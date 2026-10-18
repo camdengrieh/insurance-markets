@@ -2,6 +2,14 @@
 
 > **Status (2026-10-18): planning only, no plugin code yet.** Phase 0 is blocked on (1) the XO docs, which were unreachable from the research sandbox, (2) reading the public reference plugins (the clone was denied by the permission classifier), and (3) PayBox developer-portal access. See "Resume checklist" at the end and `docs/research-notes.md` for sources and confidence levels. Every XO-specific claim below is unverified.
 
+## Decisions recorded (author, 2026-10-18)
+
+- **Packaging**: our own Open Plugin; official only if MoonPay promotes it.
+- **Self-trading**: **always allowed.** No block and no flag required. Cheap mitigations that do not restrict it stay in: self-trades are marked in tool output and the audit log. Risk accepted by the author: creator-fee gaming, wash-trading optics, and manipulation/insider rules (CFTC advisory 2026-02-25; Polymarket/Kalshi tightened rules 2026-03) apply to whoever operates this.
+- **First release scope**: **creation is a must-have.** The release is read + trade + create (+ funding). Internal milestones (v0.1/v0.2/v0.3) still exist, but nothing ships publicly until all work. If XO has no programmatic create path, the answer is an XO partnership or contract-level path, not browser automation and not a "draft + link" substitute.
+- **Caps (plugin-enforced, env-configurable)**: **$10 per order, $50 per day, at most 2 markets created per day.**
+- **Funding**: **the plugin must handle funding** (bridge USDC to XO chain 3223 inside the flow), not a manual step. This is a release-blocking unknown, see gate item 6.
+
 ## Context
 
 PayBox (MoonPay's non-custodial agent wallet, exposed over MCP) has no route to XO Market (xo.market, a permissionless, user-created prediction-market platform). Its only prediction-market plugin, `world`, is Solana-only and has no create-market tool. Goal: a plugin so people's PayBox agents can **discover, bet on, and create** XO markets, with guardrails that hold even when a wallet grant is `autonomous` (both of this account's granted wallets are).
@@ -39,28 +47,30 @@ PayBox (MoonPay's non-custodial agent wallet, exposed over MCP) has no route to 
 3. **Smart wallet**: can a PayBox EVM wallet be the owner of an XO (Kernel v3) smart account, and is the account deployable/usable by an external owner?
 4. **Chain support**: will PayBox simulate/sign proposals for chainId 3223, and how does gas work for an external wallet?
 5. **Market creation**: any API or contract path, and what "eligibility/review" means for agents.
-6. **Funding**: bridge path from the PayBox wallets' chains to XO.
+6. **Funding (release-blocking, plugin must handle it)**: what is XO's deposit/bridge mechanism (contract, provider, supported source chains such as Base, fees, time, withdrawal path)? Funding is the natural fit for the documented proposal model: `xo_fund_account` can return unsigned approve + bridge calls on the *source* chain for PayBox to simulate and sign. Also check whether PayBox's own cross-chain swap/bridge (`pending_settlement` = bridge in flight) can target chain 3223. If neither works, funding blocks the release.
 7. **Terms**: bot policy, restricted jurisdictions.
 8. **Sign-then-submit**: the documented `io.paybox/transactionProposal` pattern only covers on-chain EVM calls. Can a plugin obtain an off-chain typed-data signature and then continue to an HTTP submit, or must the agent orchestrate prepare → `request_wallet_sign` → submit? And do `autonomous` grants auto-sign Open Plugin proposals (an SDK `SKILL.md` reportedly says "plugin money always pauses for passkey"; `world` tool text says autonomous grants return `pending_signature`; unresolved)?
 9. **Read-side fallback**: if the Data API is restricted, is the Blockscout GraphQL endpoint (`/graphiql` on the XO explorer) a usable read model?
 
-Go/no-go: reads ship regardless; trading needs 1–4 and 8; creation needs 5. If creation is UI-only, "agents create markets" cannot be built as a plugin without XO's cooperation; do not substitute browser automation.
+Go/no-go: reads are buildable regardless; trading needs 1–4 and 8; funding needs 6; creation needs 5. Because creation and funding are must-haves, **items 5 and 6 (as well as 1–4 and 8) are release-blocking.** If creation is UI-only, "agents create markets" cannot be built as a plugin without XO's cooperation: take it to XO (partnership/whitelisting or a documented contract path). Do not substitute browser automation.
 
 ## Staged delivery
 
-- **v0.1 read-only** (no signing, no secrets, lowest risk): `xo_search`, `xo_get_markets`, `xo_get_market`, `xo_orderbook`, `xo_market_prices`, `xo_positions`, `xo_account`. Ships even if trading is blocked.
-- **v0.2 trading**: `xo_prepare_order` (returns EIP-712 payload + quote, read-only), `xo_submit_order`, `xo_cancel_order`, `xo_enable_trading`, `xo_redeem`. Funding via existing PayBox buy/deposit links and bridge guidance.
-- **v0.3 creation**: `xo_validate_market_draft` (free dry run), `xo_create_market` only if a real path exists; otherwise return a finished draft and a link for the user to submit in the app.
+Internal milestones, built in this order. **Public release requires all of v0.1–v0.3** (author decision).
+
+- **v0.1 read-only** (no signing, no secrets, lowest risk): `xo_search`, `xo_get_markets`, `xo_get_market`, `xo_orderbook`, `xo_market_prices`, `xo_positions`, `xo_account` (includes balance, trading-enabled flag, self-created-market flag). Buildable as soon as the Data API is known; also the fastest way to validate the plugin pipeline end to end.
+- **v0.2 funding + trading**: `xo_fund_account` (bridge to chain 3223 as source-chain proposals, subject to gate 6), `xo_withdraw` (only to the owner's own address, approval-gated, subject to a confirmed safe path), `xo_enable_trading`, `xo_prepare_order` (EIP-712 payload + quote, read-only), `xo_submit_order`, `xo_cancel_order`, `xo_redeem`.
+- **v0.3 creation**: `xo_validate_market_draft` (free dry run), `xo_create_market` (must be a real programmatic path, subject to gate 5; always approval-gated even for `autonomous` credentials; max 2 per day).
 
 ## Guardrails (enforced in the plugin; do not rely on prompts or human approval)
 
-- Hard per-order and per-day USDC caps (env-configurable, conservative defaults), price/slippage band, `value_cents` supplied so grant policy can evaluate.
+- Hard caps, author-chosen defaults, env-configurable: **$10 per order, $50 per day, 2 markets created per day**. Also a price/slippage band, and `value_cents` supplied so grant policy can evaluate. Funding and withdrawal count toward the daily cap unless the author says otherwise.
 - Pinned constants: chain ID, RPC, exchange, conditional-token and USDC.e addresses are constants in the plugin, verified on the explorer, and are never accepted from the agent. Prefer capped allowances over unlimited in `xo_enable_trading`.
 - Off-chain order signing must not be blind: turn intent into a human-readable quote with a `quote_id`, then have `xo_submit_order` re-verify that the signed typed data equals the quote before submitting. Amounts are strings in one documented unit; confirm USDC.e decimals before use (a 6-vs-18 mix-up is a 10^12 error).
-- Creation is always approval-gated and rate-limited even when the credential is `autonomous`. Creator trading its own market is blocked unless explicitly flagged.
+- Creation is always approval-gated and rate-limited even when the credential is `autonomous`. Self-trading (creator trading its own market) is **allowed** by author decision; it is not blocked, but every such trade is marked in tool output and written to the audit log.
 - Read-then-verify-then-act: writes require the exact market id returned by a read; refuse stale, closed, determined or disputed markets; refuse thin books; never infer outcomes from absent data.
 - Quote-before-trade; dry-run first; no automatic retry after ambiguous failure; idempotency keys; one request per intent.
-- Creation lint: absolute close date, named deterministic resolution source, no relative dates, near-duplicate detection against existing markets, creation rate limit, quoted creation cost and seed shown before signing, block/flag a creator trading its own market.
+- Creation lint: absolute close date, named deterministic resolution source, no relative dates, near-duplicate detection against existing markets, creation rate limit (2/day), quoted creation cost and seed shown before signing.
 - Market titles/descriptions are attacker-controlled: return them in labeled fields as data, never as instructions.
 - Defer geo restrictions to XO's live check or the signing window; never hardcode country lists.
 - Repo hygiene: no keys or XO credentials in code or logs.
@@ -80,12 +90,12 @@ Typecheck, lint and unit tests pass; build twice is byte-identical; hosted confo
 3. The three reference repos (`theluckystrike/paylink-guard`, `bunnyyxtan/arcanum-plugin`, `NitinkashyapSTRR/xo-pulse-market-maker`) must be read. A shallow clone into the scratchpad was **denied by the permission classifier ("untrusted code integration")**. Either add a Bash permission rule allowing read-only `git clone --depth 1` into the scratchpad, or paste the relevant files (plugin entry point, the `io.paybox/transactionProposal` schema, build/test scripts, the XO order-signing and auth sections). They are read, never run or installed.
 4. Access to the PayBox developer portal (account) for upload and conformance checks.
 
-## Decisions to make before building (from the research critic)
+## Decisions still open (from the research critic)
 
-- **Scope of "bet on them"**: any XO market, or only markets the agent created? Recommended: any market, with creator-trades-own-market blocked unless flagged.
-- **Phasing**: read-only → trading → creation (recommended), or is creation needed in the first release?
-- **Funding**: the PayBox EVM wallet on XO chain 3223 is assumed. A Solana-held balance cannot trade on XO directly. Is a manual bridge step acceptable for v1? Who pays gas if the wallet is not sponsored?
-- **Guardrail defaults** (numbers to confirm): per-order cap, per-day cap, max markets created per day (suggest 1–3), topic denylist for creation, kill switch. Enforce in the plugin because current grants are `autonomous`.
+Decided on 2026-10-18 (see top of file): packaging, self-trading, first-release scope, caps, funding.
+
+- **Funding detail**: the PayBox EVM wallet on XO chain 3223 is assumed; a Solana-held balance cannot trade on XO directly, so funding means moving value from a chain PayBox can sign on. Who pays gas on chain 3223 if the wallet is not sponsored?
+- **Guardrail extras not yet decided**: topic denylist for creation, a global kill switch (recommended yes), and whether funding/withdrawals count toward the $50/day cap.
 - **Secrets**: if XO needs per-user HMAC credentials, may the plugin hold per-user secrets, or must it be stateless? A shared XO API key is not acceptable for per-user trading.
 - **Environments**: develop on XO testnet (chain 1000101); what dedicated PayBox credential and dollar budget is approved for mainnet smoke tests (suggest a few dollars, approval-gated)?
 - **Legal posture**: who accepts responsibility for agents creating markets and betting, which jurisdictions to exclude, and whether MoonPay compliance sign-off is needed for listing. XO is offshore and its terms on bots are unknown.
