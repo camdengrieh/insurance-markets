@@ -8,9 +8,9 @@ PayBox (MoonPay's non-custodial agent wallet, exposed over MCP) has no route to 
 
 `camdengrieh/insurance-markets` is empty (only `.gitattributes`), so this is greenfield.
 
-## Packaging decision (needs your confirmation)
+## Packaging decision (confirmed 2026-10-18)
 
-You chose "official PayBox plugin". Research shows official handlers live in MoonPay's **private** monorepo (`moonpay/paybox`; anonymous git read refused; not in your accessible repos), so an official plugin cannot be built from this repo. What outside developers *can* build is an **Open Plugin**:
+**Confirmed by the author: we build our own Open Plugin. It only becomes official if and when MoonPay promotes it.** Background: the author first chose "official PayBox plugin". Research shows official handlers live in MoonPay's **private** monorepo (`moonpay/paybox`; anonymous git read refused; not in your accessible repos), so an official plugin cannot be built from this repo. What outside developers *can* build is an **Open Plugin**:
 
 - single-file ES module `dist/plugin.mjs` (Node 24, pnpm, build must be byte-reproducible), uploaded in the PayBox developer portal (developer.paybox.sh), outbound hosts allowlisted under Project settings → Network access, plain env vars, hosted conformance checks, then enabled at app.paybox.sh/plugins. It appears in `discover_plugins` as `unofficial`.
 - write tools return **unsigned EVM calls as `io.paybox/transactionProposal`**; PayBox simulates, the user/grant approves, the vault signs. Proposals expire in ~5 minutes. (Field-level schema not yet seen — it is in the reference repos below.)
@@ -75,7 +75,7 @@ Typecheck, lint and unit tests pass; build twice is byte-identical; hosted confo
 
 ## Prerequisites still needed from you
 
-1. Confirm **Open Plugin** instead of official (the plan assumes this).
+1. ~~Confirm **Open Plugin** instead of official~~ Done: confirmed 2026-10-18.
 2. XO docs via the `.mcp.json` on branch `add-xo-docs-mcp` (server `xo-docs` at `https://docs.xo.market/mcp`) in a new session started from a branch that contains it, with `docs.xo.market` allowlisted. Also allowlist `developer.paybox.sh` and `docs.paybox.sh` to read the plugin spec directly.
 3. The three reference repos (`theluckystrike/paylink-guard`, `bunnyyxtan/arcanum-plugin`, `NitinkashyapSTRR/xo-pulse-market-maker`) must be read. A shallow clone into the scratchpad was **denied by the permission classifier ("untrusted code integration")**. Either add a Bash permission rule allowing read-only `git clone --depth 1` into the scratchpad, or paste the relevant files (plugin entry point, the `io.paybox/transactionProposal` schema, build/test scripts, the XO order-signing and auth sections). They are read, never run or installed.
 4. Access to the PayBox developer portal (account) for upload and conformance checks.
