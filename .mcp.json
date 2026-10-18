@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "xo-docs": {
+      "type": "http",
+      "url": "https://docs.xo.market/mcp"
+    }
+  }
+}
