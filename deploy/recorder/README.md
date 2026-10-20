@@ -7,8 +7,11 @@ discovers its targets from public XO and Polymarket data, records them, and refr
 It sends only `GET` requests with the User-Agent `insurance-markets-research/0.1`, to five public
 read hosts, within per-host budgets far below the venues' documented limits. It trades nothing.
 
-Nothing here has been deployed. The bundle and the runtime image were tested locally (see "What was and
-was not verified" at the end).
+First deployed to Railway on 2026-10-20 with `railway up` (a project with one service and a volume at
+`/data`). Its first pass discovered 388 targets and recorded 386 order books and 388 market states with no
+failures. Railway rejects a `VOLUME` line in a Dockerfile, so the image declares none; the volume is attached
+in Railway. The bundle and the runtime image were also tested locally (see "What was and was not verified"
+at the end).
 
 ## What is recorded, and what is refused
 
@@ -123,7 +126,7 @@ Estimates from the code's own arithmetic, not measurements; check `status` and t
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | two stages: install from the lockfile and bundle; then `node:24-slim` + `recorder.mjs` + entrypoint; `VOLUME /data` |
+| `Dockerfile` | two stages: install from the lockfile and bundle; then `node:24-slim` + `recorder.mjs` + entrypoint; a data directory at `/data` (no `VOLUME` line: Railway rejects it) |
 | `entrypoint.sh` | creates and owns `/data`, drops to the `node` user, execs node so SIGTERM reaches it |
 | `build.mjs` | bundles `pm/recorder/main.ts` into `dist/recorder.mjs` with the repository's pinned esbuild; deterministic; prints the sha256 |
 | `railway.json` | the same builder and restart settings as Config as Code (deprecated by Railway; see step 2) |

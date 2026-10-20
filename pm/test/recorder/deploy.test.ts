@@ -27,7 +27,8 @@ test("the deploy folder has the expected files and the Dockerfile keeps its prom
   const d = read("Dockerfile");
   assert.match(d, /^FROM node:24-slim AS build$/m);
   assert.match(d, /^FROM node:24-slim AS runtime$/m);
-  assert.match(d, /^VOLUME \/data$/m);
+  // Railway rejects a VOLUME instruction ("use Railway Volumes"), so the data dir is only declared, not a docker volume.
+  assert.doesNotMatch(d, /^VOLUME\b/m);
   assert.match(d, /DATA_DIR=\/data/);
   assert.match(d, /RECORDER_DB=\/data\/recorder\.sqlite/);
   assert.match(d, /RECORDER_TARGETS=\/data\/targets\.json/);

@@ -34,7 +34,7 @@ ENV DATA_DIR=/data \
     RECORDER_DB=/data/recorder.sqlite \
     RECORDER_TARGETS=/data/targets.json \
     NODE_ENV=production
-VOLUME /data
+# No VOLUME instruction: Railway rejects it. Attach a Railway volume at /data instead (README step 3).
 
 # The entrypoint starts as root only to make the mounted volume writable (some platforms mount it
 # root-owned), then runs node as the unprivileged user "node" (uid 1000). If the platform already
