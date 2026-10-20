@@ -1,0 +1,102 @@
+{
+ "note": "Unauthenticated GET /orderbook-v3/snapshot?marketHash=... (legacy path; changelog 2026-10-13 says a much stricter rate limit applies from 2026-12-01). NFL moneyline 49ers v Commanders, fetched ~2026-10-19 00:55 UTC. Odds are maker-frame implied probability x1e20; size = resting maker stake in USDC base units (6 dp).",
+ "response": {
+  "status": "success",
+  "data": {
+   "marketHash": "0x738fc4edbcaea87017dd51a8c28a8d3a55e95064c869c46c3e3fdede886427e9",
+   "outcomeOne": [
+    {
+     "percentageOdds": "78375000000000000000",
+     "size": "119130000"
+    },
+    {
+     "percentageOdds": "78125000000000000000",
+     "size": "1063160000"
+    },
+    {
+     "percentageOdds": "78000000000000000000",
+     "size": "8179636363"
+    },
+    {
+     "percentageOdds": "77500000000000000000",
+     "size": "8795530000"
+    },
+    {
+     "percentageOdds": "77250000000000000000",
+     "size": "2020025000"
+    },
+    {
+     "percentageOdds": "77000000000000000000",
+     "size": "4617763041"
+    },
+    {
+     "percentageOdds": "76875000000000000000",
+     "size": "962720000"
+    },
+    {
+     "percentageOdds": "76375000000000000000",
+     "size": "964930000"
+    },
+    {
+     "percentageOdds": "76250000000000000000",
+     "size": "35000000"
+    },
+    {
+     "percentageOdds": "75125000000000000000",
+     "size": "1812060301"
+    },
+    {
+     "percentageOdds": "75000000000000000000",
+     "size": "5000000"
+    }
+   ],
+   "outcomeTwo": [
+    {
+     "percentageOdds": "21000000000000000000",
+     "size": "42090000"
+    },
+    {
+     "percentageOdds": "20875000000000000000",
+     "size": "847653750"
+    },
+    {
+     "percentageOdds": "20750000000000000000",
+     "size": "6320645773"
+    },
+    {
+     "percentageOdds": "20625000000000000000",
+     "size": "231880000"
+    },
+    {
+     "percentageOdds": "20500000000000000000",
+     "size": "2067030000"
+    },
+    {
+     "percentageOdds": "20250000000000000000",
+     "size": "10125000"
+    },
+    {
+     "percentageOdds": "20000000000000000000",
+     "size": "2165510000"
+    },
+    {
+     "percentageOdds": "19875000000000000000",
+     "size": "248049921"
+    },
+    {
+     "percentageOdds": "19375000000000000000",
+     "size": "245104184"
+    },
+    {
+     "percentageOdds": "19250000000000000000",
+     "size": "231350000"
+    },
+    {
+     "percentageOdds": "19125000000000000000",
+     "size": "10000000"
+    }
+   ],
+   "version": "000001000014421452"
+  }
+ }
+}

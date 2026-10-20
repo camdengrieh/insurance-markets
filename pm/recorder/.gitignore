@@ -1,0 +1,5 @@
+# Recorded data never belongs in git.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

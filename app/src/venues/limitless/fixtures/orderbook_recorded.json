@@ -1,0 +1,37 @@
+{
+  "bids": [
+    {
+      "price": 0.003,
+      "size": 863898323,
+      "side": "BUY"
+    }
+  ],
+  "asks": [
+    {
+      "price": 0.899,
+      "size": 12362000,
+      "side": "SELL"
+    },
+    {
+      "price": 0.9,
+      "size": 91872889,
+      "side": "SELL"
+    },
+    {
+      "price": 0.95,
+      "size": 100000000,
+      "side": "SELL"
+    },
+    {
+      "price": 0.997,
+      "size": 500000000,
+      "side": "SELL"
+    }
+  ],
+  "tokenId": "74545983764114334479013489209199340682364685758382950569413632147917995316991",
+  "adjustedMidpoint": 0.4765,
+  "midpoint": 0.451,
+  "maxSpread": "0.035",
+  "minSize": "100000000",
+  "lastTradePrice": 0.899
+}

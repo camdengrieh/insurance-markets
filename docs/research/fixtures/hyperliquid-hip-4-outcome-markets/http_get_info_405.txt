@@ -1,0 +1,10 @@
+HTTP/1.1 405 Method Not Allowed
+Content-Length: 0
+Connection: keep-alive
+Server: nginx/1.30.3
+Date: Mon, 19 Oct 2026 02:22:34 GMT
+allow: POST
+access-control-allow-origin: *
+vary: origin
+vary: access-control-request-method
+# GET https://api.hyperliquid.xyz/info on 2026-10-19: REST info/exchange are POST-only; POST not used in this research (ground rules).

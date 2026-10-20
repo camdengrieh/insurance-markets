@@ -1,0 +1,43 @@
+{
+ "WARNING": "These are the SAMPLE responses printed in the official docs page https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/spot (read 2026-10-19). They are NOT live captures: the REST /info endpoint is POST-only and this research did not POST.",
+ "outcomeMeta_sample": {
+  "outcomes": [
+   {
+    "outcome": 123,
+    "name": "Recurring",
+    "description": "class:priceBinary|underlying:HYPE|expiry:20260310-1100|targetPrice:34.5|period:3m",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ]
+   }
+  ]
+ },
+ "settledOutcome_sample": {
+  "spec": {
+   "outcome": 95,
+   "name": "Recurring",
+   "description": "class:priceBinary|underlying:BTC|expiry:20260526-0600|targetPrice:77363|period:1d",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  "settleFraction": "0.0",
+  "details": "price:76876.9"
+ },
+ "outcomeDeployerLimits_sample": {
+  "nDailyOutcomesRemaining": 50,
+  "nActiveOutcomesRemaining": 14
+ },
+ "ws_types_from_docs": "WsOutcomeMetaUpdate = {outcomeCreated: OutcomeSpec} | {outcomeSettled: number} | {questionUpdated: QuestionSpec} | {questionSettled: number}; QuestionSpec = {question, name, description, fallbackOutcome, namedOutcomes[], settledNamedOutcomes[]}"
+}

@@ -1,0 +1,209 @@
+{
+  "data": [
+    {
+      "id": 48881,
+      "createdAt": "2026-10-13T16:46:09.444Z",
+      "updatedAt": "2026-10-18T16:00:24.424Z",
+      "contractMarketId": "0xc0835b17f7dae68b139ef7653bdf06084a29cd7360eb1fcf6320458dc18b85fc",
+      "conditionId": "0xc0835b17f7dae68b139ef7653bdf06084a29cd7360eb1fcf6320458dc18b85fc",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-10-13T16:46:08.000Z",
+      "creatorId": 31589,
+      "title": "Cowboys vs. Packers: 53+ Total Points?",
+      "slug": "cowboys-vs-packers-53-total-points-6626",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 105,
+          "name": "American football",
+          "slug": "american-football"
+        },
+        {
+          "id": 106,
+          "name": "NFL",
+          "slug": "nfl"
+        }
+      ],
+      "type": 4,
+      "totalVolume": "0",
+      "totalVolumeInUSD": "0",
+      "totalNotional": "0",
+      "totalNotionalInUSD": "0.00",
+      "status": "PAUSED",
+      "startsAt": "2026-10-13T16:46:04.000Z",
+      "expiresAt": "2026-10-18T16:00:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/e18a13fb-74ce-4753-a0ba-c10861beb628.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/b10e14f7-07c7-4709-960e-a1b498e25083.webp",
+      "resolutionSources": [
+        "https://www.nfl.com",
+        "https://www.espn.com",
+        "https://www.pro-football-reference.com"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 31589,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": "REDACTED",
+        "profilePictureUrl": null,
+        "roosterColor": "#8855FF",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 95144.24,
+        "tier": "Caller"
+      },
+      "outcomes": [
+        {
+          "id": 98123,
+          "marketId": 48881,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "32917365553854619603664637296510490140303349152531061780514403878481229807402",
+          "title": "53 points or more",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 0
+        },
+        {
+          "id": 98124,
+          "marketId": 48881,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "28355033332624138153319482158695031815372639749181769587246018827903505519529",
+          "title": "52 points or more",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 48879,
+      "createdAt": "2026-10-13T16:40:47.427Z",
+      "updatedAt": "2026-10-18T16:00:24.314Z",
+      "contractMarketId": "0x9a699747e0f7b0cf7d90f63f924cccb034e7f02e96d7b70492c05412e76512ae",
+      "conditionId": "0x9a699747e0f7b0cf7d90f63f924cccb034e7f02e96d7b70492c05412e76512ae",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-10-13T16:40:46.000Z",
+      "creatorId": 31589,
+      "title": "Will Bills vs Raiders total points be 54 or more?",
+      "slug": "will-bills-vs-raiders-total-points-be-54-or-more-5131",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 105,
+          "name": "American football",
+          "slug": "american-football"
+        },
+        {
+          "id": 106,
+          "name": "NFL",
+          "slug": "nfl"
+        }
+      ],
+      "type": 4,
+      "totalVolume": "0",
+      "totalVolumeInUSD": "0",
+      "totalNotional": "0",
+      "totalNotionalInUSD": "0.00",
+      "status": "PAUSED",
+      "startsAt": "2026-10-13T16:40:43.000Z",
+      "expiresAt": "2026-10-18T16:00:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/15a5510e-2b4c-4b99-9258-8af7b06a871a.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/e1cbfe7c-9846-4330-88c0-c2ef4edfd93d.webp",
+      "resolutionSources": [
+        "https://buffalobills.com",
+        "https://raiders.com",
+        "https://nfl.com",
+        "https://www.nfl.com"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 31589,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": "REDACTED",
+        "profilePictureUrl": null,
+        "roosterColor": "#8855FF",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 95144.24,
+        "tier": "Caller"
+      },
+      "outcomes": [
+        {
+          "id": 98119,
+          "marketId": 48879,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "101523039270829775053575900234027579425400197634155612642300447510699188151629",
+          "title": "54 points or more",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 0
+        },
+        {
+          "id": 98120,
+          "marketId": 48879,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "69435815769463928213118810389608328301323958256108427984285622840861767167008",
+          "title": "53 points or less",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 3,
+    "itemCount": 6,
+    "pageCount": 2,
+    "hasPreviousPage": false,
+    "hasNextPage": true
+  }
+}

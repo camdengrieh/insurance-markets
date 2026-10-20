@@ -1,0 +1,75 @@
+kind,venue,title,n_legs,exhaustive,sum_bid_touch,sum_ask_touch,q,cost,fees,gross,net,net_bps,flags
+me_buy,kalshi,Arizona State Senate winner?,2,,0.87,0.9,1716.51,1546.659,44.531,169.851,125.32,810.2626370777269,exhaustiveness_unverified
+me_sell,kalshi,Democratic Senate Seat Count (2028),14,,1.02,1.16,6798.0,88238.04,447.84,135.96,-311.88,-35.34530005426231,
+me_buy,kalshi,Oklahoma Attorney General winner?,2,,0.986,0.988,6879.06,6796.5114,48.3086,82.5486,34.24,50.37878675354482,exhaustiveness_unverified
+me_buy,kalshi,North Dakota Attorney General winner?,2,,0.99,0.992,8324.98,8258.3802,38.2698,66.5998,28.33,34.304548169407596,exhaustiveness_unverified
+me_sell,kalshi,Which party will win the U.S. House?,2,,1.001,1.012,52911.74,52858.8283,663.7217,52.9117,-610.81,-115.55496406306453,
+me_buy,kalshi,Connecticut Attorney General winner?,2,,0.987,0.994,9737.02,9688.0019,37.7181,49.0181,11.3,11.663911833047845,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,South Carolina Attorney General winner?,2,,0.992,0.994,7011.01,6968.9439,59.6561,42.0661,-17.59,-25.240553161918534,exhaustiveness_unverified
+me_buy,kalshi,Rhode Island Attorney General winner?,2,,0.983,0.985,3671.02,3630.1866,10.7734,40.8334,30.06,82.80565982139144,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,Delaware Attorney General winner?,2,,0.991,0.993,4865.07,4831.0147,15.6253,34.0553,18.43,38.14933569255615,extreme_price_leg;exhaustiveness_unverified
+me_sell,kalshi,Alaska State Senate winner?,2,,1.01,1.03,3354.11,3320.5689,47.7911,33.5411,-14.25,-42.91433314333577,
+me_sell,kalshi,2028 House winner,2,,1.01,1.03,2881.94,2853.1206,76.6494,28.8194,-47.83,-167.64100332807524,
+me_sell,kalshi,Oscar Winner: Best Picture,41,,1.01,1.42,2879.54,17248.4446,140.3054,28.7954,-111.51,-64.64930756712985,extreme_price_leg
+me_buy,kalshi,Vermont Attorney General winner?,2,,0.995,0.997,4884.02,4869.3679,17.6521,14.6521,-3.0,-6.160963880663329,exhaustiveness_unverified
+me_buy,kalshi,New Mexico Attorney General winner?,2,,0.995,0.997,4706.12,4692.0016,28.6184,14.1184,-14.5,-30.903655012362698,exhaustiveness_unverified
+me_buy,kalshi,Arkansas Attorney General winner?,2,,0.992,0.994,2483.02,2472.6439,5.5161,10.3761,4.86,19.655074552607736,extreme_price_leg;exhaustiveness_unverified
+me_sell,polymarket,Who wins the Senate pending Hormuz Agreement by Oct 23 and o,4,True,1.008,1.016,1200.0,3590.4,23.3074,9.6,-13.7074,-38.17780748663102,extreme_price_leg
+me_buy,polymarket,Who wins the Senate pending oil below $85 before the midterm,4,True,0.964,0.988,710.0,701.48,14.9423,8.52,-6.4223,-91.5538575583053,extreme_price_leg
+me_buy,kalshi,South Dakota Attorney General winner?,2,,0.997,0.999,7490.0,7482.51,18.04,7.49,-10.55,-14.099546809827183,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,Pennsylvania State House winner?,2,,0.997,0.999,3879.73,3875.8503,36.9897,3.8797,-33.11,-85.42641597896596,exhaustiveness_unverified
+me_sell,kalshi,Nebraska Attorney General winner?,2,,1.001,1.003,1596.0,1594.404,15.986,1.596,-14.39,-90.25316042859903,
+me_buy,kalshi,Colorado Attorney General winner?,2,,0.989,0.991,135.01,133.7949,0.9551,1.2151,0.26,19.432727298818765,exhaustiveness_unverified
+me_sell,kalshi,Alaska Governor winner?,16,,1.013,1.068,125.76,376.1482,2.9518,1.1318,-1.82,-48.38518949554346,extreme_price_leg
+me_sell,kalshi,Iowa St. vs Arizona,2,,1.01,1.03,111.0,109.89,2.8,1.11,-1.69,-153.7901537901538,
+me_sell,kalshi,Critics Choice Awards: Best Animated Feature,16,,1.02,1.23,40.62,608.4876,1.2724,0.8124,-0.46,-7.559726771753443,extreme_price_leg
+me_sell,kalshi,"Trump's approval rating on Oct 23, 2026?",8,,1.04,1.14,14.0,97.44,0.89,0.56,-0.33,-33.86699507389162,
+me_sell,kalshi,Critics Choice Awards: Best Adapted Screenplay,16,,1.03,1.3,13.1,169.907,0.713,0.393,-0.32,-18.83383262608368,extreme_price_leg
+me_sell,kalshi,CA-22 House winner?,2,,1.01,1.021,30.0,29.7,0.4,0.3,-0.1,-33.67003367003367,
+me_sell,kalshi,"Who will be the top ActBlue fundraiser on Oct 23, 2026?",8,,1.02,1.13,14.94,104.2812,0.3688,0.2988,-0.07,-6.712619340782423,extreme_price_leg
+me_sell,kalshi,State of the economy at the end of 2026,4,,1.024,1.045,12.04,35.831,0.389,0.289,-0.1,-27.90876290501197,extreme_price_leg
+me_sell,polymarket,Democratic nomination odds leader on October 31?,3,False,1.01,1.04,25.0,49.75,0.6391,0.25,-0.3891,-78.21105527638191,
+me_buy,kalshi,MT-02 House winner?,2,,0.98,0.994,50.01,49.7769,0.1331,0.2331,0.1,20.089627865760303,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,Bonzi vs Norrie,2,,0.96,0.99,23.15,22.9185,0.8115,0.2315,-0.58,-253.07066343783407,past_end_date;exhaustiveness_unverified
+me_sell,kalshi,Pro Basketball Atlantic Division Winner,5,,1.01,1.07,23.0,68.77,1.2,0.23,-0.97,-141.04987639959285,extreme_price_leg
+me_buy,kalshi,Griekspoor vs Schoenhaus,2,,0.97,0.99,22.21,21.9879,0.5721,0.2221,-0.35,-159.1784572423924,past_end_date;exhaustiveness_unverified
+me_sell,kalshi,Tennessee Governor winner?,3,,1.001,1.04,216.0,431.784,2.296,0.216,-2.08,-48.172234265280785,extreme_price_leg
+me_sell,polymarket,Who wins the Senate pending Hormuz Agreement and oil below $,4,True,1.001,1.009,200.0,599.8,4.0994,0.2,-3.8994,-65.01233744581528,
+me_sell,kalshi,Alaska Governor-Senate combo,4,,1.01,1.06,20.0,59.8,0.72,0.2,-0.52,-86.95652173913044,
+me_sell,kalshi,"Highest temperature in New Orleans on Oct 18, 2026?",6,,1.02,1.09,10.0,9.8,0.36,0.2,-0.16,-163.26530612244898,extreme_price_leg
+me_sell,kalshi,Number of rate hikes in 2026?,4,,1.01,1.05,19.96,39.7204,0.6696,0.1996,-0.47,-118.32710647425505,extreme_price_leg
+me_buy,kalshi,OH-01 House winner?,2,,0.981,0.99,20.96,20.7644,0.1356,0.1956,0.06,28.895637625587664,exhaustiveness_unverified
+me_sell,kalshi,Series Exact Score: Atlanta vs Golden State,8,,1.02,1.26,7.36,44.0128,0.4872,0.1472,-0.34,-77.25025447142649,extreme_price_leg
+me_sell,kalshi,"Highest temperature in Los Angeles on Oct 19, 2026?",6,,1.01,1.07,13.0,38.87,0.24,0.13,-0.11,-28.29945973758683,extreme_price_leg
+me_sell,kalshi,How many Senate seats will Democrats hold after the Midterms,10,,1.043,1.099,2.89,25.8857,0.2143,0.1243,-0.09,-34.7681908140122,
+me_sell,kalshi,Afghanistan vs Zimbabwe,2,,1.01,1.03,11.82,11.7018,0.3782,0.1182,-0.26,-222.1880394469227,
+me_sell,kalshi,2026 Midterms: House popular vote margin of victory? (Generi,10,,1.004,1.056,29.0,260.884,1.776,0.116,-1.66,-63.62981248370924,extreme_price_leg
+me_buy,polymarket,Who wins the Senate pending Hormuz Agreement by Oct 23?,3,True,0.992,0.999,103.73,103.6263,0.2788,0.1037,-0.1751,-16.89532972671891,extreme_price_leg
+me_sell,kalshi,How many House seats will Democrats hold after the Midterms?,12,,1.042,1.114,2.37,25.9705,0.2195,0.0995,-0.12,-46.20634366892231,
+me_sell,polymarket,NPB Japan Series Champion (2026),2,False,1.002,1.02,48.58,48.4828,0.9815,0.0972,-0.8843,-182.40268103106172,
+me_sell,kalshi,Tossup Senate Race Combo: which states will Democrats win?,16,,1.021,1.342,5.0,64.91,0.36,0.09,-0.27,-41.59605607764597,extreme_price_leg
+me_sell,kalshi,Texas Tech vs Cincinnati,2,,1.01,1.03,7.73,7.6527,0.1873,0.0773,-0.11,-143.74011786689664,
+me_sell,polymarket,Worlds 2026: Winner,17,False,1.014,1.084,20.0,199.94,0.8207,0.06,-0.7607,-38.046914074222265,extreme_price_leg
+me_sell,kalshi,Oscar Winner: Best Actor,25,,1.01,1.28,6.0,41.94,0.35,0.06,-0.29,-69.14639961850263,extreme_price_leg
+me_sell,kalshi,How many Senate seats will Republicans hold after the Midter,15,,1.02,1.18,2.4,31.152,0.228,0.048,-0.18,-57.78120184899846,extreme_price_leg
+me_sell,kalshi,Maine-Texas Senate Combo,6,,1.03,1.09,1.58,4.6926,0.0974,0.0474,-0.05,-106.55073946213187,extreme_price_leg
+me_sell,kalshi,Pro Football #1 Overall Pick in 2027,22,,1.01,1.27,4.6,36.754,0.286,0.046,-0.24,-65.29901507318931,extreme_price_leg
+me_sell,kalshi,Fed decision in Sep 2027?,5,,1.01,1.17,4.53,18.0747,0.1253,0.0453,-0.08,-44.26076228097838,extreme_price_leg
+me_buy,kalshi,New Mexico Senate winner?,2,,0.989,0.999,36.01,35.974,0.136,0.036,-0.1,-27.797861732879785,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,CA-21 House winner?,2,,0.992,0.997,11.52,11.4854,0.0846,0.0346,-0.05,-43.53337791151232,exhaustiveness_unverified
+me_sell,kalshi,Prime Minister of Spain after the next election?,3,,1.02,1.06,1.7,3.366,0.054,0.034,-0.02,-59.41770647653001,
+me_sell,kalshi,"Highest temperature in Atlanta on Oct 19, 2026?",6,,1.03,1.1,1.11,4.4067,0.0533,0.0333,-0.02,-45.3854358136474,extreme_price_leg
+me_sell,kalshi,Texas Railroad Commissioner & Senate combo,4,,1.02,1.13,1.74,5.1868,0.0932,0.0332,-0.06,-115.67826019896661,extreme_price_leg
+me_sell,kalshi,Iowa Attorney General winner?,2,,1.01,1.03,3.18,3.1482,0.1218,0.0318,-0.09,-285.8776443682104,
+me_sell,kalshi,California Governor winner? (Person),2,,1.001,1.003,28.0,27.972,0.178,0.028,-0.15,-53.625053625053624,
+me_sell,kalshi,Grammy winner: Album of the Year,13,,1.04,1.23,0.61,4.2456,0.0744,0.0244,-0.05,-117.76898436027888,extreme_price_leg
+me_sell,kalshi,Arkansas Senate winner?,2,,1.002,1.01,11.0,10.978,0.102,0.022,-0.08,-72.87301876480234,
+me_sell,kalshi,Arizona Governor winner?,2,,1.001,1.008,14.0,13.986,0.174,0.014,-0.16,-114.4001144001144,
+me_sell,kalshi,New York Governor winner?,2,,1.001,1.004,12.78,12.7672,0.1128,0.0128,-0.1,-78.32558693278568,
+me_sell,kalshi,Pro Basketball Eastern Conference #1 Seed,15,,1.01,1.25,1.03,9.2597,0.1303,0.0103,-0.12,-129.59383133362851,extreme_price_leg
+me_sell,kalshi,Minnesota Governor winner?,2,,1.004,1.008,2.57,2.5597,0.0303,0.0103,-0.02,-78.13354585657807,
+me_sell,kalshi,Brazil presidential runoff: margin of victory,8,,1.01,1.16,1.0,4.99,0.08,0.01,-0.07,-140.28056112224448,extreme_price_leg
+me_buy,kalshi,MN-02 House winner?,2,,0.986,0.995,1.39,1.383,0.0169,0.0069,-0.01,-72.30396587252811,exhaustiveness_unverified
+me_sell,kalshi,Georgia Governor-Senate combo,4,,1.01,1.06,0.34,0.6766,0.0234,0.0034,-0.02,-295.5956251847473,extreme_price_leg
+me_buy,kalshi,TN-04 House winner?,2,,0.984,0.992,0.01,0.0099,0.0101,0.0001,-0.01,-10080.645161290322,extreme_price_leg;exhaustiveness_unverified
+me_buy,kalshi,Maryland Attorney General winner?,2,,0.99,0.992,0.01,0.0099,0.0101,0.0001,-0.01,-10080.645161290322,extreme_price_leg;exhaustiveness_unverified

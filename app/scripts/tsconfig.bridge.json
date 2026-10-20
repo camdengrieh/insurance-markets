@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "include": ["../../bridge/**/*.ts", "../../app/headers.config.ts", "../../src/**/*.ts", "../../relay/**/*.ts"]
+}

@@ -1,0 +1,720 @@
+{
+ "data": [
+  {
+   "id": 50394,
+   "createdAt": "2026-10-18T12:03:07.741Z",
+   "updatedAt": "2026-10-20T05:07:29.264Z",
+   "contractMarketId": "0x5bb81cbeb6572a4b62a143144b705a107fbdb3af9f5de55865aba0d7d62752a7",
+   "conditionId": "0x5bb81cbeb6572a4b62a143144b705a107fbdb3af9f5de55865aba0d7d62752a7",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T12:03:05.000Z",
+   "creatorId": 47724,
+   "title": "Draw: VfB Stuttgart vs Atletico Madrid",
+   "slug": "draw-vfb-stuttgart-vs-atletico-madrid-9000",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "0",
+   "totalVolumeInUSD": "0",
+   "totalNotional": "0",
+   "totalNotionalInUSD": "0.00",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T12:02:56.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101149,
+     "marketId": 50394,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "29643525573622370666468559885197534521929228632348566824766460170912794710603",
+     "title": "Yes",
+     "currentPrice": "245000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 0
+    },
+    {
+     "id": 101150,
+     "marketId": 50394,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "12361216878306364144958887347549109454130205043452759266924574700862206705079",
+     "title": "No",
+     "currentPrice": "755000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 50395,
+   "createdAt": "2026-10-18T12:03:07.781Z",
+   "updatedAt": "2026-10-20T04:51:59.185Z",
+   "contractMarketId": "0x9746360e14f483a92217df4548614aa58d2101dc887271bb631b3b80a9190484",
+   "conditionId": "0x9746360e14f483a92217df4548614aa58d2101dc887271bb631b3b80a9190484",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T12:03:05.000Z",
+   "creatorId": 47724,
+   "title": "Atletico Madrid to win vs VfB Stuttgart",
+   "slug": "atletico-madrid-to-win-vs-vfb-stuttgart-9083",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "65217388",
+   "totalVolumeInUSD": "65.217388",
+   "totalNotional": "65217388",
+   "totalNotionalInUSD": "65.22",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T12:02:56.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101151,
+     "marketId": 50395,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "15985587558040992965294423453940213006166116791924419376009837558092966207010",
+     "title": "Yes",
+     "currentPrice": "465000",
+     "volumeTraded": "29999998",
+     "volumeTradedInUSD": "29.999998",
+     "notionalTraded": "65217388",
+     "index": 0
+    },
+    {
+     "id": 101152,
+     "marketId": 50395,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "41932271659422195190901748126662015002464443388925516879174267199906778079960",
+     "title": "No",
+     "currentPrice": "535000",
+     "volumeTraded": "35217390",
+     "volumeTradedInUSD": "35.21739",
+     "notionalTraded": "65217388",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 50393,
+   "createdAt": "2026-10-18T12:03:07.697Z",
+   "updatedAt": "2026-10-20T05:07:29.089Z",
+   "contractMarketId": "0xaf754ae7c3ac4884d946953b7a67d487ab9e9c8761c2406be3fc900149edc083",
+   "conditionId": "0xaf754ae7c3ac4884d946953b7a67d487ab9e9c8761c2406be3fc900149edc083",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T12:03:05.000Z",
+   "creatorId": 47724,
+   "title": "VfB Stuttgart to win vs Atletico Madrid",
+   "slug": "vfb-stuttgart-to-win-vs-atletico-madrid-7970",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "0",
+   "totalVolumeInUSD": "0",
+   "totalNotional": "0",
+   "totalNotionalInUSD": "0.00",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T12:02:56.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101147,
+     "marketId": 50393,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "96704040642035084451788998725519809194165632498340642610895393026196533715692",
+     "title": "Yes",
+     "currentPrice": "285000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 0
+    },
+    {
+     "id": 101148,
+     "marketId": 50393,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "40213519199481293266569289323979707049540690922355845064416277306998901885459",
+     "title": "No",
+     "currentPrice": "715000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 50369,
+   "createdAt": "2026-10-18T10:44:18.495Z",
+   "updatedAt": "2026-10-20T05:36:29.211Z",
+   "contractMarketId": "0x6086db243998d387a721faded248fcd045ba7219f6eb010f7a7b7f82eefbfc17",
+   "conditionId": "0x6086db243998d387a721faded248fcd045ba7219f6eb010f7a7b7f82eefbfc17",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T10:44:15.000Z",
+   "creatorId": 47724,
+   "title": "Draw: Liverpool vs Villarreal",
+   "slug": "draw-liverpool-vs-villarreal-2575",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "0",
+   "totalVolumeInUSD": "0",
+   "totalNotional": "0",
+   "totalNotionalInUSD": "0.00",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T10:44:08.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101099,
+     "marketId": 50369,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "105737648912681681135211742191297445756772368030525709553713560399045725567692",
+     "title": "Yes",
+     "currentPrice": "205000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 0
+    },
+    {
+     "id": 101100,
+     "marketId": 50369,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "106826304215260241340579845817462722188408347408981155128252130882215059422855",
+     "title": "No",
+     "currentPrice": "795000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 50368,
+   "createdAt": "2026-10-18T10:44:18.456Z",
+   "updatedAt": "2026-10-20T05:23:59.061Z",
+   "contractMarketId": "0x4c160af3dda1b05075531ba3a3fa3fd15ef74638ff5a8f9864dbe40f59e255c3",
+   "conditionId": "0x4c160af3dda1b05075531ba3a3fa3fd15ef74638ff5a8f9864dbe40f59e255c3",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T10:44:15.000Z",
+   "creatorId": 47724,
+   "title": "Liverpool to win vs Villarreal",
+   "slug": "liverpool-to-win-vs-villarreal-6943",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "0",
+   "totalVolumeInUSD": "0",
+   "totalNotional": "0",
+   "totalNotionalInUSD": "0.00",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T10:44:08.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101097,
+     "marketId": 50368,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "63443223899639827159545503903566346248806138735788771534122620064344240815074",
+     "title": "Yes",
+     "currentPrice": "645000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 0
+    },
+    {
+     "id": 101098,
+     "marketId": 50368,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "77783189050841861844474123956045247391997348653469991578104381052299107074302",
+     "title": "No",
+     "currentPrice": "355000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 50370,
+   "createdAt": "2026-10-18T10:44:18.535Z",
+   "updatedAt": "2026-10-20T05:32:59.054Z",
+   "contractMarketId": "0x83a470ad766a71222fcc5b8293be8b92fa4681a6d1fff32a123301d5174bc2ce",
+   "conditionId": "0x83a470ad766a71222fcc5b8293be8b92fa4681a6d1fff32a123301d5174bc2ce",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-18T10:44:15.000Z",
+   "creatorId": 47724,
+   "title": "Villarreal to win vs Liverpool",
+   "slug": "villarreal-to-win-vs-liverpool-4276",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 28,
+     "name": "Champions League",
+     "slug": "champions-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "0",
+   "totalVolumeInUSD": "0",
+   "totalNotional": "0",
+   "totalNotionalInUSD": "0.00",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-18T10:44:08.000Z",
+   "expiresAt": "2026-10-20T22:00:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.uefa.com/uefachampionsleague/",
+    "https://www.espn.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 101101,
+     "marketId": 50370,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "79652122448416038097399308891573197105071885379012577236173901704457583701731",
+     "title": "Yes",
+     "currentPrice": "155000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 0
+    },
+    {
+     "id": 101102,
+     "marketId": 50370,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "46476588692665518843634026821472742718099287241955280734144388069472410901872",
+     "title": "No",
+     "currentPrice": "845000",
+     "volumeTraded": "0",
+     "volumeTradedInUSD": "0",
+     "notionalTraded": "0",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 45792,
+   "createdAt": "2026-10-04T18:34:43.248Z",
+   "updatedAt": "2026-10-20T00:35:29.428Z",
+   "contractMarketId": "0xfd4166baca855de305502f40d0fc868bd4a5305ecf1f7a4a60cd3ff2b2ce3273",
+   "conditionId": "0xfd4166baca855de305502f40d0fc868bd4a5305ecf1f7a4a60cd3ff2b2ce3273",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-04T18:34:38.000Z",
+   "creatorId": 47724,
+   "title": "Taiko announces a shutdown of its main network first",
+   "slug": "taiko-announces-a-shutdown-of-its-main-network-fir-4721",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 1,
+     "name": "CRYPTO",
+     "slug": null
+    }
+   ],
+   "type": 2,
+   "totalVolume": "602604892",
+   "totalVolumeInUSD": "602.604892",
+   "totalNotional": "706160892",
+   "totalNotionalInUSD": "706.16",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-05T19:30:00.000Z",
+   "expiresAt": "2027-12-31T23:59:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.coindesk.com/",
+    "https://cryptonews.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": false,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 91945,
+     "marketId": 45792,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "21595391835095569122040197102407261534640145894396086874105970788583974472577",
+     "title": "Yes",
+     "currentPrice": "500000",
+     "volumeTraded": "108813621",
+     "volumeTradedInUSD": "108.813621",
+     "notionalTraded": "698160892",
+     "index": 0
+    },
+    {
+     "id": 91946,
+     "marketId": 45792,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "55360267632414856294210024951465569706131320361306885699504424143668657924402",
+     "title": "No",
+     "currentPrice": "500000",
+     "volumeTraded": "493791271",
+     "volumeTradedInUSD": "493.791271",
+     "notionalTraded": "594160892",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 45797,
+   "createdAt": "2026-10-04T18:34:44.161Z",
+   "updatedAt": "2026-10-20T00:35:29.343Z",
+   "contractMarketId": "0xc68f2c85319c148a7d48f6192845da14f4d7b4ef67c63d468a5e152a5ea72470",
+   "conditionId": "0xc68f2c85319c148a7d48f6192845da14f4d7b4ef67c63d468a5e152a5ea72470",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-10-04T18:34:38.000Z",
+   "creatorId": 47724,
+   "title": "zkSync Era announces a shutdown of its main network first",
+   "slug": "zksync-era-announces-a-shutdown-of-its-main-networ-7868",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 1,
+     "name": "CRYPTO",
+     "slug": null
+    }
+   ],
+   "type": 2,
+   "totalVolume": "209102000",
+   "totalVolumeInUSD": "209.102",
+   "totalNotional": "405102000",
+   "totalNotionalInUSD": "405.10",
+   "status": "ACTIVE",
+   "startsAt": "2026-10-05T19:30:00.000Z",
+   "expiresAt": "2027-12-31T23:59:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.coindesk.com/",
+    "https://cryptonews.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 100,
+   "likes": 0,
+   "cpEnabled": false,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 91955,
+     "marketId": 45797,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "11733409687666180029982985330419970334482465075242356136671764262555217007764",
+     "title": "Yes",
+     "currentPrice": "500000",
+     "volumeTraded": "9691040",
+     "volumeTradedInUSD": "9.69104",
+     "notionalTraded": "405102000",
+     "index": 0
+    },
+    {
+     "id": 91956,
+     "marketId": 45797,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "51799921446276070857618421214663712633587889490920231132856243951080443049288",
+     "title": "No",
+     "currentPrice": "500000",
+     "volumeTraded": "199410960",
+     "volumeTradedInUSD": "199.41096",
+     "notionalTraded": "205102000",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  },
+  {
+   "id": 34302,
+   "createdAt": "2026-08-30T12:06:01.886Z",
+   "updatedAt": "2026-10-20T03:19:59.126Z",
+   "contractMarketId": "0x362eb610cbd6e1014cdc12872a963f7e1a6ca190e8e164b7db27479281f599a6",
+   "conditionId": "0x362eb610cbd6e1014cdc12872a963f7e1a6ca190e8e164b7db27479281f599a6",
+   "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+   "versionId": 3,
+   "createMarketBlockTimestamp": "2026-08-30T12:05:59.000Z",
+   "creatorId": 47724,
+   "title": "Liverpool to win the 2026/27 Premier League",
+   "slug": "liverpool-to-win-the-202627-premier-league-5111",
+   "rules": {},
+   "categoryPath": [
+    {
+     "id": 2,
+     "name": "SPORTS",
+     "slug": null
+    },
+    {
+     "id": 26,
+     "name": "Football",
+     "slug": "football"
+    },
+    {
+     "id": 27,
+     "name": "Premier League",
+     "slug": "premier-league"
+    }
+   ],
+   "type": 2,
+   "totalVolume": "102186858644",
+   "totalVolumeInUSD": "102186.858644",
+   "totalNotional": "102186860264",
+   "totalNotionalInUSD": "102186.86",
+   "status": "ACTIVE",
+   "startsAt": "2026-08-30T13:58:00.000Z",
+   "expiresAt": "2027-06-14T23:59:00.000Z",
+   "resolvedAt": null,
+   "resolutionSources": [
+    "https://www.premierleague.com/"
+   ],
+   "resolutionType": "MANUAL",
+   "resolutionFlagCount": 0,
+   "priorityScore": 0,
+   "likes": 0,
+   "cpEnabled": true,
+   "cpMultiplier": 1,
+   "creatorBps": 0,
+   "isFeatured": false,
+   "featuredOrder": null,
+   "outcomes": [
+    {
+     "id": 68965,
+     "marketId": 34302,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "38816213766520479368252939215723726698389059579921792510601177105826188299050",
+     "title": "Yes",
+     "currentPrice": "500000",
+     "volumeTraded": "51093429322",
+     "volumeTradedInUSD": "51093.429322",
+     "notionalTraded": "102186860264",
+     "index": 0
+    },
+    {
+     "id": 68966,
+     "marketId": 34302,
+     "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+     "outcomeTokenId": "48671923547132854335223435028564687254519737402026094368750152815587014335336",
+     "title": "No",
+     "currentPrice": "500000",
+     "volumeTraded": "51093429322",
+     "volumeTradedInUSD": "51093.429322",
+     "notionalTraded": "102186860264",
+     "index": 1
+    }
+   ],
+   "notes": null,
+   "reviewStatus": null
+  }
+ ],
+ "meta": {
+  "page": 1,
+  "take": 50,
+  "itemCount": 235,
+  "pageCount": 5,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+ }
+}

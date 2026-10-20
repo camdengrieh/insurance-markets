@@ -1,0 +1,11 @@
+{
+  "name": "policy-paymaster",
+  "address": "0x2353B23D8F329fD3cEC0d21652F14208248A439d",
+  "chain_id": 3223,
+  "size": 7309,
+  "sha256": "fdef8098a6470749cb1667993aeb7d469a8a5a489611fc77bcb870256e3c6ebc",
+  "keccak256": "0x7bc8ad31438a89df3b35f3e072c5d0d0efc704adcf81f33e9102693a3df307c4",
+  "source_url": "https://explorer-mainnet.xo.market/api/v2/smart-contracts/0x2353B23D8F329fD3cEC0d21652F14208248A439d",
+  "source_field": "deployed_bytecode",
+  "captured_at": "2026-10-19"
+}

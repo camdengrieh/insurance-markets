@@ -1,0 +1,112 @@
+{
+ "captured_utc": "2026-10-19T02:19:00Z",
+ "channel": "trades",
+ "n_trades_in_capture": 33,
+ "trades": [
+  {
+   "coin": "#36000",
+   "side": "B",
+   "px": "0.869",
+   "sz": "55.0",
+   "time": 1792375552911,
+   "hash": "0x2543029d5ee368f926bc0446dec01e0202e00082f9e687cbc90badf01de742e3",
+   "tid": 1097488544099454,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "A",
+   "px": "0.86899",
+   "sz": "55.0",
+   "time": 1792375552911,
+   "hash": "0xd3e5e8c7fb327c50d55f0446dec01e0202e0010196359b2277ae941aba36563b",
+   "tid": 769652225480556,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "B",
+   "px": "0.869",
+   "sz": "49.0",
+   "time": 1792375615932,
+   "hash": "0x87841f2a779fb71488fd0446dec35d02072800101292d5e62b4cca7d369390ff",
+   "tid": 635682495603121,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "A",
+   "px": "0.86899",
+   "sz": "23.0",
+   "time": 1792375615932,
+   "hash": "0x3627055513eeca6c37a00446dec35d0207280101aee1e93ed9efb0a7d2e2a456",
+   "tid": 379699778849595,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "A",
+   "px": "0.86899",
+   "sz": "26.0",
+   "time": 1792375615932,
+   "hash": "0x3627055513eeca6c37a00446dec35d0207280101aee1e93ed9efb0a7d2e2a456",
+   "tid": 816838499968661,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "B",
+   "px": "0.869",
+   "sz": "46.0",
+   "time": 1792375678507,
+   "hash": "0x106166924b74e54d11db0446dec6a50202ae0077e678041fb42a11e50a78bf37",
+   "tid": 590860419493132,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "B",
+   "px": "0.869",
+   "sz": "24.0",
+   "time": 1792375678507,
+   "hash": "0x106166924b74e54d11db0446dec6a50202ae0077e678041fb42a11e50a78bf37",
+   "tid": 263083909416706,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  },
+  {
+   "coin": "#36000",
+   "side": "A",
+   "px": "0.86899",
+   "sz": "70.0",
+   "time": 1792375678507,
+   "hash": "0xbf044cbce7c3f8a4c07e0446dec6a50202ae010182c7177662ccf80fa6c7d28f",
+   "tid": 969822041901873,
+   "users": [
+    "<redacted>",
+    "<redacted>"
+   ]
+  }
+ ],
+ "note": "counterparty wallet addresses redacted by the author of this note. Fields: coin, side B/A, px, sz, time(ms), hash, tid, users[2]. The same ms often shows a B print and an A print at prices one tick apart (0.869 vs 0.86899 here); dedupe on (hash,tid) and do not use this feed to sum volume - use activeAssetCtx."
+}

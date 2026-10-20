@@ -1,0 +1,228 @@
+{
+ "n_audited": 78,
+ "seed": 20261019,
+ "strata_population": {
+  "0.0-0.55": 415,
+  "0.55-0.65": 221,
+  "0.65-0.75": 84,
+  "0.75-0.85": 35,
+  "0.85-0.95": 39,
+  "0.95-1.01": 60,
+  "positive_edge(sim>=0.55, not already sampled)": 141
+ },
+ "by_stratum": [
+  {
+   "stratum": "0.0-0.55",
+   "population": 415,
+   "n_audited": 12,
+   "identical": 0,
+   "resolution_differs_minor": 1,
+   "resolution_differs_major": 0,
+   "different": 11,
+   "precision_strict": 0.0,
+   "precision_strict_ci95": [
+    0.0,
+    0.243
+   ],
+   "precision_lenient": 0.083,
+   "precision_lenient_ci95": [
+    0.015,
+    0.354
+   ]
+  },
+  {
+   "stratum": "0.55-0.65",
+   "population": 221,
+   "n_audited": 12,
+   "identical": 0,
+   "resolution_differs_minor": 3,
+   "resolution_differs_major": 0,
+   "different": 9,
+   "precision_strict": 0.0,
+   "precision_strict_ci95": [
+    0.0,
+    0.243
+   ],
+   "precision_lenient": 0.25,
+   "precision_lenient_ci95": [
+    0.089,
+    0.532
+   ]
+  },
+  {
+   "stratum": "0.65-0.75",
+   "population": 84,
+   "n_audited": 12,
+   "identical": 10,
+   "resolution_differs_minor": 1,
+   "resolution_differs_major": 0,
+   "different": 1,
+   "precision_strict": 0.833,
+   "precision_strict_ci95": [
+    0.552,
+    0.953
+   ],
+   "precision_lenient": 0.917,
+   "precision_lenient_ci95": [
+    0.646,
+    0.985
+   ]
+  },
+  {
+   "stratum": "0.75-0.85",
+   "population": 35,
+   "n_audited": 10,
+   "identical": 3,
+   "resolution_differs_minor": 5,
+   "resolution_differs_major": 0,
+   "different": 2,
+   "precision_strict": 0.3,
+   "precision_strict_ci95": [
+    0.108,
+    0.603
+   ],
+   "precision_lenient": 0.8,
+   "precision_lenient_ci95": [
+    0.49,
+    0.943
+   ]
+  },
+  {
+   "stratum": "0.85-0.95",
+   "population": 39,
+   "n_audited": 10,
+   "identical": 6,
+   "resolution_differs_minor": 2,
+   "resolution_differs_major": 0,
+   "different": 2,
+   "precision_strict": 0.6,
+   "precision_strict_ci95": [
+    0.313,
+    0.832
+   ],
+   "precision_lenient": 0.8,
+   "precision_lenient_ci95": [
+    0.49,
+    0.943
+   ]
+  },
+  {
+   "stratum": "0.95-1.01",
+   "population": 60,
+   "n_audited": 10,
+   "identical": 9,
+   "resolution_differs_minor": 1,
+   "resolution_differs_major": 0,
+   "different": 0,
+   "precision_strict": 0.9,
+   "precision_strict_ci95": [
+    0.596,
+    0.982
+   ],
+   "precision_lenient": 1.0,
+   "precision_lenient_ci95": [
+    0.722,
+    1.0
+   ]
+  },
+  {
+   "stratum": "positive_edge",
+   "population": 141,
+   "n_audited": 12,
+   "identical": 1,
+   "resolution_differs_minor": 1,
+   "resolution_differs_major": 0,
+   "different": 10,
+   "precision_strict": 0.083,
+   "precision_strict_ci95": [
+    0.015,
+    0.354
+   ],
+   "precision_lenient": 0.167,
+   "precision_lenient_ci95": [
+    0.047,
+    0.448
+   ]
+  }
+ ],
+ "by_threshold": [
+  {
+   "sim_threshold": 0.0,
+   "population_pairs_at_or_above": 854,
+   "n_audited_at_or_above": 66,
+   "precision_strict_pop_weighted": 0.185,
+   "precision_lenient_pop_weighted": 0.335,
+   "unweighted_lenient_ci95": [
+    0.501,
+    0.729
+   ]
+  },
+  {
+   "sim_threshold": 0.55,
+   "population_pairs_at_or_above": 439,
+   "n_audited_at_or_above": 54,
+   "precision_strict_pop_weighted": 0.36,
+   "precision_lenient_pop_weighted": 0.573,
+   "unweighted_lenient_ci95": [
+    0.611,
+    0.839
+   ]
+  },
+  {
+   "sim_threshold": 0.65,
+   "population_pairs_at_or_above": 218,
+   "n_audited_at_or_above": 42,
+   "precision_strict_pop_weighted": 0.724,
+   "precision_lenient_pop_weighted": 0.9,
+   "unweighted_lenient_ci95": [
+    0.75,
+    0.948
+   ]
+  },
+  {
+   "sim_threshold": 0.75,
+   "population_pairs_at_or_above": 134,
+   "n_audited_at_or_above": 30,
+   "precision_strict_pop_weighted": 0.656,
+   "precision_lenient_pop_weighted": 0.89,
+   "unweighted_lenient_ci95": [
+    0.703,
+    0.947
+   ]
+  },
+  {
+   "sim_threshold": 0.85,
+   "population_pairs_at_or_above": 99,
+   "n_audited_at_or_above": 20,
+   "precision_strict_pop_weighted": 0.782,
+   "precision_lenient_pop_weighted": 0.921,
+   "unweighted_lenient_ci95": [
+    0.699,
+    0.972
+   ]
+  },
+  {
+   "sim_threshold": 0.95,
+   "population_pairs_at_or_above": 60,
+   "n_audited_at_or_above": 10,
+   "precision_strict_pop_weighted": 0.9,
+   "precision_lenient_pop_weighted": 1.0,
+   "unweighted_lenient_ci95": [
+    0.722,
+    1.0
+   ]
+  }
+ ],
+ "audited_pairs_with_positive_net_edge": {
+  "X": 30,
+  "Dm": 2,
+  "I": 3
+ },
+ "label_policy": {
+  "I": "identical: same event and outcome mapping, rule text equivalent or mirrored (cosmetic wording only)",
+  "Dm": "looks identical but resolution differs (minor): same underlying outcome; documented difference in cancel/void/postponement handling, source, cut-off time or edge-case definition that could change THIS leg's payout in an uncommon scenario",
+  "DM": "looks identical but resolution differs (major): none observed in this sample",
+  "X": "different: not the same event/outcome mapping (other entity, scope, deadline or direction)"
+ },
+ "single_rater_caveat": "labels assigned by one reader (this agent) from the rules text displayed in the fixture; no legal or domain second opinion"
+}

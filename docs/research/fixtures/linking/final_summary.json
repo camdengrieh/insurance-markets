@@ -1,0 +1,1333 @@
+{
+ "manifest": {
+  "requests_per_host_total": {
+   "gamma-api.polymarket.com": 296,
+   "clob.polymarket.com": 536,
+   "external-api.kalshi.com": 169,
+   "api-mainnet.xo.market": 121,
+   "orderbooks.xo.market": 487,
+   "api.limitless.exchange": 364
+  },
+  "first_request_utc": {
+   "gamma-api.polymarket.com": "2026-10-18T18:03:43Z",
+   "clob.polymarket.com": "2026-10-18T18:03:43Z",
+   "external-api.kalshi.com": "2026-10-18T18:03:43Z",
+   "api-mainnet.xo.market": "2026-10-18T18:03:43Z",
+   "orderbooks.xo.market": "2026-10-18T18:03:43Z",
+   "api.limitless.exchange": "2026-10-18T18:03:43Z"
+  },
+  "last_request_utc": {
+   "gamma-api.polymarket.com": "2026-10-18T18:08:04Z",
+   "clob.polymarket.com": "2026-10-18T18:43:18Z",
+   "external-api.kalshi.com": "2026-10-18T18:43:24Z",
+   "api-mainnet.xo.market": "2026-10-18T18:28:42Z",
+   "orderbooks.xo.market": "2026-10-18T18:41:21Z",
+   "api.limitless.exchange": "2026-10-18T18:43:31Z"
+  },
+  "listing_start_utc": {
+   "polymarket": "2026-10-18T18:06:30Z",
+   "kalshi": "2026-10-18T18:06:30Z",
+   "xo": "2026-10-18T18:06:30Z",
+   "limitless": "2026-10-18T18:06:30Z"
+  },
+  "universe_sizes": {
+   "polymarket": {
+    "normalised_markets": 13209,
+    "tradable": 10995
+   },
+   "kalshi": {
+    "normalised_markets": 130180,
+    "tradable": 130180
+   },
+   "xo": {
+    "normalised_markets": 411,
+    "tradable": 411
+   },
+   "limitless": {
+    "normalised_markets": 1402,
+    "tradable": 1330
+   }
+  },
+  "book_fetch_windows": {
+   "polymarket": {
+    "n": 392,
+    "ok": 378,
+    "first_utc": "2026-10-18T18:21:21Z",
+    "last_utc": "2026-10-18T18:43:18Z"
+   },
+   "polymarket_recheck": {
+    "n": 46,
+    "ok": 46,
+    "first_utc": "2026-10-18T18:33:46Z",
+    "last_utc": "2026-10-18T18:34:00Z"
+   },
+   "polymarket_calib": {
+    "n": 19,
+    "ok": 17,
+    "first_utc": "2026-10-18T18:36:45Z",
+    "last_utc": "2026-10-18T18:36:51Z"
+   },
+   "kalshi": {
+    "n": 5851,
+    "ok": 5851,
+    "first_utc": "2026-10-18T18:21:22Z",
+    "last_utc": "2026-10-18T18:43:24Z"
+   },
+   "kalshi_recheck": {
+    "n": 411,
+    "ok": 411,
+    "first_utc": "2026-10-18T18:34:07Z",
+    "last_utc": "2026-10-18T18:34:12Z"
+   },
+   "kalshi_calib": {
+    "n": 3277,
+    "ok": 3277,
+    "first_utc": "2026-10-18T18:36:01Z",
+    "last_utc": "2026-10-18T18:36:38Z"
+   },
+   "xo": {
+    "n": 411,
+    "ok": 411,
+    "first_utc": "2026-10-18T18:21:21Z",
+    "last_utc": "2026-10-18T18:23:27Z"
+   },
+   "xo_recheck": {
+    "n": 9,
+    "ok": 9,
+    "first_utc": "2026-10-18T18:34:18Z",
+    "last_utc": "2026-10-18T18:34:20Z"
+   },
+   "limitless": {
+    "n": 302,
+    "ok": 297,
+    "first_utc": "2026-10-18T18:21:21Z",
+    "last_utc": "2026-10-18T18:43:31Z"
+   },
+   "limitless_recheck": {
+    "n": 40,
+    "ok": 40,
+    "first_utc": "2026-10-18T18:34:26Z",
+    "last_utc": "2026-10-18T18:34:47Z"
+   }
+  }
+ },
+ "listing_level": {
+  "ladder_families": {
+   "polymarket:threshold": 553,
+   "polymarket:date": 53,
+   "kalshi:threshold": 7542,
+   "kalshi:date": 383,
+   "xo:threshold": 3,
+   "limitless:threshold": 33,
+   "limitless:date": 16
+  },
+  "ladder_pairs_with_both_quotes": {
+   "polymarket:threshold": 11007,
+   "polymarket:date": 238,
+   "kalshi:threshold": 263835,
+   "kalshi:date": 2997
+  },
+  "ladder_pairs_violating_in_listing": {
+   "polymarket:threshold": 3,
+   "kalshi:date": 2,
+   "kalshi:threshold": 7
+  },
+  "listing_two_sided_and_crossed": {
+   "kalshi": {
+    "two_sided": 81874,
+    "crossed": 0
+   },
+   "polymarket": {
+    "two_sided": 7645,
+    "crossed": 0
+   }
+  },
+  "me_sets": {
+   "polymarket": {
+    "sets_with_ge2_legs": 494,
+    "listing_sum_bid_gt_1": 13,
+    "listing_sum_bid_ge_0.985": 201,
+    "listing_sum_ask_lt_1_all_quoted": 159
+   },
+   "kalshi": {
+    "sets_with_ge2_legs": 4936,
+    "listing_sum_bid_gt_1": 48,
+    "listing_sum_bid_ge_0.985": 549,
+    "listing_sum_ask_lt_1_all_quoted": 158
+   }
+  }
+ },
+ "screen_calibration": {
+  "population": {
+   "ka_sets_unscreened": 4025,
+   "pm_sets_unscreened": 380,
+   "ka_ladder_pairs_unscreened": 264561
+  },
+  "kalshi_sets_sampled": 420,
+  "pm_sets_sampled": 8,
+  "me_sell_evaluated": 379,
+  "me_sell_gross_positive": 2,
+  "me_sell_net_positive": 0,
+  "me_buy_evaluated": 415,
+  "me_buy_gross_positive": 15,
+  "me_buy_net_positive_all_flagged_unverified_or_nonexhaustive": 12,
+  "ladder_unscreened_pairs": {
+   "checked": 298,
+   "violating_on_book": 0,
+   "net_positive": 0
+  }
+ },
+ "audit": {
+  "n_audited": 78,
+  "seed": 20261019,
+  "strata_population": {
+   "0.0-0.55": 415,
+   "0.55-0.65": 221,
+   "0.65-0.75": 84,
+   "0.75-0.85": 35,
+   "0.85-0.95": 39,
+   "0.95-1.01": 60,
+   "positive_edge(sim>=0.55, not already sampled)": 141
+  },
+  "by_stratum": [
+   {
+    "stratum": "0.0-0.55",
+    "population": 415,
+    "n_audited": 12,
+    "identical": 0,
+    "resolution_differs_minor": 1,
+    "resolution_differs_major": 0,
+    "different": 11,
+    "precision_strict": 0.0,
+    "precision_strict_ci95": [
+     0.0,
+     0.243
+    ],
+    "precision_lenient": 0.083,
+    "precision_lenient_ci95": [
+     0.015,
+     0.354
+    ]
+   },
+   {
+    "stratum": "0.55-0.65",
+    "population": 221,
+    "n_audited": 12,
+    "identical": 0,
+    "resolution_differs_minor": 3,
+    "resolution_differs_major": 0,
+    "different": 9,
+    "precision_strict": 0.0,
+    "precision_strict_ci95": [
+     0.0,
+     0.243
+    ],
+    "precision_lenient": 0.25,
+    "precision_lenient_ci95": [
+     0.089,
+     0.532
+    ]
+   },
+   {
+    "stratum": "0.65-0.75",
+    "population": 84,
+    "n_audited": 12,
+    "identical": 10,
+    "resolution_differs_minor": 1,
+    "resolution_differs_major": 0,
+    "different": 1,
+    "precision_strict": 0.833,
+    "precision_strict_ci95": [
+     0.552,
+     0.953
+    ],
+    "precision_lenient": 0.917,
+    "precision_lenient_ci95": [
+     0.646,
+     0.985
+    ]
+   },
+   {
+    "stratum": "0.75-0.85",
+    "population": 35,
+    "n_audited": 10,
+    "identical": 3,
+    "resolution_differs_minor": 5,
+    "resolution_differs_major": 0,
+    "different": 2,
+    "precision_strict": 0.3,
+    "precision_strict_ci95": [
+     0.108,
+     0.603
+    ],
+    "precision_lenient": 0.8,
+    "precision_lenient_ci95": [
+     0.49,
+     0.943
+    ]
+   },
+   {
+    "stratum": "0.85-0.95",
+    "population": 39,
+    "n_audited": 10,
+    "identical": 6,
+    "resolution_differs_minor": 2,
+    "resolution_differs_major": 0,
+    "different": 2,
+    "precision_strict": 0.6,
+    "precision_strict_ci95": [
+     0.313,
+     0.832
+    ],
+    "precision_lenient": 0.8,
+    "precision_lenient_ci95": [
+     0.49,
+     0.943
+    ]
+   },
+   {
+    "stratum": "0.95-1.01",
+    "population": 60,
+    "n_audited": 10,
+    "identical": 9,
+    "resolution_differs_minor": 1,
+    "resolution_differs_major": 0,
+    "different": 0,
+    "precision_strict": 0.9,
+    "precision_strict_ci95": [
+     0.596,
+     0.982
+    ],
+    "precision_lenient": 1.0,
+    "precision_lenient_ci95": [
+     0.722,
+     1.0
+    ]
+   },
+   {
+    "stratum": "positive_edge",
+    "population": 141,
+    "n_audited": 12,
+    "identical": 1,
+    "resolution_differs_minor": 1,
+    "resolution_differs_major": 0,
+    "different": 10,
+    "precision_strict": 0.083,
+    "precision_strict_ci95": [
+     0.015,
+     0.354
+    ],
+    "precision_lenient": 0.167,
+    "precision_lenient_ci95": [
+     0.047,
+     0.448
+    ]
+   }
+  ],
+  "by_threshold": [
+   {
+    "sim_threshold": 0.0,
+    "population_pairs_at_or_above": 854,
+    "n_audited_at_or_above": 66,
+    "precision_strict_pop_weighted": 0.185,
+    "precision_lenient_pop_weighted": 0.335,
+    "unweighted_lenient_ci95": [
+     0.501,
+     0.729
+    ]
+   },
+   {
+    "sim_threshold": 0.55,
+    "population_pairs_at_or_above": 439,
+    "n_audited_at_or_above": 54,
+    "precision_strict_pop_weighted": 0.36,
+    "precision_lenient_pop_weighted": 0.573,
+    "unweighted_lenient_ci95": [
+     0.611,
+     0.839
+    ]
+   },
+   {
+    "sim_threshold": 0.65,
+    "population_pairs_at_or_above": 218,
+    "n_audited_at_or_above": 42,
+    "precision_strict_pop_weighted": 0.724,
+    "precision_lenient_pop_weighted": 0.9,
+    "unweighted_lenient_ci95": [
+     0.75,
+     0.948
+    ]
+   },
+   {
+    "sim_threshold": 0.75,
+    "population_pairs_at_or_above": 134,
+    "n_audited_at_or_above": 30,
+    "precision_strict_pop_weighted": 0.656,
+    "precision_lenient_pop_weighted": 0.89,
+    "unweighted_lenient_ci95": [
+     0.703,
+     0.947
+    ]
+   },
+   {
+    "sim_threshold": 0.85,
+    "population_pairs_at_or_above": 99,
+    "n_audited_at_or_above": 20,
+    "precision_strict_pop_weighted": 0.782,
+    "precision_lenient_pop_weighted": 0.921,
+    "unweighted_lenient_ci95": [
+     0.699,
+     0.972
+    ]
+   },
+   {
+    "sim_threshold": 0.95,
+    "population_pairs_at_or_above": 60,
+    "n_audited_at_or_above": 10,
+    "precision_strict_pop_weighted": 0.9,
+    "precision_lenient_pop_weighted": 1.0,
+    "unweighted_lenient_ci95": [
+     0.722,
+     1.0
+    ]
+   }
+  ],
+  "audited_pairs_with_positive_net_edge": {
+   "X": 30,
+   "Dm": 2,
+   "I": 3
+  },
+  "label_policy": {
+   "I": "identical: same event and outcome mapping, rule text equivalent or mirrored (cosmetic wording only)",
+   "Dm": "looks identical but resolution differs (minor): same underlying outcome; documented difference in cancel/void/postponement handling, source, cut-off time or edge-case definition that could change THIS leg's payout in an uncommon scenario",
+   "DM": "looks identical but resolution differs (major): none observed in this sample",
+   "X": "different: not the same event/outcome mapping (other entity, scope, deadline or direction)"
+  },
+  "single_rater_caveat": "labels assigned by one reader (this agent) from the rules text displayed in the fixture; no legal or domain second opinion"
+ },
+ "cross_venue": {
+  "link_pairs_evaluated": 868,
+  "directional_rows": 1644,
+  "pairs_net_positive": 485,
+  "pairs_gross_positive": 508,
+  "by_similarity_bin": {
+   "0.0-0.55": {
+    "pairs_evaluated": 413,
+    "gross_positive": 339,
+    "net_positive": 332,
+    "net_bps_median": 636.8731475737525,
+    "net_bps_p90": 6099.016393442623,
+    "capital_usd_median": 429.4684,
+    "capital_usd_p90": 980.0
+   },
+   "0.55-0.65": {
+    "pairs_evaluated": 218,
+    "gross_positive": 132,
+    "net_positive": 123,
+    "net_bps_median": 2059.4123456790126,
+    "net_bps_p90": 14062.439024390244,
+    "capital_usd_median": 440.0,
+    "capital_usd_p90": 937.6773
+   },
+   "0.65-0.75": {
+    "pairs_evaluated": 83,
+    "gross_positive": 17,
+    "net_positive": 17,
+    "net_bps_median": 40.47625695191948,
+    "net_bps_p90": 1257.7083267024657,
+    "capital_usd_median": 71.6187,
+    "capital_usd_p90": 20901.8372
+   },
+   "0.75-0.85": {
+    "pairs_evaluated": 35,
+    "gross_positive": 10,
+    "net_positive": 7,
+    "net_bps_median": 2715.887965024822,
+    "net_bps_p90": 10920.27865759436,
+    "capital_usd_median": 489.49,
+    "capital_usd_p90": 974.0
+   },
+   "0.85-0.95": {
+    "pairs_evaluated": 39,
+    "gross_positive": 5,
+    "net_positive": 3,
+    "net_bps_median": 245.86339820359282,
+    "net_bps_p90": 845.2513966480446,
+    "capital_usd_median": 179.0,
+    "capital_usd_p90": 480.96
+   },
+   "0.95-1.01": {
+    "pairs_evaluated": 60,
+    "gross_positive": 5,
+    "net_positive": 3,
+    "net_bps_median": 58.953703202608445,
+    "net_bps_p90": 164.1237113402062,
+    "capital_usd_median": 990.6078,
+    "capital_usd_p90": 991.0
+   },
+   "hint": {
+    "pairs_evaluated": 20,
+    "gross_positive": 0,
+    "net_positive": 0,
+    "net_bps_median": null,
+    "net_bps_p90": null,
+    "capital_usd_median": null,
+    "capital_usd_p90": null
+   }
+  },
+  "net_bps_positive_median": 826.2978142076503,
+  "net_bps_positive_p90": 9897.04881369117,
+  "capital_usd_positive_median": 450.0,
+  "capital_usd_positive_p90": 979.0,
+  "touch_capital_usd_positive_median": 95.5,
+  "by_venue_pair": {
+   "polymarket/kalshi": {
+    "pairs": 41,
+    "gross_pos": 18,
+    "net_pos": 15,
+    "pairs_sim_ge_065": 20,
+    "net_pos_sim_ge_065": 7
+   },
+   "polymarket/xo": {
+    "pairs": 18,
+    "gross_pos": 9,
+    "net_pos": 9,
+    "pairs_sim_ge_065": 9,
+    "net_pos_sim_ge_065": 5
+   },
+   "polymarket/limitless": {
+    "pairs": 62,
+    "gross_pos": 1,
+    "net_pos": 1,
+    "pairs_sim_ge_065": 58,
+    "net_pos_sim_ge_065": 0
+   },
+   "kalshi/xo": {
+    "pairs": 61,
+    "gross_pos": 11,
+    "net_pos": 8,
+    "pairs_sim_ge_065": 37,
+    "net_pos_sim_ge_065": 3
+   },
+   "kalshi/limitless": {
+    "pairs": 683,
+    "gross_pos": 468,
+    "net_pos": 451,
+    "pairs_sim_ge_065": 113,
+    "net_pos_sim_ge_065": 15
+   },
+   "xo/limitless": {
+    "pairs": 3,
+    "gross_pos": 1,
+    "net_pos": 1,
+    "pairs_sim_ge_065": 0,
+    "net_pos_sim_ge_065": 0
+   }
+  },
+  "net_bps_histogram_positive_pairs": {
+   "25-50": 24,
+   "1000-5000": 143,
+   "100-250": 50,
+   "50-100": 24,
+   "0-25": 11,
+   "5000-inf": 72,
+   "500-1000": 73,
+   "250-500": 88
+  },
+  "funnel": [
+   [
+    "net-positive link pairs (any similarity >= 0.45)",
+    485
+   ],
+   [
+    "... similarity >= 0.65",
+    30
+   ],
+   [
+    "... no crossed/past-end/resolution-proposed flag",
+    30
+   ],
+   [
+    "... no leg priced <=2c or >=98c",
+    15
+   ],
+   [
+    "... still net-positive on re-fetched books (~10-13 min later)",
+    14
+   ],
+   [
+    "... executable capital >= $10",
+    12
+   ],
+   [
+    "... net APR on locked capital >= 5%",
+    7
+   ],
+   [
+    "... still positive after a 300 bps resolution-risk haircut",
+    6
+   ]
+  ],
+  "haircut_survivors": {
+   "all net-positive pairs": {
+    "0": 485,
+    "100": 426,
+    "300": 362,
+    "500": 288,
+    "1000": 215,
+    "n": 485
+   },
+   "sim>=0.65": {
+    "0": 30,
+    "100": 13,
+    "300": 9,
+    "500": 9,
+    "1000": 8,
+    "n": 30
+   },
+   "sim>=0.85": {
+    "0": 6,
+    "100": 3,
+    "300": 1,
+    "500": 1,
+    "1000": 0,
+    "n": 6
+   },
+   "sim>=0.65, unflagged, persists, no extreme leg": {
+    "0": 14,
+    "100": 9,
+    "300": 6,
+    "500": 6,
+    "1000": 5,
+    "n": 14
+   }
+  },
+  "survivor_rows": [
+   {
+    "a": "2027 French Presidential Election: who will be on the ballot? — Édouard Philippe",
+    "b": "Édouard Philippe to Win the 2027 French Presidential Election",
+    "va": "kalshi",
+    "vb": "xo",
+    "sim": 0.7799,
+    "net_bps": 2715.9,
+    "capital_usd": 489.49,
+    "days_locked": 256.2,
+    "apr_net": 0.387,
+    "label": "X",
+    "persist": true
+   },
+   {
+    "a": "Which bank will lead OpenAI's IPO? — Goldman Sachs",
+    "b": "Lead Bank in Anthropic's IPO? Goldman Sachs",
+    "va": "kalshi",
+    "vb": "limitless",
+    "sim": 0.8142,
+    "net_bps": 11313.0,
+    "capital_usd": 46.0,
+    "days_locked": 439.9,
+    "apr_net": 0.939,
+    "label": "X",
+    "persist": true
+   },
+   {
+    "a": "Which bank will lead OpenAI's IPO? — Morgan Stanley",
+    "b": "Lead Bank in Anthropic's IPO? Morgan Stanley",
+    "va": "kalshi",
+    "vb": "limitless",
+    "sim": 0.7932,
+    "net_bps": 10920.3,
+    "capital_usd": 46.8532,
+    "days_locked": 439.9,
+    "apr_net": 0.906,
+    "label": "X",
+    "persist": true
+   },
+   {
+    "a": "La Liga Golden Boot — Raphinha",
+    "b": "Champions League Golden Boot Raphinha",
+    "va": "kalshi",
+    "vb": "limitless",
+    "sim": 0.6989,
+    "net_bps": 3692.5,
+    "capital_usd": 71.6187,
+    "days_locked": 237.8,
+    "apr_net": 0.567,
+    "label": "X",
+    "persist": true
+   },
+   {
+    "a": "EPL Golden Boot — Erling Haaland",
+    "b": "Champions League Golden Boot Erling Haaland",
+    "va": "kalshi",
+    "vb": "limitless",
+    "sim": 0.6999,
+    "net_bps": 10693.6,
+    "capital_usd": 47.36,
+    "days_locked": 237.8,
+    "apr_net": 1.641,
+    "label": "X",
+    "persist": true
+   },
+   {
+    "a": "Will James Comey’s criminal case be dismissed? — Before Jul 1, 2027",
+    "b": "Will James Comey’s criminal case be dismissed? Before Jan 1, 2027",
+    "va": "kalshi",
+    "vb": "limitless",
+    "sim": 0.9084,
+    "net_bps": 845.3,
+    "capital_usd": 179.0,
+    "days_locked": 75.5,
+    "apr_net": 0.409,
+    "label": "X",
+    "persist": true
+   }
+  ],
+  "audited_positive_edge_labels": {
+   "X": 30,
+   "Dm": 2,
+   "I": 3
+  }
+ },
+ "positive_edge_census": {
+  "pairs_sim_ge_0.65_net_positive": 30,
+  "labels": {
+   "I": 13,
+   "Dm": 4,
+   "X": 13
+  },
+  "true_link_net_bps_median": 45.7,
+  "true_link_net_bps_p90": 164.1,
+  "true_link_capital_usd_median": 990.6078,
+  "true_link_capital_usd_p90": 20901.8372,
+  "true_link_capital_usd_total": 181985.15,
+  "true_link_net_usd_total": 981.89,
+  "true_link_net_usd_total_excl_tail_legs": 82.05,
+  "precision_strict": 0.433,
+  "precision_lenient": 0.567,
+  "true_link_rows": [
+   {
+    "venues": "kalshi/limitless",
+    "label": "Dm",
+    "sim": 0.86,
+    "a": "Nigerian Senate election winner? — APC",
+    "b": "Nigerian Senate Election Winner APC",
+    "net_bps": 245.9,
+    "gross_bps": 416.7,
+    "capital_usd": 480.96,
+    "size_contracts": 501.0,
+    "days_locked": 132.9,
+    "apr_net_pct": 6.75,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.14,
+      "key": "ka:KXNIGERIASENATE-27-APC",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.82,
+      "key": "lm:apc-1791909777594",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "Dm",
+    "sim": 0.761,
+    "a": "Who will officially lead Venezuela at the end ",
+    "b": "Venezuela leader end of 2026? María Corina Mac",
+    "net_bps": 234.0,
+    "gross_bps": 266.9,
+    "capital_usd": 974.0,
+    "size_contracts": 1000.0,
+    "days_locked": 74.0,
+    "apr_net_pct": 11.54,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.959,
+      "key": "ka:KXVENEZUELALEADER-26DEC31-MCM",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.015,
+      "key": "lm:maria-corina-machado-1787676477924",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "I",
+    "sim": 0.969,
+    "a": "2028 Republican presidential nominee — Marco R",
+    "b": "Republican Presidential Nominee 2028 Marco Rub",
+    "net_bps": 164.1,
+    "gross_bps": 309.3,
+    "capital_usd": 970.0,
+    "size_contracts": 1000.0,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.8,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.83,
+      "key": "ka:KXPRESNOMR-28-MR",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.14,
+      "key": "lm:marco-rubio-1768931335058",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.739,
+    "a": "Will Michelle Obama win the 2028 Democratic pr",
+    "b": "2028 Democratic presidential nominee — Michell",
+    "net_bps": 92.8,
+    "gross_bps": 104.5,
+    "capital_usd": 81923.7109,
+    "size_contracts": 82779.5,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.45,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.003,
+      "key": "pm:0x3e218c99a1335641b3a5ee6c887521d19b0c28fddd6b99c254a07968e35c0b1b",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.984,
+      "key": "ka:KXPRESNOMD-28-MO",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "Dm",
+    "sim": 0.722,
+    "a": "Who will officially lead Venezuela at the end ",
+    "b": "Venezuela leader end of 2026? Nicolás Maduro",
+    "net_bps": 73.5,
+    "gross_bps": 309.3,
+    "capital_usd": 34.6678,
+    "size_contracts": 35.74,
+    "days_locked": 74.0,
+    "apr_net_pct": 3.63,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.24,
+      "key": "ka:KXVENEZUELALEADER-26DEC31-NMAD",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.73,
+      "key": "lm:nicolas-maduro-1787676477905",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "I",
+    "sim": 0.97,
+    "a": "2028 Republican presidential nominee — Ron DeS",
+    "b": "Republican Presidential Nominee 2028 Ron DeSan",
+    "net_bps": 59.0,
+    "gross_bps": 94.8,
+    "capital_usd": 990.6078,
+    "size_contracts": 1000.0,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.29,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.958,
+      "key": "ka:KXPRESNOMR-28-RDS",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.03,
+      "key": "lm:ron-desantis-1768931335065",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "I",
+    "sim": 0.732,
+    "a": "Europa League Champion — Juventus",
+    "b": "UEFA Europa League: 2027 Champion Juventus",
+    "net_bps": 55.2,
+    "gross_bps": 204.1,
+    "capital_usd": 8.4574,
+    "size_contracts": 8.63,
+    "days_locked": 224.2,
+    "apr_net_pct": 0.9,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.83,
+      "key": "ka:KXUEL-27-JUV",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.15,
+      "key": "lm:juventus-1786711372226",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.847,
+    "a": "Will Lamine Yamal win the 2026 Ballon d'Or?",
+    "b": "Who will win the Ballon d'Or in 2026? — Lamine",
+    "net_bps": 46.6,
+    "gross_bps": 254.4,
+    "capital_usd": 3968.2942,
+    "size_contracts": 4069.23,
+    "days_locked": 74.9,
+    "apr_net_pct": 2.27,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.265,
+      "key": "pm:0xa34edb6c898232378a9cc08744842df2cd89d278ba45b012bed3ac10c7241c4d",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.71,
+      "key": "ka:KXBALLONDOR-26-LYAM",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "I",
+    "sim": 0.97,
+    "a": "2028 Democratic presidential nominee — Andy Be",
+    "b": "Democratic Presidential Nominee 2028 Andy Besh",
+    "net_bps": 45.7,
+    "gross_bps": 90.8,
+    "capital_usd": 991.0,
+    "size_contracts": 1000.0,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.22,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.951,
+      "key": "ka:KXPRESNOMD-28-AB",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.04,
+      "key": "lm:andy-beshear-1768927395504",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "kalshi/limitless",
+    "label": "I",
+    "sim": 0.942,
+    "a": "Serie A Champion — Roma",
+    "b": "Serie A: 2027 Champion Roma",
+    "net_bps": 41.9,
+    "gross_bps": 204.1,
+    "capital_usd": 76.6164,
+    "size_contracts": 78.18,
+    "days_locked": 224.3,
+    "apr_net_pct": 0.68,
+    "flags": "",
+    "persist_recheck": false,
+    "legs": [
+     {
+      "label": "kalshi no",
+      "touch": 0.81,
+      "key": "ka:KXSERIEA-27-ROM",
+      "side": "no"
+     },
+     {
+      "label": "limitless yes",
+      "touch": 0.17,
+      "key": "lm:roma-1784641677643",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "Dm",
+    "sim": 0.696,
+    "a": "Will Édouard Philippe win the 2027 French pres",
+    "b": "Next French presidential election winner? — Éd",
+    "net_bps": 40.5,
+    "gross_bps": 204.1,
+    "capital_usd": 7571.6858,
+    "size_contracts": 7726.21,
+    "days_locked": 224.8,
+    "apr_net_pct": 0.66,
+    "flags": "",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket no",
+      "touch": 0.81,
+      "key": "pm:0x46f2f457e14ee9021ebd0ef4c27eacd98fdceaf7f2938b484e2551e9e3275ae8",
+      "side": "no"
+     },
+     {
+      "label": "kalshi yes",
+      "touch": 0.17,
+      "key": "ka:KXFRENCHPRES-27-EPHI",
+      "side": "yes"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/xo",
+    "label": "I",
+    "sim": 0.665,
+    "a": "Will the Fed decrease interest rates by 50+ bp",
+    "b": "Fed cuts rates by 50+ bps after October 2026 m",
+    "net_bps": 39.1,
+    "gross_bps": 40.2,
+    "capital_usd": 0.7885,
+    "size_contracts": 0.7916,
+    "days_locked": 10.4,
+    "apr_net_pct": 13.72,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.002,
+      "key": "pm:0xa69ef420d8b4075ad8ba8611d02c63cb2ece46f5c8c643af223c272689b0c96f",
+      "side": "yes"
+     },
+     {
+      "label": "xo no",
+      "touch": 0.994,
+      "key": "xo:0x8e408c87e05defcc051edc9c6d09e58d5eadf05ca809bc1b165aae9c14f00a49",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/xo",
+    "label": "I",
+    "sim": 0.679,
+    "a": "Will the Fed increase interest rates by 50+ bp",
+    "b": "Fed hikes rates by 50+ bps after October 2026 ",
+    "net_bps": 38.2,
+    "gross_bps": 40.2,
+    "capital_usd": 0.3053,
+    "size_contracts": 0.3065,
+    "days_locked": 10.4,
+    "apr_net_pct": 13.39,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.004,
+      "key": "pm:0xde5d75ab7702875623ba509bc923241e1211da74a113521b3b70ddac930d7316",
+      "side": "yes"
+     },
+     {
+      "label": "xo no",
+      "touch": 0.992,
+      "key": "xo:0x8ede8735685c085417ab745098750ed9885d59fa0d601bbb0cdb94f3e88de364",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.746,
+    "a": "Will Mark Cuban win the 2028 Democratic presid",
+    "b": "2028 Democratic presidential nominee — Mark Cu",
+    "net_bps": 15.8,
+    "gross_bps": 20.8,
+    "capital_usd": 56356.2151,
+    "size_contracts": 56473.48,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.08,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.003,
+      "key": "pm:0x9d4f94f82de9d13ff1d3318639ab9000ee2533949e525343156f374fb00bd9b1",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.993,
+      "key": "ka:KXPRESNOMD-28-MC",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.731,
+    "a": "Will Roy Cooper win the 2028 Democratic presid",
+    "b": "2028 Democratic presidential nominee — Roy Coo",
+    "net_bps": 11.8,
+    "gross_bps": 17.3,
+    "capital_usd": 5454.61,
+    "size_contracts": 5464.03,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.06,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.003,
+      "key": "pm:0x939eeb2dea216749bd409bedde483c3f2bfb0e24d4f2d34461c0b21c6e91f010",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.993,
+      "key": "ka:KXPRESNOMD-28-RC",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.704,
+    "a": "Will Stephen A. Smith win the 2028 Democratic ",
+    "b": "2028 Democratic presidential nominee — Stephen",
+    "net_bps": 7.1,
+    "gross_bps": 10.0,
+    "capital_usd": 20901.8372,
+    "size_contracts": 20922.76,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.03,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.002,
+      "key": "pm:0xc8f1cf5d4f26e0fd9c8fe89f2a7b3263b902cf14fde7bfccef525753bb492e47",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.997,
+      "key": "ka:KXPRESNOMD-28-SAS",
+      "side": "no"
+     }
+    ]
+   },
+   {
+    "venues": "polymarket/kalshi",
+    "label": "I",
+    "sim": 0.702,
+    "a": "Will Chris Murphy win the 2028 Democratic pres",
+    "b": "2028 Democratic presidential nominee — Chris M",
+    "net_bps": 4.9,
+    "gross_bps": 10.0,
+    "capital_usd": 1281.3973,
+    "size_contracts": 1282.68,
+    "days_locked": 751.5,
+    "apr_net_pct": 0.02,
+    "flags": "extreme_price_leg",
+    "persist_recheck": true,
+    "legs": [
+     {
+      "label": "polymarket yes",
+      "touch": 0.004,
+      "key": "pm:0xc720fcfa9e29346a976902f87e0f0f3bdc31d43af501b4fdef4f1780a30dd359",
+      "side": "yes"
+     },
+     {
+      "label": "kalshi no",
+      "touch": 0.995,
+      "key": "ka:KXPRESNOMD-28-CMUR",
+      "side": "no"
+     }
+    ]
+   }
+  ],
+  "true_link_funnel": [
+   [
+    "true links (I or Dm) with net>0 and sim>=0.65",
+    17
+   ],
+   [
+    "... strictly identical (I)",
+    13
+   ],
+   [
+    "... no leg priced <=2c or >=98c",
+    5
+   ],
+   [
+    "... persists on re-fetch (or not rechecked)",
+    4
+   ],
+   [
+    "... capital >= $10",
+    3
+   ],
+   [
+    "... net APR >= 5%",
+    0
+   ],
+   [
+    "... positive after 300 bps resolution haircut",
+    0
+   ]
+  ]
+ },
+ "me_by_venue": {
+  "polymarket": {
+   "sets_with_all_books": 24,
+   "sell_evaluated": 24,
+   "sell_gross_positive": 5,
+   "sell_net_positive": 0,
+   "buy_evaluated": 24,
+   "buy_gross_positive": 2,
+   "buy_net_positive": 0,
+   "buy_exhaustive_verified_evaluated": 8,
+   "buy_exhaustive_verified_gross_positive": 2,
+   "buy_exhaustive_verified_net_positive": 0,
+   "sell_gross_usd_sum": 10.21,
+   "sell_fees_usd_on_those": 29.85
+  },
+  "kalshi": {
+   "sets_with_all_books": 702,
+   "sell_evaluated": 682,
+   "sell_gross_positive": 45,
+   "sell_net_positive": 0,
+   "buy_evaluated": 701,
+   "buy_gross_positive": 22,
+   "buy_net_positive": 10,
+   "buy_exhaustive_verified_evaluated": 0,
+   "buy_exhaustive_verified_gross_positive": 0,
+   "buy_exhaustive_verified_net_positive": 0,
+   "sell_gross_usd_sum": 288.98,
+   "sell_fees_usd_on_those": 1413.5
+  }
+ },
+ "persistence": {
+  "net_positive_rows": 485,
+  "rechecked": 188,
+  "still_positive": 187,
+  "median_abs_net_bps_change": 0.0
+ },
+ "flag_share": {
+  "cross": {
+   "gross_positive": 510,
+   "with_any_flag": 264,
+   "with_stale_crossed_or_ended_flag": 0,
+   "flag_counts": {
+    "extreme_price_leg": 264
+   }
+  },
+  "me": {
+   "gross_positive": 74,
+   "with_any_flag": 51,
+   "with_stale_crossed_or_ended_flag": 2,
+   "flag_counts": {
+    "extreme_price_leg": 38,
+    "exhaustiveness_unverified": 22,
+    "past_end_date": 2
+   }
+  },
+  "ladders": {
+   "gross_positive": 10,
+   "with_any_flag": 3,
+   "with_stale_crossed_or_ended_flag": 0,
+   "flag_counts": {
+    "extreme_price_leg": 3
+   }
+  }
+ },
+ "me_recheck": {
+  "gross_positive": 74,
+  "rechecked": 55,
+  "still_gross_positive": 55,
+  "net_positive_original": 10,
+  "net_positive_recheck": 10
+ },
+ "ladder_recheck": {
+  "gross_positive": 10,
+  "rechecked": 10,
+  "still_gross_positive": 10,
+  "net_positive_original": 3,
+  "net_positive_recheck": 3
+ },
+ "attribution_of_gross_positive": {
+  "cross_pairs": {
+   "net_apr_below_5pct_on_locked_capital": 5,
+   "taker_fees_exceed_gross_edge": 7,
+   "link_unverified_low_similarity (audit: 0-25% genuine)": 426,
+   "tail_price_leg (<=2c or >=98c)": 9,
+   "false_link_confirmed_by_reading_rules": 58,
+   "edge_vanished_on_refetch": 1,
+   "capital_below_10_usd": 1,
+   "remaining_candidate": 1
+  },
+  "me_rows": {
+   "taker_fees_exceed_gross_edge": 52,
+   "set_not_proven_exhaustive": 20,
+   "market_already_ended_or_resolution_proposed": 2
+  },
+  "ladder_rows": {
+   "tail_price_leg (<=2c or >=98c)": 2,
+   "remaining_candidate": 1,
+   "taker_fees_exceed_gross_edge": 7
+  }
+ }
+}

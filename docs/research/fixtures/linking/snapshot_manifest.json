@@ -1,0 +1,112 @@
+{
+ "requests_per_host_total": {
+  "gamma-api.polymarket.com": 296,
+  "clob.polymarket.com": 536,
+  "external-api.kalshi.com": 169,
+  "api-mainnet.xo.market": 121,
+  "orderbooks.xo.market": 487,
+  "api.limitless.exchange": 364
+ },
+ "first_request_utc": {
+  "gamma-api.polymarket.com": "2026-10-18T18:03:43Z",
+  "clob.polymarket.com": "2026-10-18T18:03:43Z",
+  "external-api.kalshi.com": "2026-10-18T18:03:43Z",
+  "api-mainnet.xo.market": "2026-10-18T18:03:43Z",
+  "orderbooks.xo.market": "2026-10-18T18:03:43Z",
+  "api.limitless.exchange": "2026-10-18T18:03:43Z"
+ },
+ "last_request_utc": {
+  "gamma-api.polymarket.com": "2026-10-18T18:08:04Z",
+  "clob.polymarket.com": "2026-10-18T18:43:18Z",
+  "external-api.kalshi.com": "2026-10-18T18:43:24Z",
+  "api-mainnet.xo.market": "2026-10-18T18:28:42Z",
+  "orderbooks.xo.market": "2026-10-18T18:41:21Z",
+  "api.limitless.exchange": "2026-10-18T18:43:31Z"
+ },
+ "listing_start_utc": {
+  "polymarket": "2026-10-18T18:06:30Z",
+  "kalshi": "2026-10-18T18:06:30Z",
+  "xo": "2026-10-18T18:06:30Z",
+  "limitless": "2026-10-18T18:06:30Z"
+ },
+ "universe_sizes": {
+  "polymarket": {
+   "normalised_markets": 13209,
+   "tradable": 10995
+  },
+  "kalshi": {
+   "normalised_markets": 130180,
+   "tradable": 130180
+  },
+  "xo": {
+   "normalised_markets": 411,
+   "tradable": 411
+  },
+  "limitless": {
+   "normalised_markets": 1402,
+   "tradable": 1330
+  }
+ },
+ "book_fetch_windows": {
+  "polymarket": {
+   "n": 392,
+   "ok": 378,
+   "first_utc": "2026-10-18T18:21:21Z",
+   "last_utc": "2026-10-18T18:43:18Z"
+  },
+  "polymarket_recheck": {
+   "n": 46,
+   "ok": 46,
+   "first_utc": "2026-10-18T18:33:46Z",
+   "last_utc": "2026-10-18T18:34:00Z"
+  },
+  "polymarket_calib": {
+   "n": 19,
+   "ok": 17,
+   "first_utc": "2026-10-18T18:36:45Z",
+   "last_utc": "2026-10-18T18:36:51Z"
+  },
+  "kalshi": {
+   "n": 5851,
+   "ok": 5851,
+   "first_utc": "2026-10-18T18:21:22Z",
+   "last_utc": "2026-10-18T18:43:24Z"
+  },
+  "kalshi_recheck": {
+   "n": 411,
+   "ok": 411,
+   "first_utc": "2026-10-18T18:34:07Z",
+   "last_utc": "2026-10-18T18:34:12Z"
+  },
+  "kalshi_calib": {
+   "n": 3277,
+   "ok": 3277,
+   "first_utc": "2026-10-18T18:36:01Z",
+   "last_utc": "2026-10-18T18:36:38Z"
+  },
+  "xo": {
+   "n": 411,
+   "ok": 411,
+   "first_utc": "2026-10-18T18:21:21Z",
+   "last_utc": "2026-10-18T18:23:27Z"
+  },
+  "xo_recheck": {
+   "n": 9,
+   "ok": 9,
+   "first_utc": "2026-10-18T18:34:18Z",
+   "last_utc": "2026-10-18T18:34:20Z"
+  },
+  "limitless": {
+   "n": 302,
+   "ok": 297,
+   "first_utc": "2026-10-18T18:21:21Z",
+   "last_utc": "2026-10-18T18:43:31Z"
+  },
+  "limitless_recheck": {
+   "n": 40,
+   "ok": 40,
+   "first_utc": "2026-10-18T18:34:26Z",
+   "last_utc": "2026-10-18T18:34:47Z"
+  }
+ }
+}

@@ -1,0 +1,27 @@
+// Public surface of the Signals feature (docs/dapp-design.md 7.4 work package G). The screen is
+// app/src/routes/signals.tsx; other features import from here, never from the sibling modules.
+import "./signals.css";
+
+export { SignalsView, COVERAGE_FILTERS, type CoverageFilter } from "./SignalsView";
+export { RowCard, type RowCardProps } from "./RowCard";
+export { SignalsServicesProvider, createSignalsServices, legReaderOver, setSignalsTokenSource, useSignalsServices, type LegReader, type SignalsServices, type SignalsServicesOptions } from "./services";
+export { SignalsSession, type AccessChoice, type SessionOptions, type SessionSnapshot } from "./session";
+export { LinkOverlay, keysOfRow, linksOfRow, useLinkVerdict, type LinkOverlayProps } from "./LinkOverlay";
+export {
+  DATASET_STALE_AFTER_DAYS,
+  NO_LINK_DATASET,
+  canonicalJson,
+  contentHash,
+  datasetAge,
+  linksForLeg,
+  loadBundledLinks,
+  parseLinkDataset,
+  pinDataset,
+  showsInDefaultView,
+  type DatasetRejection,
+  type LinkIndex,
+  type LinkLoad,
+} from "./links/dataset";
+export { LINK_PROOFS, LINK_RELATIONS, LINK_STATES, linkDatasetSchema, linkSchema, type Link, type LinkDataset, type LinkLeg } from "./links/schema";
+export { linkLabel, verifyLink, type LegObservation, type LinkLabelReason, type LinkReason, type LinkVerdict } from "./links/verify";
+export { pointsText, probabilityText, usdLabel } from "./figures";

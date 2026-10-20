@@ -1,0 +1,51 @@
+{
+  "market": "0x2b6a0353a7bb3459dbde9f3c3a5805e96afe0c40fc0a70e09eb5c2de65b95a0e",
+  "asset_id": "92405223113781133805412284720343870251774119932157196615021237861128430695593",
+  "timestamp": "1792352671117",
+  "hash": "80d1fea4b8b259aebc5afdc489ac9ee983feb81f49522ad484ba9fbe947245c1",
+  "bids": [
+    {
+      "price": "0.100",
+      "size": "50"
+    },
+    {
+      "price": "0.041",
+      "size": "1271.980687"
+    },
+    {
+      "price": "0.040",
+      "size": "1000"
+    },
+    {
+      "price": "0.020",
+      "size": "300"
+    },
+    {
+      "price": "0.010",
+      "size": "1000"
+    }
+  ],
+  "asks": [
+    {
+      "price": "0.350",
+      "size": "20.317466"
+    },
+    {
+      "price": "0.400",
+      "size": "28.571424"
+    },
+    {
+      "price": "0.500",
+      "size": "10"
+    },
+    {
+      "price": "0.960",
+      "size": "200"
+    }
+  ],
+  "min_order_size": "0",
+  "tick_size": "0.001",
+  "neg_risk": false,
+  "last_trade_price": "0.000",
+  "last_update_id": 618
+}

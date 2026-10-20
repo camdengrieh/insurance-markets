@@ -1,0 +1,14 @@
+{
+ "x_label_patterns_in_audit_sample": {
+  "different scope/subject in a near-identical template (ballot vs win, OpenAI vs Anthropic, La Liga/EPL vs Champions League)": 6,
+  "different entity under a shared market template (player/team/candidate/party/bank/office)": 26,
+  "opposite direction/outcome (cut vs hike)": 1,
+  "same question, different deadline (calendar spread)": 2
+ },
+ "x_label_patterns_in_positive_edge_census_sim_ge_0.65": {
+  "opposite direction/outcome (cut vs hike)": 3,
+  "different scope/subject in a near-identical template (ballot vs win, OpenAI vs Anthropic, La Liga/EPL vs Champions League)": 8,
+  "different entity under a shared market template (player/team/candidate/party/bank/office)": 1,
+  "same question, different deadline (calendar spread)": 1
+ }
+}

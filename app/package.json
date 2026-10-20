@@ -1,0 +1,59 @@
+{
+  "name": "xo-cockpit-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Static Cockpit client: read-only explorer build and local Cockpit build. Holds no key and talks to no server the author operates.",
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.11.0"
+  },
+  "packageManager": "pnpm@11.11.0",
+  "scripts": {
+    "dev": "vite --mode cockpit",
+    "build": "pnpm run build:standalone && pnpm run build:cockpit",
+    "build:standalone": "vite build --mode standalone",
+    "build:cockpit": "vite build --mode cockpit",
+    "serve:standalone": "node scripts/serve-with-headers.ts standalone",
+    "serve:cockpit": "node scripts/serve-with-headers.ts cockpit",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.app-tests.json && tsc --noEmit -p scripts/tsconfig.node.json",
+    "typecheck:bridge": "tsc --noEmit -p scripts/tsconfig.bridge.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "check": "node scripts/check-all.ts && pnpm run check:supply-chain && pnpm run check:e2e-hygiene",
+    "check:deps": "node scripts/check-deps.ts",
+    "check:boundaries": "node scripts/check-boundaries.ts",
+    "check:csp": "node scripts/check-csp.ts",
+    "check:origins": "node scripts/check-origins.ts",
+    "check:addresses": "node scripts/check-addresses.ts",
+    "check:bundle": "node scripts/check-bundle.ts",
+    "check:supply-chain": "node scripts/check-supply-chain.mjs --require-installed",
+    "check:e2e-hygiene": "node scripts/check-e2e-hygiene.mjs",
+    "e2e:install-browser": "node e2e/install-browser.ts",
+    "check:isolation": "node scripts/check-root-isolation.ts",
+    "headers:write": "node scripts/check-csp.ts --write"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.104.1",
+    "idb": "8.0.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "viem": "2.57.2",
+    "wouter": "3.13.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/jsdom": "30.0.0",
+    "@types/node": "24.12.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.1.2",
+    "typescript": "5.9.3",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
+}

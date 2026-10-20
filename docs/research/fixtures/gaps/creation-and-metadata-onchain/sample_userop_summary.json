@@ -1,0 +1,330 @@
+[
+{
+"kind": "first",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 1003962,
+"gas_used": "934143",
+"status": "ok",
+"fee_value": "4670715000000000",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 2,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 951226,
+"gas_used": "1613534",
+"status": "ok",
+"fee_value": "8067670000000000",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 2,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"0x0a1c55e6",
+"0xdffdd5d3"
+],
+"approve_amt_is_max": [],
+"callGas": 1189872,
+"gas_used": "1613534",
+"status": "ok",
+"fee_value": "8067670000000000",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 951226,
+"gas_used": "897001",
+"status": "ok",
+"fee_value": "4485005000000000",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 836635,
+"gas_used": "934155",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 3,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"0x0a1c55e6",
+"0xdffdd5d3"
+],
+"approve_amt_is_max": [],
+"callGas": 712124,
+"gas_used": "2212958",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 3,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"0x0a1c55e6",
+"0xdffdd5d3"
+],
+"approve_amt_is_max": [],
+"callGas": 712124,
+"gas_used": "2212958",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 3,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 800014,
+"gas_used": "2212958",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "first",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 807338,
+"gas_used": "924344",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 2,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"0x72ce4275",
+"0x9e7212ad"
+],
+"approve_amt_is_max": [],
+"callGas": 398856,
+"gas_used": "1103860",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 2,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 916070,
+"gas_used": "1103860",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 924860,
+"gas_used": "870285",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 785365,
+"gas_used": "885058",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 951226,
+"gas_used": "909644",
+"status": "ok",
+"fee_value": "4548220000000000",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 924860,
+"gas_used": "870261",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+},
+{
+"kind": "later",
+"ops_in_tx": 1,
+"initCode_len": 0,
+"sig_len": 65,
+"paymaster": "0x2353b23d8f329fd3cec0d21652f14208248a439d",
+"pmd_len": 52,
+"ncalls": 2,
+"calls": [
+"approve(address,uint256)",
+"createConvictionMarket(uint40,uint40,address,string)"
+],
+"approve_amt_is_max": [
+true
+],
+"callGas": 792689,
+"gas_used": "892556",
+"status": "ok",
+"fee_value": "0",
+"maxFee": 0
+}
+]

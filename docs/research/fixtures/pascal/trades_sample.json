@@ -1,0 +1,87 @@
+{
+ "status": "success",
+ "data": {
+  "items": [
+   {
+    "trade_id": "126178",
+    "symbol": "HOUSE_2026_CTRL.DEM",
+    "taker_side": "ASK",
+    "price": "0.907000",
+    "size": "20",
+    "maker": "REDACTED",
+    "taker": "REDACTED",
+    "maker_reduce_only": false,
+    "taker_reduce_only": false,
+    "maker_position_size_prev": "0",
+    "taker_position_size_prev": "-82",
+    "seq": "10631918250",
+    "trade_ts_ms": "1792327642487"
+   },
+   {
+    "trade_id": "126176",
+    "symbol": "HOUSE_2026_CTRL.DEM",
+    "taker_side": "ASK",
+    "price": "0.909000",
+    "size": "6",
+    "maker": "REDACTED",
+    "taker": "REDACTED",
+    "maker_reduce_only": false,
+    "taker_reduce_only": false,
+    "maker_position_size_prev": "-88",
+    "taker_position_size_prev": "6",
+    "seq": "10631775300",
+    "trade_ts_ms": "1792327534389"
+   },
+   {
+    "trade_id": "126175",
+    "symbol": "HOUSE_2026_CTRL.DEM",
+    "taker_side": "BID",
+    "price": "0.910000",
+    "size": "6",
+    "maker": "REDACTED",
+    "taker": "REDACTED",
+    "maker_reduce_only": false,
+    "taker_reduce_only": false,
+    "maker_position_size_prev": "-82",
+    "taker_position_size_prev": "0",
+    "seq": "10631774885",
+    "trade_ts_ms": "1792327534083"
+   },
+   {
+    "trade_id": "126174",
+    "symbol": "HOUSE_2026_CTRL.DEM",
+    "taker_side": "ASK",
+    "price": "0.909000",
+    "size": "82",
+    "maker": "REDACTED",
+    "taker": "REDACTED",
+    "maker_reduce_only": false,
+    "taker_reduce_only": false,
+    "maker_position_size_prev": "-164",
+    "taker_position_size_prev": "82",
+    "seq": "10631772746",
+    "trade_ts_ms": "1792327532503"
+   },
+   {
+    "trade_id": "126173",
+    "symbol": "HOUSE_2026_CTRL.DEM",
+    "taker_side": "ASK",
+    "price": "0.909000",
+    "size": "39",
+    "maker": "REDACTED",
+    "taker": "REDACTED",
+    "maker_reduce_only": true,
+    "taker_reduce_only": false,
+    "maker_position_size_prev": "-39",
+    "taker_position_size_prev": "121",
+    "seq": "10631772745",
+    "trade_ts_ms": "1792327532503"
+   }
+  ],
+  "next_cursor": "00000000010631772745:0000000000"
+ },
+ "seq": "10705512344",
+ "state_time_ms": "1792368198791",
+ "server_time_ms": "1792368198903",
+ "_fixture_note": "GET https://data.pascal.trade/api/v1/trades?symbols=HOUSE_2026_CTRL.DEM&limit=5 on 2026-10-19; maker/taker wallet pubkeys replaced by REDACTED, everything else unmodified"
+}

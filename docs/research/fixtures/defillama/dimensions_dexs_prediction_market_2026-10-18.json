@@ -1,0 +1,240 @@
+[
+  {
+    "name": "Kalshi",
+    "slug": "kalshi",
+    "chains": [
+      "Off Chain"
+    ],
+    "total24h": 457792632,
+    "total7d": 3708324188,
+    "total30d": 14922269381
+  },
+  {
+    "name": "Polymarket US",
+    "slug": "polymarket-us",
+    "chains": [
+      "Off Chain"
+    ],
+    "total24h": 104819527,
+    "total7d": 717902796,
+    "total30d": 3056758553
+  },
+  {
+    "name": "Polymarket International",
+    "slug": "polymarket-international",
+    "chains": [
+      "Polygon"
+    ],
+    "total24h": 92825179,
+    "total7d": 542454464,
+    "total30d": 2212935953
+  },
+  {
+    "name": "Predict Fun",
+    "slug": "predict-fun",
+    "chains": [
+      "Blast",
+      "BSC"
+    ],
+    "total24h": 14807290,
+    "total7d": 102194978,
+    "total30d": 345840136
+  },
+  {
+    "name": "OPINION",
+    "slug": "opinion",
+    "chains": [
+      "BSC"
+    ],
+    "total24h": 8364005,
+    "total7d": 58456362,
+    "total30d": 276004534
+  },
+  {
+    "name": "MagicMarkets",
+    "slug": "magicmarkets",
+    "chains": [
+      "Off Chain"
+    ],
+    "total24h": 2359715,
+    "total7d": 21329878,
+    "total30d": 62813679
+  },
+  {
+    "name": "XO Market",
+    "slug": "xo-market",
+    "chains": [
+      "XO"
+    ],
+    "total24h": 2443756,
+    "total7d": 16619075,
+    "total30d": 50186659
+  },
+  {
+    "name": "PredictStreet",
+    "slug": "predictstreet",
+    "chains": [
+      "ADI"
+    ],
+    "total24h": 4245,
+    "total7d": 50013,
+    "total30d": 46282928
+  },
+  {
+    "name": "Hyperliquid Outcomes",
+    "slug": "hyperliquid-outcomes",
+    "chains": [
+      "Hyperliquid L1"
+    ],
+    "total24h": 2851802,
+    "total7d": 18491527,
+    "total30d": 45105468
+  },
+  {
+    "name": "TurboFlow Prediction Markets",
+    "slug": "turboflow-prediction-markets",
+    "chains": [
+      "Solana",
+      "BSC"
+    ],
+    "total24h": 2225674,
+    "total7d": 10635739,
+    "total30d": 44634385
+  },
+  {
+    "name": "SX Bet V3",
+    "slug": "sx-bet-v3",
+    "chains": [
+      "SX Rollup"
+    ],
+    "total24h": 6912139,
+    "total7d": 27680307,
+    "total30d": 38917021
+  },
+  {
+    "name": "Polymarket Combos",
+    "slug": "polymarket-combos",
+    "chains": [
+      "Polygon"
+    ],
+    "total24h": 1184520,
+    "total7d": 5769579,
+    "total30d": 21195930
+  },
+  {
+    "name": "world",
+    "slug": "world",
+    "chains": [
+      "Solana"
+    ],
+    "total24h": 493988,
+    "total7d": 3178010,
+    "total30d": 13056749
+  },
+  {
+    "name": "PancakeSwap Prediction",
+    "slug": "pancakeswap-prediction",
+    "chains": [
+      "BSC"
+    ],
+    "total24h": 347319,
+    "total7d": 2041233,
+    "total30d": 8085379
+  },
+  {
+    "name": "Overtime",
+    "slug": "overtime",
+    "chains": [
+      "Base",
+      "OP Mainnet",
+      "Arbitrum",
+      "Polygon"
+    ],
+    "total24h": 370182,
+    "total7d": 2140895,
+    "total30d": 7805782
+  },
+  {
+    "name": "Sport.fun",
+    "slug": "sport.fun",
+    "chains": [
+      "Base"
+    ],
+    "total24h": 75535,
+    "total7d": 881207,
+    "total30d": 4214202
+  },
+  {
+    "name": "Limitless Exchange",
+    "slug": "limitless-exchange",
+    "chains": [
+      "Base"
+    ],
+    "total24h": 15587,
+    "total7d": 143866,
+    "total30d": 3325632
+  },
+  {
+    "name": "Azuro",
+    "slug": "azuro",
+    "chains": [
+      "Polygon",
+      "Base"
+    ],
+    "total24h": 0,
+    "total7d": 0,
+    "total30d": 2124335
+  },
+  {
+    "name": "Alpha Arcade",
+    "slug": "alpha-arcade",
+    "chains": [
+      "Algorand"
+    ],
+    "total24h": 96687,
+    "total7d": 568227,
+    "total30d": 1906980
+  },
+  {
+    "name": "Myriad Markets",
+    "slug": "myriad-markets",
+    "chains": [
+      "Abstract",
+      "Linea",
+      "BSC"
+    ],
+    "total24h": 203,
+    "total7d": 19204,
+    "total30d": 1886544
+  },
+  {
+    "name": "PRED",
+    "slug": "pred",
+    "chains": [
+      "Base"
+    ],
+    "total24h": 45102,
+    "total7d": 476363,
+    "total30d": 861102
+  },
+  {
+    "name": "PredictEX",
+    "slug": "predictex",
+    "chains": [
+      "Base"
+    ],
+    "total24h": 15800,
+    "total7d": 142463,
+    "total30d": 685070
+  },
+  {
+    "name": "Closer",
+    "slug": "closer",
+    "chains": [
+      "Solana"
+    ],
+    "total24h": 151537,
+    "total7d": 352803,
+    "total30d": 353247
+  }
+]

@@ -1,0 +1,73 @@
+{
+  "data": [
+    {
+      "proxy_wallet": "REDACTED",
+      "side": "BUY",
+      "token_id": "51939490109676186832507970701169130490548061087912630009168726706475001411420",
+      "condition_id": "0x86bfb53af7250a40928975c551d12c185b762fa4ce0b40c6a64a50c946d72587",
+      "size": 65.789474,
+      "price": 0.3799999982,
+      "timestamp": 1792343627,
+      "title": "Will the Republican Party control the Senate after the 2026 Midterm elections?",
+      "slug": "will-the-republican-party-control-the-senate-after-the-2026-midterm-elections",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-the-republican-party-control-the-senate-after-the-2026-midterm-elections-JSsqogfn0U0u.png",
+      "event_slug": "which-party-will-win-the-senate-in-2026",
+      "outcome": "Yes",
+      "outcome_index": 0,
+      "name": "REDACTED",
+      "pseudonym": "REDACTED",
+      "bio": "REDACTED",
+      "profile_image": "REDACTED",
+      "profile_image_optimized": "REDACTED",
+      "transaction_hash": "0xb956b2ec8cd33275ada6176a10e0e79175083c7f75a375ff4c58a62dfc7d2323"
+    },
+    {
+      "proxy_wallet": "REDACTED",
+      "side": "BUY",
+      "token_id": "51939490109676186832507970701169130490548061087912630009168726706475001411420",
+      "condition_id": "0x86bfb53af7250a40928975c551d12c185b762fa4ce0b40c6a64a50c946d72587",
+      "size": 12.0,
+      "price": 0.38,
+      "timestamp": 1792343565,
+      "title": "Will the Republican Party control the Senate after the 2026 Midterm elections?",
+      "slug": "will-the-republican-party-control-the-senate-after-the-2026-midterm-elections",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-the-republican-party-control-the-senate-after-the-2026-midterm-elections-JSsqogfn0U0u.png",
+      "event_slug": "which-party-will-win-the-senate-in-2026",
+      "outcome": "Yes",
+      "outcome_index": 0,
+      "name": "REDACTED",
+      "pseudonym": "REDACTED",
+      "bio": "REDACTED",
+      "profile_image": "REDACTED",
+      "profile_image_optimized": "REDACTED",
+      "transaction_hash": "0xb2ca0b016f4dab508c29e5639af93eba048fce20e11bc72c73674efb80002570"
+    },
+    {
+      "proxy_wallet": "REDACTED",
+      "side": "BUY",
+      "token_id": "51939490109676186832507970701169130490548061087912630009168726706475001411420",
+      "condition_id": "0x86bfb53af7250a40928975c551d12c185b762fa4ce0b40c6a64a50c946d72587",
+      "size": 122.0,
+      "price": 0.38,
+      "timestamp": 1792342433,
+      "title": "Will the Republican Party control the Senate after the 2026 Midterm elections?",
+      "slug": "will-the-republican-party-control-the-senate-after-the-2026-midterm-elections",
+      "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-the-republican-party-control-the-senate-after-the-2026-midterm-elections-JSsqogfn0U0u.png",
+      "event_slug": "which-party-will-win-the-senate-in-2026",
+      "outcome": "Yes",
+      "outcome_index": 0,
+      "name": "REDACTED",
+      "pseudonym": "REDACTED",
+      "bio": "REDACTED",
+      "profile_image": "REDACTED",
+      "profile_image_optimized": "REDACTED",
+      "transaction_hash": "0xe3b4cf4f2c78f62d6894ebba1952c9f1dda3d71fead30401cef4465210ed59bb"
+    }
+  ],
+  "pagination": {
+    "limit": 3,
+    "offset": 0,
+    "has_more": true,
+    "next_cursor": "eyJkYXRhIjp7InR5cGUiOiJ0cmFkZXMiLCJwYXJhbXMiOnsibCI6MywidHMiOjE3OTIzNDI0MzMsInNxIjoiOTU3NTgwNTcwMDA0MjA1MjkwIiwiZCI6M319LCJzaWciOiIzNWViZDI2ZmE0YmEwM2UyNTM0ZmE4ODMwYTg5MWFiMiJ9"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "ecdsa-validator",
+  "address": "0x845ADb2C711129d4f3966735eD98a9F09fC4cE57",
+  "chain_id": 3223,
+  "size": 1819,
+  "sha256": "c040057b4c52462b3a85d4e8bbe8ca66bc608984583621ceffcda591cf42eee2",
+  "keccak256": "0x2f8b585e669feb673b21af5666d38b5a9ef3c361cf29a48299240fa97c890708",
+  "source_url": "https://explorer-mainnet.xo.market/api/v2/smart-contracts/0x845ADb2C711129d4f3966735eD98a9F09fC4cE57",
+  "source_field": "deployed_bytecode",
+  "captured_at": "2026-10-19"
+}

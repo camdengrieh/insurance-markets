@@ -1,0 +1,460 @@
+{
+  "data": [
+    {
+      "id": 29879,
+      "createdAt": "2026-08-16T11:11:00.713Z",
+      "updatedAt": "2026-10-09T20:13:39.012Z",
+      "contractMarketId": "0xb63d8f77fc1437a804d5fdeedb4c00dc49e1d7c7738f6410c36f1f44e6cfd654",
+      "conditionId": "0xb63d8f77fc1437a804d5fdeedb4c00dc49e1d7c7738f6410c36f1f44e6cfd654",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-08-16T11:10:58.000Z",
+      "creatorId": 47724,
+      "title": "Imavov UFC Title 2026",
+      "slug": "imavov-ufc-title-2026-1256",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 48,
+          "name": "MMA",
+          "slug": "mma"
+        },
+        {
+          "id": 49,
+          "name": "UFC",
+          "slug": "ufc"
+        }
+      ],
+      "type": 2,
+      "totalVolume": "306091829184",
+      "totalVolumeInUSD": "306091.829184",
+      "totalNotional": "306254705016",
+      "totalNotionalInUSD": "306254.71",
+      "status": "ACTIVE",
+      "startsAt": "2026-08-16T13:06:00.000Z",
+      "expiresAt": "2026-12-31T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/210e6e1b-a077-4484-992b-f0395b110131.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/2c338c38-b5d5-4d23-87b6-c51e9a1c92b6.webp",
+      "resolutionSources": [
+        "https://www.ufc.com/athletes"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 60121,
+          "marketId": 29879,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "68215442288791572296498952759094916177229244750752613990844701608971303593663",
+          "title": "Yes",
+          "currentPrice": "394000",
+          "volumeTraded": "152922574092",
+          "volumeTradedInUSD": "152922.574092",
+          "notionalTraded": "306244705016",
+          "index": 0
+        },
+        {
+          "id": 60122,
+          "marketId": 29879,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "6530318981470987186894988035298961845748217855361759807272408942024241321361",
+          "title": "No",
+          "currentPrice": "653000",
+          "volumeTraded": "153169255092",
+          "volumeTradedInUSD": "153169.255092",
+          "notionalTraded": "306037705016",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 17120,
+      "createdAt": "2026-07-03T13:00:40.611Z",
+      "updatedAt": "2026-10-10T08:38:47.187Z",
+      "contractMarketId": "0x1eae53244d9df6a57a064b68ac08edcc5560d25300a594ddfed00439ad960d0b",
+      "conditionId": "0x1eae53244d9df6a57a064b68ac08edcc5560d25300a594ddfed00439ad960d0b",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-07-03T13:00:38.000Z",
+      "creatorId": 47724,
+      "title": "Largest Company by Market Capitalization at the End of 2026",
+      "slug": "largest-company-by-market-capitalization-at-the-en-3332",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 10,
+          "name": "FINANCE",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "1057396899576",
+      "totalVolumeInUSD": "1057396.899576",
+      "totalNotional": "1058979102564",
+      "totalNotionalInUSD": "1058979.10",
+      "status": "ACTIVE",
+      "startsAt": "2026-07-04T09:00:00.000Z",
+      "expiresAt": "2027-01-01T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/787b9de0-0289-4e52-8849-17d03434bc5d.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/01aceb58-6a73-4258-9c4d-9dcd35398e5d.webp",
+      "resolutionSources": [
+        "https://companiesmarketcap.com/",
+        "https://finance.yahoo.com/",
+        "https://www.investing.com/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": false,
+      "cpMultiplier": 2,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 34583,
+          "marketId": 17120,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "7678661301048675950609208627986584711697399869952037347875776165085707223033",
+          "title": "Yes",
+          "currentPrice": "25000",
+          "volumeTraded": "519689460182",
+          "volumeTradedInUSD": "519689.460182",
+          "notionalTraded": "1055451762690",
+          "index": 0
+        },
+        {
+          "id": 34584,
+          "marketId": 17120,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "10926950653401052690867310369807297696939428018035306415818730697636726886377",
+          "title": "No",
+          "currentPrice": "975000",
+          "volumeTraded": "537707439394",
+          "volumeTradedInUSD": "537707.439394",
+          "notionalTraded": "1057480530572",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 20637,
+      "createdAt": "2026-07-15T11:13:18.296Z",
+      "updatedAt": "2026-10-09T20:12:08.988Z",
+      "contractMarketId": "0x9c94198f7244a1a7770a5a2cfe3a479696c70370f9b2d722d40fbf1faf8c6e74",
+      "conditionId": "0x9c94198f7244a1a7770a5a2cfe3a479696c70370f9b2d722d40fbf1faf8c6e74",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-07-15T11:13:15.000Z",
+      "creatorId": 47724,
+      "title": "Another Candidate to Win the 2027 French Presidential Election",
+      "slug": "another-candidate-to-win-the-2027-french-president-1170",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 3,
+          "name": "POLITICS",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "1167947766292",
+      "totalVolumeInUSD": "1167947.766292",
+      "totalNotional": "1168357787566",
+      "totalNotionalInUSD": "1168357.79",
+      "status": "ACTIVE",
+      "startsAt": "2026-07-16T13:01:00.000Z",
+      "expiresAt": "2027-07-01T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/cc55639d-e510-4420-846b-401dc2bec697.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/13b6d396-5ed0-48fd-876a-0535414cc3a3.webp",
+      "resolutionSources": [
+        "https://www.elections.interieur.gouv.fr/",
+        "https://www.france24.com/en/",
+        "https://www.reuters.com/",
+        "https://www.politico.eu/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": false,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 41619,
+          "marketId": 20637,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "53379006227680491247418827127279299151708209969959086420698885029152144101344",
+          "title": "Yes",
+          "currentPrice": "203000",
+          "volumeTraded": "578945679556",
+          "volumeTradedInUSD": "578945.679556",
+          "notionalTraded": "1168101050679",
+          "index": 0
+        },
+        {
+          "id": 41620,
+          "marketId": 20637,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "104802748419287940627781575971175801709982451154627968874192190816405196919567",
+          "title": "No",
+          "currentPrice": "766999",
+          "volumeTraded": "589002086736",
+          "volumeTradedInUSD": "589002.086736",
+          "notionalTraded": "1167918947320",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 26373,
+      "createdAt": "2026-08-04T20:36:41.226Z",
+      "updatedAt": "2026-10-09T09:37:26.431Z",
+      "contractMarketId": "0x74fc138b1cf0d461911d096e0b99c90af0e0ab372eb9acd6e875b72d2b317893",
+      "conditionId": "0x74fc138b1cf0d461911d096e0b99c90af0e0ab372eb9acd6e875b72d2b317893",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-08-04T20:36:40.000Z",
+      "creatorId": 47724,
+      "title": "Will the majority of FIFA associations approve the FFE proposal by 31 Mar 2027?",
+      "slug": "will-the-majority-of-fifa-associations-approve-the-6787",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "409154705210",
+      "totalVolumeInUSD": "409154.70521",
+      "totalNotional": "410896550703",
+      "totalNotionalInUSD": "410896.55",
+      "status": "ACTIVE",
+      "startsAt": "2026-08-05T22:34:00.000Z",
+      "expiresAt": "2027-03-31T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/2f6085cf-77fa-4cce-af34-94b7cc9e764b.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/f9e1c80b-cc89-44d7-a146-9b657546f2ce.webp",
+      "resolutionSources": [
+        "https://inside.fifa.com/",
+        "https://www.reuters.com/",
+        "https://www.nytimes.com/athletic/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 53098,
+          "marketId": 26373,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "16867598789289485059293550612819946771473628792472078933540594096907797963713",
+          "title": "Yes",
+          "currentPrice": "300000",
+          "volumeTraded": "204825588694",
+          "volumeTradedInUSD": "204825.588694",
+          "notionalTraded": "410802723120",
+          "index": 0
+        },
+        {
+          "id": 53099,
+          "marketId": 26373,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "66440583902550451244878165887574463398566261827645533976403392992440698990027",
+          "title": "No",
+          "currentPrice": "700000",
+          "volumeTraded": "204329116516",
+          "volumeTradedInUSD": "204329.116516",
+          "notionalTraded": "408260550709",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 27196,
+      "createdAt": "2026-08-07T14:44:47.920Z",
+      "updatedAt": "2026-10-14T13:37:03.989Z",
+      "contractMarketId": "0x5c2f4bf4eb0bd5866f6ee55c701b058acd4e78520cdcf8ea641af721fbb9786d",
+      "conditionId": "0x5c2f4bf4eb0bd5866f6ee55c701b058acd4e78520cdcf8ea641af721fbb9786d",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-08-07T14:44:46.000Z",
+      "creatorId": 47724,
+      "title": "StripChain to Launch Token by December 31, 2026",
+      "slug": "stripchain-to-launch-token-by-december-31-2026-2936",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 1,
+          "name": "CRYPTO",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "324713017343",
+      "totalVolumeInUSD": "324713.017343",
+      "totalNotional": "324803063972",
+      "totalNotionalInUSD": "324803.06",
+      "status": "ACTIVE",
+      "startsAt": "2026-08-07T17:39:00.000Z",
+      "expiresAt": "2026-12-31T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/56aa00d3-601d-4b14-b442-1f34504fa3ea.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/010fa7a0-3afe-4935-b5ab-8049b460b2ac.webp",
+      "resolutionSources": [
+        "https://x.com/Stripchain",
+        "https://www.stripchain.xyz/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": false,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 54744,
+          "marketId": 27196,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "3244290291459232029313278936124671569580769252729401118619961668575143921346",
+          "title": "Yes",
+          "currentPrice": "10000",
+          "volumeTraded": "162392613920",
+          "volumeTradedInUSD": "162392.61392",
+          "notionalTraded": "324687349688",
+          "index": 0
+        },
+        {
+          "id": 54745,
+          "marketId": 27196,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "28817800569834163439479334379300833842117552322391703521761000272202441003172",
+          "title": "No",
+          "currentPrice": "200000",
+          "volumeTraded": "162320403423",
+          "volumeTradedInUSD": "162320.403423",
+          "notionalTraded": "324800063972",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 50,
+    "itemCount": 408,
+    "pageCount": 9,
+    "hasPreviousPage": false,
+    "hasNextPage": true
+  }
+}

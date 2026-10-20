@@ -1,0 +1,41 @@
+tx 0xc9ef8950c7c5f9489261ed9c65a7e6f8cedbfe4e5c3e213708dc5fc0f704013a
+ local userOpHash    0xbd0dcbef3d92d93ef7ce3305977099c21d1c57baf52779ebead30bd72bed6f86
+ EntryPoint.getUserOpHash 0xbd0dcbef3d92d93ef7ce3305977099c21d1c57baf52779ebead30bd72bed6f86 MATCH
+ event userOpHash    0xbd0dcbef3d92d93ef7ce3305977099c21d1c57baf52779ebead30bd72bed6f86
+ op nonce 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000  EntryPoint.getNonce(sender,key) now = 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000001 (seq now 1 )
+ factory.getAddress(data,salt) 0x70e718..2648 | CREATE2(initCodeHash) offline 0x70e718..2648 | sender 0x70e718..2648 | factory.implementation() 0xBAC849bB641841b44E965fB01A4Bf5F074f84b4D
+  all equal: true
+tx 0x0999a02198426d2f324bd4cb5e4308d26eb67a2d088c03eecf7b57d1c3e0690f
+ local userOpHash    0x1750f31ada4ee6c9516bf6e64f2636488e02fb806d8c37217ca60ea1c8428ae0
+ EntryPoint.getUserOpHash 0x1750f31ada4ee6c9516bf6e64f2636488e02fb806d8c37217ca60ea1c8428ae0 MATCH
+ event userOpHash    0x1750f31ada4ee6c9516bf6e64f2636488e02fb806d8c37217ca60ea1c8428ae0
+ op nonce 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000  EntryPoint.getNonce(sender,key) now = 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000001 (seq now 1 )
+ factory.getAddress(data,salt) 0x9b97D4..9fB5 | CREATE2(initCodeHash) offline 0x9b97D4..9fB5 | sender 0x9b97D4..9fB5 | factory.implementation() 0xBAC849bB641841b44E965fB01A4Bf5F074f84b4D
+  all equal: true
+tx 0xc097b149544c980afb98bf6b949edc6a3cfb39cc620d093f251cead4fbfe17f2
+ local userOpHash    0xc24cad2420db0e7ff1e864b377aba3823744b752c1f8e2392564a4cd4f48fbc7
+ EntryPoint.getUserOpHash 0xc24cad2420db0e7ff1e864b377aba3823744b752c1f8e2392564a4cd4f48fbc7 MATCH
+ event userOpHash    0xc24cad2420db0e7ff1e864b377aba3823744b752c1f8e2392564a4cd4f48fbc7
+ op nonce 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000  EntryPoint.getNonce(sender,key) now = 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000001 (seq now 1 )
+ factory.getAddress(data,salt) 0x293849..CcAa | CREATE2(initCodeHash) offline 0x293849..CcAa | sender 0x293849..CcAa | factory.implementation() 0xBAC849bB641841b44E965fB01A4Bf5F074f84b4D
+  all equal: true
+tx 0xbcc79750f764a7c34c6270fccc15494d98949cebfe40abc3142934b190c757da
+ local userOpHash    0x01a7c2dfc645164de1eb59e45f1ed72e82786d5e27863b457b74b29d0f9b20b4
+ EntryPoint.getUserOpHash 0x01a7c2dfc645164de1eb59e45f1ed72e82786d5e27863b457b74b29d0f9b20b4 MATCH
+ event userOpHash    0x01a7c2dfc645164de1eb59e45f1ed72e82786d5e27863b457b74b29d0f9b20b4
+ op nonce 845adb2c711129d4f3966735ed98a9f09fc4ce570000000000000000000a  EntryPoint.getNonce(sender,key) now = 845adb2c711129d4f3966735ed98a9f09fc4ce570000000000000000000c (seq now 12 )
+tx 0x2a544e2adfb356ee1a1e16448494002bdbdd991c794f984f84b0333a43faab79
+ local userOpHash    0x053423fd89f999a20e6ebbc111965517c69a7a401a1c86b4ac13f92f5d458120
+ EntryPoint.getUserOpHash 0x053423fd89f999a20e6ebbc111965517c69a7a401a1c86b4ac13f92f5d458120 MATCH
+ event userOpHash    0x053423fd89f999a20e6ebbc111965517c69a7a401a1c86b4ac13f92f5d458120
+ op nonce 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000082  EntryPoint.getNonce(sender,key) now = 845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000083 (seq now 131 )
+tx 0x03218f49a39a3d2423d21bf8de0b024d916062d9184850df1a07afac930db699
+ local userOpHash    0x0c4ca95415ea2bafc439969c5bc9e27dcbbe4cf7c47992279c898c3bbfea30c0
+ EntryPoint.getUserOpHash 0x0c4ca95415ea2bafc439969c5bc9e27dcbbe4cf7c47992279c898c3bbfea30c0 MATCH
+ event userOpHash    0x0c4ca95415ea2bafc439969c5bc9e27dcbbe4cf7c47992279c898c3bbfea30c0
+ op nonce 115f9  EntryPoint.getNonce(sender,key) now = 115fc (seq now 71164 )
+tx 0x97ade4c892095ca08009dd4d341fc1cd5666b016329f934bd3495e6b79fbc025
+ local userOpHash    0x9cd271d15c07e513159cb3157d699c24a539d5b3d0703ac6c0fa17469140d1b8
+ EntryPoint.getUserOpHash 0x9cd271d15c07e513159cb3157d699c24a539d5b3d0703ac6c0fa17469140d1b8 MATCH
+ event userOpHash    0x9cd271d15c07e513159cb3157d699c24a539d5b3d0703ac6c0fa17469140d1b8
+ op nonce cab  EntryPoint.getNonce(sender,key) now = 115fc (seq now 71164 )

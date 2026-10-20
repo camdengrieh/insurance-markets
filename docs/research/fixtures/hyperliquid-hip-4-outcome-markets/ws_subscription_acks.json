@@ -1,0 +1,46 @@
+{
+ "captured_utc": "2026-10-19T02:19:00Z",
+ "n_acks": 342,
+ "sample": [
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "allMids"
+   }
+  },
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "outcomeMetaUpdates"
+   }
+  },
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "activeAssetCtx",
+    "coin": "#14720"
+   }
+  },
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "activeAssetCtx",
+    "coin": "#14730"
+   }
+  },
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "activeAssetCtx",
+    "coin": "#14740"
+   }
+  },
+  {
+   "method": "subscribe",
+   "subscription": {
+    "type": "activeAssetCtx",
+    "coin": "#14750"
+   }
+  }
+ ]
+}

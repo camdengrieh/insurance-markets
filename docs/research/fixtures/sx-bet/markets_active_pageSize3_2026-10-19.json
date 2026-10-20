@@ -1,0 +1,93 @@
+{
+ "status": "success",
+ "data": {
+  "markets": [
+   {
+    "status": "ACTIVE",
+    "marketHash": "0x903d6db8019c9778f8d82d1e07f63000af0d1cb67188a028fbd917e7554e5db1",
+    "outcomeOneName": "Over 49.5",
+    "outcomeTwoName": "Under 49.5",
+    "outcomeVoidName": "NO_GAME_OR_EVEN",
+    "teamOneName": "Dallas Cowboys",
+    "teamTwoName": "Philadelphia Eagles",
+    "type": 28,
+    "gameTime": 1795728600,
+    "line": 49.5,
+    "sportXeventId": "L18876509",
+    "liveEnabled": true,
+    "sportLabel": "Football",
+    "sportId": 8,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 243,
+    "leagueLabel": "NFL",
+    "group1": "NFL",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": false,
+    "participantOneId": 16798,
+    "participantTwoId": 16782,
+    "mainLine": true,
+    "__type": "Market"
+   },
+   {
+    "status": "ACTIVE",
+    "marketHash": "0x74348a576e63e8229756402f8b3a784f137a58efc0870108d162e4bab455fedf",
+    "outcomeOneName": "Dallas Cowboys +2.5",
+    "outcomeTwoName": "Philadelphia Eagles -2.5",
+    "outcomeVoidName": "NO_GAME_OR_EVEN",
+    "teamOneName": "Dallas Cowboys",
+    "teamTwoName": "Philadelphia Eagles",
+    "type": 342,
+    "gameTime": 1795728600,
+    "line": 2.5,
+    "sportXeventId": "L18876509",
+    "liveEnabled": true,
+    "sportLabel": "Football",
+    "sportId": 8,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 243,
+    "leagueLabel": "NFL",
+    "group1": "NFL",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": false,
+    "participantOneId": 16798,
+    "participantTwoId": 16782,
+    "mainLine": false,
+    "__type": "Market"
+   },
+   {
+    "status": "ACTIVE",
+    "marketHash": "0x2d6e2c24de38d38922f6ee85144d578893fb8f5f5380f0e0145a2a73f1c6f144",
+    "outcomeOneName": "Dallas Cowboys",
+    "outcomeTwoName": "Philadelphia Eagles",
+    "outcomeVoidName": "NO_CONTEST",
+    "teamOneName": "Dallas Cowboys",
+    "teamTwoName": "Philadelphia Eagles",
+    "type": 226,
+    "gameTime": 1795728600,
+    "sportXeventId": "L18876509",
+    "liveEnabled": true,
+    "sportLabel": "Football",
+    "sportId": 8,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 243,
+    "leagueLabel": "NFL",
+    "group1": "NFL",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": false,
+    "participantOneId": 16798,
+    "participantTwoId": 16782,
+    "__type": "Market"
+   }
+  ],
+  "nextKey": "6a02edc3c1202ac6ab0fa9b6"
+ }
+}

@@ -1,0 +1,350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pop_platform_registry.schema.json",
+  "title": "Prediction-market platform registry entry (PROPOSAL, docs/research/14-platform-of-platforms.md section 9)",
+  "description": "One record per PLATFORM (venue/operator), not per market. Field families are borrowed from DefiLlama (identity, chains, oracles, dimensions), Prediction Index (mechanism, outcome types, status), Prediction Almanac (geo, data, routes_to, status, as_of), ccxt (has-map, executionModel, collateral, fees), Predictefy /v1/exec/venues (credentials, funding, geo, onboarding) and Polymarket/Hyperliquid builder-code docs. Every non-trivial value carries a source via provenance and a last_verified date; unknown is null, never a guess.",
+  "type": "object",
+  "required": ["platform_id", "name", "kind", "status", "provenance"],
+  "additionalProperties": false,
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "url": { "type": ["string", "null"], "pattern": "^https?://" },
+    "conf": { "enum": ["H", "M", "L"] },
+    "caip2": { "type": "string", "pattern": "^[a-z0-9]+:[A-Za-z0-9_-]+$" },
+    "tri": { "enum": ["yes", "no", "unproven", "unknown"] }
+  },
+  "properties": {
+    "platform_id": { "$ref": "#/$defs/slug", "description": "Our stable id. Never reuse a vendor id as the key; map vendor ids in external_ids." },
+    "name": { "type": "string", "minLength": 1 },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entity": { "type": ["string", "null"] },
+        "jurisdiction": { "type": ["string", "null"] },
+        "parent_platform_id": { "oneOf": [{ "$ref": "#/$defs/slug" }, { "type": "null" }] }
+      }
+    },
+    "urls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "site": { "$ref": "#/$defs/url" },
+        "docs": { "$ref": "#/$defs/url" },
+        "api_base": { "type": "array", "items": { "$ref": "#/$defs/url" } },
+        "ws": { "type": "array", "items": { "type": "string" } },
+        "openapi": { "$ref": "#/$defs/url" },
+        "status_page": { "$ref": "#/$defs/url" },
+        "terms": { "$ref": "#/$defs/url" },
+        "fee_schedule": { "$ref": "#/$defs/url" },
+        "geoblock_check": { "$ref": "#/$defs/url" },
+        "changelog": { "$ref": "#/$defs/url" }
+      }
+    },
+    "external_ids": {
+      "type": "object",
+      "description": "Crosswalk to every directory/aggregator id so third-party data can be joined. Examples: defillama_slug, defillama_id, prediction_index_id, wikidata_qid, ccxt_id, pmxt_id, synpath_id, predictefy_id, oddpool_tag, river_exchange_name, coingecko_category_id, almanac_slug.",
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "kind": {
+      "type": "object",
+      "required": ["operator_type", "execution_model"],
+      "additionalProperties": false,
+      "properties": {
+        "operator_type": { "enum": ["onchain_protocol", "regulated_exchange", "broker_frontend", "wallet_frontend", "aggregator_frontend", "sportsbook_protocol", "forecasting_community", "play_money", "unknown"] },
+        "execution_model": { "type": "array", "minItems": 1, "items": { "enum": ["clob", "amm_lmsr", "amm_cpmm", "amm_hook", "parimutuel", "rfq", "sportsbook", "bonding_curve", "pools", "unknown"] } },
+        "matching": { "enum": ["onchain", "offchain_match_onchain_settle", "centralized", "n_a", "unknown"] },
+        "outcome_types": { "type": "array", "items": { "enum": ["binary", "categorical", "scalar", "parlay"] } },
+        "market_creation": { "enum": ["curated", "gated_permissionless", "permissionless", "none", "unknown"] },
+        "neg_risk": { "type": ["boolean", "null"] },
+        "money_type": { "enum": ["real", "play", "points"] },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "chains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["caip2", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "caip2": { "$ref": "#/$defs/caip2" },
+          "name": { "type": "string" },
+          "role": { "enum": ["settlement", "trading", "funding_source", "bridge"] },
+          "gas_sponsored": { "type": ["boolean", "null"] },
+          "note": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "collateral": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["symbol"],
+            "additionalProperties": false,
+            "properties": {
+              "symbol": { "type": "string" },
+              "chain_caip2": { "oneOf": [{ "$ref": "#/$defs/caip2" }, { "type": "null" }] },
+              "address": { "type": ["string", "null"] },
+              "decimals": { "type": ["integer", "null"] },
+              "bridged": { "type": ["boolean", "null"] }
+            }
+          }
+        },
+        "custody": { "enum": ["self", "smart_account", "venue", "broker", "unknown"] },
+        "deposit_routes": { "type": "array", "items": { "type": "string" } },
+        "withdrawal_notes": { "type": ["string", "null"] }
+      }
+    },
+    "fees": {
+      "type": "object",
+      "required": ["model"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "enum": ["price_curve", "flat_bps", "profit_share", "tiered", "none", "unknown"], "description": "Registry must fail closed on unknown; do not default to zero (stale bots assumed Polymarket zero fees)." },
+        "formula": { "type": ["string", "null"] },
+        "params_source": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": ["string", "null"] },
+            "granularity": { "enum": ["market", "series", "token", "category", "platform", null] },
+            "field": { "type": ["string", "null"] }
+          }
+        },
+        "taker": { "type": ["string", "number", "null"] },
+        "maker": { "type": ["string", "number", "null"] },
+        "maker_rebate": { "type": ["string", "null"] },
+        "rounding": { "type": ["string", "null"] },
+        "settlement_fee": { "type": ["string", "number", "null"] },
+        "deposit_withdraw_fee": { "type": ["string", "null"] },
+        "fee_payer_mechanics": { "type": ["string", "null"] },
+        "source_urls": { "type": "array", "items": { "$ref": "#/$defs/url" } },
+        "verified_on": { "$ref": "#/$defs/date" }
+      }
+    },
+    "regulation_geo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "regulator": { "type": ["string", "null"] },
+        "licence": { "type": ["string", "null"] },
+        "us_persons": { "enum": ["allowed", "close_only", "blocked", "unknown"] },
+        "geo_model": { "enum": ["everyone", "global_restrictions", "allowlist", "checked_at_point_of_use", "unknown"] },
+        "restricted_iso2": { "type": "array", "items": { "type": "string", "pattern": "^[a-z]{2}$" } },
+        "allowed_iso2": { "type": "array", "items": { "type": "string", "pattern": "^[a-z]{2}$" } },
+        "geoblock_check_url": { "$ref": "#/$defs/url" },
+        "bots_policy": { "enum": ["allowed", "conditional", "prohibited", "unknown"] },
+        "bots_policy_note": { "type": ["string", "null"] },
+        "wash_trading_prohibited": { "type": ["boolean", "null"] },
+        "source": { "$ref": "#/$defs/url" },
+        "as_of": { "$ref": "#/$defs/date" }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "read": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "auth": { "enum": ["none", "api_key", "wallet_signature", "oauth", "unknown"] },
+            "public_keyless": { "type": ["boolean", "null"] },
+            "rate_limit": { "type": ["string", "null"] },
+            "orderbook_depth": { "enum": ["full", "top_of_book", "synthetic", "none", "unknown"] },
+            "history": { "enum": ["none", "partial", "full", "unknown"] },
+            "trade_tape": { "enum": ["public", "caller_scoped", "none", "unknown"] },
+            "has": { "type": "object", "description": "ccxt/Parsec-style capability map, e.g. fetch_markets, fetch_orderbook, fetch_trades, fetch_positions, watch_orderbook, create_order, cancel_order.", "additionalProperties": { "type": ["boolean", "null"] } }
+          }
+        },
+        "trade": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "available": { "type": ["boolean", "null"] },
+            "auth_scheme": { "type": ["string", "null"] },
+            "signing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": { "enum": ["eip712", "eip191", "rsa_pss", "ed25519", "hmac", "none", "unknown"] },
+                "domain": { "type": ["string", "null"] },
+                "signature_types": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "order_types": { "type": "array", "items": { "type": "string" } },
+            "credentials": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["field", "kind"],
+                "additionalProperties": false,
+                "properties": {
+                  "field": { "type": "string" },
+                  "kind": { "enum": ["wallet_signer", "venue_api_key", "venue_api_secret", "venue_api_passphrase", "session_token", "access_token", "oauth_client_pair", "none"] },
+                  "acquisition": { "type": ["string", "null"] }
+                }
+              }
+            },
+            "sandbox": { "enum": ["testnet", "demo", "none", "unknown"] },
+            "idempotency": { "type": ["boolean", "null"] },
+            "cancel_semantics": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "reachability": {
+      "type": "object",
+      "description": "Project-specific: can OUR stack act here. Kept separate from api so venue facts stay venue facts.",
+      "additionalProperties": false,
+      "properties": {
+        "paybox_chain": { "$ref": "#/$defs/tri" },
+        "needs_offchain_typed_data_sign": { "type": ["boolean", "null"] },
+        "human_onboarding_steps": { "type": "array", "items": { "type": "string" } },
+        "unattended_ok": { "type": ["boolean", "null"] },
+        "builder_program": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "supported": { "type": ["boolean", "null"] },
+            "mechanism": { "type": ["string", "null"] },
+            "max_fee_bps_taker": { "type": ["number", "null"] },
+            "max_fee_bps_maker": { "type": ["number", "null"] },
+            "docs": { "$ref": "#/$defs/url" }
+          }
+        }
+      }
+    },
+    "liquidity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "enum": ["A", "B", "C", "D", "X"], "description": "A: >=$1B 30d volume; B: $100M-$1B; C: $10M-$100M; D: $0.1M-$10M; X: <$0.1M or dead. Downgrade one tier when displayed depth or volume_integrity contradicts the headline." },
+        "tier_basis": { "type": ["string", "null"] },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "value", "source", "as_of"],
+            "additionalProperties": false,
+            "properties": {
+              "metric": { "enum": ["volume_24h_usd", "volume_30d_usd", "open_interest_usd", "tvl_usd", "fees_30d_usd", "active_markets", "total_volume_usd"] },
+              "value": { "type": "number" },
+              "source": { "type": "string" },
+              "as_of": { "type": "string" },
+              "caveat": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "depth_sample": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "n_markets": { "type": "integer" },
+            "median_spread_cents": { "type": ["number", "null"] },
+            "median_best_bid_depth_usd": { "type": ["number", "null"] },
+            "sampled_at": { "type": "string" },
+            "note": { "type": ["string", "null"] }
+          }
+        },
+        "volume_integrity": { "enum": ["normal", "incentive_distorted", "suspect", "unknown"] }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "oracle_types": { "type": "array", "items": { "enum": ["uma_oo", "pyth", "chainlink", "ai_panel", "venue_staff", "community_vote", "manual", "external_venue_parity", "unknown"] } },
+        "oracle_names": { "type": "array", "items": { "type": "string" } },
+        "dispute_window": { "type": ["string", "null"] },
+        "void_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["fifty_fifty", "refund", "last_traded_price", "invalid_reverse_trades", "unknown"] },
+            "note": { "type": ["string", "null"] }
+          }
+        },
+        "early_close_possible": { "type": ["boolean", "null"] },
+        "rule_text_form": { "enum": ["structured", "free_text", "unknown"] },
+        "source": { "$ref": "#/$defs/url" }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shared_liquidity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target_platform_id", "relation", "confidence"],
+            "additionalProperties": false,
+            "properties": {
+              "target_platform_id": { "$ref": "#/$defs/slug" },
+              "relation": { "enum": ["same_book", "routes_to", "broker_for", "mirror_of", "mirrored_by", "fork_of", "settles_on", "parent_of", "child_of"] },
+              "evidence_url": { "$ref": "#/$defs/url" },
+              "confidence": { "$ref": "#/$defs/conf" },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "native_cross_refs": {
+          "type": "array",
+          "description": "Venue-published fields that name another venue's market (e.g. polymarketConditionIds, kalshiMarketTicker, isPolyArbitrage). Market-level linking should consume these first.",
+          "items": { "type": "object", "required": ["field", "target_platform_id"], "additionalProperties": false, "properties": { "field": { "type": "string" }, "target_platform_id": { "$ref": "#/$defs/slug" }, "where": { "type": ["string", "null"] } } }
+        },
+        "aggregator_coverage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["aggregator_id", "role", "status", "as_of"],
+            "additionalProperties": false,
+            "properties": {
+              "aggregator_id": { "type": "string" },
+              "role": { "enum": ["directory", "data", "matching", "trade"] },
+              "status": { "enum": ["live", "beta", "claimed", "unverified", "dead"] },
+              "as_of": { "$ref": "#/$defs/date" }
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "required": ["state", "last_verified"],
+      "additionalProperties": false,
+      "properties": {
+        "state": { "enum": ["live", "beta", "waitlist", "inactive", "deprecated", "dead", "dark", "unknown"] },
+        "launched_year": { "type": ["integer", "null"] },
+        "last_verified": { "$ref": "#/$defs/date" },
+        "verified_by": { "type": ["string", "null"] },
+        "ttl_days": { "type": ["integer", "null"], "description": "Re-verify after this many days; 30 for fee/geo/api fields, 7 for liquidity metrics." },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/url" } },
+        "change_log": { "type": "array", "items": { "type": "object", "required": ["date", "change"], "additionalProperties": false, "properties": { "date": { "$ref": "#/$defs/date" }, "change": { "type": "string" } } } }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["url", "retrieved", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string" },
+          "retrieved": { "$ref": "#/$defs/date" },
+          "confidence": { "$ref": "#/$defs/conf" },
+          "quote": { "type": ["string", "null"], "maxLength": 200 }
+        }
+      }
+    }
+  }
+}

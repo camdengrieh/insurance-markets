@@ -1,0 +1,14 @@
+/* The prepare console reuses the terminal's and the trade screens' classes; this adds only the re-typing box.
+   Tokens from ui/theme.css only. */
+.prepare-retype {
+  margin-block: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  min-width: 0;
+}
+
+.prepare-retype legend {
+  padding-inline: 0.25rem;
+  font-weight: 600;
+}

@@ -1,0 +1,39 @@
+{
+  "name": "xo-paybox-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.11.0"
+  },
+  "packageManager": "pnpm@11.11.0",
+  "scripts": {
+    "dev": "tsx src/plugin.ts",
+    "build": "esbuild src/plugin.ts --bundle --platform=node --format=esm --target=node24 --minify --outfile=dist/plugin.mjs",
+    "build:local": "node scripts/build-local.mjs",
+    "local": "node dist/local.mjs",
+    "call": "node scripts/call.mjs",
+    "call:local": "node scripts/call-local.mjs",
+    "conformance": "node scripts/conformance.mjs",
+    "test": "node scripts/test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.relay.json",
+    "typecheck:relay": "tsc --noEmit -p tsconfig.relay.json",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
+    "relay": "tsx relay/main.ts",
+    "unit": "tsx --test \"test/**/*.test.ts\"",
+    "unit:bridge": "tsx --test \"bridge/test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "viem": "2.57.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.2",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.12",
+    "typescript": "5.9.3"
+  }
+}

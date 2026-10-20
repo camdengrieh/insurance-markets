@@ -1,0 +1,139 @@
+{
+ "source": "https://api.llama.fi/summary/dexs/sx-bet-v3?dataType=dailyVolume and /summary/open-interest/sx-bet-v3",
+ "volume": {
+  "id": "9078",
+  "name": "SX Bet V3",
+  "chain": "SX Rollup",
+  "category": "Prediction Market",
+  "listedAt": 1791577825,
+  "total24h": 6375156,
+  "total7d": 27345286,
+  "total30d": 45292177,
+  "totalAllTime": 45464567,
+  "methodology": {
+   "Volume": "Total stake matched each day, read from the SX Bet V3 escrow's fill events. Every bet is funded by both sides, so both stakes are counted.",
+   "Fees": "Commission SX Bet takes on the profit of winning bets, counted when the escrow pays it to SX's fee wallet at settlement. On V3 the rates are set per account and can apply to singles as well as parlays; losing and voided bets pay nothing.",
+   "Revenue": "Commission taken from the profit of winning bets and kept by SX. Market makers get none of it.",
+   "ProtocolRevenue": "All commission goes to SX: first a fee wallet, and from 4 September 2026 the treasury contract that also holds the SX community fund.",
+   "SupplySideRevenue": "Zero. Market makers get no share of the commission."
+  }
+ },
+ "volume_daily_chart_tail": [
+  [
+   1787788800,
+   172390
+  ],
+  [
+   1791504000,
+   3813842
+  ],
+  [
+   1791590400,
+   7422872
+  ],
+  [
+   1791676800,
+   6710177
+  ],
+  [
+   1791763200,
+   2046338
+  ],
+  [
+   1791849600,
+   3239901
+  ],
+  [
+   1791936000,
+   3447811
+  ],
+  [
+   1792022400,
+   3535027
+  ],
+  [
+   1792108800,
+   2284658
+  ],
+  [
+   1792195200,
+   6416395
+  ],
+  [
+   1792281600,
+   6375156
+  ]
+ ],
+ "open_interest": {
+  "id": "9078",
+  "name": "SX Bet V3",
+  "chain": "SX Rollup",
+  "category": "Prediction Market",
+  "listedAt": 1791577825,
+  "total24h": 1125552,
+  "total7d": 7659072,
+  "total30d": 26170844,
+  "totalAllTime": null,
+  "methodology": {
+   "OpenInterest": "USDC held by the V3 escrow at the end of the day, which backs matched bets that are not settled yet."
+  }
+ },
+ "open_interest_daily_chart_tail": [
+  [
+   1791158400,
+   1382423
+  ],
+  [
+   1791244800,
+   475751
+  ],
+  [
+   1791331200,
+   1034919
+  ],
+  [
+   1791417600,
+   1265507
+  ],
+  [
+   1791504000,
+   1893185
+  ],
+  [
+   1791590400,
+   1902682
+  ],
+  [
+   1791676800,
+   885346
+  ],
+  [
+   1791763200,
+   749104
+  ],
+  [
+   1791849600,
+   529833
+  ],
+  [
+   1791936000,
+   811852
+  ],
+  [
+   1792022400,
+   1228565
+  ],
+  [
+   1792108800,
+   1449567
+  ],
+  [
+   1792195200,
+   1764599
+  ],
+  [
+   1792281600,
+   1125552
+  ]
+ ]
+}

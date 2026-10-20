@@ -1,0 +1,191 @@
+{
+ "captured_utc": "2026-10-19T02:19:00Z",
+ "derivation": "author's computation from activeAssetCtx of every Yes coin (side 0) over ~12 s; 334 coins",
+ "n_yes_coins": 335,
+ "sum_dayNtlVlm_yes_priced_usd": 2592937,
+ "sum_dayBaseVlm_shares": 5944278,
+ "sum_circulatingSupply_shares_approx_usd_collateral": 2702153,
+ "coins_with_volume": 184,
+ "coins_gt_10k": 61,
+ "coins_gt_50k": 13,
+ "coins_gt_100k": 4,
+ "coins_with_oi": 259,
+ "top25": [
+  {
+   "coin": "#36000",
+   "yes_mid": "0.868995",
+   "dayNtlVlm_yes_priced": 240026.9066600001,
+   "dayBaseVlm_shares": 277939.0,
+   "circulatingSupply_shares": 60782.0
+  },
+  {
+   "coin": "#132280",
+   "yes_mid": "0.787085",
+   "dayNtlVlm_yes_priced": 215002.31786,
+   "dayBaseVlm_shares": 273651.0,
+   "circulatingSupply_shares": 45282.0
+  },
+  {
+   "coin": "#132130",
+   "yes_mid": "0.778415",
+   "dayNtlVlm_yes_priced": 166695.1270400001,
+   "dayBaseVlm_shares": 219443.0,
+   "circulatingSupply_shares": 35904.0
+  },
+  {
+   "coin": "#131120",
+   "yes_mid": "0.623615",
+   "dayNtlVlm_yes_priced": 113749.1408400001,
+   "dayBaseVlm_shares": 181965.0,
+   "circulatingSupply_shares": 48093.0
+  },
+  {
+   "coin": "#132170",
+   "yes_mid": "0.721915",
+   "dayNtlVlm_yes_priced": 85362.48555,
+   "dayBaseVlm_shares": 129661.0,
+   "circulatingSupply_shares": 30886.0
+  },
+  {
+   "coin": "#131880",
+   "yes_mid": "0.642605",
+   "dayNtlVlm_yes_priced": 83846.36854,
+   "dayBaseVlm_shares": 128482.0,
+   "circulatingSupply_shares": 34753.0
+  },
+  {
+   "coin": "#131020",
+   "yes_mid": "0.489365",
+   "dayNtlVlm_yes_priced": 76655.09287,
+   "dayBaseVlm_shares": 155346.0,
+   "circulatingSupply_shares": 27746.0
+  },
+  {
+   "coin": "#131130",
+   "yes_mid": "0.554985",
+   "dayNtlVlm_yes_priced": 70789.76379,
+   "dayBaseVlm_shares": 126857.0,
+   "circulatingSupply_shares": 24503.0
+  },
+  {
+   "coin": "#131890",
+   "yes_mid": "0.563365",
+   "dayNtlVlm_yes_priced": 62253.24213,
+   "dayBaseVlm_shares": 109140.0,
+   "circulatingSupply_shares": 26135.0
+  },
+  {
+   "coin": "#138770",
+   "yes_mid": "0.936",
+   "dayNtlVlm_yes_priced": 62031.55285,
+   "dayBaseVlm_shares": 109328.0,
+   "circulatingSupply_shares": 97458.0
+  },
+  {
+   "coin": "#132190",
+   "yes_mid": "0.616305",
+   "dayNtlVlm_yes_priced": 58941.60577,
+   "dayBaseVlm_shares": 97104.0,
+   "circulatingSupply_shares": 19704.0
+  },
+  {
+   "coin": "#132080",
+   "yes_mid": "0.521865",
+   "dayNtlVlm_yes_priced": 53147.42765,
+   "dayBaseVlm_shares": 103008.0,
+   "circulatingSupply_shares": 27125.0
+  },
+  {
+   "coin": "#132300",
+   "yes_mid": "0.633525",
+   "dayNtlVlm_yes_priced": 52879.45169,
+   "dayBaseVlm_shares": 69851.0,
+   "circulatingSupply_shares": 16980.0
+  },
+  {
+   "coin": "#139390",
+   "yes_mid": "0.82452",
+   "dayNtlVlm_yes_priced": 46628.08986,
+   "dayBaseVlm_shares": 55775.0,
+   "circulatingSupply_shares": 3262.0
+  },
+  {
+   "coin": "#132150",
+   "yes_mid": "0.509285",
+   "dayNtlVlm_yes_priced": 46486.16862,
+   "dayBaseVlm_shares": 93595.0,
+   "circulatingSupply_shares": 24321.0
+  },
+  {
+   "coin": "#132370",
+   "yes_mid": "0.649635",
+   "dayNtlVlm_yes_priced": 44801.11182,
+   "dayBaseVlm_shares": 69120.0,
+   "circulatingSupply_shares": 2901.0
+  },
+  {
+   "coin": "#132290",
+   "yes_mid": "0.584405",
+   "dayNtlVlm_yes_priced": 42647.62286,
+   "dayBaseVlm_shares": 66837.0,
+   "circulatingSupply_shares": 1762.0
+  },
+  {
+   "coin": "#132180",
+   "yes_mid": "0.598965",
+   "dayNtlVlm_yes_priced": 42196.81544,
+   "dayBaseVlm_shares": 70449.0,
+   "circulatingSupply_shares": 20337.0
+  },
+  {
+   "coin": "#36001",
+   "yes_mid": "0.131005",
+   "dayNtlVlm_yes_priced": 37912.09334,
+   "dayBaseVlm_shares": 277939.0,
+   "circulatingSupply_shares": 32221.0
+  },
+  {
+   "coin": "#132240",
+   "yes_mid": "0.80413",
+   "dayNtlVlm_yes_priced": 34929.35829,
+   "dayBaseVlm_shares": 65515.0,
+   "circulatingSupply_shares": 18429.0
+  },
+  {
+   "coin": "#139710",
+   "yes_mid": "0.780995",
+   "dayNtlVlm_yes_priced": 34150.53283,
+   "dayBaseVlm_shares": 43694.0,
+   "circulatingSupply_shares": 692.0
+  },
+  {
+   "coin": "#139320",
+   "yes_mid": "0.750555",
+   "dayNtlVlm_yes_priced": 32092.16093,
+   "dayBaseVlm_shares": 42863.0,
+   "circulatingSupply_shares": 2406.0
+  },
+  {
+   "coin": "#139530",
+   "yes_mid": "0.464035",
+   "dayNtlVlm_yes_priced": 31863.99731,
+   "dayBaseVlm_shares": 69093.0,
+   "circulatingSupply_shares": 3526.0
+  },
+  {
+   "coin": "#132350",
+   "yes_mid": "0.402625",
+   "dayNtlVlm_yes_priced": 28327.22819,
+   "dayBaseVlm_shares": 71384.0,
+   "circulatingSupply_shares": 6597.0
+  },
+  {
+   "coin": "#139470",
+   "yes_mid": "0.5932",
+   "dayNtlVlm_yes_priced": 27438.59955,
+   "dayBaseVlm_shares": 46271.0,
+   "circulatingSupply_shares": 2939.0
+  }
+ ],
+ "caveat": "no titles: outcomeMeta is POST-only and was not called; match titles via a separate outcomeMeta bootstrap."
+}

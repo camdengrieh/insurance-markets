@@ -1,0 +1,14 @@
+XO Market PayBox plugin
+
+This product includes the PayBox plugin starter (release 1.0.2) from MoonPay's PayBox
+developer portal (https://developer.paybox.sh/plugin-starter/v1.0.2/): scripts/conformance.mjs,
+scripts/process.mjs, scripts/report.mjs, scripts/schema.mjs, scripts/test.mjs, src/paybox.ts,
+pnpm-workspace.yaml, starter-version.json, tsconfig.json and pnpm-lock.yaml (as the base of this
+repository's lockfile). package.json, .gitignore, paybox-plugin.json and src/plugin.ts are derived
+from the starter. The starter files are checked against the SHA-256 manifest published with the
+release; this project claims no copyright over them.
+
+The Cockpit page (app/) is built with React, TanStack Query, wouter, idb, viem and zod (MIT, ISC and Unlicense) and
+tested with Vitest, jsdom, Playwright (Apache-2.0) and axe-core through @axe-core/playwright (MPL-2.0). The
+test tools are development dependencies only: none of them is part of a built page. Licences and publish
+dates of every direct dependency are recorded in app/scripts/dependencies.json.

@@ -1,0 +1,92 @@
+GLOBAL selectors currently allowed (any target):
+  ALLOW 0x0a1c55e6 block 2599451 (unidentified)
+  ALLOW 0xdffdd5d3 block 2599451 (unidentified)
+  ALLOW 0xbe040fb0 block 2599451 (unidentified)
+  ALLOW 0x095ea7b3 block 2599451 approve(address,uint256) [usdc_impl] | approve(address,uint256) [ERC20 std]
+  ALLOW 0x430c29c6 block 2599451 (unidentified)
+  ALLOW 0x28ca00fe block 2599451 (unidentified)
+  ALLOW 0x6bfefd6b block 2599451 (unidentified)
+  ALLOW 0x28921873 block 2599451 (unidentified)
+  ALLOW 0xf2a139cb block 2599451 (unidentified)
+  ALLOW 0xe952cba9 block 2599451 (unidentified)
+  ALLOW 0x9980517e block 2599451 (unidentified)
+  ALLOW 0x2ed52606 block 2599451 (unidentified)
+  ALLOW 0x1a8e22e6 block 2599451 (unidentified)
+  ALLOW 0xb5f9d679 block 2599451 (unidentified)
+  ALLOW 0xa3bd0400 block 2599451 (unidentified)
+  ALLOW 0x7f34e314 block 2599451 (unidentified)
+  ALLOW 0xbd951c37 block 2599451 (unidentified)
+  ALLOW 0x121e5166 block 2599451 (unidentified)
+  ALLOW 0xe1c732be block 2599451 (unidentified)
+  ALLOW 0xfd2c9719 block 2599451 (unidentified)
+  ALLOW 0x865b4c9c block 2599451 (unidentified)
+  ALLOW 0xed166ac9 block 2599451 (unidentified)
+  ALLOW 0xc9389fd9 block 2599451 (unidentified)
+  ALLOW 0x2abe7b6a block 2599451 (unidentified)
+  ALLOW 0x156e29f6 block 2599451 (unidentified)
+  ALLOW 0x9c447391 block 2599451 (unidentified)
+  ALLOW 0xc38bb537 block 2599451 (unidentified)
+  ALLOW 0x841cefac block 2599451 (unidentified)
+  ALLOW 0x25c471a0 block 2599453 (unidentified)
+  ALLOW 0xb7d2b162 block 2599453 (unidentified)
+  ALLOW 0x4766f566 block 2599453 (unidentified)
+  ALLOW 0x3bfa0ee5 block 2599453 (unidentified)
+  ALLOW 0x3ccdbb28 block 3116868 (unidentified)
+  ALLOW 0x5458d296 block 3962720 (unidentified)
+PER-TARGET selectors currently allowed:
+ target 0xf730a8f194a14ab68401a9fd77d876df9fa6c08c
+    ALLOW 0xce50cfca block 4564133 (unidentified)
+ target 0x80c12230ce677e6f304027a14780edd2a829ab0c
+    ALLOW 0xa9059cbb block 4908768 transfer(address,uint256) [usdc_impl] | transfer(address,uint256) [ERC20 std]
+ target 0xccf1b2c676e2f9a13e5674be0e0ddff6d0b13909
+    ALLOW 0x01b7037c block 5399856 redeemPositions(address,bytes32,bytes32,uint256[]) [CTF std]
+    ALLOW 0xa22cb465 block 5323611 setApprovalForAll(address,bool) [CTF std]
+    ALLOW 0x72ce4275 block 5399856 splitPosition(address,bytes32,bytes32,uint256[],uint256) [CTF std]
+    ALLOW 0x9e7212ad block 5399856 mergePositions(address,bytes32,bytes32,uint256[],uint256) [CTF std]
+    ALLOW 0xf242432a block 9839771 safeTransferFrom(address,address,uint256,uint256,bytes) [CTF std]
+ target 0xe1654812ac8896a69efa3b6aa71090e4b44eb307
+    ALLOW 0x1031e36e block 5781734 pauseTrading() [exchange_impl] | pauseTrading() [manager]
+    ALLOW 0x456068d2 block 5781734 unpauseTrading() [exchange_impl] | unpauseTrading() [manager]
+    ALLOW 0x3585dec1 block 9228616 createCLOBMarket(uint40,uint40,address,string) [manager]
+    ALLOW 0x7f54a7a2 block 9228616 createConvictionMarket(uint40,uint40,address,string) [manager]
+    ALLOW 0x507cedd3 block 9228616 createConvictionMarketFor(address,uint40,uint40,address,string) [manager]
+    ALLOW 0x1de5facd block 9233370 respondToUpdateRequest(bytes32,bool) [manager]
+    ALLOW 0xbdb83289 block 9233370 cancelMarket(bytes32) [manager]
+ target 0xdb3206bde18aebd1b84657b98b9e0f55e0f95648
+    ALLOW 0xb84d6a95 block 6281363 (unidentified)
+    ALLOW 0xfe813695 block 6281363 (unidentified)
+    ALLOW 0x9f8e9c1d block 6281363 (unidentified)
+    ALLOW 0xd2863fb6 block 6281363 (unidentified)
+    ALLOW 0xc92783d7 block 6281363 (unidentified)
+    ALLOW 0xe1da224f block 6281363 (unidentified)
+    ALLOW 0x2c867f5d block 6281363 (unidentified)
+    ALLOW 0xeac5475a block 6281363 (unidentified)
+    ALLOW 0x80e95d63 block 6281363 (unidentified)
+    ALLOW 0xb73d6655 block 6281363 (unidentified)
+    ALLOW 0x28d5a66a block 6281363 (unidentified)
+    ALLOW 0x35703c1f block 6281363 (unidentified)
+    ALLOW 0x1581aac5 block 6281363 (unidentified)
+    ALLOW 0x607301e7 block 6281363 (unidentified)
+    ALLOW 0xb2e50b91 block 6281363 (unidentified)
+    ALLOW 0x137558dd block 8353457 (unidentified)
+    ALLOW 0x27a34b4c block 8353457 (unidentified)
+    ALLOW 0x3585dec1 block 9136887 createCLOBMarket(uint40,uint40,address,string) [manager]
+    ALLOW 0x51e4c451 block 10821063 (unidentified)
+ target 0x1f6edbc28d1fd8156c4096b27cd296a0bd6e3e4f
+    ALLOW 0x42e0fa2f block 10821058 (unidentified)
+    ALLOW 0x4033fc6e block 10821058 (unidentified)
+    ALLOW 0xc94e19aa block 10821058 (unidentified)
+    ALLOW 0xf22f9d67 block 10821058 (unidentified)
+    ALLOW 0xfa94555b block 10821058 (unidentified)
+    ALLOW 0x8cf0c626 block 10821058 (unidentified)
+    ALLOW 0x5da0087c block 10821058 (unidentified)
+DailyTxLimitUpdated: [ 'block 2609347: 50 -> 5000', 'block 2766455: 5000 -> 10000' ]
+OwnershipTransferred: [
+  'block 2599451: 0x0000000000000000000000000000000000000000 -> 0x88e45b5042beb633c81262fd4883ab72dae4746a',
+  'block 2766503: 0x88e45b5042beb633c81262fd4883ab72dae4746a -> 0xc0c87622761d6c606851662708e7c7547b4bca06',
+  'block 5405099: 0xc0c87622761d6c606851662708e7c7547b4bca06 -> 0xf08239f9575b30133ee79a12df5b22238b554697',
+  'block 8353014: 0xf08239f9575b30133ee79a12df5b22238b554697 -> 0x30e817b9703c77a3baf82a4d8b3d231f3ed8cf93',
+  'block 9142973: 0x30e817b9703c77a3baf82a4d8b3d231f3ed8cf93 -> 0xf08239f9575b30133ee79a12df5b22238b554697',
+  'block 9839710: 0xf08239f9575b30133ee79a12df5b22238b554697 -> 0x0498b2632c3d2bb24dab53717f0e74ddee46de2f'
+]
+ContractWhitelisted events: 0  UnlimitedAddressSet events: 0  Paused events: 0  Unpaused events: 0

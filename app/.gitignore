@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+# Playwright: browsers are installed into a project-local directory, never the home directory.
+.playwright-browsers/
+test-results/
+playwright-report/
+blob-report/
+# Scratch build directories made by scripts/*.test.ts.
+scripts/fixtures/.tmp-*/

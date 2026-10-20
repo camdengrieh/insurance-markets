@@ -1,0 +1,16 @@
+TOTALS {"txs":150,"ops":161,"notHandleOps":0,"pmPolicy":123,"pmNone":38,"pmOther":0,"withFactory":1,"fee0":161,"sig65":161,"nonceRootType":161,"nonceIdent845A":140,"nonceIdentZero":21,"nonceKeyNonZero":0,"undecodable":0} distinct bundler EOAs 13 ops/tx median 1 max 4
+CLASSES (count; median/min/max callGasLimit; median verificationGasLimit; median preVerificationGas; paymaster used count)
+  67 single:conditionalTokens.redeemPositions                                                        cgl ["600000","90400","600000"] vgl "200000" pvg "100000" pm 67 pmV/pmP med ["100000","150000"]
+  42 batch:conditionalTokens.redeemPositions                                                         cgl ["1862026","67592","1862026"] vgl "221170" pvg "228195" pm 4 pmV/pmP med ["40262","5958"]
+  13 batch:usdce.approve+0x33BCeC..639C.0x0a1c55e6                                                   cgl ["507045","360561","507045"] vgl "87869" pvg "53862" pm 13 pmV/pmP med ["40262","5958"]
+  13 single:0x068419..7614.0xbe040fb0                                                                cgl ["133510","133510","133510"] vgl "87869" pvg "49386" pm 13 pmV/pmP med ["30741","26478"]
+   9 single:conditionalTokens.mergePositions                                                         cgl ["156319","134346","167305"] vgl "46111" pvg "76741" pm 9 pmV/pmP med ["150000","8937"]
+   4 single:0x8b47a2..a7f1.0xdffdd5d3                                                                cgl ["470424","470424","470424"] vgl "87869" pvg "50640" pm 4 pmV/pmP med ["30741","5958"]
+   2 batch:0xdb3206..5648.0x607301e7                                                                 cgl ["397182","397182","397182"] vgl "87869" pvg "54681" pm 2 pmV/pmP med ["49783","5958"]
+   2 single:0xdb3206..5648.0x35703c1f                                                                cgl ["82240","82240","82240"] vgl "87869" pvg "59242" pm 2 pmV/pmP med ["40262","5958"]
+   2 batch:0xdb3206..5648.0x35703c1f                                                                 cgl ["148158","148158","148158"] vgl "87869" pvg "75406" pm 2 pmV/pmP med ["49783","5958"]
+   2 batch:0xdb3206..5648.0xe1da224f                                                                 cgl ["118861","118861","118861"] vgl "87869" pvg "54681" pm 2 pmV/pmP med ["49783","5958"]
+   1 batch:usdce.approve+0x8B47A2..A7f1.0x0a1c55e6                                                   cgl ["514369","514369","514369"] vgl "87869" pvg "53902" pm 1 pmV/pmP med ["40262","26478"]
+   1 single:0x06ec9a..274a.0xdffdd5d3                                                                cgl ["433803","433803","433803"] vgl "87869" pvg "50627" pm 1 pmV/pmP med ["30741","5958"]
+   1 single:0xdb3206..5648.0xe1da224f                                                                cgl ["67592","67592","67592"] vgl "87869" pvg "49959" pm 1 pmV/pmP med ["40262","5958"]
+   1 single:usdce.transfer                                                                           cgl ["52943","52943","52943"] vgl "87869" pvg "50004" pm 1 pmV/pmP med ["40262","26478"]

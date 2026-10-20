@@ -1,0 +1,71 @@
+{
+ "_note": "DERIVED by the research agent from GET https://data.pascal.trade/api/v1/markets (unresolved markets only) at seq 10705472171, server_time_ms 1792368170502 (2026-10-19). Category buckets are my own grouping of display_attributes.tags. taker notional = buy+sell taker volume notional (each trade counted once). Resolved markets are excluded from all_time.",
+ "totals": {
+  "markets": 3255,
+  "events": 916,
+  "polymarket_referenced": 3084,
+  "two_sided_book": 2613,
+  "markets_with_24h_volume": 121,
+  "taker_notional_usd_24h": 33428.19,
+  "taker_notional_usd_all_time_open_markets": 2455401.09,
+  "long_interest_contracts": 1278820.0
+ },
+ "by_category": {
+  "politics/elections": {
+   "markets": 1285,
+   "polymarket_referenced": 1267,
+   "two_sided_book": 1184,
+   "long_interest_contracts": 933668.0,
+   "taker_notional_usd_24h": 29558.84,
+   "taker_notional_usd_all_time": 2093557.03
+  },
+  "ai/tech": {
+   "markets": 118,
+   "polymarket_referenced": 98,
+   "two_sided_book": 53,
+   "long_interest_contracts": 25000.0,
+   "taker_notional_usd_24h": 13.82,
+   "taker_notional_usd_all_time": 12724.39
+  },
+  "finance/macro/IPO": {
+   "markets": 168,
+   "polymarket_referenced": 147,
+   "two_sided_book": 139,
+   "long_interest_contracts": 72718.0,
+   "taker_notional_usd_24h": 215.19,
+   "taker_notional_usd_all_time": 255608.78
+  },
+  "geopolitics": {
+   "markets": 51,
+   "polymarket_referenced": 51,
+   "two_sided_book": 50,
+   "long_interest_contracts": 34816.0,
+   "taker_notional_usd_24h": 62.23,
+   "taker_notional_usd_all_time": 10142.93
+  },
+  "sports": {
+   "markets": 1546,
+   "polymarket_referenced": 1461,
+   "two_sided_book": 1123,
+   "long_interest_contracts": 150153.0,
+   "taker_notional_usd_24h": 3576.17,
+   "taker_notional_usd_all_time": 19149.24
+  },
+  "crypto": {
+   "markets": 48,
+   "polymarket_referenced": 42,
+   "two_sided_book": 47,
+   "long_interest_contracts": 51513.0,
+   "taker_notional_usd_24h": 1.94,
+   "taker_notional_usd_all_time": 59152.83
+  },
+  "other": {
+   "markets": 39,
+   "polymarket_referenced": 18,
+   "two_sided_book": 17,
+   "long_interest_contracts": 10952.0,
+   "taker_notional_usd_24h": 0.0,
+   "taker_notional_usd_all_time": 5065.89
+  }
+ }
+}

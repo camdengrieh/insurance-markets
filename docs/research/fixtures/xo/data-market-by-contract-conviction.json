@@ -1,0 +1,139 @@
+{
+  "id": 50345,
+  "createdAt": "2026-10-18T09:26:39.032Z",
+  "updatedAt": "2026-10-18T09:58:24.256Z",
+  "contractMarketId": "0xd2d2617bd716b6d32986d7026361a8cd669e278a361ddf6d86a4c259f0c9d882",
+  "conditionId": "0xd2d2617bd716b6d32986d7026361a8cd669e278a361ddf6d86a4c259f0c9d882",
+  "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+  "versionId": 3,
+  "createMarketBlockTimestamp": "2026-10-18T09:26:38.000Z",
+  "creatorId": 45651,
+  "title": "Will MrBeast release a flying car video before Dec 31, 2026?",
+  "slug": "will-mrbeast-release-a-flying-car-video-before-dec-3679",
+  "rules": {
+    "description": "This market resolves Yes only if MrBeast publishes a publicly accessible video on his main YouTube channel (https://www.youtube.com/@MrBeast) before 2026-12-31 23:59 UTC containing original newly filmed footage of a physical Tesla Roadster Rocket or thruster-equipped Tesla Roadster variant with a full flight system equivalent to the Rocket trim performing real thruster-powered flight, meaning the vehicle physically lifts off under its own thruster or cold-gas thruster power, executes a powered aerial maneuver such as hover, jump, flip, roll or controlled flight, and lands or settles under thruster control. Videos on secondary channels, fan channels, unlisted, private or other platforms do not count, and the primary source is YouTube. Footage, clips or substantially identical material from the official Tesla/SpaceX Roadster reveal on or around October 15 2026 or any previously released official Tesla, SpaceX or Elon Musk demo of the Roadster in flight does not count, nor does AI-generated, CGI, deepfake, VFX-only, simulation, animation, green-screen, composited or purely digitally edited footage that does not show an actual physical vehicle in real flight, recycled or embedded prior demo clips, non-Tesla vehicles, renders, models or mere ground driving/acceleration without clear thruster-powered lift-off and flight. The flight footage must be original to the video and filmed specifically for or in connection with the MrBeast production, not previously released publicly by Tesla, SpaceX or others in substantially the same form. Otherwise the market resolves No. If MrBeast’s main channel is permanently deleted or banned prior to resolution, the market voids and all positions resolve equally.",
+    "outcomeRules": [
+      {
+        "rule": "An official video is uploaded and publicly accessible on MrBeast’s main YouTube channel before the cutoff date that includes real footage of a flying car (Tesla Roadster Rocket or equivalent) performing an actual airborne maneuver (wheels completely off the ground under its own power)",
+        "outcomeIndex": 0
+      },
+      {
+        "rule": "No such video meeting the above criteria is released and publicly accessible on MrBeast’s main YouTube channel by the cutoff date.",
+        "outcomeIndex": 1
+      }
+    ]
+  },
+  "description": "Mr.Lean :))",
+  "categoryPath": [
+    {
+      "id": 8,
+      "name": "TECH",
+      "slug": null
+    },
+    {
+      "id": 83,
+      "name": "Space",
+      "slug": "space"
+    }
+  ],
+  "type": 4,
+  "totalVolume": "19999998",
+  "totalVolumeInUSD": "19.999998",
+  "totalNotional": "19999998",
+  "totalNotionalInUSD": "20.00",
+  "collateralTokenId": 2,
+  "collateralToken": {
+    "id": 2,
+    "symbol": "USDC",
+    "name": "Bridged USDC (XO)",
+    "tokenAddress": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+    "decimals": 6,
+    "isActive": true,
+    "networkId": 1,
+    "logoUrl": ""
+  },
+  "status": "ACTIVE",
+  "startsAt": "2026-10-18T09:26:31.000Z",
+  "expiresAt": "2026-12-31T23:59:59.000Z",
+  "resolvedAt": null,
+  "metadataUri": "https://market-metadata-623756711122.s3.eu-west-1.amazonaws.com/b88f72cb-6426-4f0d-aeef-d58477232dd7.json",
+  "imageUrl": "https://market-images-623756711122.s3.eu-west-1.amazonaws.com/compressed/9b10c250-706b-469d-a645-d515eff9eecd.webp",
+  "resolutionEvidence": null,
+  "resolutionSources": [
+    "https://www.youtube.com"
+  ],
+  "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+  "resolutionType": "MANUAL",
+  "resolutionFlagCount": 0,
+  "priorityScore": 0,
+  "likes": 0,
+  "cpEnabled": true,
+  "cpMultiplier": 1,
+  "creatorBps": 0,
+  "isFeatured": false,
+  "featuredOrder": null,
+  "creator": {
+    "id": 45651,
+    "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+    "username": "REDACTED",
+    "bio": "21yr Prompt Engineer and Content Creator with AI MASTER skills\nXO AMBASSADOR",
+    "profilePictureUrl": "https://pbs.twimg.com/profile_images/1984207691817127936/jH2axJ5d_normal.jpg",
+    "roosterColor": "#0088CC",
+    "achievements": [
+      "XO Catalyst",
+      ""
+    ],
+    "verified": true,
+    "isOg": false,
+    "cpPoints": 25161.67,
+    "tier": "Believer"
+  },
+  "outcomes": [
+    {
+      "id": 101051,
+      "marketId": 50345,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "33508161846394491056920885752222536791813224220720306217052031583361364753072",
+      "title": "Yes",
+      "currentPrice": "500000",
+      "volumeTraded": "9999999",
+      "volumeTradedInUSD": "9.999999",
+      "notionalTraded": "19999998",
+      "index": 0
+    },
+    {
+      "id": 101052,
+      "marketId": 50345,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "48085453876144713069590614965643358854695340056647784946024318530397851292249",
+      "title": "No",
+      "currentPrice": "500000",
+      "volumeTraded": "9999999",
+      "volumeTradedInUSD": "9.999999",
+      "notionalTraded": "19999998",
+      "index": 1
+    }
+  ],
+  "notes": null,
+  "reviewStatus": "UPDATE_REQUIRED",
+  "effectiveFeeConfig": {
+    "eligible": true,
+    "curveModel": "CONVICTION_CURVE",
+    "takerFeeBps": 400,
+    "makerFeeBps": 0,
+    "configId": 2,
+    "configName": "convictions",
+    "splitSummary": {
+      "creatorShareBps": 2000,
+      "makerShareBps": 3500,
+      "platformShareBps": 4500
+    },
+    "resolutionPath": [
+      "market_type:4",
+      "settlement:v5"
+    ],
+    "orderbookConfigId": "bfddcf69-3c90-437f-94ea-69469dd1be0a",
+    "configVersion": 5,
+    "latestPublishedVersion": 5
+  }
+}

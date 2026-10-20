@@ -1,0 +1,327 @@
+{
+ "outcomes": [
+  {
+   "outcome": 1488,
+   "name": "template:sportsTournamentParticipant",
+   "description": "participant:Buffalo Bills",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14557,
+   "name": "template:binaryPrice",
+   "description": "perp:xyz:XYZ100|priceDescription:xyz:XYZ100-USDC perp mark|seconds:60|threshold:29533|time:20261020-2000",
+   "sideSpecs": [
+    {
+     "name": "template:Yes"
+    },
+    {
+     "name": "template:No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14185,
+   "name": "template:sportsContestParticipant2",
+   "description": "participant:AC Milan",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14183,
+   "name": "template:sportsContestParticipant2",
+   "description": "participant:Bournemouth AFC",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14315,
+   "name": "Recurring",
+   "description": "class:priceBinary|underlying:ETH|expiry:20261020-0600|targetPrice:2430.5|period:1d",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14321,
+   "name": "Recurring Named Outcome",
+   "description": "index:2",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14318,
+   "name": "Recurring Fallback",
+   "description": "other",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14182,
+   "name": "template fallback",
+   "description": "other",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14184,
+   "name": "template:sportsContestDraw2",
+   "description": "",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "out",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14316,
+   "name": "Recurring",
+   "description": "class:priceBinary|underlying:SOL|expiry:20261020-0600|targetPrice:105.64|period:1d",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14320,
+   "name": "Recurring Named Outcome",
+   "description": "index:1",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14319,
+   "name": "Recurring Named Outcome",
+   "description": "index:0",
+   "sideSpecs": [
+    {
+     "name": "Yes"
+    },
+    {
+     "name": "No"
+    }
+   ],
+   "quoteToken": "USDC"
+  },
+  {
+   "outcome": 14348,
+   "name": "template:binaryPrice",
+   "description": "perp:BTC|priceDescription:the Hyperliquid BTC perp trade|seconds:90|threshold:82132|time:20261020-0800",
+   "sideSpecs": [
+    {
+     "name": "template:Yes"
+    },
+    {
+     "name": "template:No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "skew",
+   "deployerFeeScale": "1.0"
+  },
+  {
+   "outcome": 14353,
+   "name": "template:binaryPrice",
+   "description": "perp:BTC|priceDescription:the Pyth BTC/USD price|seconds:90|threshold:81490|time:20261026-0800",
+   "sideSpecs": [
+    {
+     "name": "template:Yes"
+    },
+    {
+     "name": "template:No"
+    }
+   ],
+   "quoteToken": "USDC",
+   "venue": "skew",
+   "deployerFeeScale": "1.0"
+  }
+ ],
+ "questions": [
+  {
+   "question": 480,
+   "name": "template:sportsContestResult",
+   "description": "competition:UEFA Europa League|contestType:Match|countedPlay:regulation time, 90 minutes plus stoppage time|officialSource:Union of European Football Associations|participantA:Bournemouth AFC|participantB:AC Milan|resolutionDeadline:20261023-1900|scheduledStart:20261022-1900|season:2026/27|sport:Soccer|stage:Matchday 3",
+   "fallbackOutcome": 14182,
+   "namedOutcomes": [
+    14183,
+    14184,
+    14185
+   ],
+   "settledNamedOutcomes": []
+  },
+  {
+   "question": 484,
+   "name": "Recurring",
+   "description": "class:priceBucket|underlying:BTC|expiry:20261020-0600|priceThresholds:81064,84373|period:1d",
+   "fallbackOutcome": 14318,
+   "namedOutcomes": [
+    14319,
+    14320,
+    14321
+   ],
+   "settledNamedOutcomes": []
+  }
+ ],
+ "deployers": [
+  {
+   "deployer": "0x08e9c89f46dccee91bdb85c6532eb93a4c335efe",
+   "venue": "skew",
+   "subDeployers": [
+    [
+     "registerAndAssociateNamedOutcomeFromTemplate",
+     [
+      "0x1c867861e0cffb0eba07d9d94f716189c130dac6"
+     ]
+    ],
+    [
+     "registerQuestionFromTemplate",
+     [
+      "0x1c867861e0cffb0eba07d9d94f716189c130dac6"
+     ]
+    ],
+    [
+     "registerStandaloneOutcomeFromTemplate",
+     [
+      "0x1c867861e0cffb0eba07d9d94f716189c130dac6"
+     ]
+    ],
+    [
+     "settleOutcome",
+     [
+      "0x1c867861e0cffb0eba07d9d94f716189c130dac6"
+     ]
+    ],
+    [
+     "settleQuestion",
+     [
+      "0x1c867861e0cffb0eba07d9d94f716189c130dac6"
+     ]
+    ]
+   ]
+  },
+  {
+   "deployer": "0x0c46eb73fae2816f219fcf11f50d6d3c59b5819e",
+   "venue": "out",
+   "subDeployers": [
+    [
+     "registerAndAssociateNamedOutcomeFromTemplate",
+     [
+      "0x6947a610ef50f8b5d4b59abcd94dd75aaaa645b9",
+      "0xe5051ac5db90efacb1daffd43135dd477e5dbdab",
+      "0xf1923927d7d2847191fb7ef8b1a16028aa5ae754"
+     ]
+    ],
+    [
+     "registerQuestionFromTemplate",
+     [
+      "0x6947a610ef50f8b5d4b59abcd94dd75aaaa645b9",
+      "0xe5051ac5db90efacb1daffd43135dd477e5dbdab",
+      "0xf1923927d7d2847191fb7ef8b1a16028aa5ae754"
+     ]
+    ],
+    [
+     "registerStandaloneOutcomeFromTemplate",
+     [
+      "0x6947a610ef50f8b5d4b59abcd94dd75aaaa645b9",
+      "0xe5051ac5db90efacb1daffd43135dd477e5dbdab",
+      "0xf1923927d7d2847191fb7ef8b1a16028aa5ae754"
+     ]
+    ],
+    [
+     "settleOutcome",
+     [
+      "0x6947a610ef50f8b5d4b59abcd94dd75aaaa645b9",
+      "0xe5051ac5db90efacb1daffd43135dd477e5dbdab",
+      "0xf1923927d7d2847191fb7ef8b1a16028aa5ae754"
+     ]
+    ],
+    [
+     "settleQuestion",
+     [
+      "0x6947a610ef50f8b5d4b59abcd94dd75aaaa645b9",
+      "0xe5051ac5db90efacb1daffd43135dd477e5dbdab",
+      "0xf1923927d7d2847191fb7ef8b1a16028aa5ae754"
+     ]
+    ]
+   ]
+  }
+ ],
+ "feeScale": "1.0"
+}

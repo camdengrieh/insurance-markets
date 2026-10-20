@@ -1,0 +1,210 @@
+/*
+  Design tokens and the page base. One stylesheet that loads nothing else and ships no font files: the CSP allows
+  style-src 'self' and font-src 'self' only, and the app loads nothing from any other origin.
+
+  Themes: light by default, dark through prefers-color-scheme unless the user chose light, and an explicit
+  data-theme="dark" on <html> from the manual toggle (ui/theme.ts). The two dark blocks MUST stay identical;
+  theme-tokens.test.ts compares them and checks every foreground/background pair for WCAG contrast.
+
+  Token vocabulary for route and feature authors (use these, never raw colours):
+    --bg --surface --surface-2        page, cards, wells
+    --text --text-muted               body text, secondary text (both pass 4.5:1 on --bg and --surface)
+    --border --border-strong          decorative rule; control outline (3:1)
+    --accent --accent-fg              primary action fill and its text
+    --focus                           focus ring (3:1 against --bg and --surface)
+    --ok-bg/-fg --warn-bg/-fg --danger-bg/-fg --info-bg/-fg --neutral-bg/-fg    tone pairs (4.5:1)
+    --untrusted-bg --untrusted-fg     the fixed slot that holds market text
+  Colour is never the only carrier of meaning: every tone also has a text label and a glyph.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eceff3;
+  --text: #14171c;
+  --text-muted: #4a5360;
+  --border: #d3d9e1;
+  --border-strong: #6b7686;
+  --accent: #1a46c2;
+  --accent-fg: #ffffff;
+  --focus: #1a46c2;
+  --ok-bg: #dcfce7;
+  --ok-fg: #14532d;
+  --warn-bg: #fef3c7;
+  --warn-fg: #6b3a07;
+  --danger-bg: #fee2e2;
+  --danger-fg: #7f1d1d;
+  --info-bg: #dbeafe;
+  --info-fg: #1e3a8a;
+  --neutral-bg: #e5e8ed;
+  --neutral-fg: #2b323c;
+  --untrusted-bg: #f0f2f5;
+  --untrusted-fg: #14171c;
+
+  --gutter: 16px;
+  --radius: 8px;
+  --tap: 44px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116;
+    --surface: #161b22;
+    --surface-2: #1f2630;
+    --text: #e8ebf0;
+    --text-muted: #a9b2bf;
+    --border: #2d3643;
+    --border-strong: #8a94a3;
+    --accent: #8fb3ff;
+    --accent-fg: #08101f;
+    --focus: #8fb3ff;
+    --ok-bg: #123320;
+    --ok-fg: #bbf7d0;
+    --warn-bg: #3a2d0a;
+    --warn-fg: #fde68a;
+    --danger-bg: #4a1818;
+    --danger-fg: #fecaca;
+    --info-bg: #14284d;
+    --info-fg: #bfdbfe;
+    --neutral-bg: #262e3a;
+    --neutral-fg: #dde2ea;
+    --untrusted-bg: #1d242e;
+    --untrusted-fg: #e8ebf0;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0e1116;
+  --surface: #161b22;
+  --surface-2: #1f2630;
+  --text: #e8ebf0;
+  --text-muted: #a9b2bf;
+  --border: #2d3643;
+  --border-strong: #8a94a3;
+  --accent: #8fb3ff;
+  --accent-fg: #08101f;
+  --focus: #8fb3ff;
+  --ok-bg: #123320;
+  --ok-fg: #bbf7d0;
+  --warn-bg: #3a2d0a;
+  --warn-fg: #fde68a;
+  --danger-bg: #4a1818;
+  --danger-fg: #fecaca;
+  --info-bg: #14284d;
+  --info-fg: #bfdbfe;
+  --neutral-bg: #262e3a;
+  --neutral-fg: #dde2ea;
+  --untrusted-bg: #1d242e;
+  --untrusted-fg: #e8ebf0;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* ---- base ------------------------------------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.5;
+  /* The page itself never scrolls sideways at 360 px; wide content scrolls inside its own region. */
+  overflow-x: hidden;
+}
+
+body.ui-scroll-lock {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.2rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Programmatic focus targets (main, headings, dialogs) do not need a ring when focused by script. */
+[tabindex="-1"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

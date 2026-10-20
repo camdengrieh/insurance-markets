@@ -1,0 +1,14 @@
+{
+  "statusCode": 404,
+  "timestamp": "2026-10-18T17:44:12.465Z",
+  "path": "/api/users/portfolio?user=0xCAFE000000000000000000000000000000000A11",
+  "response": {
+    "message": "User not found",
+    "error": "Not Found",
+    "statusCode": 404
+  },
+  "status": 404,
+  "options": {},
+  "message": "User not found",
+  "name": "NotFoundException"
+}

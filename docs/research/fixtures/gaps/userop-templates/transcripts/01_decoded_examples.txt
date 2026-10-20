@@ -1,0 +1,45 @@
+{
+ "aggregate": {
+  "opsWithKnownOwner": 14,
+  "eip191Match": 14,
+  "rawMatch": 0,
+  "neither": 0,
+  "byAccountType": {}
+ },
+ "operatorAccountSignerStability": {
+  "0x92e491..4232": {
+   "ops": 8,
+   "distinctRawRecoveredSigners": 2,
+   "distinctEip191RecoveredSigners": 8,
+   "rawSigners": [
+    "0xfEC20A..490D",
+    "0x942D02..701E"
+   ]
+  }
+ }
+}
+enableTrading_firstOp_withAccountDeploy  0xc9ef8950c7c5 blk 12589192 sender 0x70e718..2648 nonceSeq 0 deploy true batchx2 pm yes sig65 rawOK false eip191OK true
+enableTrading_firstOp_withAccountDeploy  0x0999a0219842 blk 12589787 sender 0x9b97D4..9fB5 nonceSeq 0 deploy true batchx2 pm yes sig65 rawOK false eip191OK true
+enableTrading_firstOp_withAccountDeploy  0xc097b149544c blk 12604908 sender 0x293849..CcAa nonceSeq 0 deploy true batchx2 pm yes sig65 rawOK false eip191OK true
+redeemPositions_single                   0x2a544e2adfb3 blk 12601956 sender 0x812dbC..e7B5 nonceSeq 130 deploy false singlex1 pm yes sig65 rawOK false eip191OK true
+redeemPositions_single                   0xe3abd2b178d8 blk 12602053 sender 0xe05e14..E301 nonceSeq 438 deploy false singlex1 pm yes sig65 rawOK false eip191OK true
+redeemPositions_single                   0x8ddd70241d25 blk 12603923 sender 0xF712dD..7999 nonceSeq 8 deploy false singlex1 pm yes sig65 rawOK false eip191OK true
+redeemPositions_single                   0x113e9348d488 blk 12603120 sender 0xdc4389..C3BD nonceSeq 11564 deploy false singlex1 pm yes sig65 rawOK false eip191OK true
+redeemPositions_single                   0xf1d762974d59 blk 12600993 sender 0x5D020d..6a4E nonceSeq 1194 deploy false singlex1 pm yes sig65 rawOK false eip191OK true
+redeemPositions_batch_noPaymaster        0x89ede19a1517 blk 12589053 sender 0x5939F5..f779 nonceSeq 19062 deploy false batchx62 pm NO sig65 rawOK false eip191OK true
+redeemPositions_batch_noPaymaster        0x8b5a58228ce2 blk 12590114 sender 0x5939F5..f779 nonceSeq 19068 deploy false batchx62 pm NO sig65 rawOK false eip191OK true
+redeemPositions_batch_noPaymaster        0x2ad969f42f33 blk 12590477 sender 0x623cAB..afa5 nonceSeq 20330 deploy false batchx73 pm NO sig65 rawOK false eip191OK true
+mergePositions                           0xf80507d3da7a blk 12607678 sender 0x92E491..4232 nonceSeq 71154 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+mergePositions                           0x42db6d37ff9d blk 12607747 sender 0x92E491..4232 nonceSeq 71156 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+mergePositions                           0x03218f49a39a blk 12608777 sender 0x92E491..4232 nonceSeq 71161 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+splitPosition                            0x15bb7450b4a6 blk 5399909 sender 0x92E491..4232 nonceSeq 1 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+splitPosition                            0x97ade4c89209 blk 5783066 sender 0x92E491..4232 nonceSeq 3243 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+splitPosition                            0xe8b9f8faf42f blk 5783160 sender 0x92E491..4232 nonceSeq 3246 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+createConvictionMarket                   0xbcc79750f764 blk 12551478 sender 0x0cC88b..A5B8 nonceSeq 10 deploy false batchx2 pm yes sig65 rawOK false eip191OK true
+createConvictionMarket                   0xec8d1956f04e blk 12552471 sender 0x488AfD..9315 nonceSeq 872 deploy false batchx2 pm yes sig65 rawOK false eip191OK true
+createConvictionMarket                   0xcaed7961d6dc blk 12553083 sender 0x488AfD..9315 nonceSeq 873 deploy false batchx2 pm yes sig65 rawOK false eip191OK true
+transferRemote_outbound_NOT_userop       0xa4b40b5b5bc4 NOT EntryPoint
+transferRemote_outbound_NOT_userop       0xd95bf9a4b710 NOT EntryPoint
+transferRemote_outbound_NOT_userop       0x4d5cf1ec257e NOT EntryPoint
+operator_account_raw_signature_redeem    0x547571b5e1d7 blk 12590100 sender 0x92E491..4232 nonceSeq 71061 deploy false singlex1 pm yes sig65 rawOK null eip191OK null
+operator_account_raw_signature_redeem    0xe7557956984b blk 12590284 sender 0x92E491..4232 nonceSeq 71062 deploy false singlex1 pm yes sig65 rawOK null eip191OK null

@@ -1,0 +1,107 @@
+{
+ "base": {
+  "mean": {
+   "survives_after_spread": 0.50592,
+   "survives_after_fees": 0.09318,
+   "survives_after_5pct_ann_hurdle": 0.03025,
+   "survives_after_20pct_ann_hurdle": 0.00012,
+   "survives_closeout_trade": 0.00337,
+   "hours_net_gt0": 0.21589,
+   "hours_net_ann_gt5": 0.03529
+  },
+  "median": {
+   "survives_after_spread": 0.59222,
+   "survives_after_fees": 0.03905,
+   "survives_after_5pct_ann_hurdle": 0.00141,
+   "survives_after_20pct_ann_hurdle": 0.0,
+   "survives_closeout_trade": 0.0,
+   "hours_net_gt0": 0.11508,
+   "hours_net_ann_gt5": 0.00099
+  },
+  "n_pairs": 13
+ },
+ "pm_spread_0": {
+  "mean": {
+   "survives_after_spread": 0.71153,
+   "survives_after_fees": 0.12825,
+   "survives_after_5pct_ann_hurdle": 0.05565,
+   "survives_after_20pct_ann_hurdle": 0.00577,
+   "survives_closeout_trade": 0.01234,
+   "hours_net_gt0": 0.26491,
+   "hours_net_ann_gt5": 0.06801
+  },
+  "median": {
+   "survives_after_spread": 0.71289,
+   "survives_after_fees": 0.0704,
+   "survives_after_5pct_ann_hurdle": 0.00978,
+   "survives_after_20pct_ann_hurdle": 0.0,
+   "survives_closeout_trade": 0.0,
+   "hours_net_gt0": 0.11508,
+   "hours_net_ann_gt5": 0.0122
+  },
+  "n_pairs": 13
+ },
+ "kalshi_fee_x0.5": {
+  "mean": {
+   "survives_after_spread": 0.50592,
+   "survives_after_fees": 0.15948,
+   "survives_after_5pct_ann_hurdle": 0.06578,
+   "survives_after_20pct_ann_hurdle": 0.00636,
+   "survives_closeout_trade": 0.01568,
+   "hours_net_gt0": 0.3209,
+   "hours_net_ann_gt5": 0.08178
+  },
+  "median": {
+   "survives_after_spread": 0.59222,
+   "survives_after_fees": 0.10726,
+   "survives_after_5pct_ann_hurdle": 0.01308,
+   "survives_after_20pct_ann_hurdle": 0.0,
+   "survives_closeout_trade": 6e-05,
+   "hours_net_gt0": 0.27431,
+   "hours_net_ann_gt5": 0.01438
+  },
+  "n_pairs": 13
+ },
+ "both": {
+  "mean": {
+   "survives_after_spread": 0.71153,
+   "survives_after_fees": 0.21896,
+   "survives_after_5pct_ann_hurdle": 0.10058,
+   "survives_after_20pct_ann_hurdle": 0.0148,
+   "survives_closeout_trade": 0.04189,
+   "hours_net_gt0": 0.35589,
+   "hours_net_ann_gt5": 0.11255
+  },
+  "median": {
+   "survives_after_spread": 0.71289,
+   "survives_after_fees": 0.18192,
+   "survives_after_5pct_ann_hurdle": 0.04577,
+   "survives_after_20pct_ann_hurdle": 0.00237,
+   "survives_closeout_trade": 0.00698,
+   "hours_net_gt0": 0.27431,
+   "hours_net_ann_gt5": 0.07154
+  },
+  "n_pairs": 13
+ },
+ "no_fees_no_pm_spread": {
+  "mean": {
+   "survives_after_spread": 0.71153,
+   "survives_after_fees": 0.71153,
+   "survives_after_5pct_ann_hurdle": 0.44794,
+   "survives_after_20pct_ann_hurdle": 0.17217,
+   "survives_closeout_trade": 0.46516,
+   "hours_net_gt0": 0.80208,
+   "hours_net_ann_gt5": 0.42486
+  },
+  "median": {
+   "survives_after_spread": 0.71289,
+   "survives_after_fees": 0.71289,
+   "survives_after_5pct_ann_hurdle": 0.62017,
+   "survives_after_20pct_ann_hurdle": 0.16203,
+   "survives_closeout_trade": 0.48173,
+   "hours_net_gt0": 0.78175,
+   "hours_net_ann_gt5": 0.52976
+  },
+  "n_pairs": 13
+ }
+}

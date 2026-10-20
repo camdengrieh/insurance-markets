@@ -1,0 +1,83 @@
+{
+ "status": "success",
+ "data": {
+  "markets": [
+   {
+    "status": "ACTIVE",
+    "marketHash": "0x99a0bd03e6a4e112d9e08c866a2b44c71fcaa3457c844585eba69de5053d27dd",
+    "outcomeOneName": "BTC above $72,000",
+    "outcomeTwoName": "BTC at or below $72,000",
+    "teamOneName": "Bitcoin (BTC) above on October 19",
+    "teamTwoName": "",
+    "type": 52,
+    "gameTime": 1792425600,
+    "sportXeventId": "XBTCUSDT-ABOVE-20261019",
+    "liveEnabled": false,
+    "sportLabel": "Crypto",
+    "sportId": 14,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 11000,
+    "leagueLabel": "Bitcoin",
+    "group1": "Bitcoin",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": true,
+    "marketMeta": "{\"product\":\"ABOVE\",\"symbol\":\"BTCUSDT\",\"ticker\":\"BTC\",\"strike\":\"72000\",\"expiresAt\":\"2026-10-19T16:00:00.000Z\"}",
+    "__type": "Market"
+   },
+   {
+    "status": "ACTIVE",
+    "marketHash": "0x11a33c2278586707d41ccbb321f5ab995369f15da0b10920307ef96da4815812",
+    "outcomeOneName": "BTC above $74,000",
+    "outcomeTwoName": "BTC at or below $74,000",
+    "teamOneName": "Bitcoin (BTC) above on October 19",
+    "teamTwoName": "",
+    "type": 52,
+    "gameTime": 1792425600,
+    "sportXeventId": "XBTCUSDT-ABOVE-20261019",
+    "liveEnabled": false,
+    "sportLabel": "Crypto",
+    "sportId": 14,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 11000,
+    "leagueLabel": "Bitcoin",
+    "group1": "Bitcoin",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": true,
+    "marketMeta": "{\"product\":\"ABOVE\",\"symbol\":\"BTCUSDT\",\"ticker\":\"BTC\",\"strike\":\"74000\",\"expiresAt\":\"2026-10-19T16:00:00.000Z\"}",
+    "__type": "Market"
+   },
+   {
+    "status": "ACTIVE",
+    "marketHash": "0xbecdb4990fed3ba11a571859dab7efb95182955916d2520d493855cecb0fbdaf",
+    "outcomeOneName": "BTC above $76,000",
+    "outcomeTwoName": "BTC at or below $76,000",
+    "teamOneName": "Bitcoin (BTC) above on October 19",
+    "teamTwoName": "",
+    "type": 52,
+    "gameTime": 1792425600,
+    "sportXeventId": "XBTCUSDT-ABOVE-20261019",
+    "liveEnabled": false,
+    "sportLabel": "Crypto",
+    "sportId": 14,
+    "tradingModes": [
+     "CLOB"
+    ],
+    "leagueId": 11000,
+    "leagueLabel": "Bitcoin",
+    "group1": "Bitcoin",
+    "chainVersion": "SXR",
+    "isQuarterLineMarket": false,
+    "binaryOnly": true,
+    "marketMeta": "{\"product\":\"ABOVE\",\"symbol\":\"BTCUSDT\",\"ticker\":\"BTC\",\"strike\":\"76000\",\"expiresAt\":\"2026-10-19T16:00:00.000Z\"}",
+    "__type": "Market"
+   }
+  ],
+  "nextKey": "6ad4edc45c53791b3babb749"
+ }
+}

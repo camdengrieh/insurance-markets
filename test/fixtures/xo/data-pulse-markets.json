@@ -1,0 +1,104 @@
+{
+  "data": [
+    {
+      "id": 46411,
+      "marketConfigId": 2,
+      "adapterConfigId": 2,
+      "marketConfigName": "BTC 5 min",
+      "marketAddress": null,
+      "conditionId": "0xe9dff2f7e0abbd7b8ab820224de275b9ee921e45f5a2ed9631aa4dcc4eb76b92",
+      "status": "active",
+      "cycleNumber": 44051,
+      "startsAt": "2026-10-18T17:55:00.000Z",
+      "expiresAt": "2026-10-18T18:00:00.000Z",
+      "observationStartsAt": "2026-10-18T18:00:00.000Z",
+      "observationEndsAt": "2026-10-18T18:00:00.000Z",
+      "resolvedAt": null,
+      "closedAt": null,
+      "openingTwap": null,
+      "closingTwap": null,
+      "openingPrice": null,
+      "closingPrice": null,
+      "winningOutcome": null,
+      "sampleCount": 0,
+      "resolutionData": null,
+      "marketMetadata": {
+        "title": "BTC 5min Pulse",
+        "category": "PULSE",
+        "outcomes": [
+          {
+            "id": 0,
+            "title": "UP"
+          },
+          {
+            "id": 1,
+            "title": "DOWN"
+          }
+        ],
+        "image_url": "https://storage.googleapis.com/market-image/392553cb-44c8-4733-aa54-5741e95bdf4c.png",
+        "description": "This market resolves to “Up” if the Chainlink BTC/USD TWAP for the time period specified in the market title is greater than or equal to the BTC/USD price at the beginning of that period. Otherwise, it resolves to “Down.”\n\nThe market will be resolved using the Chainlink BTC/USD TWAP 60s Data Stream as the sole resolution source.",
+        "subcategories": [
+          "BTC",
+          "5m Up/Down"
+        ],
+        "settlementPriceMode": "twap"
+      },
+      "createdAt": "2026-10-18T17:40:07.887Z",
+      "updatedAt": "2026-10-18T17:40:09.170Z"
+    },
+    {
+      "id": 46410,
+      "marketConfigId": 2,
+      "adapterConfigId": 2,
+      "marketConfigName": "BTC 5 min",
+      "marketAddress": null,
+      "conditionId": "0xf3a2ffe15230736af1d36876c23c07be61656d0a12fe23bfe0ab869165f1968b",
+      "status": "active",
+      "cycleNumber": 44050,
+      "startsAt": "2026-10-18T17:50:00.000Z",
+      "expiresAt": "2026-10-18T17:55:00.000Z",
+      "observationStartsAt": "2026-10-18T17:55:00.000Z",
+      "observationEndsAt": "2026-10-18T17:55:00.000Z",
+      "resolvedAt": null,
+      "closedAt": null,
+      "openingTwap": null,
+      "closingTwap": null,
+      "openingPrice": null,
+      "closingPrice": null,
+      "winningOutcome": null,
+      "sampleCount": 0,
+      "resolutionData": null,
+      "marketMetadata": {
+        "title": "BTC 5min Pulse",
+        "category": "PULSE",
+        "outcomes": [
+          {
+            "id": 0,
+            "title": "UP"
+          },
+          {
+            "id": 1,
+            "title": "DOWN"
+          }
+        ],
+        "image_url": "https://storage.googleapis.com/market-image/392553cb-44c8-4733-aa54-5741e95bdf4c.png",
+        "description": "This market resolves to “Up” if the Chainlink BTC/USD TWAP for the time period specified in the market title is greater than or equal to the BTC/USD price at the beginning of that period. Otherwise, it resolves to “Down.”\n\nThe market will be resolved using the Chainlink BTC/USD TWAP 60s Data Stream as the sole resolution source.",
+        "subcategories": [
+          "BTC",
+          "5m Up/Down"
+        ],
+        "settlementPriceMode": "twap"
+      },
+      "createdAt": "2026-10-18T17:35:11.242Z",
+      "updatedAt": "2026-10-18T17:35:12.535Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 2,
+    "total": 4,
+    "totalPages": 2,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}

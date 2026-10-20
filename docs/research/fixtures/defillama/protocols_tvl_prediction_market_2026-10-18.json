@@ -1,0 +1,213 @@
+[
+  {
+    "name": "Polymarket International",
+    "slug": "polymarket-international",
+    "tvl": 371946508,
+    "chains": [
+      "Polygon"
+    ]
+  },
+  {
+    "name": "Rain",
+    "slug": "rain",
+    "tvl": 16425240,
+    "chains": [
+      "Arbitrum"
+    ]
+  },
+  {
+    "name": "Predict Fun",
+    "slug": "predict-fun",
+    "tvl": 12412221,
+    "chains": [
+      "Binance",
+      "Blast"
+    ]
+  },
+  {
+    "name": "OPINION",
+    "slug": "opinion",
+    "tvl": 3062463,
+    "chains": [
+      "Binance"
+    ]
+  },
+  {
+    "name": "Sport.fun",
+    "slug": "sport.fun",
+    "tvl": 2181988,
+    "chains": [
+      "Base"
+    ]
+  },
+  {
+    "name": "Pascal",
+    "slug": "pascal",
+    "tvl": 2055767,
+    "chains": [
+      "Solana"
+    ]
+  },
+  {
+    "name": "Levr Bet",
+    "slug": "levr-bet",
+    "tvl": 1845960,
+    "chains": [
+      "Monad"
+    ]
+  },
+  {
+    "name": "Augur",
+    "slug": "augur",
+    "tvl": 1781453,
+    "chains": [
+      "Ethereum"
+    ]
+  },
+  {
+    "name": "Overtime",
+    "slug": "overtime",
+    "tvl": 1358826,
+    "chains": [
+      "Arbitrum",
+      "Base",
+      "Optimism",
+      "Polygon",
+      "Ethereum",
+      "Binance"
+    ]
+  },
+  {
+    "name": "PredictStreet",
+    "slug": "predictstreet",
+    "tvl": 1339215,
+    "chains": [
+      "ADI"
+    ]
+  },
+  {
+    "name": "Liquidity House",
+    "slug": "liquidity-house",
+    "tvl": 1257431,
+    "chains": [
+      "Etherlink"
+    ]
+  },
+  {
+    "name": "Trueo",
+    "slug": "trueo",
+    "tvl": 1063391,
+    "chains": [
+      "Base"
+    ]
+  },
+  {
+    "name": "Meridian Predict",
+    "slug": "meridian-predict",
+    "tvl": 1028648,
+    "chains": [
+      "Robinhood Chain"
+    ]
+  },
+  {
+    "name": "Gnosis Protocol v1",
+    "slug": "gnosis-protocol-v1",
+    "tvl": 1022282,
+    "chains": [
+      "Ethereum"
+    ]
+  },
+  {
+    "name": "Zethr",
+    "slug": "zethr",
+    "tvl": 656778,
+    "chains": [
+      "Ethereum"
+    ]
+  },
+  {
+    "name": "PRDT",
+    "slug": "prdt",
+    "tvl": 474261,
+    "chains": [
+      "Ethereum",
+      "Binance",
+      "Polygon",
+      "Arbitrum",
+      "Solana",
+      "Nibiru"
+    ]
+  },
+  {
+    "name": "Limitless Exchange",
+    "slug": "limitless-exchange",
+    "tvl": 362062,
+    "chains": [
+      "Base"
+    ]
+  },
+  {
+    "name": "Seer",
+    "slug": "seer",
+    "tvl": 340357,
+    "chains": [
+      "xDai",
+      "Ethereum"
+    ]
+  },
+  {
+    "name": "Azuro",
+    "slug": "azuro",
+    "tvl": 240237,
+    "chains": [
+      "Polygon",
+      "Linea",
+      "Arbitrum",
+      "xDai",
+      "Base",
+      "Chiliz"
+    ]
+  },
+  {
+    "name": "PredictEX",
+    "slug": "predictex",
+    "tvl": 238586,
+    "chains": [
+      "Base"
+    ]
+  },
+  {
+    "name": "Myriad Markets",
+    "slug": "myriad-markets",
+    "tvl": 229000,
+    "chains": [
+      "Abstract",
+      "Binance",
+      "Linea"
+    ]
+  },
+  {
+    "name": "Alpha Arcade",
+    "slug": "alpha-arcade",
+    "tvl": 208897,
+    "chains": [
+      "Algorand"
+    ]
+  },
+  {
+    "name": "world",
+    "slug": "world",
+    "tvl": 206998,
+    "chains": [
+      "Solana"
+    ]
+  },
+  {
+    "name": "Probable",
+    "slug": "probable",
+    "tvl": 203875,
+    "chains": [
+      "Binance"
+    ]
+  }
+]

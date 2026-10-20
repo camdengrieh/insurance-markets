@@ -1,0 +1,51 @@
+{
+ "snapshot_utc": "2026-10-18 18:42:52Z",
+ "hold": {
+  "xo": {
+   "bid": "0.855",
+   "ask": "0.875",
+   "title": "No change in Fed funds rate after October 2026 meeting?",
+   "vol_usd": "50739.02167"
+  },
+  "pm": {
+   "bid": [
+    0.86,
+    296794.48
+   ],
+   "ask": [
+    0.87,
+    425448.87
+   ]
+  },
+  "k": {
+   "bid": "0.8600",
+   "ask": "0.8700",
+   "bid_size": "55801.83",
+   "ask_size": "188421.01"
+  }
+ },
+ "hike25": {
+  "xo": {
+   "bid": "0.125",
+   "ask": "0.145",
+   "title": "Fed hikes rates by exactly 25 bps after October 2026 meeting?",
+   "vol_usd": "1096690.858621"
+  },
+  "pm": {
+   "bid": [
+    0.13,
+    38608.16
+   ],
+   "ask": [
+    0.14,
+    391670.83
+   ]
+  },
+  "k": {
+   "bid": "0.1200",
+   "ask": "0.1300",
+   "bid_size": "1306.84",
+   "ask_size": "2333.33"
+  }
+ }
+}

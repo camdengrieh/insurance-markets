@@ -1,0 +1,231 @@
+{
+  "data": [
+    {
+      "id": 46546,
+      "createdAt": "2026-10-06T23:40:27.008Z",
+      "updatedAt": "2026-10-18T18:26:54.403Z",
+      "contractMarketId": "0xde7bcadbde7d2fe5e00395e425952ffef16c83db3dddb49db01624545d1bba4f",
+      "conditionId": "0xde7bcadbde7d2fe5e00395e425952ffef16c83db3dddb49db01624545d1bba4f",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-10-06T23:40:25.000Z",
+      "creatorId": 55961,
+      "title": "Will Gyokeres outscore Bruno Fernandes across Premier League Matchweeks 6–7?",
+      "slug": "will-gyokeres-outscore-bruno-fernandes-across-prem-6967",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 26,
+          "name": "Football",
+          "slug": "football"
+        },
+        {
+          "id": 27,
+          "name": "Premier League",
+          "slug": "premier-league"
+        }
+      ],
+      "type": 4,
+      "totalVolume": "113397547",
+      "totalVolumeInUSD": "113.397547",
+      "totalNotional": "127418450",
+      "totalNotionalInUSD": "127.42",
+      "status": "RESOLVED",
+      "startsAt": "2026-10-06T23:40:22.000Z",
+      "expiresAt": "2026-10-18T22:00:00.000Z",
+      "resolvedAt": "2026-10-18T18:26:52.000Z",
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/dbac6a93-6b83-4134-a253-af244d2a9d6c.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/6c122232-14cf-4c99-9c51-494164453c31.webp",
+      "winningOutcomeId": 93454,
+      "resolutionSources": [
+        "https://www.premierleague.com",
+        "https://theanalyst.com"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 55961,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#CC5555",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 419.13,
+        "tier": "Spectator"
+      },
+      "winningOutcome": {
+        "id": 93454,
+        "marketId": 46546,
+        "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+        "outcomeTokenId": "4531294177882101060303504714086757405811254115133534803685571433197991632669",
+        "title": "No",
+        "currentPrice": "420000",
+        "volumeTraded": "54377113",
+        "volumeTradedInUSD": "54.377113",
+        "notionalTraded": "112327555",
+        "index": 1
+      },
+      "outcomes": [
+        {
+          "id": 93453,
+          "marketId": 46546,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "55481413780110336191910691458781714019834454114612926975670859301738234591512",
+          "title": "Yes",
+          "currentPrice": "580000",
+          "volumeTraded": "59020434",
+          "volumeTradedInUSD": "59.020434",
+          "notionalTraded": "114517629",
+          "index": 0
+        },
+        {
+          "id": 93454,
+          "marketId": 46546,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "4531294177882101060303504714086757405811254115133534803685571433197991632669",
+          "title": "No",
+          "currentPrice": "420000",
+          "volumeTraded": "54377113",
+          "volumeTradedInUSD": "54.377113",
+          "notionalTraded": "112327555",
+          "index": 1
+        }
+      ],
+      "notes": "Both Viktor Gyökeres and Bruno Fernandes scored 0 goals across the four specified Premier League fixtures.\n\nOutcome: No\n\nBruno Fernandes scores more goals, or if their totals are equal, including 0-0.\n\nTherefore: All funds allocated to the “No”.\n\nAll four specified fixtures have been completed before the market deadline, and the official Premier League goal records should be used to confirm the final totals.\n\nResolver: XO Oracle",
+      "reviewStatus": null
+    },
+    {
+      "id": 47104,
+      "createdAt": "2026-10-08T12:03:14.862Z",
+      "updatedAt": "2026-10-18T17:41:24.308Z",
+      "contractMarketId": "0xf722ed20da4b07573d61379792b0d8bc1cb07247f3644b4291857560eab705dd",
+      "conditionId": "0xf722ed20da4b07573d61379792b0d8bc1cb07247f3644b4291857560eab705dd",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-10-08T12:03:13.000Z",
+      "creatorId": 55816,
+      "title": "Arsenal < 1.20 combined xG conceded vs Leeds & Forest?",
+      "slug": "arsenal-120-combined-xg-conceded-vs-leeds-forest-9819",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 26,
+          "name": "Football",
+          "slug": "football"
+        },
+        {
+          "id": 27,
+          "name": "Premier League",
+          "slug": "premier-league"
+        }
+      ],
+      "type": 4,
+      "totalVolume": "0",
+      "totalVolumeInUSD": "0",
+      "totalNotional": "0",
+      "totalNotionalInUSD": "0.00",
+      "status": "RESOLVED",
+      "startsAt": "2026-10-08T12:03:10.000Z",
+      "expiresAt": "2026-10-18T19:00:00.000Z",
+      "resolvedAt": "2026-10-18T17:41:08.000Z",
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/390c7e3f-3b1f-4586-a377-048da710a4f5.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/3f5b157e-8463-4664-ab77-a78587782420.webp",
+      "winningOutcomeId": 94570,
+      "resolutionSources": [
+        "https://www.fotmob.com"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 55816,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5555",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 29.98,
+        "tier": "Spectator"
+      },
+      "winningOutcome": {
+        "id": 94570,
+        "marketId": 47104,
+        "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+        "outcomeTokenId": "101805013398209250009498709975289954970621798483954956625459088828467402298374",
+        "title": "No",
+        "currentPrice": "630000",
+        "volumeTraded": "0",
+        "volumeTradedInUSD": "0",
+        "notionalTraded": "0",
+        "index": 1
+      },
+      "outcomes": [
+        {
+          "id": 94569,
+          "marketId": 47104,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "84044552673102430551566963314839017025397519934255528916219815982582610404350",
+          "title": "Yes",
+          "currentPrice": "370000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 0
+        },
+        {
+          "id": 94570,
+          "marketId": 47104,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "101805013398209250009498709975289954970621798483954956625459088828467402298374",
+          "title": "No",
+          "currentPrice": "630000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 1
+        }
+      ],
+      "notes": "Arsenal conceded a combined 1.37 xG across their Premier League matches against Leeds United (0.62) and Nottingham Forest (0.75), according to FotMob.\n\nOutcome: No\n\nAccording to the market rules:\nResolves to No if the combined FotMob xG conceded by Arsenal against Leeds United and Nottingham Forest is greater than or equal to 1.20.\n\nTherefore: All funds allocated to the “No”.\n\nBoth specified Premier League matches have been completed, and Arsenal’s combined xG conceded of 1.37 meets the market’s No condition.\n\nResolver: XO Oracle",
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 3,
+    "itemCount": 3,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "ulm6rrplx5",
+  "question": "Will JD Vance be nominated for President for the 2028 US Presidential Election?",
+  "mechanism": "cpmm-1",
+  "outcomeType": "BINARY",
+  "probability": 0.4665705492417914,
+  "pool": {
+    "NO": 9813.501236135815,
+    "YES": 10173.474348024314
+  },
+  "volume": 93079.52802842922,
+  "volume24Hours": 1.2044870082855885,
+  "totalLiquidity": 10000,
+  "token": "MANA",
+  "isResolved": false,
+  "closeTime": 1846126740000,
+  "resolutionTime": null,
+  "resolution": null
+}

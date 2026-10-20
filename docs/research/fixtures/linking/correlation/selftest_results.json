@@ -1,0 +1,102 @@
+{
+ "T1a peak lag recovered (x leads y by 3)": {
+  "pass": true,
+  "detail": "peak=3 rho=0.865"
+ },
+ "T1b rho(3) CI excludes 0": {
+  "pass": true,
+  "detail": "CI=(0.850,0.879)"
+ },
+ "T1c lead-lag asymmetry CI > 0 (x leads)": {
+  "pass": true,
+  "detail": "LAM=0.807 CI=(0.751,0.870)"
+ },
+ "T1d contemporaneous rho ~ 0 (no instantaneous link)": {
+  "pass": true,
+  "detail": "rho0=-0.000"
+ },
+ "T1e swapping series flips sign of LAM": {
+  "pass": true,
+  "detail": "LAM=-0.807"
+ },
+ "T1f peak lag mode in bootstrap = 3": {
+  "pass": true,
+  "detail": "{3: 1.0}"
+ },
+ "T1g extra 1-bin delay moves peak 3->4": {
+  "pass": true,
+  "detail": "peak=4"
+ },
+ "T1h circular-shift null rejects (lam_p<0.01)": {
+  "pass": true,
+  "detail": "p=0.0050"
+ },
+ "T2a block-bootstrap LAM CI false-positive rate under independence <= 15%": {
+  "pass": true,
+  "detail": "fp=2/60"
+ },
+ "T2b circular-shift test false-positive rate <= 15%": {
+  "pass": true,
+  "detail": "fp=2/60"
+ },
+ "T3 vol-clustered independent series: false-positive rate <= 20%": {
+  "pass": true,
+  "detail": "fp=2/40"
+ },
+ "T4 locf never uses an observation before it is known": {
+  "pass": true,
+  "detail": "[None, None, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0]"
+ },
+ "T5a AR(1) phi within 3 se of truth": {
+  "pass": true,
+  "detail": "phi=0.891 se=0.008"
+ },
+ "T5b half-life within 25% of 6.58 h": {
+  "pass": true,
+  "detail": "hl=6.02"
+ },
+ "T5c DF rejects unit root for OU (t<-2.86)": {
+  "pass": true,
+  "detail": "t=-13.09"
+ },
+ "T5d DF false-rejection rate on random walks <= 12%": {
+  "pass": true,
+  "detail": "rej=0/50"
+ },
+ "T6a OLS beta ~0.7": {
+  "pass": true,
+  "detail": "beta=0.723"
+ },
+ "T6b out-of-sample variance reduction ~ R2 (0.50)": {
+  "pass": true,
+  "detail": "VR=0.502"
+ },
+ "T7 stale-quote venue looks like a lagger (LAM>0 for the fast venue) - bias is real": {
+  "pass": true,
+  "detail": "LAM=0.761 CI=(0.711,0.821)"
+ },
+ "T8 diffs yields None across gaps": {
+  "pass": true,
+  "detail": "[None, None, None, 1.0]"
+ },
+ "T9a negative relation: sgn=-1 and LAM CI > 0 (x leads)": {
+  "pass": true,
+  "detail": "sgn=-1.0 LAM=0.882 CI=(0.824,0.937)"
+ },
+ "T9b negative relation: sign-aware peak lag = 2": {
+  "pass": true,
+  "detail": "{2: 1.0}"
+ },
+ "T10a event-response: S>0 and p<0.01 when x leads": {
+  "pass": true,
+  "detail": "S=1.34 p=0.005"
+ },
+ "T10b event-response flips sign when swapped": {
+  "pass": true,
+  "detail": "S=-1.34"
+ },
+ "T10c event-response false-positive rate under independence <= 15%": {
+  "pass": true,
+  "detail": "fp=2/30"
+ }
+}

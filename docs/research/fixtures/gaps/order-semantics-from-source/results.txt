@@ -1,0 +1,110 @@
+# Results of the scripts in this folder, run 2026-10-19 (machine clock). Aggregate output only; no wallet addresses.
+
+## analyze_orders.py (600 on-chain orders from 300 matchOrders txs, operator tx pages 1-6, 2026-10-18T17:32Z..19:52Z)
+txs-with-orders orders: 600 ts range: 2026-10-18T17:32:31.000000Z 2026-10-18T19:52:52.000000Z
+nonce: Counter({0: 600})
+sigtype: Counter({3: 600})
+sig len bytes: Counter({86: 595, 65: 4, 66: 1})
+sig prefix byte0: Counter({'01': 595, '20': 1, 'e0': 1, '00': 1, '53': 1, '45': 1})
+sig validator (bytes1-21): Counter({'845adb2c711129d4f3966735ed98a9f09fc4ce57': 595})
+maker==signer: Counter({True: 600})
+beneficiary zero: Counter({True: 600})
+identifier nonzero: Counter({False: 600}) metadata nonzero: Counter({False: 600})
+expiration zero: Counter({True: 598, False: 2})
+n GTD-style orders: 2
+  exp 1792351200 2026-10-18T19:20:00 fill ts 2026-10-18T19:19:44.000000Z taker 0x45f9053285
+  exp 1792351200 2026-10-18T19:20:00 fill ts 2026-10-18T19:19:44.000000Z taker 0x14b4f2610c
+tick-exactness / rounding by side (0=BUY,1=SELL):
+   (0, 'exact') 14
+   (0, 'inexact', 'ceil') 289
+   (1, 'exact') 6
+   (1, 'inexact', 'floor') 291
+examples (side,S,C,t,floorC,ceilC,kind): [(0, 50838669, 14794053, 291, 14794052, 14794053, 'ceil'), (1, 71017854, 20666195, 291, 20666195, 20666196, 'floor'), (0, 41874256, 12185409, 291, 12185408, 12185409, 'ceil'), (1, 71017854, 20666195, 291, 20666195, 20666196, 'floor'), (0, 41874256, 12185409, 291, 12185408, 12185409, 'ceil'), (1, 36896736, 10736950, 291, 10736950, 10736951, 'floor'), (0, 51523997, 14993484, 291, 14993483, 14993484, 'ceil'), (1, 36896736, 10736950, 291, 10736950, 10736951, 'floor')]
+share-amount granularity: Counter({'S%1000!=0': 595, 'S%1000==0': 5})
+smallest collateral in an order: [('maker', 0, 8000000, 64000), ('taker', 0, 1981228, 257560), ('taker', 0, 1590459, 270379), ('taker', 0, 2487032, 315854), ('maker', 1, 5000000, 410000)]
+smallest shares in an order: [('taker', 0, 1001001, 1000000), ('taker', 0, 1059647, 1041634), ('maker', 1, 1180001, 873200), ('taker', 0, 1307220, 1284998), ('taker', 0, 1543809, 1517565)]
+n matches: 300 min takerFillAmount: 35846 min maker fill: 8064
+
+## fees_in_fills.py
+matches: 300 takerFee>0: 4 makerFee>0 legs: 0
+max taker fee/cash bps: [550.8, 550.8, 482.0, 4.8]
+
+## sigform_by_maker.mjs (which digest form each maker signs, across all sampled orders)
+unclassified maker detail: {"n":2,"raws":1,"eths":1}
+unclassified maker detail: {"n":2,"raws":1,"eths":1}
+{
+ "makersTotal": 68,
+ "tally": {
+  "0x01:eip191-over-wrapped": 62,
+  "0x01:unclassified": 2,
+  "0x00:single-order(ambiguous)": 1,
+  "0x01:single-order(ambiguous)": 3
+ }
+}
+
+## verify_onchain_sigs.mjs (9 picked orders: recompute orderHash+Kernel wrap, ecrecover, compare to OwnerRegistered owner)
+recovered==registered owner: 9/9
+
+## deploy_pattern.py (first UserOp of 6 sampled traded accounts)
+6/6: OwnerRegistered tx also contains EntryPoint AccountDeployed + an ERC20 Approval (from earlier run; see notes section b)
+
+## hmac_variants.py
+[
+ {
+  "method": "GET",
+  "target_with_query": "/auth/api-keys",
+  "target_path_only": "/auth/api-keys",
+  "body": "",
+  "variants": {
+   "path-only|decode=True|pad=True": "kgl1j1THzaxUc-e7n94kM8noV66UZVflvIJF9vOnOf8=",
+   "path-only|decode=True|pad=False": "kgl1j1THzaxUc-e7n94kM8noV66UZVflvIJF9vOnOf8",
+   "path-only|decode=False|pad=True": "8Evfe-b2v0OGi6FKb869kEtfRyAa3BxbhTADnY_8EFU=",
+   "path-only|decode=False|pad=False": "8Evfe-b2v0OGi6FKb869kEtfRyAa3BxbhTADnY_8EFU",
+   "path-with-query|decode=True|pad=True": "kgl1j1THzaxUc-e7n94kM8noV66UZVflvIJF9vOnOf8=",
+   "path-with-query|decode=True|pad=False": "kgl1j1THzaxUc-e7n94kM8noV66UZVflvIJF9vOnOf8",
+   "path-with-query|decode=False|pad=True": "8Evfe-b2v0OGi6FKb869kEtfRyAa3BxbhTADnY_8EFU=",
+   "path-with-query|decode=False|pad=False": "8Evfe-b2v0OGi6FKb869kEtfRyAa3BxbhTADnY_8EFU"
+  },
+  "polymarket_py_reference(path-only)": "kgl1j1THzaxUc-e7n94kM8noV66UZVflvIJF9vOnOf8=",
+  "py_equals_path_only_decode_pad": true,
+  "variants_identical_when_no_query": true
+ },
+ {
+  "method": "GET",
+  "target_with_query": "/orders?limit=1",
+  "target_path_only": "/orders",
+  "body": "",
+  "variants": {
+   "path-only|decode=True|pad=True": "n8tzRCIDKwGtlambD7m-kcarkQDMiOTV_0l_HmkBJgU=",
+   "path-only|decode=True|pad=False": "n8tzRCIDKwGtlambD7m-kcarkQDMiOTV_0l_HmkBJgU",
+   "path-only|decode=False|pad=True": "gGZpy1jCY_gWERxYwtbdbj58bolTgBd4kyWA6HDkbg4=",
+   "path-only|decode=False|pad=False": "gGZpy1jCY_gWERxYwtbdbj58bolTgBd4kyWA6HDkbg4",
+   "path-with-query|decode=True|pad=True": "lA47_qKG5bH-EKnDZdr_8JwTrFT8do-D5StBJ0P57Mg=",
+   "path-with-query|decode=True|pad=False": "lA47_qKG5bH-EKnDZdr_8JwTrFT8do-D5StBJ0P57Mg",
+   "path-with-query|decode=False|pad=True": "gfqF0_bl0DH4uaZ4P0usULHc94WZ3XvRg_xOGeQtqm4=",
+   "path-with-query|decode=False|pad=False": "gfqF0_bl0DH4uaZ4P0usULHc94WZ3XvRg_xOGeQtqm4"
+  },
+  "polymarket_py_reference(path-only)": "n8tzRCIDKwGtlambD7m-kcarkQDMiOTV_0l_HmkBJgU=",
+  "py_equals_path_only_decode_pad": true,
+  "variants_identical_when_no_query": false
+ },
+ {
+  "method": "DELETE",
+  "target_with_query": "/order",
+  "target_path_only": "/order",
+  "body": "{\"orderID\":\"42\"}",
+  "variants": {
+   "path-only|decode=True|pad=True": "25XdZN8OsLdaUMHkhLM273AGjMuY7iCg5k8c_PYzJ7k=",
+   "path-only|decode=True|pad=False": "25XdZN8OsLdaUMHkhLM273AGjMuY7iCg5k8c_PYzJ7k",
+   "path-only|decode=False|pad=True": "Kb4iGCe4pzOs7A47PYdGu87JW9JCHXjDOzRF3-gJjoQ=",
+   "path-only|decode=False|pad=False": "Kb4iGCe4pzOs7A47PYdGu87JW9JCHXjDOzRF3-gJjoQ",
+   "path-with-query|decode=True|pad=True": "25XdZN8OsLdaUMHkhLM273AGjMuY7iCg5k8c_PYzJ7k=",
+   "path-with-query|decode=True|pad=False": "25XdZN8OsLdaUMHkhLM273AGjMuY7iCg5k8c_PYzJ7k",
+   "path-with-query|decode=False|pad=True": "Kb4iGCe4pzOs7A47PYdGu87JW9JCHXjDOzRF3-gJjoQ=",
+   "path-with-query|decode=False|pad=False": "Kb4iGCe4pzOs7A47PYdGu87JW9JCHXjDOzRF3-gJjoQ"
+  },
+  "polymarket_py_reference(path-only)": "25XdZN8OsLdaUMHkhLM273AGjMuY7iCg5k8c_PYzJ7k=",
+  "py_equals_path_only_decode_pad": true,
+  "variants_identical_when_no_query": true
+ }
+]

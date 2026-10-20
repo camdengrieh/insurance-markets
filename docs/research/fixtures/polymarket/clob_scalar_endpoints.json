@@ -1,0 +1,29 @@
+{
+  "_note": "JSON body of GET https://clob.polymarket.com/<endpoint>?token_id=<Yes token of the Senate-control market>; /price is called with side=BUY then side=SELL",
+  "token_id": "51939490109676186832507970701169130490548061087912630009168726706475001411420",
+  "midpoint": {
+    "mid": "0.365"
+  },
+  "price_side_BUY": {
+    "price": "0.36"
+  },
+  "price_side_SELL": {
+    "price": "0.37"
+  },
+  "spread": {
+    "spread": "0.01"
+  },
+  "last_trade_price": {
+    "price": "0.37",
+    "side": "BUY"
+  },
+  "tick_size": {
+    "minimum_tick_size": 0.01
+  },
+  "neg_risk": {
+    "neg_risk": true
+  },
+  "fee_rate": {
+    "base_fee": 1000
+  }
+}

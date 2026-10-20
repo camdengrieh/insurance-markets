@@ -1,0 +1,472 @@
+/*
+  Layout and primitive styles. Only tokens from theme.css; no inline styles anywhere (style-src 'self').
+  Targets: 360 px wide with a 16 px gutter and no horizontal page scroll, touch targets of at least 44 px.
+*/
+
+/* ---- shell ----------------------------------------------------------------------------------------------- */
+
+.ui-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.ui-container {
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.ui-skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.ui-skip-link:focus {
+  top: 8px;
+}
+
+.ui-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.ui-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-block: 0.5rem;
+}
+
+.ui-brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.ui-header-tools {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.ui-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 0.85rem;
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.ui-nav a:hover {
+  background: var(--surface-2);
+}
+
+.ui-nav a[aria-current="page"] {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  font-weight: 700;
+}
+
+.ui-nav-note {
+  margin-left: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ui-statusbar {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.ui-statusbar .ui-container {
+  padding-block: 0.4rem;
+}
+
+.ui-main {
+  padding-block: 1.25rem 2.5rem;
+  min-width: 0;
+}
+
+.ui-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.ui-footer .ui-container {
+  padding-block: 0.75rem;
+}
+
+/* ---- primitives ------------------------------------------------------------------------------------------ */
+
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-button:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.ui-button[data-variant="primary"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.ui-button[data-variant="primary"]:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+  border: 1px solid currentColor;
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+}
+
+.ui-badge[data-tone="ok"] {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+
+.ui-badge[data-tone="warn"] {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.ui-badge[data-tone="danger"] {
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.ui-badge[data-tone="info"] {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+
+.ui-glyph {
+  font-weight: 700;
+}
+
+/* The fixed slot that holds market text. Dashed outline plus a tinted well: visibly "someone else's words". */
+.ui-untrusted {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 0.35em;
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+  background: var(--untrusted-bg);
+  color: var(--untrusted-fg);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  unicode-bidi: isolate;
+  vertical-align: baseline;
+}
+
+.ui-untrusted-block {
+  margin: 0 0 0.75rem;
+  max-width: 100%;
+}
+
+.ui-untrusted-block > figcaption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.ui-untrusted-block .ui-untrusted {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  white-space: pre-wrap;
+}
+
+.ui-untrusted[data-clamp="1"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.ui-untrusted[data-clamp="2"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.ui-untrusted-invalid {
+  font-style: italic;
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  padding: 0 0.35em;
+  border-radius: 4px;
+}
+
+.ui-missing {
+  color: var(--text-muted);
+}
+
+/* ---- tiles ----------------------------------------------------------------------------------------------- */
+
+.ui-tile {
+  border: 1px solid var(--border-strong);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  min-width: 0;
+}
+
+.ui-tile[data-tone="danger"] {
+  border-left-color: var(--danger-fg);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.ui-tile[data-tone="warn"] {
+  border-left-color: var(--warn-fg);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.ui-tile[data-tone="info"] {
+  border-left-color: var(--info-fg);
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+
+.ui-tile[data-tone="neutral"] {
+  border-left-color: var(--neutral-fg);
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+}
+
+.ui-tile-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.4rem;
+}
+
+.ui-tile-body > :last-child {
+  margin-bottom: 0;
+}
+
+.ui-tile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.ui-tile a {
+  color: inherit;
+}
+
+/* ---- data table ------------------------------------------------------------------------------------------ */
+
+.ui-table-scroll {
+  /* The containing block for the visually-hidden spans in cells: without it they are positioned against the page
+     and widen the document at narrow widths. */
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 1rem;
+}
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.ui-table caption {
+  text-align: start;
+  font-weight: 700;
+  padding: 0.6rem 0.75rem;
+}
+
+.ui-table th,
+.ui-table td {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.ui-table thead th {
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.ui-table [data-align="end"] {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- disclosure, dialog, provenance ---------------------------------------------------------------------- */
+
+.ui-disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 1rem;
+}
+
+.ui-disclosure > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ui-disclosure-body {
+  padding: 0 0.75rem 0.75rem;
+}
+
+.ui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gutter);
+  background: rgb(0 0 0 / 0.55);
+}
+
+.ui-dialog {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 100%;
+  overflow: auto;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.ui-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.ui-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.ui-provenance dl {
+  display: contents;
+}
+
+.ui-provenance dt {
+  color: var(--text-muted);
+}
+
+.ui-provenance dd {
+  margin: 0;
+}
+
+.ui-provenance-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ui-input,
+.ui-select {
+  min-height: var(--tap);
+  padding: 0 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  max-width: 100%;
+}
+
+.ui-stack > * + * {
+  margin-top: 1rem;
+}

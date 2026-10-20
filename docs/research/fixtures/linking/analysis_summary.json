@@ -1,0 +1,235 @@
+{
+ "me_sets": {
+  "sets_total_in_listings": 5430,
+  "sets_with_all_books": 726,
+  "sell_side": {
+   "label": "me_sell",
+   "evaluated": 706,
+   "gross_positive": 50,
+   "net_positive": 0,
+   "net_positive_unflagged": 0,
+   "flag_counts_among_net_positive": {},
+   "net_bps_median": null,
+   "net_bps_p90": null,
+   "net_bps_max": null,
+   "capital_usd_median": null,
+   "capital_usd_p90": null,
+   "capital_usd_total": 0,
+   "net_usd_total": 0,
+   "below_min_size": 0
+  },
+  "buy_side_all": {
+   "label": "me_buy",
+   "evaluated": 725,
+   "gross_positive": 24,
+   "net_positive": 10,
+   "net_positive_unflagged": 0,
+   "flag_counts_among_net_positive": {
+    "extreme_price_leg": 5,
+    "exhaustiveness_unverified": 10
+   },
+   "net_bps_median": 31.600092897497632,
+   "net_bps_p90": 82.80565982139144,
+   "net_bps_max": 810.2626370777269,
+   "capital_usd_median": 3051.41525,
+   "capital_usd_p90": 8258.3802,
+   "capital_usd_total": 37427.7339,
+   "net_usd_total": 252.95999999999998,
+   "below_min_size": 0
+  },
+  "buy_side_exhaustive_verified": {
+   "label": "me_buy_verified",
+   "evaluated": 8,
+   "gross_positive": 2,
+   "net_positive": 0,
+   "net_positive_unflagged": 0,
+   "flag_counts_among_net_positive": {},
+   "net_bps_median": null,
+   "net_bps_p90": null,
+   "net_bps_max": null,
+   "capital_usd_median": null,
+   "capital_usd_p90": null,
+   "capital_usd_total": 0,
+   "net_usd_total": 0,
+   "below_min_size": 0
+  }
+ },
+ "complement": {
+  "per_venue": {
+   "polymarket": {
+    "books": 378,
+    "nonempty": 377,
+    "two_sided": 283,
+    "crossed_single_book": 0,
+    "crossed_keys": [],
+    "mirror_test": {
+     "compared": 0,
+     "both_empty": 0,
+     "price_levels_identical": 0,
+     "prices_and_sizes_identical": 0,
+     "ask_sum_below_1_or_bid_sum_above_1": 0,
+     "examples": []
+    }
+   },
+   "kalshi": {
+    "books": 5851,
+    "nonempty": 5825,
+    "two_sided": 4151,
+    "crossed_single_book": 0,
+    "crossed_keys": []
+   },
+   "xo": {
+    "books": 411,
+    "nonempty": 363,
+    "two_sided": 270,
+    "crossed_single_book": 0,
+    "crossed_keys": [],
+    "mirror_test": {
+     "compared": 25,
+     "both_empty": 0,
+     "price_levels_identical": 25,
+     "prices_and_sizes_identical": 25,
+     "ask_sum_below_1_or_bid_sum_above_1": 0,
+     "examples": []
+    }
+   },
+   "limitless": {
+    "books": 297,
+    "nonempty": 295,
+    "two_sided": 265,
+    "crossed_single_book": 0,
+    "crossed_keys": []
+   }
+  },
+  "crossed_book_opps": {
+   "label": "complement_crossed",
+   "evaluated": 0,
+   "gross_positive": 0,
+   "net_positive": 0,
+   "net_positive_unflagged": 0,
+   "flag_counts_among_net_positive": {},
+   "net_bps_median": null,
+   "net_bps_p90": null,
+   "net_bps_max": null,
+   "capital_usd_median": null,
+   "capital_usd_p90": null,
+   "capital_usd_total": 0,
+   "net_usd_total": 0,
+   "below_min_size": 0
+  }
+ },
+ "ladders": {
+  "stats": {
+   "pairs_with_both_books": {
+    "polymarket": 14,
+    "kalshi": 1835
+   },
+   "violations_on_book": {
+    "polymarket": 2,
+    "kalshi": 8
+   },
+   "violations_in_listing": {
+    "polymarket": 3,
+    "kalshi": 9
+   }
+  },
+  "all": {
+   "label": "ladders",
+   "evaluated": 1849,
+   "gross_positive": 10,
+   "net_positive": 3,
+   "net_positive_unflagged": 1,
+   "flag_counts_among_net_positive": {
+    "extreme_price_leg": 2
+   },
+   "net_bps_median": 35.963855421686745,
+   "net_bps_p90": 74.31473581111419,
+   "net_bps_max": 74.31473581111419,
+   "capital_usd_median": 4.99,
+   "capital_usd_p90": 1797.7592,
+   "capital_usd_total": 1807.7292,
+   "net_usd_total": 13.3851,
+   "below_min_size": 0
+  },
+  "threshold": {
+   "label": "threshold",
+   "evaluated": 1826,
+   "gross_positive": 8,
+   "net_positive": 2,
+   "net_positive_unflagged": 0,
+   "flag_counts_among_net_positive": {
+    "extreme_price_leg": 2
+   },
+   "net_bps_median": 25.206376608638962,
+   "net_bps_p90": 35.963855421686745,
+   "net_bps_max": 35.963855421686745,
+   "capital_usd_median": 4.985,
+   "capital_usd_p90": 4.99,
+   "capital_usd_total": 9.97,
+   "net_usd_total": 0.025099999999999997,
+   "below_min_size": 0
+  },
+  "date": {
+   "label": "date",
+   "evaluated": 23,
+   "gross_positive": 2,
+   "net_positive": 1,
+   "net_positive_unflagged": 1,
+   "flag_counts_among_net_positive": {},
+   "net_bps_median": 74.31473581111419,
+   "net_bps_p90": 74.31473581111419,
+   "net_bps_max": 74.31473581111419,
+   "capital_usd_median": 1797.7592,
+   "capital_usd_p90": 1797.7592,
+   "capital_usd_total": 1797.7592,
+   "net_usd_total": 13.36,
+   "below_min_size": 0
+  }
+ },
+ "cross": {
+  "stats": {
+   "link_pairs_with_books": 951,
+   "skipped": {
+    "no_book": 4032,
+    "empty_book": 21,
+    "pm_side_ambiguous": 1,
+    "orientation_unknown": 347,
+    "inverse_but_not_verified_two_way": 40
+   }
+  },
+  "all": {
+   "label": "cross",
+   "evaluated": 1644,
+   "gross_positive": 510,
+   "net_positive": 485,
+   "net_positive_unflagged": 222,
+   "flag_counts_among_net_positive": {
+    "extreme_price_leg": 263
+   },
+   "net_bps_median": 826.2978142076503,
+   "net_bps_p90": 9897.04881369117,
+   "net_bps_max": 158983.75224721007,
+   "capital_usd_median": 450.0,
+   "capital_usd_p90": 979.0,
+   "capital_usd_total": 1252773.7975,
+   "net_usd_total": 47815.6087,
+   "below_min_size": 5
+  }
+ },
+ "listing_vs_book": {
+  "polymarket": {
+   "compared_best_ask": 361,
+   "identical": 296,
+   "within_one_cent": 45,
+   "more_than_one_cent": 20,
+   "median_abs_diff": 0.0
+  },
+  "kalshi": {
+   "compared_best_ask": 5743,
+   "identical": 5071,
+   "within_one_cent": 265,
+   "more_than_one_cent": 407,
+   "median_abs_diff": 0.0
+  }
+ }
+}

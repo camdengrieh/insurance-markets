@@ -1,0 +1,337 @@
+{
+ "status": "success",
+ "data": [
+  {
+   "symbol": "HOUSE_2026_CTRL.DEM",
+   "taker_fee_rate": "0.010000",
+   "maker_rebate_share": "0.500000",
+   "tick_size_min": "0.001000",
+   "tick_sig_figs": 2,
+   "display_attributes": {
+    "colors": {
+     "market": {
+      "light": "#025AC3",
+      "dark": "#4385E4"
+     }
+    },
+    "event_description": "House control after 2026 midterms",
+    "expected_resolution_time_ms": "1793768400000",
+    "market_description": "Democratic Party",
+    "reference": {
+     "kind": "polymarket",
+     "market_slug": "will-the-democratic-party-control-the-house-after-the-2026-midterm-elections",
+     "condition_id": "0xd5d9fc47718bd553592d126b1fa5e87183d27f3936975b0c04cc0f2dec1f1bb4",
+     "market_outcome_token_id": "83247781037352156539108067944461291821683755894607244160607042790356561625563",
+     "reverse_outcome_token_id": "33156410999665902694791064431724433042010245771106314074312009703157423879038"
+    },
+    "sort_order": "PRICE",
+    "tags": [
+     "Politics",
+     "Elections",
+     "Midterms",
+     "Balance of Power"
+    ],
+    "topic": {
+     "id": "2026-us-midterms",
+     "description": "2026 U.S. Midterms"
+    }
+   },
+   "rules_url": "https://pascal-prod-market-metadata-355653384618.s3.ap-northeast-1.amazonaws.com/events/HOUSE_2026_CTRL/HOUSE_2026_CTRL.DEM.md",
+   "stats": {
+    "last_24h": {
+     "mark_price_start": "0.906000",
+     "taker_buy_volume": "3419",
+     "taker_sell_volume": "3155",
+     "taker_buy_volume_notional": "3096.568000",
+     "taker_sell_volume_notional": "2854.383000",
+     "taker_buy_trade_count": "56",
+     "taker_sell_trade_count": "54",
+     "window_end_ts_ms_exclusive": "1792368120000"
+    },
+    "all_time": {
+     "taker_buy_volume": "53394",
+     "taker_sell_volume": "29035",
+     "taker_buy_volume_notional": "49222.409000",
+     "taker_sell_volume_notional": "26662.567000",
+     "taker_buy_trade_count": "200",
+     "taker_sell_trade_count": "162",
+     "window_end_ts_ms_exclusive": "1792327680000"
+    }
+   },
+   "mark_price": "0.906000",
+   "best_bid": "0.905000",
+   "best_ask": "0.907000",
+   "open_interest": "23988",
+   "long_interest": "23988",
+   "short_interest": "23988"
+  },
+  {
+   "symbol": "EPL_26OCT19_TOTCOV_ML.COV",
+   "taker_fee_rate": "0.020000",
+   "maker_rebate_share": "0.250000",
+   "tick_size_min": "0.001000",
+   "tick_sig_figs": 3,
+   "display_attributes": {
+    "colors": {
+     "market": {
+      "light": "#059DD9",
+      "dark": "#059DD9"
+     }
+    },
+    "event_description": "Tottenham Hotspur FC vs Coventry City FC, Moneyline - Reg Time",
+    "expected_event_start_time_ms": "1792436400000",
+    "expected_resolution_time_ms": "1792447200000",
+    "game_page": {
+     "game_id": "epl-tot-cov-2026-10-19",
+     "game_description": "Tottenham Hotspur FC vs Coventry City FC",
+     "section_id": "money-line-reg-time",
+     "section_description": "Moneyline - Reg Time",
+     "section_display_order": 100,
+     "row_display_order": 300
+    },
+    "market_description": "Coventry City FC",
+    "market_type": {
+     "kind": "sports",
+     "sport": "soccer",
+     "period": "reg_time",
+     "teams": {
+      "home_name": "Tottenham Hotspur FC",
+      "home_subject_id": "tottenham-hotspur",
+      "away_name": "Coventry City FC",
+      "away_subject_id": "coventry-city"
+     },
+     "market": {
+      "type": "moneyline",
+      "outcome": "away"
+     }
+    },
+    "reference": {
+     "kind": "polymarket",
+     "market_slug": "epl-tot-cov-2026-10-19-cov",
+     "condition_id": "0x8b82ad049c9ea7a72df5972dd202f47e41a166ab24b60d432173e51fd924626a",
+     "market_outcome_token_id": "34464944484969522068827139837280287494112699264408013620203000547992597307331",
+     "reverse_outcome_token_id": "52920162469873082672191051649577536534753437063826122812381417931580769229030"
+    },
+    "sort_order": "SYMBOL_ASC",
+    "tags": [
+     "Sports",
+     "Soccer",
+     "EPL"
+    ],
+    "topic": {
+     "id": "2026-27-premier-league",
+     "description": "2026-27 Premier League"
+    }
+   },
+   "listing_ts_ms": "1792149717596",
+   "rules_url": "https://pascal-prod-market-metadata-355653384618.s3.ap-northeast-1.amazonaws.com/events/EPL_26OCT19_TOTCOV_ML/EPL_26OCT19_TOTCOV_ML.COV.md",
+   "stats": {
+    "last_24h": {
+     "mark_price_start": "0.145000",
+     "taker_buy_volume": "16",
+     "taker_sell_volume": "40",
+     "taker_buy_volume_notional": "2.360000",
+     "taker_sell_volume_notional": "6.240000",
+     "taker_buy_trade_count": "2",
+     "taker_sell_trade_count": "1",
+     "window_end_ts_ms_exclusive": "1792368120000"
+    },
+    "all_time": {
+     "taker_buy_volume": "16",
+     "taker_sell_volume": "40",
+     "taker_buy_volume_notional": "2.360000",
+     "taker_sell_volume_notional": "6.240000",
+     "taker_buy_trade_count": "2",
+     "taker_sell_trade_count": "1",
+     "window_end_ts_ms_exclusive": "1792352340000"
+    }
+   },
+   "mark_price": "0.154500",
+   "best_bid": "0.151000",
+   "best_ask": "0.158000",
+   "open_interest": "40",
+   "long_interest": "40",
+   "short_interest": "40"
+  },
+  {
+   "symbol": "CLARITY_ACT_SIGNED_BY.26DEC31",
+   "taker_fee_rate": "0.010000",
+   "maker_rebate_share": "0.500000",
+   "tick_size_min": "0.001000",
+   "tick_sig_figs": 2,
+   "display_attributes": {
+    "event_description": "Clarity Act signed into law by",
+    "expected_resolution_time_ms": "1798779540000",
+    "market_description": "Dec 31, 2026",
+    "reference": {
+     "kind": "polymarket",
+     "market_slug": "clarity-act-signed-into-law-in-2026",
+     "condition_id": "0x9cb23d04b2ded06147482076688b69b487a8d982c63ebdda2ab3678cf27cf390",
+     "market_outcome_token_id": "35198549486569600595408965368290795524428922595732253580266052028158040373233",
+     "reverse_outcome_token_id": "29633826701713552120011280893309822625942861174174976276686142480636225243753"
+    },
+    "sort_order": "EXPECTED_RESOLUTION_TIME",
+    "tags": [
+     "Politics",
+     "Crypto",
+     "Clarity Act"
+    ],
+    "topic": {
+     "id": "clarity-act-2026",
+     "description": "Digital Asset Market Clarity Act"
+    }
+   },
+   "listing_ts_ms": "1781044883170",
+   "rules_url": "https://pascal-prod-market-metadata-355653384618.s3.ap-northeast-1.amazonaws.com/events/CLARITY_ACT_SIGNED_BY/CLARITY_ACT_SIGNED_BY.26DEC31.md",
+   "stats": {
+    "last_24h": {
+     "mark_price_start": "0.052500",
+     "taker_buy_volume": "0",
+     "taker_sell_volume": "0",
+     "taker_buy_volume_notional": "0.000000",
+     "taker_sell_volume_notional": "0.000000",
+     "taker_buy_trade_count": "0",
+     "taker_sell_trade_count": "0",
+     "window_end_ts_ms_exclusive": "1792368120000"
+    },
+    "all_time": {
+     "taker_buy_volume": "101955",
+     "taker_sell_volume": "80621",
+     "taker_buy_volume_notional": "19228.034000",
+     "taker_sell_volume_notional": "16828.618000",
+     "taker_buy_trade_count": "157",
+     "taker_sell_trade_count": "152",
+     "window_end_ts_ms_exclusive": "1791142320000"
+    }
+   },
+   "mark_price": "0.051500",
+   "best_bid": "0.048000",
+   "best_ask": "0.055000",
+   "open_interest": "29314",
+   "long_interest": "29314",
+   "short_interest": "29314"
+  },
+  {
+   "symbol": "ANTH_IPO_MC_27DEC31_RNG.0_4T",
+   "taker_fee_rate": "0.010000",
+   "maker_rebate_share": "0.500000",
+   "tick_size_min": "0.001000",
+   "tick_sig_figs": 2,
+   "display_attributes": {
+    "event_description": "Anthropic IPO market cap",
+    "expected_resolution_time_ms": "1830315599000",
+    "game_page": {
+     "game_id": "anthropic-ipo-market-cap-2027-12-31",
+     "game_description": "Anthropic IPO Market Cap",
+     "section_id": "anthropic-ipo-market-cap",
+     "section_description": "Anthropic IPO Market Cap",
+     "section_display_order": 100,
+     "row_display_order": 100
+    },
+    "market_description": "[$0T - $4T]",
+    "scalar": {
+     "upper": "4",
+     "lower": "0",
+     "scale": "0",
+     "prefix": "$",
+     "suffix": "T"
+    },
+    "sort_order": "MARKET_DESCRIPTION_ASC",
+    "tags": [
+     "Finance",
+     "Pre-IPO",
+     "AI",
+     "Scalar"
+    ],
+    "topic": {
+     "id": "pre-ipo-stocks",
+     "description": "Pre-IPO Stocks"
+    }
+   },
+   "listing_ts_ms": "1787679261947",
+   "rules_url": "https://pascal-prod-market-metadata-355653384618.s3.ap-northeast-1.amazonaws.com/events/ANTH_IPO_MC_27DEC31_RNG/ANTH_IPO_MC_27DEC31_RNG.0_4T.md",
+   "stats": {
+    "last_24h": {
+     "mark_price_start": "0.465000",
+     "taker_buy_volume": "0",
+     "taker_sell_volume": "0",
+     "taker_buy_volume_notional": "0.000000",
+     "taker_sell_volume_notional": "0.000000",
+     "taker_buy_trade_count": "0",
+     "taker_sell_trade_count": "0",
+     "window_end_ts_ms_exclusive": "1792368120000"
+    },
+    "all_time": {
+     "taker_buy_volume": "310",
+     "taker_sell_volume": "42",
+     "taker_buy_volume_notional": "166.400000",
+     "taker_sell_volume_notional": "22.260000",
+     "taker_buy_trade_count": "4",
+     "taker_sell_trade_count": "1",
+     "window_end_ts_ms_exclusive": "1791922620000"
+    }
+   },
+   "mark_price": "0.460000",
+   "best_bid": "0.410000",
+   "best_ask": "0.510000",
+   "open_interest": "342",
+   "long_interest": "342",
+   "short_interest": "342"
+  },
+  {
+   "symbol": "CLARITY_ACT_SIGNED_BY.26NOV30",
+   "taker_fee_rate": "0.010000",
+   "maker_rebate_share": "0.500000",
+   "tick_size_min": "0.001000",
+   "tick_sig_figs": 2,
+   "display_attributes": {
+    "event_description": "Clarity Act signed into law by",
+    "expected_resolution_time_ms": "1796101140000",
+    "market_description": "Nov 30, 2026",
+    "sort_order": "EXPECTED_RESOLUTION_TIME",
+    "tags": [
+     "Politics",
+     "Crypto",
+     "Clarity Act"
+    ],
+    "topic": {
+     "id": "clarity-act-2026",
+     "description": "Digital Asset Market Clarity Act"
+    }
+   },
+   "listing_ts_ms": "1784833055535",
+   "rules_url": "https://pascal-prod-market-metadata-355653384618.s3.ap-northeast-1.amazonaws.com/events/CLARITY_ACT_SIGNED_BY/CLARITY_ACT_SIGNED_BY.26NOV30.md",
+   "stats": {
+    "last_24h": {
+     "mark_price_start": "0.023000",
+     "taker_buy_volume": "0",
+     "taker_sell_volume": "0",
+     "taker_buy_volume_notional": "0.000000",
+     "taker_sell_volume_notional": "0.000000",
+     "taker_buy_trade_count": "0",
+     "taker_sell_trade_count": "0",
+     "window_end_ts_ms_exclusive": "1792368120000"
+    },
+    "all_time": {
+     "taker_buy_volume": "1034",
+     "taker_sell_volume": "0",
+     "taker_buy_volume_notional": "179.860000",
+     "taker_sell_volume_notional": "0.000000",
+     "taker_buy_trade_count": "3",
+     "taker_sell_trade_count": "0",
+     "window_end_ts_ms_exclusive": "1786370100000"
+    }
+   },
+   "mark_price": "0.023000",
+   "best_bid": "0.001000",
+   "best_ask": "0.045000",
+   "open_interest": "1000",
+   "long_interest": "1000",
+   "short_interest": "1000"
+  }
+ ],
+ "seq": "10705472171",
+ "state_time_ms": "1792368170449",
+ "server_time_ms": "1792368170502",
+ "_fixture_note": "GET https://data.pascal.trade/api/v1/markets on 2026-10-19; full response was 3255 markets / 5.9MB; 5 unmodified market objects kept (politics, sports, policy, scalar, one without a Polymarket reference)."
+}

@@ -1,0 +1,16 @@
+# The app is its own pnpm workspace root, separate from the plugin's. pnpm resolves the workspace
+# from the nearest pnpm-workspace.yaml upward, so `pnpm --dir app ...` never reads or writes the
+# root package.json, pnpm-workspace.yaml or pnpm-lock.yaml (acceptance W0-1, scripts/check-root-isolation.mjs).
+packages:
+  - "."
+
+# Supply chain (docs/dapp-design.md section 6 row 3). The plugin's own file does not set the age gate
+# (that is open ask A6), so the app sets it explicitly. Units: minutes. 20160 = 14 days.
+minimumReleaseAge: 20160
+# No git, tarball or other non-registry transitive dependency.
+blockExoticSubdeps: true
+# Fail an install if a package's trust level dropped between releases (provenance regression).
+trustPolicy: no-downgrade
+# No dependency may run an install script. Add a name here only with a written reason in
+# scripts/dependencies.json.
+allowBuilds: {}

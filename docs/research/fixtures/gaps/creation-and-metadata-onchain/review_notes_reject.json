@@ -1,0 +1,257 @@
+[
+{
+"cond12": "65b49d7b572b",
+"created_utc": "2026-08-14",
+"reason": "test market"
+},
+{
+"cond12": "66562e875a4b",
+"created_utc": "2026-08-14",
+"reason": "test market"
+},
+{
+"cond12": "16edfd2fb9a4",
+"created_utc": "2026-08-14",
+"reason": "Was created before the seed fix"
+},
+{
+"cond12": "3047d377263f",
+"created_utc": "2026-08-14",
+"reason": "this was a test market"
+},
+{
+"cond12": "264ba2689589",
+"created_utc": "2026-08-14",
+"reason": "duplicate"
+},
+{
+"cond12": "9312059f3e43",
+"created_utc": "2026-08-14",
+"reason": "reject"
+},
+{
+"cond12": "bcecb430b146",
+"created_utc": "2026-08-14",
+"reason": "DUP"
+},
+{
+"cond12": "8707f8497db3",
+"created_utc": "2026-08-14",
+"reason": "This Market is Already exists on the platform"
+},
+{
+"cond12": "88f1a7a75e45",
+"created_utc": "2026-08-14",
+"reason": "Reject: the title and rules do not specify the exact start time and date for the 1-hour BTC/USDT candle, so the market cannot be resolved unambiguously."
+},
+{
+"cond12": "2aa09166d0b1",
+"created_utc": "2026-08-14",
+"reason": "Reject: the selected primary source (OpenSea) does not display the STONKBROKER NFT floor price in ETH, and the rules do not specify a cutoff date/time for resolution, so the market cannot be resolved unambiguously."
+},
+{
+"cond12": "b50766ebe51f",
+"created_utc": "2026-08-14",
+"reason": "A current market already exists on the platform."
+},
+{
+"cond12": "7197cf9f392f",
+"created_utc": "2026-08-16",
+"reason": "Unfortunately, we have to decline this market. The only mention of “Grand Theft Auto VI Trailer 3” is in the creator note and not in the actual rules, which can be misleading. Please specify more clearly which video the market refers to and feel free to resubmit."
+},
+{
+"cond12": "9e619e95948b",
+"created_utc": "2026-08-16",
+"reason": "Unfortunately, we cannot accept this market as currently written.  It is ambiguous whether the condition requires Bitcoin to reach or exceed $70,000 at any point between the market’s launch and by August 31, or specifically to be at $70,000 or higher on August 31 itself. Please resubmit with a clearer resolution criteria."
+},
+{
+"cond12": "836c20fbcbf2",
+"created_utc": "2026-08-17",
+"reason": "For MPL Season 18, the teams that will advance to the Grand Final have not yet been determined. As a result, the market you proposed is not binary because it only considers two teams. We regret that we are unable to accept it. Please re-submit in binary format."
+},
+{
+"cond12": "de29b001bde8",
+"created_utc": "2026-08-18",
+"reason": "REJECT"
+},
+{
+"cond12": "f02013421d99",
+"created_utc": "2026-08-18",
+"reason": "REJECT"
+},
+{
+"cond12": "6cf3222c1dee",
+"created_utc": "2026-08-18",
+"reason": "REJECT"
+},
+{
+"cond12": "ee7c6225fc84",
+"created_utc": "2026-08-18",
+"reason": "reject"
+},
+{
+"cond12": "a4a696bac47b",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "8d172348abff",
+"created_utc": "2026-08-18",
+"reason": "Duplicate"
+},
+{
+"cond12": "cce28a2b5bd4",
+"created_utc": "2026-08-18",
+"reason": "Duplicate"
+},
+{
+"cond12": "2af7862f3cac",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "8b1bd2d0707c",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "3a1f3571bf1d",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "708bb0902ddc",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "44b12b7b3cd0",
+"created_utc": "2026-08-18",
+"reason": "rejected"
+},
+{
+"cond12": "9a30a80baa6a",
+"created_utc": "2026-08-25",
+"reason": "Unfortunately, your market cannot be accepted as it is not binary and does not account for a draw."
+},
+{
+"cond12": "c1db22052a53",
+"created_utc": "2026-08-31",
+"reason": "Duplicate"
+},
+{
+"cond12": "63d3a3d59a53",
+"created_utc": "2026-09-03",
+"reason": "“Winner of the first El Clásico of the 2026–27 La Liga season” cannot be created because it is not binary: a draw is possible, while the outcomes BARCELONA / REAL MADRID refer only to wins by those teams and cannot account for a draw.\nTo fix this, recreate the market as a binary Yes/No event, for example:\nA binary Yes/No formulation would be: “Will Real Madrid beat Barcelona in the first El Clásico of the 2026–27 La Liga season?” with outcomes YES / NO."
+},
+{
+"cond12": "3354d530e5ef",
+"created_utc": "2026-09-04",
+"reason": "The match has already taken place, so such a market cannot be created."
+},
+{
+"cond12": "fdaa7a3eba99",
+"created_utc": "2026-09-05",
+"reason": "A market with the same event, outcomes, and resolution rules is already live"
+},
+{
+"cond12": "3dc9dfaaef21",
+"created_utc": "2026-09-10",
+"reason": "reject"
+},
+{
+"cond12": "dae4d9eb56ff",
+"created_utc": "2026-09-12",
+"reason": "Convictions cannot be created on past events. Only upcoming or unresolved events are eligible."
+},
+{
+"cond12": "1bfe2ffe7409",
+"created_utc": "2026-09-13",
+"reason": "This match has already been played, so the market cannot be created. Convictions cannot be opened on past events."
+},
+{
+"cond12": "ab7d1d9ef57b",
+"created_utc": "2026-09-13",
+"reason": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, add that own goals do not count, keep scoring limited to regular time and added time, and change non-participation from a void condition into a No resolution while simplifying the abandonment wording."
+},
+{
+"cond12": "27854821ae64",
+"created_utc": "2026-09-15",
+"reason": "This event has already concluded."
+},
+{
+"cond12": "dbd94db51b6f",
+"created_utc": "2026-09-15",
+"reason": "This event has already concluded."
+},
+{
+"cond12": "cd2ed2d4a21e",
+"created_utc": "2026-09-23",
+"reason": "## MODRA Review\n\n**Decision:** REJECT\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nThis market was rejected for the reasons below.\n\n### Rejection reasons\n- [API-Football] Could not extract team names from market. Market must clearly identify both teams."
+},
+{
+"cond12": "6fda26dd41cd",
+"created_utc": "2026-09-29",
+"reason": "## MODRA Review\n\n**Decision:** REJECT\n**Quality score:** 0.40\n**Mode:** proposal\n\n### Summary\nThis market was rejected for the reasons below.\n\n### Rejection reasons\n- Market does not fit the playbook criteria."
+},
+{
+"cond12": "77cfcb61c128",
+"created_utc": "2026-10-02",
+"reason": "## MODRA Review\n\n**Decision:** REJECT\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nThis market was rejected for the reasons below.\n\n### Rejection reasons\n- [API-Football] Could not extract team names from market. Market must clearly identify both teams."
+},
+{
+"cond12": "54c2e314b268",
+"created_utc": "2026-10-02",
+"reason": "No accurate source of truth. Example.com doesn't belong to XO Market."
+},
+{
+"cond12": "bf3504ad042c",
+"created_utc": "2026-10-03",
+"reason": "The current setup of the market looks like two binaries combined into one market rather than one clean binary market; they should normally be two separate binary markets."
+},
+{
+"cond12": "46560dfa1187",
+"created_utc": "2026-10-04",
+"reason": "You submitted two identical markets. One of them is already live, so we can’t accept a second copy of the same market from you.Please use the live market. \nIf you meant a different resolution rule or a different event, send a revised version that is clearly distinct from the one already listed."
+},
+{
+"cond12": "efb099bf02bf",
+"created_utc": "2026-10-06",
+"reason": "This market is ineligible for listing because it directly concerns XO Market. Under platform standards, markets about the project itself, or that reference XO Market metrics, are not permitted."
+},
+{
+"cond12": "3499c24152d4",
+"created_utc": "2026-10-07",
+"reason": "Verification of this market may be highly disputed, so we cannot accept it"
+},
+{
+"cond12": "bd82a0684b8a",
+"created_utc": "2026-10-08",
+"reason": "Unfortunately this market cannot be launched, because whether Sky Sports showed a crowd banner or protest sign related to the Manchester City legal case depends on a subjective reading of a brief broadcast shot, the rules do not define which wording counts, and without a complete verified recording the fallback sources are unlikely to match the live feed, so the market would very likely end in a dispute or a void."
+},
+{
+"cond12": "b26b3fe82f02",
+"created_utc": "2026-10-08",
+"reason": "."
+},
+{
+"cond12": "f227a9cd6a57",
+"created_utc": "2026-10-12",
+"reason": "This market would be rejected because the rules do not specify either the matchweek or the numeric goal threshold. Without these two concrete values, the market cannot be resolved or updated unambiguously."
+},
+{
+"cond12": "01d99c15b37e",
+"created_utc": "2026-10-12",
+"reason": "This market would be rejected because the rules do not specify the numeric goal threshold. Without this concrete value, the market cannot be resolved unambiguously."
+},
+{
+"cond12": "c82b52202250",
+"created_utc": "2026-10-13",
+"reason": "test"
+},
+{
+"cond12": "5ee78844bdce",
+"created_utc": "2026-10-14",
+"reason": "This market should be rejected because its resolution condition is too vague, its primary source does not provide a directly usable 2029 settlement metric, and it lacks a definite expiration date. In addition, a 2029 settlement metric is too far removed from today’s date to be reliably set up: there is no currently established, finalized indicator that can objectively measure “AI takeover” or “global human disempowerment” more than two years in advance."
+}
+]

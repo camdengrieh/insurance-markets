@@ -1,0 +1,1400 @@
+[
+{
+"cond12": "e731892b8b05",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "test"
+},
+{
+"cond12": "6077a9a88ce1",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "f34644ca8e07",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Image updated"
+},
+{
+"cond12": "db6cee926fb9",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Title update"
+},
+{
+"cond12": "420dc736486f",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Image updated"
+},
+{
+"cond12": "b3365c3b746f",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "2beb9ea17d4e",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "rules"
+},
+{
+"cond12": "2d4510eb31b3",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Minor wording changes to align"
+},
+{
+"cond12": "1015d522bac5",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Updated rules to specify that resolution is based on the $CASHCAT market cap at the exact snapshot time of August 31, 2026 at 23:59 UTC, with both primary (CoinGecko) and fallback (CoinMarketCap) sources required to use the market cap value"
+},
+{
+"cond12": "6aa64d1a1d2e",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "The market was reworked according to the platform standards."
+},
+{
+"cond12": "1d32f306132a",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Minor wording changes plus image."
+},
+{
+"cond12": "f2ecb3323283",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added requirement that the video must be a new, previously unreleased official GTA VI trailer explicitly labeled as a “trailer” by Rockstar Games."
+},
+{
+"cond12": "f5efd70ccc7f",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "he market image was resized to match the platform’s required resolution."
+},
+{
+"cond12": "52a305a68796",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added a clause specifying that if neither the $61,000 nor $65,000 target is reached by the cutoff time (August 16, 2026, 23:59 UTC), the market will resolve to the outcome whose target price is closest to the actual BTC spot price at that t"
+},
+{
+"cond12": "2574ab356114",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Clarified that the price can reach $64,000 at any time from market launch until August 16, 2026, at 10:00 PM UTC."
+},
+{
+"cond12": "5048c6c0a305",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "The void condition was changed; all other details remain unchanged."
+},
+{
+"cond12": "86e75b05e086",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Removed “1.”; all other market details remain unchanged."
+},
+{
+"cond12": "d7f5fa27c731",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added match date (16 Aug 2026), specified Trophée des Champions, corrected team order to Lens vs PSG, and updated primary source to LFP/Ligue 1 sites instead of only ligue1.com."
+},
+{
+"cond12": "b0061a59fa69",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Clarified that the closing price will be taken from CoinGecko’s historical daily data page for Bitcoin."
+},
+{
+"cond12": "d7c50d8d028b",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Image added"
+},
+{
+"cond12": "e08c7bb5e8c9",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Clarified that “launches” means Apple officially releases, ships, or announces the iPhone 18 Pro before the cutoff time."
+},
+{
+"cond12": "92891efef56a",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added a void clause if the Best Actor winner is not announced by the end of March 2027."
+},
+{
+"cond12": "ccb36c02604e",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added a cutoff date (December 31, 2026, 23:59 UTC) and clarified that the rate increase must occur between market launch and the cutoff."
+},
+{
+"cond12": "6f41bd0ad062",
+"reviewed_utc": "2026-08-14",
+"accepted": true,
+"note": "Added a cutoff date (August 31, 2026, 23:59 UTC) and clarified that the price can exceed $1950 at any time from market launch until the cutoff."
+},
+{
+"cond12": "7913d3e1d215",
+"reviewed_utc": "2026-08-14",
+"accepted": false,
+"note": "Added a specific cutoff time (December 31, 2026, 11:59:59 PM UTC) for the resolution."
+},
+{
+"cond12": "959ee560acca",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "Added a specific cutoff time (August 31, 2026, 11:59:59 PM UTC) and clarified that any changes to the box office gross after the cutoff do not affect the market resolution."
+},
+{
+"cond12": "3b377f06c8db",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- While the teams and date of the fixture are id"
+},
+{
+"cond12": "91ae06148448",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "Few wording changes to align on the date."
+},
+{
+"cond12": "2d720277b42d",
+"reviewed_utc": "2026-08-15",
+"accepted": false,
+"note": "Rules rewritten according to platform standards."
+},
+{
+"cond12": "6afd6c5fc2a7",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "The rules were revised to use a generic reference to the 2027 presidential election instead of a fixed date, to more precisely define official declaration by INEC, to limit the impact of legal challenges to only a Supreme Court overturn bef"
+},
+{
+"cond12": "b1f5f81c1b38",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "The match date (August 16, 2026) was added, and the void condition was expanded to include cases where the match is interrupted and not completed within 48 hours of the scheduled start time."
+},
+{
+"cond12": "2c295b7b2bd4",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "A fixed deadline (August 22, 2026, 23:59:59 UTC) was added, resolution is now tied strictly to the total raised figure shown on the official Wefunder page, funds count even if later returned or the round is cancelled, and an explicit “No” o"
+},
+{
+"cond12": "2d9dcedc9876",
+"reviewed_utc": "2026-08-15",
+"accepted": true,
+"note": "Minor wording changes to make the rules clear."
+},
+{
+"cond12": "ce2bf62ae510",
+"reviewed_utc": "2026-08-16",
+"accepted": true,
+"note": "Outcome descriptions were swapped. All other details remain unchanged."
+},
+{
+"cond12": "f9cefbc2f1b9",
+"reviewed_utc": "2026-08-16",
+"accepted": true,
+"note": "Compared to the original rules, we added that only videos published after market launch are eligible, the title must contain “GTA 6”, “GTA VI”, “Grand Theft Auto 6” or “Grand Theft Auto VI” (or a close variation), and if no such video is re"
+},
+{
+"cond12": "97c20e55b603",
+"reviewed_utc": "2026-08-16",
+"accepted": false,
+"note": "Added explicit clarification that a draw counts as a successful title defense by Petr Yan (champion retains the belt under UFC rules). Made the Outcome-Specific Rules more concise."
+},
+{
+"cond12": "0aa637a5da21",
+"reviewed_utc": "2026-08-16",
+"accepted": true,
+"note": "Added clarification that the market refers to the overall Club Championship (not a single game) and that the final results are expected to be announced on 23 August 2026."
+},
+{
+"cond12": "11590581a966",
+"reviewed_utc": "2026-08-17",
+"accepted": true,
+"note": "The revised rules replace the vague \"military action\" with a precise definition of a \"direct kinetic military attack\" by US armed forces against Omani territory, expand the list of excluded non-qualifying actions (adding threats, political "
+},
+{
+"cond12": "021233207b84",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "The match date (Tuesday, 18 August 2026) and kick-off time (19:00 UTC) were added to the rules."
+},
+{
+"cond12": "4cc55187b8e3",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "“Mun United” was corrected to “Man United” / “Manchester United” for accuracy and natural usage"
+},
+{
+"cond12": "6ebf40a58c51",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "Updated to specify that this is a Dota 2 Best-of-3 (BO3) match and that it takes place in the Main Event Upper Bracket Quarterfinals of The International 2026."
+},
+{
+"cond12": "0555b97a0421",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "The market image was adjusted to meet platform standards."
+},
+{
+"cond12": "44a16a1908d9",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "Restructured to clarify YES/NO outcomes upfront: YES if Yan wins by any official method; NO if Dvalishvili wins, or if the bout is cancelled, ends in no-contest, or draw. Void now applies only to full event cancellation or postponement beyo"
+},
+{
+"cond12": "d2991a8ddb86",
+"reviewed_utc": "2026-08-18",
+"accepted": true,
+"note": "Clarified YES/NO resolution conditions upfront: YES if Volkanovski wins by any official method; NO if the bout is cancelled, ends in a no contest, or ends in a draw. Also specified that only a full event cancellation or postponement beyond "
+},
+{
+"cond12": "055b0bcb48cf",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "Added clarification that the market resolves after the final matchweek or earlier if the outcome becomes mathematically certain before then."
+},
+{
+"cond12": "e1fbf4a16a6b",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "Added clarification that the market resolves after the final matchweek or earlier if the outcome becomes mathematically certain before then."
+},
+{
+"cond12": "3bbe0053f252",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "The rules were rewritten as one continuous paragraph instead of separate YES and NO blocks. The 51 percent threshold was clarified to apply only to FOR plus AGAINST votes with Abstain excluded. A void clause was added covering permanent wit"
+},
+{
+"cond12": "ae8fc602407e",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "Clarified that this is a men's Twenty20 cricket match in the Caribbean Premier League (CPL) 2026, specified OVER/UNDER resolution logic for the 314.5 total runs line, and confirmed the match date as August 19, 2026 (23:00 UTC)."
+},
+{
+"cond12": "cd5ec17fa29f",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "Added a clear time window: the condition is evaluated from market launch until March 1, 2027, 23:59 UTC (instead of just a single end date)."
+},
+{
+"cond12": "e40674009b3b",
+"reviewed_utc": "2026-08-19",
+"accepted": true,
+"note": "The rules were tightened and made more specific. The deadline is now 23:59 UTC on Dec 31, 2026, and the market resolves YES only if there is a formal official claim, otherwise NO. Social media, rallies, interviews, and vague statements abou"
+},
+{
+"cond12": "5e218f39dbd4",
+"reviewed_utc": "2026-08-20",
+"accepted": true,
+"note": "Updated rules to ensure all edge cases are covered."
+},
+{
+"cond12": "9dfddc1f7879",
+"reviewed_utc": "2026-08-20",
+"accepted": true,
+"note": "Updated market end date to a later time as the game starts at 7 PM UTC."
+},
+{
+"cond12": "65ea3cd18a8f",
+"reviewed_utc": "2026-08-21",
+"accepted": true,
+"note": "Added an explicit source hierarchy (Netflix > rockstargames.com > YouTube) to resolve runtime discrepancies — the original had no hierarchy. Removed the caveat limiting that rule to discrepancies \"due solely to platform-specific formatting\""
+},
+{
+"cond12": "0bf98f25caf3",
+"reviewed_utc": "2026-08-22",
+"accepted": true,
+"note": "Primary sources switched to Trump’s Truth Social/X (WLFI as fallback); exact ticker match required; token must be tradable and listed on CMC/CoinGecko; announced-but-not-launched or pre-listing cancellations resolve NO, disputed cases VOID."
+},
+{
+"cond12": "cbfdedb2bfd0",
+"reviewed_utc": "2026-08-23",
+"accepted": true,
+"note": "A cutoff date of March 31, 2027 was added to the rules."
+},
+{
+"cond12": "f5c68aa4c1e1",
+"reviewed_utc": "2026-08-24",
+"accepted": true,
+"note": "The original rules stated that the market resolves based on whether the SGP-0002 vote passes, with the Solana Governance Portal as primary source (fallback to Solana Foundation), and voids if the vote is cancelled or abandoned. The updates "
+},
+{
+"cond12": "43c31f225d55",
+"reviewed_utc": "2026-08-24",
+"accepted": true,
+"note": "Rules and outcome names"
+},
+{
+"cond12": "3d3cd2311ad5",
+"reviewed_utc": "2026-08-25",
+"accepted": true,
+"note": "The match kick-off date and time (26 August 2026 at 19:00 UTC) was added to the Resolution Rules."
+},
+{
+"cond12": "b27e79dc8339",
+"reviewed_utc": "2026-08-25",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.67\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Exact match date and competition stage are not"
+},
+{
+"cond12": "e89c179db565",
+"reviewed_utc": "2026-08-26",
+"accepted": true,
+"note": "The image has been changed to a more suitable one related to League of Legends."
+},
+{
+"cond12": "9600f75db3d7",
+"reviewed_utc": "2026-08-26",
+"accepted": false,
+"note": "Compared to the original rules, the official contract address (0x<addr> on BNB Smart Chain) was added for clarity, a time window was specified (from market launch until September 30, 2026, 23:59 UTC), and m"
+},
+{
+"cond12": "f4ac28f6732c",
+"reviewed_utc": "2026-08-27",
+"accepted": false,
+"note": "Rewritten shorter; outcomes now YES (UP)/NO (DOWN); ET times include UTC; same close logic, fallbacks, hours, and Pyth source kept."
+},
+{
+"cond12": "a57f93e1ea3b",
+"reviewed_utc": "2026-08-28",
+"accepted": true,
+"note": "Added the scheduled match date (August 30, 2026) and kept the original resolution logic, including the listed sources: Serie A official site as primary and ESPN as fallback."
+},
+{
+"cond12": "cc854ece2729",
+"reviewed_utc": "2026-08-29",
+"accepted": true,
+"note": "Added the scheduled match date (August 29, 2026); all other resolution rules and sources stayed the same."
+},
+{
+"cond12": "41a6778c0f8c",
+"reviewed_utc": "2026-08-31",
+"accepted": true,
+"note": "Added the scheduled match date: 6 September 2026."
+},
+{
+"cond12": "fff321c128cc",
+"reviewed_utc": "2026-08-31",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "7db22c1c7887",
+"reviewed_utc": "2026-08-31",
+"accepted": true,
+"note": "The 2-hour window now starts at market launch. The rules also name the Robinhood-chain token and add contract address 0x<addr>"
+},
+{
+"cond12": "306ef766f3b2",
+"reviewed_utc": "2026-08-31",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.72\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Year is not specified in the intent, though a "
+},
+{
+"cond12": "91bfaa763fd1",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title was cleaned up to the official matchup, market type, and kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "b2839047ed52",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title was cleaned up to the official matchup, market type, and kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "f888f4bd6dce",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title was cleaned up to the official matchup, market type, and kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "ceba5deb6f4c",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title now states 49+ instead of O/U 49, and uses the official matchup plus kickoff time. “By September 9th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "c5bc76ff2905",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 46+ instead of O/U 46, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "5b63ea460dba",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 45+ instead of O/U 45, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "21436716940f",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title now states 44+ instead of O/U 44, and uses the official matchup plus kickoff time. “By September 13th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "c7290c77e291",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 45+ instead of O/U 45, and uses the official matchup plus kickoff time. “By September 8th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "d13b84dfe9d1",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 51+ instead of O/U 51, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "b642dd101eb9",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 49+ instead of O/U 49, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to NFL."
+},
+{
+"cond12": "36f4d07c042b",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 49+ instead of O/U 49, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to NFL."
+},
+{
+"cond12": "062d7e8812c6",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "The title now states 46+ instead of O/U 46, and uses the official matchup plus kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "da8958b89c38",
+"reviewed_utc": "2026-09-01",
+"accepted": false,
+"note": "The title was cleaned up to the official matchup, market type, and kickoff time. “By September 12th” was removed from the title. Subcategory changed to None."
+},
+{
+"cond12": "f44b627402ba",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "6f46ab0ba994",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "bfcb6f19cb1d",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "Tighten the rules to make it more clear when to resolve the market."
+},
+{
+"cond12": "0ba2311082ae",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "fbfec7e25b5c",
+"reviewed_utc": "2026-09-01",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "9466addc356f",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "2b6a0353a7bb",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "The rules were changed from circulating or fully diluted market cap to circulating market cap only, the wording was simplified, CoinGecko was removed from the Yes condition so resolution now depends solely on CoinMarketCap, and a delisting "
+},
+{
+"cond12": "565ae1b75808",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "This market resolves on the 1-minute UTC USD close of $BASECAT/WETH on Uniswap V3 (Base) at 17:36:00 UTC. Token: 0x<addr>. Pool: 0x<addr>. Use the UTC 1-minute candle openi"
+},
+{
+"cond12": "9e81daff81a1",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "Start and end prices are no longer both taken from a 1-day CoinGecko window. Start is fixed at $77,090. End is the BTC price at 16:00 UTC on 3 September 2026. Daily-close and historical-page wording was removed. Source order (CoinGecko then"
+},
+{
+"cond12": "50a02a8b65b0",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "The market was changed from a 2-hour candle close at 7:00 PM UTC to the 1-minute UTC candle that opens at 19:00:00 and closes at 19:01:00, with resolution based on that candle’s Dexscreener USD close. The pair was specified as BASECAT/WETH "
+},
+{
+"cond12": "4ad17c564357",
+"reviewed_utc": "2026-09-02",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "505b00d11b49",
+"reviewed_utc": "2026-09-03",
+"accepted": true,
+"note": "The rules were shortened into one block and the repeats were cut. YES still requires a full official PC release that is generally available to buy and play in calendar 2027. It now states more clearly that a first full official PC release b"
+},
+{
+"cond12": "a1ef41a96afc",
+"reviewed_utc": "2026-09-03",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- The specific match date, season, or competitio"
+},
+{
+"cond12": "0b134838574e",
+"reviewed_utc": "2026-09-03",
+"accepted": true,
+"note": "minor wording changes"
+},
+{
+"cond12": "d731799b0768",
+"reviewed_utc": "2026-09-04",
+"accepted": true,
+"note": "Added a short definition of public launch: first time official $VAR is minted and freely tradable on a major CEX or permissionless DEX. Explicitly excluded pre-markets, points, OTC/restricted listings, testnet, wrapped, IOU, and locked toke"
+},
+{
+"cond12": "9d52862732aa",
+"reviewed_utc": "2026-09-04",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "dc6a3a6d389b",
+"reviewed_utc": "2026-09-04",
+"accepted": true,
+"note": "Standardized FDV wording to “greater than or equal to $2B,” added explicit public launch definition with exclusions (pre-markets, IOUs, testnet, etc.), kept one-day post-launch timing and interim valuation exclusion, retained CoinGecko→Coin"
+},
+{
+"cond12": "082561473ee4",
+"reviewed_utc": "2026-09-04",
+"accepted": true,
+"note": "Standardized FDV wording, updated threshold to ≥$1B, added explicit public launch definition and exclusions, kept CoinGecko→CoinMarketCap source chain, and added a Dec 31, 2027 deadline with No resolution if no launch, plus voiding if cance"
+},
+{
+"cond12": "c91251ff0229",
+"reviewed_utc": "2026-09-04",
+"accepted": true,
+"note": "Shortened the text, removed some repetition, kept the same resolution logic, sources, time window, and void rules."
+},
+{
+"cond12": "c97ce77c7126",
+"reviewed_utc": "2026-09-06",
+"accepted": true,
+"note": "A definition of public launch was added along with exclusions for pre-markets, points, OTC, testnet, wrapped, IOU and non-transferable tokens; if the token does not launch by the cutoff the market now resolves to No instead of void, while v"
+},
+{
+"cond12": "d80a4d29409e",
+"reviewed_utc": "2026-09-06",
+"accepted": true,
+"note": "A definition of public launch was added, along with exclusions for pre-markets, points, OTC, testnet, wrapped, IOU and non-transferable tokens; the one-hour window around the one-day mark was removed in favor of excluding other timestamps; "
+},
+{
+"cond12": "cfae15042a6b",
+"reviewed_utc": "2026-09-06",
+"accepted": true,
+"note": "The condition was changed so the market resolves only if Solana’s price falls to $25.00 or below, and reaching $25.00 from below does not count."
+},
+{
+"cond12": "5632d251f62d",
+"reviewed_utc": "2026-09-07",
+"accepted": true,
+"note": "The original rules were kept intact on sources, fallback, primary-source priority, the October 1, 2026 deadline, and the void if recovery is officially canceled. The only material change is that “in full” now means the 3,995 BTC principal: "
+},
+{
+"cond12": "f97e14e3973a",
+"reviewed_utc": "2026-09-07",
+"accepted": true,
+"note": "Launch is defined (live CEX/DEX only; no premarket/IOU). No launch by cutoff = No. Void also if FDV data is missing 24h after launch. Sources unchanged."
+},
+{
+"cond12": "3c54233a868b",
+"reviewed_utc": "2026-09-07",
+"accepted": true,
+"note": "The rules were changed from a generic 1-day close direction to a comparison against a fixed starting price of $79,181.43 at a precise settlement time of 16:00 UTC on 8 September 2026; CoinMarketCap was added as a fallback if CoinGecko is un"
+},
+{
+"cond12": "beea3e945a28",
+"reviewed_utc": "2026-09-08",
+"accepted": true,
+"note": "minor updates"
+},
+{
+"cond12": "66d65e83a74a",
+"reviewed_utc": "2026-09-08",
+"accepted": true,
+"note": "The reference price is now the CoinGecko historical daily close instead of an unspecified launch price, and if the token is not launched by September 11, 2026 at 23:59 UTC the market resolves NO rather than following the original launch-win"
+},
+{
+"cond12": "280cd0d92560",
+"reviewed_utc": "2026-09-09",
+"accepted": true,
+"note": "Replaced CoinMarketCap fallback with Dexscreener FDV (price × total/max supply) and added explicit language to ignore wick anomalies. Clarified that only official tokens count (Hunter Biden’s $LAPTOP on Base and $ANSEM on Solana), excluding"
+},
+{
+"cond12": "33b580a5e35f",
+"reviewed_utc": "2026-09-09",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "35e5fa95f62a",
+"reviewed_utc": "2026-09-09",
+"accepted": true,
+"note": "The cutoff was added: ZEC now has to touch or exceed $1,350.00 on or before 10 September 2026, 23:30 UTC. Any print after that time does not count. All other source and void rules stay the same."
+},
+{
+"cond12": "2a5e43a93ecb",
+"reviewed_utc": "2026-09-09",
+"accepted": true,
+"note": "The cutoff was added: the $1.45 RAY/USDT touch now counts only on or before 10 September 2026, 23:30 UTC. Any print after that time does not count. All other source and void rules stay the same."
+},
+{
+"cond12": "dd65fef36536",
+"reviewed_utc": "2026-09-09",
+"accepted": true,
+"note": "Minor wording changes to be clear on the outcome."
+},
+{
+"cond12": "d6b5382dbe78",
+"reviewed_utc": "2026-09-10",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "6b4809958c27",
+"reviewed_utc": "2026-09-10",
+"accepted": false,
+"note": "minor changes"
+},
+{
+"cond12": "b6d950a70525",
+"reviewed_utc": "2026-09-10",
+"accepted": true,
+"note": "The rules were rewritten so the market is no longer a catch-all. WIN now means Fenerbahce or Roma actually wins the match, and DRAW is a separate outcome for a tied result. Extra time and penalties count only if they are part of the officia"
+},
+{
+"cond12": "37d5c6914a5a",
+"reviewed_utc": "2026-09-10",
+"accepted": true,
+"note": "Added a hard cutoff to the Resolution Rules: 11 September 2026, 23:30 UTC. Only prices at or before that time count. Anything after does not."
+},
+{
+"cond12": "146aedd6f9c0",
+"reviewed_utc": "2026-09-12",
+"accepted": true,
+"note": "If Jesus does not play, does not score, or has a goal disallowed, the market now resolves No instead of void. Only a fully abandoned and unresumed match still voids."
+},
+{
+"cond12": "ebd97272cc01",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "If Pedri does not play or a goal is disallowed, the market now resolves No instead of staying unclear. Own goals are excluded. Only a fully abandoned and unresumed match still voids."
+},
+{
+"cond12": "5ac72cd8833e",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rules now use an explicit Yes/No format, list extra No cases (does not play, unused, sent off, injured, disallowed goal), limit scoring to regular and added time, and slightly simplify the own-goal, source, and void wording."
+},
+{
+"cond12": "2066f06c6d5d",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases (does not play, unused substitute, sent off, injured, disallowed goal), state that only regular time and added time count, add that own goals do not count, and simplify t"
+},
+{
+"cond12": "155ffa398495",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and change non-participation from a void c"
+},
+{
+"cond12": "82ca2a6026b9",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, add that own goals do not count, and chang"
+},
+{
+"cond12": "a6171c25f3f7",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, add that own goals do not count, drop the "
+},
+{
+"cond12": "3c516ecf0f27",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and simplify the void condition from postp"
+},
+{
+"cond12": "c1dd71818a0d",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and change non-participation from a void c"
+},
+{
+"cond12": "2b9d7193681d",
+"reviewed_utc": "2026-09-13",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and simplify the void condition from cance"
+},
+{
+"cond12": "4fa1b375c90a",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, add that own goals do not count, limit scoring to regular time and added time, and simpl"
+},
+{
+"cond12": "34b30b195ec7",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and change non-participation from a void c"
+},
+{
+"cond12": "a8dfe6f5564f",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and change non-participation from a void c"
+},
+{
+"cond12": "6626a8d45623",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, add that own goals do not count, limit scoring to regular time and added time, and chang"
+},
+{
+"cond12": "6bf723ad263d",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, add that own goals do not count, limit scoring to regular time and added time, and chang"
+},
+{
+"cond12": "a664f01df009",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, add that own goals do not count, keep scoring limited to regular time and added time, an"
+},
+{
+"cond12": "07762660ea4b",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rewritten rules use an explicit Yes/No format, add extra No cases such as not playing, unused substitute, sending-off, injury or a disallowed goal, limit scoring to regular time and added time, and simplify the void condition from cance"
+},
+{
+"cond12": "9f5ebad150a1",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "400764ff1dbe",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "minor changed"
+},
+{
+"cond12": "d36724e36e3b",
+"reviewed_utc": "2026-09-14",
+"accepted": true,
+"note": "The rules were rewritten to match the platform’s standard resolution format."
+},
+{
+"cond12": "1853116e41a3",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "The match is BSKT CUP and the date is 15 September 2026"
+},
+{
+"cond12": "f48892b9926a",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "4997794c94c5",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "Added that the match is today, 15 September 2026. No other changes."
+},
+{
+"cond12": "a26c78467c8a",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "Resolution source updated."
+},
+{
+"cond12": "19abc5d01606",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "8ac04c99d125",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "Added the match date inside the rules: the Balcania Basket vs. NS Rockets game is specified as 15 September 2026."
+},
+{
+"cond12": "0b088e4546e6",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- While a specific match is named, the market do"
+},
+{
+"cond12": "038d7b2181cf",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "62af78b442b0",
+"reviewed_utc": "2026-09-15",
+"accepted": true,
+"note": "The AC Milan vs Lecce match date and kickoff were added (Sunday, September 20, 2026, 20:45 CEST at San Siro), and the ETH condition now applies from market launch through the end of that match, requiring ETH to reach or exceed $2,560.00 USD"
+},
+{
+"cond12": "cbb20ea458aa",
+"reviewed_utc": "2026-09-16",
+"accepted": true,
+"note": "The date was updated to UTC format. All other details remain unchanged."
+},
+{
+"cond12": "d17b8ad1df6f",
+"reviewed_utc": "2026-09-17",
+"accepted": true,
+"note": "The rules now require a public launch of the official $ARC token, not just any on-chain mint or distribution. The token must be live on public mainnet and publicly usable - tradeable/transferable or active for staking, governance, fees, or "
+},
+{
+"cond12": "98e8fc1db65d",
+"reviewed_utc": "2026-09-17",
+"accepted": true,
+"note": "minor change"
+},
+{
+"cond12": "17d2b40e733b",
+"reviewed_utc": "2026-09-17",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "00a30d265847",
+"reviewed_utc": "2026-09-17",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "4f6eb851ac98",
+"reviewed_utc": "2026-09-17",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "8ceb904d53e2",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "The resolution check is now pinned to a single timestamp - September 19, 2026, 05:55 AM UTC. CoinMarketCap is locked in as the primary source for that exact time, with CoinGecko used only if CMC is missing or inconsistent then. The Yes/No l"
+},
+{
+"cond12": "457aece9b98d",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "Added a fixed resolution time: September 19, 2026, 06:00 AM UTC. The market now checks the JUP spot price at that exact moment, not “whether it is above $0.25” in general. CoinMarketCap still governs at that timestamp; CoinGecko is only the"
+},
+{
+"cond12": "4d3fbd114bfc",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "The market now resolves on whether NEAR reaches $10.00 or more after launch and by December 31, 2026, 11:59:59 PM UTC. CoinGecko is the primary source and CoinMarketCap is the fallback. The original wick, DEX, and hard-fork void language re"
+},
+{
+"cond12": "384f27affa57",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "f1b782e77149",
+"reviewed_utc": "2026-09-18",
+"accepted": false,
+"note": "EC must reach $2,000 on CoinMarketCap after launch and by December 31, 2026, 23:59 UTC. CoinMarketCap stays primary, CoinGecko stays fallback, and the delisting/void language is unchanged except that it is tied to that same deadline."
+},
+{
+"cond12": "6b0f73a0b7c0",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "The market now checks whether ZEC trades at or below $1,000 on CoinGecko after launch and by December 31, 2026, 23:59 UTC. CoinGecko stays primary, CoinMarketCap stays fallback, and the delisting/void rule is tied to that deadline."
+},
+{
+"cond12": "99c348bd60c5",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "The market now resolves on whether TRX hits $1.00 on CoinGecko after launch and by December 31, 2026, 23:59 UTC. CoinGecko stays primary, CoinMarketCap stays fallback, and the void rule is tied to that same deadline."
+},
+{
+"cond12": "adce5dfddeed",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "If Dangote Refinery is not publicly trading on NGX by November 30, 2026, 23:59 UTC, the market now resolves to No instead of voiding. The day-1 close vs ₦525 test is unchanged once listing happens by that deadline."
+},
+{
+"cond12": "3e2d4f10686b",
+"reviewed_utc": "2026-09-18",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "535eb67ff11a",
+"reviewed_utc": "2026-09-21",
+"accepted": true,
+"note": "Official X account of the project has been corrected and updated. Market resolution time has also been added."
+},
+{
+"cond12": "cfe984770942",
+"reviewed_utc": "2026-09-21",
+"accepted": true,
+"note": "Changed the primary source from FIBA to BetsAPI, specified the exact fixture date as 21 September 2026, excluded the 15 September 2025 match (51–101), and kept the void rule if the game is cancelled, postponed, abandoned, or has no official"
+},
+{
+"cond12": "79c61e3f5b41",
+"reviewed_utc": "2026-09-21",
+"accepted": true,
+"note": "Few minor wording changes"
+},
+{
+"cond12": "b56222af7d32",
+"reviewed_utc": "2026-09-22",
+"accepted": true,
+"note": "Added a explicit void rule: if both players finish with the same number of Premier League goals, the market voids and all positions resolve equally."
+},
+{
+"cond12": "057f0723526d",
+"reviewed_utc": "2026-09-22",
+"accepted": true,
+"note": "Changed the primary source URL to the LBMA Precious Metal Prices page. Clarified that the relevant price is the official once-daily LBMA Silver Price USD auction fix at 12:00 London time, not live spot, open, close, or an average. Removed r"
+},
+{
+"cond12": "721d89451bc9",
+"reviewed_utc": "2026-09-23",
+"accepted": false,
+"note": "The phrase “in total” was removed because it conflicted with the Yes/No rules. The market now consistently requires each of Norway, Lithuania, and Portugal to win by 5 or more goals, not a combined margin across the three matches. The relev"
+},
+{
+"cond12": "f7a30186ceb1",
+"reviewed_utc": "2026-09-23",
+"accepted": true,
+"note": "The rules were changed from an inconsistent mix of “in total” and “each team wins by 5+” to one clear condition: all three teams must win, and their combined goal difference must be 5 or more. The title was rewritten to match that combined-"
+},
+{
+"cond12": "44b65bc246c1",
+"reviewed_utc": "2026-09-25",
+"accepted": true,
+"note": "some updates on image and rules"
+},
+{
+"cond12": "94877381d3b9",
+"reviewed_utc": "2026-09-25",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- The market concerns a personal challenge betwe"
+},
+{
+"cond12": "9a1ad27b414c",
+"reviewed_utc": "2026-09-26",
+"accepted": true,
+"note": "The rules were shortened and clarified, with clearer source priorities, full-time result criteria, and procedures for postponed, cancelled, or unresolved matches."
+},
+{
+"cond12": "55b35197e638",
+"reviewed_utc": "2026-09-26",
+"accepted": true,
+"note": "The rules were shortened and clarified, with clearer source priorities, full-time result criteria, and procedures for postponed, cancelled, or unresolved matches."
+},
+{
+"cond12": "262b26816687",
+"reviewed_utc": "2026-09-27",
+"accepted": true,
+"note": "minor wording changes"
+},
+{
+"cond12": "787c93ccf14a",
+"reviewed_utc": "2026-09-28",
+"accepted": true,
+"note": "The primary data source was changed from CoinGecko to DexScreener (GARRI/ETH pair on Robinhood Chain, contract 0x<addr>), the resolution window was specified as from market launch until October 1, 2026 at 2"
+},
+{
+"cond12": "d6a5f7859b39",
+"reviewed_utc": "2026-09-28",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.78\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Exact match date and time are not specified in"
+},
+{
+"cond12": "e1623341602f",
+"reviewed_utc": "2026-09-28",
+"accepted": false,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.56\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Exact cutoff time on October 2, 2026 is not sp"
+},
+{
+"cond12": "ac334ea64ef2",
+"reviewed_utc": "2026-09-28",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.63\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Exact source definition for Legion deposit met"
+},
+{
+"cond12": "1b6b07dce7c1",
+"reviewed_utc": "2026-09-28",
+"accepted": true,
+"note": "Minor wording in title"
+},
+{
+"cond12": "bc5c623252c9",
+"reviewed_utc": "2026-09-29",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.88\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Specific date and season of the matchup are no"
+},
+{
+"cond12": "88762d4747bb",
+"reviewed_utc": "2026-09-29",
+"accepted": true,
+"note": "Minor wording changes."
+},
+{
+"cond12": "01e92076cac1",
+"reviewed_utc": "2026-09-29",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- The specific year for which the Nobel Peace Pr"
+},
+{
+"cond12": "46cb1b08d34c",
+"reviewed_utc": "2026-09-29",
+"accepted": true,
+"note": "Once live the market needs to be paused and resolved immediately under the current wording as the price is already beyond USD 135 and the rules are on or before the 15th of October. Hence the slight wording change."
+},
+{
+"cond12": "5a7ce160193a",
+"reviewed_utc": "2026-10-01",
+"accepted": true,
+"note": "minor wording changes"
+},
+{
+"cond12": "7119dd242744",
+"reviewed_utc": "2026-10-02",
+"accepted": true,
+"note": "## MODRA Review\n\n**Decision:** UPDATE_REQUIRED\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nPlease make the changes below so the market is clear and resolvable.\n\n### Changes needed\n- Exact definition of who qualifies as a Netanya"
+},
+{
+"cond12": "06931b0647c4",
+"reviewed_utc": "2026-10-02",
+"accepted": true,
+"note": "cleared up the rules"
+},
+{
+"cond12": "ef5cb82190b1",
+"reviewed_utc": "2026-10-02",
+"accepted": true,
+"note": "minor wording"
+},
+{
+"cond12": "0daeed597992",
+"reviewed_utc": "2026-10-03",
+"accepted": true,
+"note": "FDV is checked exactly 24 hours after JUMP first has a public price on CoinGecko, or CoinMarketCap if needed. Only that snapshot counts, and above $200M is Yes. If the token is not publicly launched by 31 December 2026, 23:59 UTC, or the la"
+},
+{
+"cond12": "aca218ac0c66",
+"reviewed_utc": "2026-10-05",
+"accepted": true,
+"note": "Shortened both statements to one sentence and removed the repeated rules: what counts as a mention, exclusions, the time window, and the resolution source. The No statement now also covers a no-show."
+},
+{
+"cond12": "e00d2d97bcfb",
+"reviewed_utc": "2026-10-05",
+"accepted": true,
+"note": "Shortened both statements to one sentence and removed the repeated rules: what counts as a date, vague timeframes, off-stage statements, the time window, and the resolution source. The No statement still covers a no-show."
+},
+{
+"cond12": "076f0dcb894e",
+"reviewed_utc": "2026-10-05",
+"accepted": true,
+"note": "Rules were expanded to match platform standards"
+},
+{
+"cond12": "28a1620bb3df",
+"reviewed_utc": "2026-10-06",
+"accepted": true,
+"note": "The Yes/No logic is unchanged: Yes if De Zerbi is still Spurs manager through November 1, No if he leaves. The rewrite only sets the deadline at 11:59 PM UTC, counts an official departure announcement even if it takes effect later, and excl"
+},
+{
+"cond12": "c150663da31c",
+"reviewed_utc": "2026-10-06",
+"accepted": true,
+"note": "The only material change is the tie: it now counts for Pascal Groß instead of voiding the market. Everything else matches the original rules."
+},
+{
+"cond12": "ae9cc2fc9351",
+"reviewed_utc": "2026-10-06",
+"accepted": true,
+"note": "A tie for the highest captaincy percentage now counts as Yes. Previously it was not specified."
+},
+{
+"cond12": "9150dcf93816",
+"reviewed_utc": "2026-10-06",
+"accepted": true,
+"note": "Goals scored or conceded before launch no longer count, and only Premier League matches after launch are included."
+},
+{
+"cond12": "f88fb5ea56ac",
+"reviewed_utc": "2026-10-06",
+"accepted": true,
+"note": "Added a definition of a clean sheet: zero goals conceded in the official Premier League full-time result. Own goals conceded count against it."
+},
+{
+"cond12": "026f508cd828",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "Added secondary sources: Sky Sports, then Opta Analyst, if the Premier League does not publish distance for the match. The Premier League still governs if sources conflict."
+},
+{
+"cond12": "3dff337acc54",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "Clarified that only Chelsea’s Premier League Matchweek 6 fixture against AFC Bournemouth counts. Other gameweeks and competitions are excluded."
+},
+{
+"cond12": "10c461c77bc5",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "Substance is unchanged. The rewrite only restyles the same deadline, Yes/No conditions, departure types, and temporary-absence exclusion, and adds mutually exclusive outcomes, named sources, and a void if status cannot be established."
+},
+{
+"cond12": "14e7085bf859",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "The title’s “non-penalty set piece” now covers corners, free kicks, throw-ins and goal kicks, not only corners and free kicks. A goal in the immediate set-piece sequence counts, including a header, flick-on, rebound or forced own goal, not "
+},
+{
+"cond12": "4a7ee618c9bb",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "The same two matches and the same exclusion of a cleared corner remain. The rewrite only defines a qualifying goal as one from that same corner delivery, including a first-contact header, shot or deflection, and adds that one match is not e"
+},
+{
+"cond12": "e2469565e415",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "The date/time format was changed to UTC."
+},
+{
+"cond12": "d8521119e724",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "Defining exact threshold for 'pressure or dismissal proceedings initiated' in case of mutual consent departures."
+},
+{
+"cond12": "0e1d64d15373",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "A memecoin is now defined as an asset listed by CoinGecko in its meme category. An asset without that category does not count. The void condition now refers to that meme category being altered or removed, rather than a broader change to mem"
+},
+{
+"cond12": "3beb73b9cd63",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "Compared with the original rules, the cutoff “4:00 PM ET” was converted to UTC as 20:00 UTC during Eastern Daylight, and a deadline was added so that if there is no listing by 31/12/2027, 23:59 UTC, the market resolves to NO."
+},
+{
+"cond12": "81773a5439c2",
+"reviewed_utc": "2026-10-07",
+"accepted": true,
+"note": "The resolution criteria are unchanged. The text was only shortened: repeated definitions, the separate Yes/No section, and overlapping exclusion and source wording were merged into one set of rules, while the deadline, scope, conditions (A)"
+},
+{
+"cond12": "adfe21314bcc",
+"reviewed_utc": "2026-10-08",
+"accepted": true,
+"note": "The postponement clause was replaced with a fixed cutoff: if the fight has not taken place by December 15, 2026, 23:50 UTC, the market voids. Cancellation and a no contest still void the market."
+},
+{
+"cond12": "802f16d4b9b7",
+"reviewed_utc": "2026-10-08",
+"accepted": true,
+"note": "The comparison is now limited to Premier League matchweeks 6–8, and a player who does not appear is scored as 0 for that match. If goals are level, assists break the tie; if both also have 0 assists, the player with more active minutes on t"
+},
+{
+"cond12": "ad9054369fc7",
+"reviewed_utc": "2026-10-08",
+"accepted": true,
+"note": "The market now resolves on Coinbase’s official winner announcement, including a tie in which Jez shares first place, rather than on final leaderboard standings. A declaration on coinbase.com, in the official X broadcast, or from (at)coinbase\n "
+},
+{
+"cond12": "5e6b20d4070c",
+"reviewed_utc": "2026-10-08",
+"accepted": true,
+"note": "If Cole Palmer does not appear in the match, the market now resolves to No. Cancellation or an abandoned match without an official result still voids the market."
+},
+{
+"cond12": "4e98f67acd58",
+"reviewed_utc": "2026-10-08",
+"accepted": true,
+"note": "Parsed explicit date \"October 10, 2026\"; user cutoff differs by more than 24h."
+},
+{
+"cond12": "01f0c605b0e3",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "The source is now Kaito Studio, not Binance. X posts count only if Studio is down. Yes requires a new Katalyst-badged campaign for a project that had none before. Partner and Select do not count. The cutoff is November 1, 2026, 23:59 UTC. T"
+},
+{
+"cond12": "09ed2b243b4f",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "The cutoff is now November 1, 2026, 00:00 UTC, and the sources are the official Premier League, UEFA, and EFL reports, with BBC Sport, Sky Sports, ESPN, Flashscore, Sofascore, and The Athletic only as backups. A goal counts only if it is of"
+},
+{
+"cond12": "edeb2fd3682b",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "The trigger is now the official announcement, not the date the manager actually leaves. An announcement before November 9, 2026, 23:59:59 UTC counts even if the exit takes effect later, and one after the cutoff does not. Talks, a caretaker "
+},
+{
+"cond12": "e1e236d382eb",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "A tie resolves to Haaland. A player who does not play scores 0, and that no longer voids the market. The void now applies only if Gameweek 6 is cancelled or abandoned with no official FPL points."
+},
+{
+"cond12": "861d5402409b",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "The title was changed from “Will Bitcoin trade below $79,000 by October 23, 2026?” to “Will Bitcoin trade below $79,000 at 2026-10-23 23:59 UTC?” so it no longer reads as a “by this date” condition and instead points to the exact cutoff tim"
+},
+{
+"cond12": "b74dc7593e87",
+"reviewed_utc": "2026-10-09",
+"accepted": true,
+"note": "Resolution now depends on the transcript being published before November 5, 2026 at 13:00 UTC, and anything published after that time does not count. The match is the exact letter sequence 'Manchester City', so wording that contains it, inc"
+},
+{
+"cond12": "2d7458ec674f",
+"reviewed_utc": "2026-10-10",
+"accepted": true,
+"note": "The rules now define a clear entity, treat only a public S-1 on EDGAR as the IPO trigger and only an on-chain native token deployment with official announcement as the token trigger, use sources that actually cover both events, resolve by t"
+},
+{
+"cond12": "af38aac1e8cb",
+"reviewed_utc": "2026-10-11",
+"accepted": true,
+"note": "The primary measurement source was updated to specifically Binance spot BTCUSDT, with CoinGecko retained as the fallback, replacing the original dual reference to the CF Bitcoin Real-Time Index or Binance BTCUSDT."
+},
+{
+"cond12": "7516b87b21c2",
+"reviewed_utc": "2026-10-11",
+"accepted": true,
+"note": "Added a rule that the market resolves to No if Enzo Fernandez does not appear on the pitch at any point during the match."
+},
+{
+"cond12": "d22a8c1131bc",
+"reviewed_utc": "2026-10-11",
+"accepted": true,
+"note": "The rules were tightened to require a new previously unreported incident confirmed by at least two independent sources including official manufacturer statements and X accounts, with clearer exclusions for software-only, exchange, phishing "
+},
+{
+"cond12": "671d9e2e7c27",
+"reviewed_utc": "2026-10-11",
+"accepted": true,
+"note": "The rules were tightened to require that Gyökeres must both be named in the official starting XI and actually take to the pitch at kickoff (previously only inclusion in the starting XI was needed). Secondary sources were reduced to primaril"
+},
+{
+"cond12": "c0c85104aae5",
+"reviewed_utc": "2026-10-12",
+"accepted": true,
+"note": "The market rules were updated to specify that the two consecutive matchdays are Matchweek 7 and Matchweek 8 of the Premier League 2026-27 season, and to define the resolution of the Over 2.5 and Under 2.5 outcomes based on the total number "
+},
+{
+"cond12": "82e4dbdb4a7e",
+"reviewed_utc": "2026-10-12",
+"accepted": true,
+"note": "Changed the resolution window to start from the launch of the market (instead of any time before the cutoff)."
+},
+{
+"cond12": "a4b9e67a354a",
+"reviewed_utc": "2026-10-13",
+"accepted": true,
+"note": "Changed to require a monetary giveaway post on X every calendar day in UTC from market launch until November 1, 2026, 12:00:00 AM UTC, with all times specified in UTC."
+},
+{
+"cond12": "f67f318b9b67",
+"reviewed_utc": "2026-10-13",
+"accepted": true,
+"note": "The fixed November 19 2026 date was removed and replaced with resolution based on whether Jack Doherty posts before the official GTA VI release, with a November 30 2026 backup deadline under which no post and no release equals NO; platforms"
+},
+{
+"cond12": "5ca29029419a",
+"reviewed_utc": "2026-10-13",
+"accepted": true,
+"note": "The updated version explicitly defines 0-14 as a combined total of 0 to 14 goals from 80.1 minutes onward across Matchweeks 7–9 and 15+ as 15 or more, while clarifying the timing as starting from 80.1 minutes rather than the 81st minute."
+},
+{
+"cond12": "690baa0b4f2f",
+"reviewed_utc": "2026-10-13",
+"accepted": true,
+"note": "The resolution rules were updated to remove the generic \"spot price on any qualifying liquid public spot market\" language and the TGE-based start time, replacing them with a 24-hour window that begins at the first spot listing on a major CE"
+},
+{
+"cond12": "3af779bbb008",
+"reviewed_utc": "2026-10-14",
+"accepted": true,
+"note": "The rules were refined to clarify that the $1.33 threshold refers to a decline from the price at market creation, that a single touch of the level is sufficient for a Yes resolution, and that CoinMarketCap serves as the secondary source if "
+},
+{
+"cond12": "976c4d9e33ce",
+"reviewed_utc": "2026-10-15",
+"accepted": true,
+"note": "minor changes"
+},
+{
+"cond12": "eb99fe930978",
+"reviewed_utc": "2026-10-17",
+"accepted": true,
+"note": "The resolution threshold was updated from 7,429.65 (which represented a 3% decline from the Friday, October 16, 2026 closing value of 7,659.44) to 7,276.46, reflecting a 5% decline from the same reference close. All related references to th"
+},
+{
+"cond12": "b5c82ea2fc2e",
+"reviewed_utc": "2026-10-18",
+"accepted": true,
+"note": "The date was corrected: Manchester City and AS Roma play on October 20, 2026, while Real Madrid plays on October 21, 2026 (not all on the 20th as originally stated). The rest of the resolution criteria remain unchanged."
+},
+{
+"cond12": "d2d2617bd716",
+"reviewed_utc": "2026-10-18",
+"accepted": true,
+"note": "The rules were tightened to require original newly filmed footage of a physical Tesla Roadster Rocket or equivalent thruster-equipped variant performing real thruster-powered flight with clear lift-off, aerial maneuver and thruster landing,"
+},
+{
+"cond12": "89da88be4712",
+"reviewed_utc": "2026-10-18",
+"accepted": true,
+"note": "The rules were tightened to specifically define the current nationwide protest movement (student-originated, expanding to cost-of-living and related issues) and require its complete cessation with no related physical street protests or bloc"
+}
+]

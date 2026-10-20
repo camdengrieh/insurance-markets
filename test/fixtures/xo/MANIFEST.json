@@ -1,0 +1,226 @@
+{
+  "data-error-400-take-over-max.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-error-404-market.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-error-404-user-portfolio.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-liquidity-rewards-earning-pools.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-liquidity-rewards-market-config.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-market-by-contract-conviction.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-market-by-contract-pulse.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-market-by-slug.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-markets-closed-resolved.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-markets-list.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-markets-search.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "data-pulse-markets.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-balance-allowance-dummy-address.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-book.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-claimable-dummy-address.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-error-400-bad-token.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-error-401-orders.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-error-404-book-unknown-token.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-error-404-market-unknown.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-fee-rate.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-health.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-last-trade-price.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-last-trades-prices.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-live-activity.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-market-by-condition.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-markets.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-midpoint.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-neg-risk.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-positions-dummy-address.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-price-buy.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-price-sell.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-prices-history.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-spread.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-tick-size.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-time.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-trading-state.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "orderbook-version.json": {
+    "source": "research-copy",
+    "note": "copied from docs/research/fixtures/xo; creator profile fields scrubbed"
+  },
+  "live-data-list-active.json": {
+    "source": "live-get",
+    "note": "first 5 rows of marketType=2,4 statuses=ACTIVE take=50 sorted by volume; meta untouched (hasNextPage true)"
+  },
+  "live-data-list-voided.json": {
+    "source": "live-get",
+    "note": "type 4 VOIDED row: no winningOutcomeId key"
+  },
+  "live-data-list-voided-closed.json": {
+    "source": "live-get",
+    "note": "VOIDED_CLOSED rows, resolvedAt null on some"
+  },
+  "live-data-list-update-required.json": {
+    "source": "live-get",
+    "note": "market status UPDATE_REQUIRED"
+  },
+  "live-data-list-resolved.json": {
+    "source": "live-get",
+    "note": "type 4 RESOLVED rows with winners"
+  },
+  "live-data-list-paused.json": {
+    "source": "live-get",
+    "note": "type 4 PAUSED rows"
+  },
+  "live-data-detail-fee-400.json": {
+    "source": "live-get",
+    "note": "detail route: constant 500000 prices, effectiveFeeConfig takerFeeBps 400, /fee-rate says 0"
+  },
+  "live-data-detail-fractional.json": {
+    "source": "live-get",
+    "note": "type 4 detail"
+  },
+  "live-orderbook-market-fee-400.json": {
+    "source": "live-get",
+    "note": "orderbook market for live-data-detail-fee-400"
+  },
+  "live-orderbook-market-fractional.json": {
+    "source": "live-get",
+    "note": "orderbook market for live-data-detail-fractional"
+  },
+  "live-orderbook-book-empty.json": {
+    "source": "live-get",
+    "note": "active market with both book sides empty"
+  },
+  "live-orderbook-book-two-sided.json": {
+    "source": "live-get",
+    "note": "two-sided book: best bid 0.105, best ask 0.135"
+  },
+  "live-orderbook-book-no-token.json": {
+    "source": "live-get",
+    "note": "No-token book of the same market as live-orderbook-book-two-sided (taken a few seconds earlier)"
+  },
+  "live-orderbook-book-fractional.json": {
+    "source": "live-get",
+    "note": "book with 6-decimal sizes such as 1271.980687"
+  },
+  "live-orderbook-fee-rate-zero-type4.json": {
+    "source": "live-get",
+    "note": "fee-rate 0 for a market"
+  },
+  "live-orderbook-price-buy-two-sided.json": {
+    "source": "live-observed",
+    "note": "transcribed from live GET /price?side=BUY answers on the two-sided market, which equalled its best bid (4 of 4 samples); the answer shape was re-checked against a live GET on 2026-10-20 ({\"price\":\"<decimal>\"})"
+  },
+  "live-orderbook-price-sell-two-sided.json": {
+    "source": "live-observed",
+    "note": "transcribed from live GET /price?side=SELL answers on the two-sided market, which equalled its best ask (4 of 4 samples); the answer shape was re-checked against a live GET on 2026-10-20 ({\"price\":\"<decimal>\"})"
+  },
+  "live-orderbook-price-empty-side.json": {
+    "source": "live-get",
+    "note": "empty side answers 0.000"
+  },
+  "live-orderbook-last-trade-price.json": {
+    "source": "live-get",
+    "note": "last trade price with side"
+  }
+}

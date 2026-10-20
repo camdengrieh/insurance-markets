@@ -1,0 +1,31 @@
+{
+ "captured_utc": "2026-10-19T02:19:00Z",
+ "source": "subscribe {type:activeAssetCtx, coin}",
+ "channel": "activeSpotAssetCtx",
+ "yes": {
+  "prevDayPx": "0.86302",
+  "dayNtlVlm": "240026.9066600001",
+  "markPx": "0.868995",
+  "midPx": "0.868995",
+  "circulatingSupply": "60782.0",
+  "coin": "#36000",
+  "totalSupply": "184467440737095.53125",
+  "dayBaseVlm": "277939.0"
+ },
+ "no": {
+  "prevDayPx": "0.13698",
+  "dayNtlVlm": "37912.09334",
+  "markPx": "0.131005",
+  "midPx": "0.131005",
+  "circulatingSupply": "32221.0",
+  "coin": "#36001",
+  "totalSupply": "184467440737095.53125",
+  "dayBaseVlm": "277939.0"
+ },
+ "checks": {
+  "dayNtlVlm_yes_plus_no": 277939.0000000001,
+  "dayBaseVlm_yes": "277939.0",
+  "dayBaseVlm_no": "277939.0",
+  "meaning": "Yes and No report the SAME dayBaseVlm (shares). dayNtlVlm(Yes)+dayNtlVlm(No) == dayBaseVlm, so adding both sides counts every share at $1 face, not at traded price. circulatingSupply = shares outstanding (each backed by $1)."
+ }
+}

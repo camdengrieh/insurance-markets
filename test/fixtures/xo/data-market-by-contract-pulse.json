@@ -1,0 +1,141 @@
+{
+  "id": 50501,
+  "createdAt": "2026-10-18T17:35:13.124Z",
+  "updatedAt": "2026-10-18T17:35:13.124Z",
+  "contractMarketId": "0xf3a2ffe15230736af1d36876c23c07be61656d0a12fe23bfe0ab869165f1968b",
+  "conditionId": "0xf3a2ffe15230736af1d36876c23c07be61656d0a12fe23bfe0ab869165f1968b",
+  "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+  "versionId": 3,
+  "createMarketBlockTimestamp": "2026-10-18T17:35:11.000Z",
+  "creatorId": 43954,
+  "title": "BTC 5min Pulse",
+  "slug": "btc-5min-pulse-4487",
+  "rules": {
+    "description": "Market resolution based on threshold value",
+    "outcomeRules": [
+      {
+        "rule": "UP",
+        "outcomeIndex": 0
+      },
+      {
+        "rule": "DOWN",
+        "outcomeIndex": 1
+      }
+    ]
+  },
+  "description": "This market resolves to “Up” if the Chainlink BTC/USD TWAP for the time period specified in the market title is greater than or equal to the BTC/USD price at the beginning of that period. Otherwise, it resolves to “Down.”\n\nThe market will be resolved using the Chainlink BTC/USD TWAP 60s Data Stream as the sole resolution source.",
+  "categoryPath": [
+    {
+      "id": 17,
+      "name": "PULSE",
+      "slug": null
+    },
+    {
+      "id": 19,
+      "name": "BTC",
+      "slug": "btc"
+    },
+    {
+      "id": 20,
+      "name": "5m Up/Down",
+      "slug": "5m-up-down"
+    }
+  ],
+  "type": 3,
+  "totalVolume": "0",
+  "totalVolumeInUSD": "0",
+  "totalNotional": "0",
+  "totalNotionalInUSD": "0.00",
+  "collateralTokenId": 2,
+  "collateralToken": {
+    "id": 2,
+    "symbol": "USDC",
+    "name": "Bridged USDC (XO)",
+    "tokenAddress": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+    "decimals": 6,
+    "isActive": true,
+    "networkId": 1,
+    "logoUrl": ""
+  },
+  "status": "ACTIVE",
+  "startsAt": "2026-10-18T17:50:00.000Z",
+  "expiresAt": "2026-10-18T17:55:00.000Z",
+  "resolvedAt": null,
+  "metadataUri": "https://market-metadata-623756711122.s3.eu-west-1.amazonaws.com/873b8fc7-6202-4018-a868-caee97e7f842.json",
+  "imageUrl": "https://xo.market/placeholder.png",
+  "resolutionEvidence": null,
+  "resolutionSources": [
+    "Automated data feed"
+  ],
+  "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+  "resolutionType": "MANUAL",
+  "resolutionFlagCount": 0,
+  "priorityScore": 0,
+  "likes": 0,
+  "cpEnabled": true,
+  "cpMultiplier": 1,
+  "creatorBps": 0,
+  "isFeatured": false,
+  "featuredOrder": null,
+  "creator": {
+    "id": 43954,
+    "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+    "username": "REDACTED",
+    "bio": null,
+    "profilePictureUrl": null,
+    "roosterColor": "#888888",
+    "achievements": [],
+    "verified": false,
+    "isOg": false,
+    "cpPoints": 0,
+    "tier": "Spectator"
+  },
+  "outcomes": [
+    {
+      "id": 101363,
+      "marketId": 50501,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "108433602066735700868641178404536800436429014637832424889766827150556104280568",
+      "title": "UP",
+      "currentPrice": "500000",
+      "volumeTraded": "0",
+      "volumeTradedInUSD": "0",
+      "notionalTraded": "0",
+      "index": 0
+    },
+    {
+      "id": 101364,
+      "marketId": 50501,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "12601909279118051367421589701881534755901467880916407727196043871251431859446",
+      "title": "DOWN",
+      "currentPrice": "500000",
+      "volumeTraded": "0",
+      "volumeTradedInUSD": "0",
+      "notionalTraded": "0",
+      "index": 1
+    }
+  ],
+  "notes": null,
+  "reviewStatus": null,
+  "effectiveFeeConfig": {
+    "eligible": true,
+    "curveModel": "FLAT_BPS",
+    "takerFeeBps": 600,
+    "makerFeeBps": 0,
+    "configId": 1,
+    "configName": "clob_pulse",
+    "splitSummary": {
+      "creatorShareBps": 0,
+      "makerShareBps": 3500,
+      "platformShareBps": 6500
+    },
+    "resolutionPath": [
+      "market_type:3",
+      "settlement:v7"
+    ],
+    "orderbookConfigId": "9cd2ef8f-44cf-449f-9704-37a5bac4dbf3",
+    "configVersion": 7,
+    "latestPublishedVersion": 7
+  }
+}

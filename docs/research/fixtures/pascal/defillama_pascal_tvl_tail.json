@@ -1,0 +1,82 @@
+{
+ "_note": "DerivedFrom GET https://api.llama.fi/protocol/pascal on 2026-10-19 (last 12 TVL points + selected fields)",
+ "id": "8321",
+ "category": "Prediction Market",
+ "chains": [
+  "Solana"
+ ],
+ "listedAt_utc": "2026-07-29T16:47:19+00:00",
+ "methodology": "TVL is the USDC collateral held in Pascal's vault token account on Solana.",
+ "currentChainTvls": {
+  "Solana": 2115986.43137
+ },
+ "raises": [
+  {
+   "date": 1754006400,
+   "round": "Seed",
+   "amount": 6,
+   "leadInvestors": [
+    "Wintermute",
+    "DBA"
+   ]
+  },
+  {
+   "date": 1784160000,
+   "round": "Series A",
+   "amount": 9,
+   "leadInvestors": [
+    "Union Square Ventures"
+   ]
+  }
+ ],
+ "tvl_tail": [
+  {
+   "date_utc": "2026-10-08T00:00:00+00:00",
+   "tvl_usd": 1829496
+  },
+  {
+   "date_utc": "2026-10-09T00:00:00+00:00",
+   "tvl_usd": 1856899
+  },
+  {
+   "date_utc": "2026-10-10T00:00:00+00:00",
+   "tvl_usd": 1872174
+  },
+  {
+   "date_utc": "2026-10-11T00:00:00+00:00",
+   "tvl_usd": 1882641
+  },
+  {
+   "date_utc": "2026-10-12T00:00:00+00:00",
+   "tvl_usd": 1872863
+  },
+  {
+   "date_utc": "2026-10-13T00:00:00+00:00",
+   "tvl_usd": 1883830
+  },
+  {
+   "date_utc": "2026-10-14T00:00:00+00:00",
+   "tvl_usd": 1947239
+  },
+  {
+   "date_utc": "2026-10-15T00:00:00+00:00",
+   "tvl_usd": 1940707
+  },
+  {
+   "date_utc": "2026-10-16T00:00:00+00:00",
+   "tvl_usd": 1936273
+  },
+  {
+   "date_utc": "2026-10-17T00:00:00+00:00",
+   "tvl_usd": 1987910
+  },
+  {
+   "date_utc": "2026-10-18T00:00:00+00:00",
+   "tvl_usd": 2050162
+  },
+  {
+   "date_utc": "2026-10-18T22:03:35+00:00",
+   "tvl_usd": 2115986
+  }
+ ]
+}

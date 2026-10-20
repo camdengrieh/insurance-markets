@@ -1,0 +1,1253 @@
+{
+ "totalDataChart": [],
+ "totalDataChartBreakdown": [],
+ "breakdown24h": null,
+ "breakdown30d": null,
+ "chain": null,
+ "allChains": [
+  "Solana",
+  "Ethereum",
+  "Robinhood Chain",
+  "BSC",
+  "Base",
+  "Polygon",
+  "Hyperliquid L1",
+  "Arbitrum",
+  "Near",
+  "Avalanche"
+ ],
+ "total24h": 7283657276.330001,
+ "total48hto24h": 7102130690.200005,
+ "total7d": 57068905330.059975,
+ "total14dto7d": 56907995444.57001,
+ "total30d": 271286478240.36993,
+ "total60dto30d": 316214541896.47986,
+ "total1y": 3402810861107.0767,
+ "total7DaysAgo": 8839216145.32,
+ "total30DaysAgo": 9385733689.430004,
+ "totalAllTime": 14268542213450.303,
+ "change_1d": 2.56,
+ "change_7d": -17.6,
+ "change_1m": -22.4,
+ "change_7dover7d": 0.28,
+ "change_30dover30d": -14.21,
+ "protocols": [
+  {
+   "total24h": 667873176,
+   "total48hto24h": 668420097,
+   "total7d": 3760200187,
+   "total14dto7d": 3532322004,
+   "total30d": 15347687952,
+   "total60dto30d": 12370325968,
+   "total1y": 87386341085,
+   "annualized1y": 87386341085,
+   "total7DaysAgo": 673393606,
+   "total30DaysAgo": 475154163,
+   "totalAllTime": 92490454575,
+   "average1y": 239414633.10958904,
+   "monthlyAverage1y": 7287781431.85589,
+   "change_1d": -0.08,
+   "change_7d": -0.82,
+   "change_1m": 40.56,
+   "change_7dover7d": 6.45,
+   "change_30dover30d": 24.07,
+   "breakdown24h": {
+    "off_chain": {
+     "Kalshi": 667873176
+    }
+   },
+   "breakdown30d": {
+    "off_chain": {
+     "Kalshi": 15347687952
+    }
+   },
+   "defillamaId": "6689",
+   "name": "Kalshi",
+   "displayName": "Kalshi",
+   "module": "kalshi",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/kalshi",
+   "chains": [
+    "Off Chain"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/kalshi.ts",
+   "methodology": {},
+   "slug": "kalshi",
+   "id": "6689"
+  },
+  {
+   "total24h": 53035677,
+   "total48hto24h": 107637219,
+   "total7d": 552203543,
+   "total14dto7d": 482848772,
+   "total30d": 2217704781,
+   "total60dto30d": 2263763383,
+   "total1y": 37851917316,
+   "annualized1y": 37851917316,
+   "total7DaysAgo": 59183154,
+   "total30DaysAgo": 85136762,
+   "totalAllTime": 48086047295,
+   "average1y": 103703883.05753425,
+   "monthlyAverage1y": 3156746200.2713428,
+   "change_1d": -50.73,
+   "change_7d": -10.39,
+   "change_1m": -37.71,
+   "change_7dover7d": 14.36,
+   "change_30dover30d": -2.03,
+   "breakdown24h": {
+    "polygon": {
+     "Polymarket International": 53035677
+    }
+   },
+   "breakdown30d": {
+    "polygon": {
+     "Polymarket International": 2217704781
+    }
+   },
+   "defillamaId": "711",
+   "name": "Polymarket International",
+   "displayName": "Polymarket International",
+   "module": "polymarket",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/polymarket-international",
+   "chains": [
+    "Polygon"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/polymarket",
+   "methodology": {},
+   "parentProtocol": "parent#polymarket",
+   "slug": "polymarket-international",
+   "linkedProtocols": [
+    "Polymarket",
+    "Polymarket International",
+    "Polymarket US",
+    "Polymarket Combos"
+   ],
+   "id": "711"
+  },
+  {
+   "total24h": 63406263,
+   "total48hto24h": 137834633,
+   "total7d": 700689074,
+   "total14dto7d": 760221932,
+   "total30d": 3072049424,
+   "total60dto30d": 1924711171,
+   "total1y": 11500282110.720001,
+   "annualized1y": 11824233719.472677,
+   "total7DaysAgo": 88718321,
+   "total30DaysAgo": 136532874,
+   "totalAllTime": 11500282110.720001,
+   "average1y": 32395160.87526761,
+   "monthlyAverage1y": 986108697.0431461,
+   "change_1d": -54,
+   "change_7d": -28.53,
+   "change_1m": -53.56,
+   "change_7dover7d": -7.83,
+   "change_30dover30d": 59.61,
+   "breakdown24h": {
+    "off_chain": {
+     "Polymarket US": 63406263
+    }
+   },
+   "breakdown30d": {
+    "off_chain": {
+     "Polymarket US": 3072049424
+    }
+   },
+   "defillamaId": "7656",
+   "name": "Polymarket US",
+   "displayName": "Polymarket US",
+   "module": "polymarket-us",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/polymarket-us",
+   "chains": [
+    "Off Chain"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/polymarket-us",
+   "methodology": {
+    "Volume": "The total volume of trades on Polymarket US per UTC day, taken from the exchange's daily time-and-sales files (17:00 ET to 17:00 ET trading days) and filtered by trade time",
+    "NotionalVolume": "The total notional volume of trades on Polymarket US per UTC day, taken from the exchange's daily time-and-sales files (17:00 ET to 17:00 ET trading days) and filtered by trade time",
+    "Fees": "Taker fees computed as \u0398 \u00d7 C \u00d7 p \u00d7 (1 - p), where C is contracts and p is trade price. \u0398 = 0.0695 from 11:59 PM ET 2026-09-16, \u0398 = 0.06 from 12:00 AM ET 2026-07-01, \u0398 = 0.05 from 2026-04-04, flat 1% from 2026-01-09 to 2026-04-03. Combo trades (launched 2026-08-11) use the same formula until 11:59 PM ET 2026-09-24, then pay C \u00d7 p \u00d7 [\u0398 \u00d7 (1 - p) + 0.04 \u00d7 (1 - p)^4], with 0.04 raised to 0.06 from 10:00 AM ET 2026-10-01. Revenue breakdowns are not available due to lack of per-trader volume data.",
+    "UserFees": "Taker fees computed as \u0398 \u00d7 C \u00d7 p \u00d7 (1 - p), where C is contracts and p is trade price. \u0398 = 0.0695 from 11:59 PM ET 2026-09-16, \u0398 = 0.06 from 12:00 AM ET 2026-07-01, \u0398 = 0.05 from 2026-04-04, flat 1% from 2026-01-09 to 2026-04-03. Combo trades (launched 2026-08-11) use the same formula until 11:59 PM ET 2026-09-24, then pay C \u00d7 p \u00d7 [\u0398 \u00d7 (1 - p) + 0.04 \u00d7 (1 - p)^4], with 0.04 raised to 0.06 from 10:00 AM ET 2026-10-01. Revenue breakdowns are not available due to lack of per-trader volume data."
+   },
+   "parentProtocol": "parent#polymarket",
+   "slug": "polymarket-us",
+   "linkedProtocols": [
+    "Polymarket",
+    "Polymarket International",
+    "Polymarket US",
+    "Polymarket Combos"
+   ],
+   "breakdownMethodology": {
+    "Fees": {
+     "Taker Fees": "Fees paid by the aggressor on each trade, computed as \u0398 \u00d7 C \u00d7 p \u00d7 (1 - p)",
+     "Combo Taker Fees": "Fees paid by the aggressor on each combo trade since combos launched on 2026-08-11, computed on the combo execution price as \u0398 \u00d7 C \u00d7 p \u00d7 (1 - p) until 11:59 PM ET 2026-09-24, then C \u00d7 p \u00d7 [\u0398 \u00d7 (1 - p) + 0.04 \u00d7 (1 - p)^4], with 0.04 raised to 0.06 from 10:00 AM ET 2026-10-01"
+    }
+   },
+   "id": "7656"
+  },
+  {
+   "total24h": 2877156,
+   "total48hto24h": 2507927,
+   "total7d": 16733562,
+   "total14dto7d": 12914921,
+   "total30d": 53773448,
+   "total60dto30d": 19536440,
+   "total1y": 419118636,
+   "annualized1y": 520334361.02040815,
+   "total7DaysAgo": 2553803,
+   "total30DaysAgo": 20327,
+   "totalAllTime": 421995792,
+   "average1y": 1425573.5918367347,
+   "monthlyAverage1y": 43394460.135510206,
+   "change_1d": 14.72,
+   "change_7d": 12.66,
+   "change_1m": 14054.36,
+   "change_7dover7d": 29.57,
+   "change_30dover30d": 175.25,
+   "breakdown24h": {
+    "xo": {
+     "XO Market": 2755924
+    }
+   },
+   "breakdown30d": {
+    "xo": {
+     "XO Market": 53773448
+    }
+   },
+   "defillamaId": "8020",
+   "name": "XO Market",
+   "displayName": "XO Market",
+   "module": "xo-market",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/xo-market",
+   "chains": [
+    "XO"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/xo-market",
+   "methodology": {
+    "Volume": "USD collateral value of every trade on the LMSR/AMM markets (buy cost and sell proceeds) and the CLOB orderbook (collateral leg of each match, counted once per match via OrdersMatched).",
+    "NotionalVolume": "Number of outcome shares traded, valued at their $1 settlement face value and counted once per trade.",
+    "Fees": "AMM markets charge protocol, creator, user and resolver fees on trades and resolution. The CLOB charges trading fees on fills (current exchange generation only) and a creation fee on conviction markets.",
+    "Revenue": "CLOB trading fees, conviction market creation fees and the protocol's share of AMM fees.",
+    "ProtocolRevenue": "CLOB trading fees, conviction market creation fees and the protocol's share of AMM fees.",
+    "SupplySideRevenue": "AMM fees paid out to market creators, resolvers and the user fee handler."
+   },
+   "parentProtocol": "parent#xo-protocol",
+   "slug": "xo-market",
+   "linkedProtocols": [
+    "XO Protocol",
+    "XO Market"
+   ],
+   "breakdownMethodology": {
+    "Fees": {
+     "Trading Fees": "Fees charged on CLOB order fills, on the current exchange generation",
+     "Market Creation Fees": "Fees paid to the treasury when a conviction market is created",
+     "AMM Protocol Fees": "Protocol fees charged on AMM market trades",
+     "AMM Creator Fees": "Fees paid to market creators on AMM market trades",
+     "AMM Resolver Fees": "Fees paid to resolvers when an AMM market resolves",
+     "AMM User Fees": "Fees sent to the XO fee handler for user distributions on AMM market trades"
+    },
+    "Revenue": {
+     "Trading Fees": "Fees charged on CLOB order fills, on the current exchange generation",
+     "Market Creation Fees": "Fees paid to the treasury when a conviction market is created",
+     "AMM Protocol Fees": "Protocol fees charged on AMM market trades"
+    },
+    "ProtocolRevenue": {
+     "Trading Fees": "Fees charged on CLOB order fills, on the current exchange generation",
+     "Market Creation Fees": "Fees paid to the treasury when a conviction market is created",
+     "AMM Protocol Fees": "Protocol fees charged on AMM market trades"
+    },
+    "SupplySideRevenue": {
+     "AMM Creator Fees": "Fees paid to market creators on AMM market trades",
+     "AMM Resolver Fees": "Fees paid to resolvers when an AMM market resolves",
+     "AMM User Fees": "Fees sent to the XO fee handler for user distributions on AMM market trades"
+    }
+   },
+   "id": "8020"
+  },
+  {
+   "total24h": 36572,
+   "total48hto24h": 28260,
+   "total7d": 156035,
+   "total14dto7d": 163031,
+   "total30d": 2609806,
+   "total60dto30d": 13365511,
+   "total1y": 1022085109,
+   "annualized1y": 1022085109,
+   "total7DaysAgo": 16932,
+   "total30DaysAgo": 469765,
+   "totalAllTime": 1467448738,
+   "average1y": 2800233.1753424658,
+   "monthlyAverage1y": 85239097.85742466,
+   "change_1d": 29.41,
+   "change_7d": 115.99,
+   "change_1m": -92.21,
+   "change_7dover7d": -4.29,
+   "change_30dover30d": -80.47,
+   "breakdown24h": {
+    "base": {
+     "Limitless Exchange": 21457
+    }
+   },
+   "breakdown30d": {
+    "base": {
+     "Limitless Exchange": 2609806
+    }
+   },
+   "defillamaId": "5181",
+   "name": "Limitless Exchange",
+   "displayName": "Limitless Exchange",
+   "module": "limitless-exchange",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/limitless-exchange",
+   "chains": [
+    "Base"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/limitless-exchange",
+   "methodology": {
+    "Volume": "USDC value of every trade, counting the orderbook and the AMM markets once each",
+    "NotionalVolume": "Number of outcome shares changing hands, counted at one share per trade",
+    "Fees": "Trading fees paid by takers. Only takers pay: the orderbook charges 0.40%-3.00% on buys and 0.42%-1.50% on sells depending on the price, and maker fees are refunded in full. AMM markets charge a flat 0.40%.",
+    "SupplySideRevenue": "Maker rebates, liquidity provider rewards and market creator fees, paid out to traders in USDC every day",
+    "Revenue": "Trading fees left over after the daily payouts to makers, liquidity providers and market creators",
+    "ProtocolRevenue": "Trading fees left over after the daily payouts to makers, liquidity providers and market creators",
+    "HoldersRevenue": "Zero. No portion of trading fees reaches LMTS holders on-chain today."
+   },
+   "slug": "limitless-exchange",
+   "breakdownMethodology": {
+    "Fees": {
+     "Orderbook Fees": "Orderbook trading fees collected by the protocol fee modules post fee refunds",
+     "AMM Fees": "FPMM (AMM) trading fees from FPMMBuy and FPMMSell events"
+    },
+    "Revenue": {
+     "Orderbook Fees": "Orderbook trading fees left over after the daily payouts to makers, liquidity providers and market creators",
+     "AMM Fees": "AMM trading fees, which the protocol keeps in full because it is the only liquidity provider in those markets"
+    },
+    "ProtocolRevenue": {
+     "Orderbook Fees": "Orderbook trading fees left over after the daily payouts to makers, liquidity providers and market creators",
+     "AMM Fees": "AMM trading fees, which the protocol keeps in full because it is the only liquidity provider in those markets"
+    },
+    "SupplySideRevenue": {
+     "Trader Rewards": "Maker rebates, liquidity provider rewards and market creator fees, paid out to traders in USDC every day"
+    }
+   },
+   "id": "5181"
+  },
+  {
+   "total24h": 2815925,
+   "total48hto24h": 3128093,
+   "total7d": 17730408,
+   "total14dto7d": 11678530,
+   "total30d": 48925978,
+   "total60dto30d": 28894113,
+   "total1y": 263900292,
+   "annualized1y": 563295944.9122807,
+   "total7DaysAgo": 2986447,
+   "total30DaysAgo": 904565,
+   "totalAllTime": 263900292,
+   "average1y": 1543276.5614035088,
+   "monthlyAverage1y": 46977338.52912281,
+   "change_1d": -9.98,
+   "change_7d": -5.71,
+   "change_1m": 211.3,
+   "change_7dover7d": 51.82,
+   "change_30dover30d": 69.33,
+   "breakdown24h": {
+    "hyperliquid": {
+     "Hyperliquid Outcomes": 2815925
+    }
+   },
+   "breakdown30d": {
+    "hyperliquid": {
+     "Hyperliquid Outcomes": 48925978
+    }
+   },
+   "defillamaId": "8941",
+   "name": "Hyperliquid Outcomes",
+   "displayName": "Hyperliquid Outcomes",
+   "module": "hyperliquid-outcome",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/hyperliquid-outcomes",
+   "chains": [
+    "Hyperliquid L1"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/hyperliquid-outcome",
+   "methodology": {
+    "Volume": "USD value of HIP-4 outcome-market trades on Hyperliquid: price times shares over every buy and sell fill, halved so each trade is counted once. Merges, splits and settlements are not trades and are excluded.",
+    "NotionalVolume": "Shares traded on HIP-4 outcome markets, each share valued at its $1 payout, halved so each trade is counted once.",
+    "Fees": "Fees users pay when closing or settling HIP-4 outcome positions, including builder-code fees added by front-ends. Hyperliquid charged no outcome fee of its own before 15 Aug 2026.",
+    "Revenue": "99% of outcome fees net of builder-code fees, sent to the Assistance Fund to buy HYPE.",
+    "ProtocolRevenue": "Hyperliquid's protocol keeps no outcome fees; they go to the Assistance Fund and the HLP vault.",
+    "HoldersRevenue": "99% of outcome fees net of builder-code fees, used by the Assistance Fund to buy back HYPE.",
+    "SupplySideRevenue": "Builder-code fees paid to the front-ends that routed the trades, plus 1% of the remaining outcome fees to HLP vault depositors."
+   },
+   "parentProtocol": "parent#hyperliquid",
+   "slug": "hyperliquid-outcomes",
+   "linkedProtocols": [
+    "Hyperliquid",
+    "Hyperliquid Spot Orderbook",
+    "Hyperliquid Outcomes"
+   ],
+   "breakdownMethodology": {
+    "Fees": {
+     "Outcome Fees": "Fees on HIP-4 outcome positions closed or settled, excluding builder-code fees.",
+     "Builder Code Fees": "Fees added on top by front-ends building on Hyperliquid, charged on outcome sells."
+    },
+    "Revenue": {
+     "Outcome Fees": "99% of outcome fees net of builder-code fees."
+    },
+    "SupplySideRevenue": {
+     "Builder Code Distribution": "Builder-code fees passed in full to the front-ends that routed the trades.",
+     "HLP": "1% of outcome fees net of builder-code fees go to the HLP vault."
+    },
+    "HoldersRevenue": {
+     "Token Buy Back": "99% of outcome fees net of builder-code fees, used to buy back HYPE."
+    }
+   },
+   "id": "8941"
+  },
+  {
+   "total24h": 2435640,
+   "total48hto24h": 6178648,
+   "total7d": 27376928,
+   "total14dto7d": 19993229,
+   "total30d": 47370157,
+   "total60dto30d": 172390,
+   "total1y": 47542547,
+   "annualized1y": 1446085804.5833333,
+   "total7DaysAgo": 2046338,
+   "totalAllTime": 49978187,
+   "average1y": 3961878.9166666665,
+   "change_1d": -60.58,
+   "change_7d": 19.02,
+   "change_7dover7d": 36.93,
+   "change_30dover30d": 27378.48,
+   "breakdown24h": {
+    "sxr": {
+     "SX Bet V3": 2274488
+    }
+   },
+   "breakdown30d": {
+    "sxr": {
+     "SX Bet V3": 47370157
+    }
+   },
+   "defillamaId": "9078",
+   "name": "SX Bet V3",
+   "displayName": "SX Bet V3",
+   "module": "sxbet-v3",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/sx-bet-v3",
+   "chains": [
+    "SX Rollup"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/sxbet-v3",
+   "methodology": {
+    "Volume": "Total stake matched each day, read from the SX Bet V3 escrow's fill events. Every bet is funded by both sides, so both stakes are counted.",
+    "Fees": "Commission SX Bet takes on the profit of winning bets, counted when the escrow pays it to SX's fee wallet at settlement. On V3 the rates are set per account and can apply to singles as well as parlays; losing and voided bets pay nothing.",
+    "Revenue": "Commission taken from the profit of winning bets and kept by SX. Market makers get none of it.",
+    "ProtocolRevenue": "All commission goes to SX: first a fee wallet, and from 4 September 2026 the treasury contract that also holds the SX community fund.",
+    "SupplySideRevenue": "Zero. Market makers get no share of the commission."
+   },
+   "parentProtocol": "parent#sx-bet",
+   "slug": "sx-bet-v3",
+   "linkedProtocols": [
+    "SX Bet",
+    "SX Bet V2",
+    "SX Bet V3"
+   ],
+   "breakdownMethodology": {
+    "Fees": {
+     "Trading Fees": "Commission taken from the profit of winning bets when the V3 escrow pays SX's fee wallet at settlement."
+    },
+    "Revenue": {
+     "Trading Commission To Protocol": "Commission taken from the profit of winning bets and kept by SX. Market makers get none of it."
+    },
+    "ProtocolRevenue": {
+     "Trading Commission To Protocol": "All commission sent to SX: a fee wallet until 4 September 2026, then the treasury contract that also holds the SX community fund."
+    }
+   },
+   "id": "9078"
+  },
+  {
+   "total24h": 313,
+   "total48hto24h": 313,
+   "total7d": 3345,
+   "total14dto7d": 6381,
+   "total30d": 16772,
+   "total60dto30d": 9452.919999999998,
+   "total1y": 338184.8900000001,
+   "annualized1y": 345763.26288515417,
+   "total7DaysAgo": 2713,
+   "total30DaysAgo": 187,
+   "totalAllTime": 796856.8900000001,
+   "average1y": 947.296610644258,
+   "monthlyAverage1y": 28835.708828011215,
+   "change_1d": 0,
+   "change_7d": -88.46,
+   "change_1m": 67.38,
+   "change_7dover7d": -47.58,
+   "change_30dover30d": 77.43,
+   "breakdown24h": {
+    "base": {
+     "Trueo": 313
+    }
+   },
+   "breakdown30d": {
+    "base": {
+     "Trueo": 16772
+    }
+   },
+   "defillamaId": "5251",
+   "name": "Trueo",
+   "displayName": "Trueo",
+   "module": "truemarkets",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/trueo",
+   "chains": [
+    "Base"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/truemarkets.ts",
+   "methodology": {
+    "Volume": "Volume is calculated from Swap events on TrueMarkets prediction market pools, enumerated from the active markets on TruthMarketManager. V1 markets use Uniswap V3 pools (USDC pairs), V2 markets use Uniswap V4 pools (TYD pairs). Only the stablecoin side of swaps is counted.",
+    "Fees": "Trading fees are tracked via PoolFeeTracked events from the FeeCollector contracts (V4 pools only; one per hook generation). Launchpad protocol fees (charged on proposal graduation and Live-phase withdrawals) are tracked via TYD transfers from the Launchpad to the fee receiver.",
+    "Revenue": "All the trading fees (v4 pools only) and launchpad fees are considered revenue.",
+    "ProtocolRevenue": "All the trading fees (v4 pools only) and launchpad fees are considered protocol revenue."
+   },
+   "slug": "trueo",
+   "breakdownMethodology": {
+    "Fees": {
+     "Trading Fees": "Trading fees are tracked via PoolFeeTracked events from the FeeCollector contracts (V4 pools only; one per hook generation).",
+     "Launchpad Fees": "Launchpad protocol fees (charged on proposal graduation and Live-phase withdrawals) are tracked via TYD transfers from the Launchpad to the fee receiver."
+    },
+    "Revenue": {
+     "Trading Fees": "Trading fees are tracked via PoolFeeTracked events from the FeeCollector contracts (V4 pools only; one per hook generation).",
+     "Launchpad Fees": "Launchpad protocol fees (charged on proposal graduation and Live-phase withdrawals) are tracked via TYD transfers from the Launchpad to the fee receiver."
+    },
+    "ProtocolRevenue": {
+     "Trading Fees": "Trading fees are tracked via PoolFeeTracked events from the FeeCollector contracts (V4 pools only; one per hook generation).",
+     "Launchpad Fees": "Launchpad protocol fees (charged on proposal graduation and Live-phase withdrawals) are tracked via TYD transfers from the Launchpad to the fee receiver."
+    }
+   },
+   "id": "5251"
+  },
+  {
+   "total24h": 0,
+   "total48hto24h": 0,
+   "total7d": 0,
+   "total14dto7d": 42166,
+   "total30d": 1777500,
+   "total60dto30d": 3879914,
+   "total1y": 9434991,
+   "annualized1y": 40997282.321428575,
+   "total7DaysAgo": 0,
+   "total30DaysAgo": 274160,
+   "totalAllTime": 9434991,
+   "average1y": 112321.32142857143,
+   "monthlyAverage1y": 3419061.0242857146,
+   "change_1m": -100,
+   "change_7dover7d": -100,
+   "change_30dover30d": -54.19,
+   "breakdown24h": {
+    "polygon": {
+     "Azuro": 0
+    },
+    "base": {
+     "Azuro": 0
+    }
+   },
+   "breakdown30d": {
+    "polygon": {
+     "Azuro": 1776777
+    },
+    "base": {
+     "Azuro": 722.56
+    }
+   },
+   "defillamaId": "1892",
+   "name": "Azuro",
+   "displayName": "Azuro",
+   "module": "azuro",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/azuro",
+   "chains": [
+    "Polygon",
+    "Base"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/fees/azuro",
+   "methodology": {
+    "Volume": "Total wager amount from all settled bets across Azuro V1, V2, and V3 contracts.",
+    "Fees": "Total pools profits (equals total bets amount minus total won bets amount)",
+    "Revenue": "Total pools profits (equals total bets amount minus total won bets amount)"
+   },
+   "slug": "azuro",
+   "id": "1892"
+  },
+  {
+   "total24h": 0,
+   "total48hto24h": 0,
+   "total7d": 0,
+   "total14dto7d": 0,
+   "total30d": 0,
+   "total60dto30d": 0,
+   "total1y": 417357,
+   "annualized1y": 417357,
+   "total7DaysAgo": 0,
+   "total30DaysAgo": 0,
+   "totalAllTime": 429256,
+   "average1y": 1143.4438356164383,
+   "monthlyAverage1y": 34806.43035616438,
+   "breakdown24h": {
+    "bsc": {
+     "Punk.Coffee": 0
+    }
+   },
+   "breakdown30d": {
+    "bsc": {
+     "Punk.Coffee": 0
+    }
+   },
+   "defillamaId": "6860",
+   "name": "Punk.Coffee",
+   "displayName": "Punk.Coffee",
+   "module": "punk.coffee",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/punk.coffee",
+   "chains": [
+    "BSC"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/punk.coffee",
+   "methodology": {
+    "Volume": "All trades on prediction markets."
+   },
+   "slug": "punk.coffee",
+   "id": "6860"
+  },
+  {
+   "total24h": null,
+   "total48hto24h": null,
+   "annualized1y": 486446119.527027,
+   "totalAllTime": 394487812,
+   "breakdown24h": null,
+   "breakdown30d": null,
+   "defillamaId": "5648",
+   "name": "O.LAB",
+   "displayName": "O.LAB",
+   "module": "olab",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/o.lab",
+   "chains": [
+    "Base"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/907a33a21a905e24de53272e391f73b262898e8b/dexs/olab",
+   "methodology": {},
+   "slug": "o.lab",
+   "id": "5648"
+  },
+  {
+   "total24h": 1263,
+   "total48hto24h": 4009,
+   "total7d": 12340,
+   "total14dto7d": 1370.39,
+   "total30d": 109979.39,
+   "total60dto30d": 116328.66,
+   "total1y": 3758468.5000000005,
+   "annualized1y": 3758468.5000000005,
+   "total7DaysAgo": 0,
+   "total30DaysAgo": 1938,
+   "totalAllTime": 6104844.499999998,
+   "average1y": 10297.17397260274,
+   "monthlyAverage1y": 313445.97572602745,
+   "change_1d": -68.5,
+   "change_1m": -34.83,
+   "change_7dover7d": 800.47,
+   "change_30dover30d": -5.46,
+   "breakdown24h": {
+    "ethereum": {
+     "Seer": 0
+    },
+    "xdai": {
+     "Seer": 1263
+    }
+   },
+   "breakdown30d": {
+    "ethereum": {
+     "Seer": 0
+    },
+    "xdai": {
+     "Seer": 109979.39
+    }
+   },
+   "defillamaId": "5245",
+   "name": "Seer",
+   "displayName": "Seer",
+   "module": "seer",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/seer",
+   "chains": [
+    "Ethereum",
+    "Gnosis"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/seer",
+   "methodology": {},
+   "slug": "seer",
+   "id": "5245"
+  },
+  {
+   "total24h": 408796,
+   "total48hto24h": 515597,
+   "total7d": 3425832,
+   "total14dto7d": 2326193,
+   "total30d": 12964606,
+   "total60dto30d": 17818696,
+   "total1y": 59838044,
+   "annualized1y": 166724321.06870228,
+   "total7DaysAgo": 304338,
+   "total30DaysAgo": 551567,
+   "totalAllTime": 59838044,
+   "average1y": 456778.96183206106,
+   "monthlyAverage1y": 13904351.59816794,
+   "change_1d": -20.71,
+   "change_7d": 34.32,
+   "change_1m": -25.88,
+   "change_7dover7d": 47.27,
+   "change_30dover30d": -27.24,
+   "breakdown24h": {
+    "solana": {
+     "world": 408796
+    }
+   },
+   "breakdown30d": {
+    "solana": {
+     "world": 12964606
+    }
+   },
+   "defillamaId": "8130",
+   "name": "world",
+   "displayName": "world",
+   "module": "world-xyz",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/world",
+   "chains": [
+    "Solana"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/world-xyz",
+   "methodology": {
+    "Volume": "Volume of all prediction market trades on world.xyz."
+   },
+   "slug": "world",
+   "doublecounted": true,
+   "id": "8130"
+  },
+  {
+   "total24h": 4263186,
+   "total48hto24h": 5283044,
+   "total7d": 22309982,
+   "total14dto7d": 16026184,
+   "total30d": 68344925,
+   "total60dto30d": 59525439,
+   "total1y": 338645631,
+   "annualized1y": 767736989.5341616,
+   "total7DaysAgo": 3808682,
+   "total30DaysAgo": 2025351,
+   "totalAllTime": 338645631,
+   "average1y": 2103389.0124223605,
+   "monthlyAverage1y": 64027161.53813665,
+   "change_1d": -19.3,
+   "change_7d": 11.93,
+   "change_1m": 110.49,
+   "change_7dover7d": 39.21,
+   "change_30dover30d": 14.82,
+   "breakdown24h": {
+    "off_chain": {
+     "MagicMarkets": 4263186
+    }
+   },
+   "breakdown30d": {
+    "off_chain": {
+     "MagicMarkets": 68344925
+    }
+   },
+   "defillamaId": "8277",
+   "name": "MagicMarkets",
+   "displayName": "MagicMarkets",
+   "module": "magicmarkets",
+   "category": "Prediction Market",
+   "logo": "https://icons.llamao.fi/icons/protocols/magicmarkets",
+   "chains": [
+    "Off Chain"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/magicmarkets.ts",
+   "methodology": {
+    "Volume": "USD value of stakes matched on the Magic Markets exchange each day, counted once per matched trade (taker side only). Sourced from the team-maintained public Dune dataset dune.magicmarkets.data, which is refreshed daily from production settlement records.",
+    "NotionalVolume": "Both sides of each matched trade (taker + maker stakes), i.e. exactly 2x Volume."
+   },
+   "slug": "magicmarkets",
+   "id": "8277"
+  },
+  {
+   "total24h": 12484473,
+   "total48hto24h": 73430012,
+   "total7d": 511194737,
+   "total14dto7d": 601106056,
+   "total30d": 2715645521,
+   "total60dto30d": 3669405424,
+   "total1y": 70165202032,
+   "annualized1y": 70165202032,
+   "total7DaysAgo": 60873700,
+   "total30DaysAgo": 49381918,
+   "totalAllTime": 353298576695,
+   "average1y": 192233430.22465754,
+   "monthlyAverage1y": 5851585616.038575,
+   "change_1d": -83,
+   "change_7d": -79.49,
+   "change_1m": -74.72,
+   "change_7dover7d": -14.96,
+   "change_30dover30d": -25.99,
+   "breakdown24h": {
+    "ethereum": {
+     "Curve DEX": 50395020
+    },
+    "polygon": {
+     "Curve DEX": 101203
+    },
+    "arbitrum": {
+     "Curve DEX": 8180730
+    },
+    "bsc": {
+     "Curve DEX": 25786
+    },
+    "optimism": {
+     "Curve DEX": 145346
+    },
+    "xdai": {
+     "Curve DEX": 2025700
+    },
+    "base": {
+     "Curve DEX": 236449
+    },
+    "fraxtal": {
+     "Curve DEX": 25233
+    },
+    "hyperliquid": {
+     "Curve DEX": 14223
+    },
+    "sonic": {
+     "Curve DEX": 1885
+    },
+    "ink": {
+     "Curve DEX": 348
+    },
+    "plasma": {
+     "Curve DEX": 213619
+    },
+    "unichain": {
+     "Curve DEX": 0
+    },
+    "monad": {
+     "Curve DEX": 1487949
+    },
+    "robinhood": {
+     "Curve DEX": 6389
+    },
+    "celo": {
+     "Curve DEX": 2452
+    },
+    "avax": {
+     "Curve DEX": 1225
+    },
+    "stable": {
+     "Curve DEX": 0
+    },
+    "mantle": {
+     "Curve DEX": 0
+    }
+   },
+   "breakdown30d": {
+    "ethereum": {
+     "Curve DEX": 2508986993
+    },
+    "arbitrum": {
+     "Curve DEX": 65952572
+    },
+    "optimism": {
+     "Curve DEX": 8475212
+    },
+    "bsc": {
+     "Curve DEX": 352235
+    },
+    "polygon": {
+     "Curve DEX": 5850150
+    },
+    "base": {
+     "Curve DEX": 19791920
+    },
+    "xdai": {
+     "Curve DEX": 29308844
+    },
+    "fraxtal": {
+     "Curve DEX": 1741716
+    },
+    "sonic": {
+     "Curve DEX": 206591
+    },
+    "hyperliquid": {
+     "Curve DEX": 595614
+    },
+    "mantle": {
+     "Curve DEX": 0
+    },
+    "stable": {
+     "Curve DEX": 0.08
+    },
+    "plasma": {
+     "Curve DEX": 7235628
+    },
+    "ink": {
+     "Curve DEX": 5225
+    },
+    "celo": {
+     "Curve DEX": 180964
+    },
+    "robinhood": {
+     "Curve DEX": 556255
+    },
+    "unichain": {
+     "Curve DEX": 25047.89
+    },
+    "monad": {
+     "Curve DEX": 65697638
+    },
+    "avax": {
+     "Curve DEX": 682917
+    }
+   },
+   "defillamaId": "3",
+   "name": "Curve DEX",
+   "displayName": "Curve DEX",
+   "module": "curve",
+   "category": "Dexs",
+   "logo": "https://icons.llamao.fi/icons/protocols/curve",
+   "chains": [
+    "Ethereum",
+    "OP Mainnet",
+    "Gnosis",
+    "Avalanche",
+    "Polygon",
+    "Arbitrum",
+    "Fantom",
+    "Fraxtal",
+    "Celo",
+    "Base",
+    "Sonic",
+    "Hyperliquid L1",
+    "Plasma",
+    "Mantle",
+    "Ink",
+    "Unichain",
+    "Monad",
+    "Stable",
+    "Robinhood Chain",
+    "BSC",
+    "Etherlink"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/curve",
+   "methodology": {
+    "UserFees": "Swap fees paid by traders.",
+    "Fees": "Swap fees paid by traders, set per pool (roughly 0.01% on stable pools, up to a few percent on volatile pools).",
+    "Revenue": "The share of swap fees taken by the protocol rather than paid to liquidity providers - usually half of the fee.",
+    "ProtocolRevenue": "10% of the protocol's share, sent to the Curve DAO treasury.",
+    "HoldersRevenue": "90% of the protocol's share, distributed to veCRV holders.",
+    "SupplySideRevenue": "The share of swap fees paid to liquidity providers - usually half of the fee.",
+    "Volume": "Value swapped in Curve pools, counting one side of each trade. Deposits and withdrawals are not counted as volume."
+   },
+   "parentProtocol": "parent#curve-finance",
+   "slug": "curve-dex",
+   "linkedProtocols": [
+    "Curve Finance",
+    "Curve DEX",
+    "Curve LlamaLend"
+   ],
+   "id": "3"
+  },
+  {
+   "total24h": 51403,
+   "total48hto24h": 50622,
+   "total7d": 416068,
+   "total14dto7d": 945851,
+   "total30d": 3589187,
+   "total60dto30d": 12644661,
+   "total1y": 205536137,
+   "annualized1y": 212523201.14730877,
+   "total7DaysAgo": 81578,
+   "total30DaysAgo": 78827,
+   "totalAllTime": 7236544238,
+   "average1y": 582255.3456090651,
+   "monthlyAverage1y": 17723852.720339943,
+   "change_1d": 1.54,
+   "change_7d": -36.99,
+   "change_1m": -34.79,
+   "change_7dover7d": -56.01,
+   "change_30dover30d": -71.62,
+   "breakdown24h": {
+    "ethereum": {
+     "Balancer V1": 45716
+    }
+   },
+   "breakdown30d": {
+    "ethereum": {
+     "Balancer V1": 3589187
+    }
+   },
+   "defillamaId": "116",
+   "name": "Balancer V1",
+   "displayName": "Balancer V1",
+   "module": "balancer-v1",
+   "category": "Dexs",
+   "logo": "https://icons.llamao.fi/icons/protocols/balancer-v1",
+   "chains": [
+    "Ethereum"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/balancer-v1.ts",
+   "methodology": {
+    "UserFees": "Trading fees paid by users, set per pool by the pool creator (0.0001% to 10%)",
+    "Fees": "Swap fees paid by traders on the counted swaps, at each pool's own swap fee",
+    "Revenue": "Balancer V1 takes no protocol fee, so protocol revenue is zero",
+    "ProtocolRevenue": "Balancer V1 takes no protocol fee, so protocol revenue is zero",
+    "HoldersRevenue": "Money going to governance token holders",
+    "SupplySideRevenue": "All swap fees are distributed to pool liquidity providers",
+    "Volume": "Value of swaps in Balancer V1 pools, counted on the side that is WETH, DAI, USDC, USDT, WBTC or BAL; swaps between two other tokens and wash trades are not counted"
+   },
+   "parentProtocol": "parent#balancer",
+   "slug": "balancer-v1",
+   "linkedProtocols": [
+    "Balancer",
+    "Balancer V1",
+    "Balancer V2",
+    "Balancer V3"
+   ],
+   "breakdownMethodology": {
+    "UserFees": {
+     "Token Swap Fees": "Swap fees paid by users on each trade"
+    },
+    "Fees": {
+     "Token Swap Fees": "Swap fees paid by traders on the counted swaps, at each pool's own swap fee"
+    },
+    "SupplySideRevenue": {
+     "Token Swap Fees To LPs": "100% of swap fees are distributed to pool liquidity providers"
+    }
+   },
+   "id": "116"
+  },
+  {
+   "total24h": 548576,
+   "total48hto24h": 611144,
+   "total7d": 4736478,
+   "total14dto7d": 8055239,
+   "total30d": 30523612,
+   "total60dto30d": 26915314,
+   "total1y": 552973413,
+   "annualized1y": 556020098.4710743,
+   "total7DaysAgo": 970533,
+   "total30DaysAgo": 1540550,
+   "totalAllTime": 251660778110,
+   "average1y": 1523342.73553719,
+   "monthlyAverage1y": 46370552.869752064,
+   "change_1d": -10.24,
+   "change_7d": -43.48,
+   "change_1m": -64.39,
+   "change_7dover7d": -41.2,
+   "change_30dover30d": 13.41,
+   "breakdown24h": {
+    "blast": {
+     "SushiSwap": 0
+    },
+    "metis": {
+     "SushiSwap": 0
+    },
+    "sonic": {
+     "SushiSwap": 0
+    },
+    "arc": {
+     "SushiSwap": 0
+    },
+    "linea": {
+     "SushiSwap": 11.59
+    },
+    "avax": {
+     "SushiSwap": 223
+    },
+    "optimism": {
+     "SushiSwap": 33.29
+    },
+    "fuse": {
+     "SushiSwap": 0.12
+    },
+    "core": {
+     "SushiSwap": 0
+    },
+    "base": {
+     "SushiSwap": 3047
+    },
+    "bsc": {
+     "SushiSwap": 2873
+    },
+    "xdai": {
+     "SushiSwap": 1278
+    },
+    "katana": {
+     "SushiSwap": 0
+    },
+    "celo": {
+     "SushiSwap": 449
+    },
+    "polygon": {
+     "SushiSwap": 47485
+    },
+    "ethereum": {
+     "SushiSwap": 583704
+    },
+    "arbitrum": {
+     "SushiSwap": 172363
+    }
+   },
+   "breakdown30d": {
+    "metis": {
+     "SushiSwap": 0
+    },
+    "blast": {
+     "SushiSwap": 0
+    },
+    "sonic": {
+     "SushiSwap": 0
+    },
+    "arc": {
+     "SushiSwap": 0
+    },
+    "linea": {
+     "SushiSwap": 508.25
+    },
+    "optimism": {
+     "SushiSwap": 2399.8399999999997
+    },
+    "katana": {
+     "SushiSwap": 0
+    },
+    "core": {
+     "SushiSwap": 4.29
+    },
+    "avax": {
+     "SushiSwap": 32821.89
+    },
+    "celo": {
+     "SushiSwap": 88630
+    },
+    "xdai": {
+     "SushiSwap": 102581
+    },
+    "fuse": {
+     "SushiSwap": 110.98
+    },
+    "bsc": {
+     "SushiSwap": 81819
+    },
+    "base": {
+     "SushiSwap": 313990
+    },
+    "ethereum": {
+     "SushiSwap": 19516211
+    },
+    "polygon": {
+     "SushiSwap": 1888410
+    },
+    "arbitrum": {
+     "SushiSwap": 8496122
+    }
+   },
+   "defillamaId": "119",
+   "name": "SushiSwap",
+   "displayName": "SushiSwap",
+   "module": "sushiswap-classic",
+   "category": "Dexs",
+   "logo": "https://icons.llamao.fi/icons/protocols/sushiswap",
+   "chains": [
+    "Ethereum",
+    "Fantom",
+    "BSC",
+    "Harmony",
+    "Polygon",
+    "Gnosis",
+    "Arbitrum",
+    "Avalanche",
+    "Moonriver",
+    "Celo",
+    "Fuse",
+    "Boba",
+    "Blast",
+    "CORE",
+    "Katana",
+    "Metis",
+    "Linea",
+    "Sonic",
+    "OP Mainnet",
+    "Base",
+    "Arc"
+   ],
+   "protocolType": "protocol",
+   "methodologyURL": "https://github.com/DefiLlama/dimension-adapters/blob/master/dexs/sushiswap-classic.ts",
+   "methodology": {
+    "UserFees": "Users pay a 0.3% fee on each trade.",
+    "Fees": "SushiSwap Classic charges a flat 0.3% fee.",
+    "Revenue": "A share of each trade fee goes to xSUSHI stakers.",
+    "ProtocolRevenue": "Treasury does not receive SushiSwap Classic swap fees.",
+    "HoldersRevenue": "A share of each trade fee goes to xSUSHI stakers.",
+    "SupplySideRevenue": "Liquidity providers receive 5/6 of swap fees from trades in their pools."
+   },
+   "parentProtocol": "parent#sushi",
+   "slug": "sushiswap",
+   "linkedProtocols": [
+    "Sushi",
+    "SushiSwap",
+    "Sushi Trident",
+    "SushiSwap V3",
+    "Sushi Aptos",
+    "Sushi Spot"
+   ],
+   "breakdownMethodology": {
+    "Fees": {
+     "Token Swap Fees": "Swap fees paid by users on SushiSwap Classic pools."
+    },
+    "UserFees": {
+     "Token Swap Fees": "Swap fees paid by users on SushiSwap Classic pools."
+    },
+    "Revenue": {
+     "Swap Fees To xSUSHI Stakers": "The 1/6 protocol fee share from SushiSwap Classic swaps."
+    },
+    "HoldersRevenue": {
+     "Swap Fees To xSUSHI Stakers": "The 1/6 protocol fee share from SushiSwap Classic swaps."
+    },
+    "SupplySideRevenue": {
+     "Swap Fees To Liquidity Providers": "The 5/6 fee share retained by liquidity providers."
+    }
+   },
+   "id": "119"
+  }
+ ]
+}

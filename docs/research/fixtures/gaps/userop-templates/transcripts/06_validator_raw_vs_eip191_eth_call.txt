@@ -1,0 +1,10 @@
+tx 0xc9ef8950c7c5 sender 0x70e718..
+ (a) correct userOpHash, from=sender            -> 0 (0 = valid, 1 = SIG_VALIDATION_FAILED)
+ (b) digest = hashMessage(raw:userOpHash)        -> 0 (0 means the deployed validator also accepts a raw, unprefixed signature)
+ (c) random hash                                 -> 1
+ (d) from=other account (validator storage empty)-> 1
+tx 0x2a544e2adfb3 sender 0x812dbC..
+ (a) correct userOpHash, from=sender            -> 0 (0 = valid, 1 = SIG_VALIDATION_FAILED)
+ (b) digest = hashMessage(raw:userOpHash)        -> 0 (0 means the deployed validator also accepts a raw, unprefixed signature)
+ (c) random hash                                 -> 1
+ (d) from=other account (validator storage empty)-> 1

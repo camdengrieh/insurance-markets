@@ -1,0 +1,237 @@
+{
+  "_meta": {
+    "purpose": "Five seed records for the proposed platform registry (schema: pop_platform_registry.schema.json). Only facts read first-hand in docs/research/09, 10, 14 or measured on 2026-10-18/19 are filled in; everything else is null/unknown on purpose. Liquidity metrics are DefiLlama adapter figures (snapshot 2026-10-18 ~18:15Z), not displayed depth.",
+    "not_a_source_of_truth": "Re-verify every field against the venue before use; fees, geo and API shapes drift (see 14 section 8, mortality list)."
+  },
+  "platforms": [
+    {
+      "platform_id": "xo",
+      "name": "XO Market",
+      "aliases": ["xo.market"],
+      "operator": { "entity": null, "jurisdiction": null, "parent_platform_id": null },
+      "urls": {
+        "site": "https://xo.market/",
+        "docs": "https://docs.xo.market/",
+        "api_base": ["https://orderbooks.xo.market", "https://api-mainnet.xo.market/api"],
+        "ws": [],
+        "openapi": null,
+        "status_page": null,
+        "terms": "https://docs.xo.market/legal/terms-of-service",
+        "fee_schedule": "https://docs.xo.market/guides/fees",
+        "geoblock_check": null,
+        "changelog": null
+      },
+      "external_ids": { "defillama_slug": "xo-market", "defillama_id": "8020", "prediction_index_id": "xo", "predictefy_id": "xo", "ccxt_id": null, "pmxt_id": null, "synpath_id": null, "oddpool_tag": null, "wikidata_qid": null },
+      "kind": {
+        "operator_type": "onchain_protocol",
+        "execution_model": ["clob", "amm_lmsr"],
+        "matching": "offchain_match_onchain_settle",
+        "outcome_types": ["binary", "categorical"],
+        "market_creation": "gated_permissionless",
+        "neg_risk": false,
+        "money_type": "real",
+        "tags": ["only CLOB and CLOB_PULSE markets are tradable via the orderbook; LMSR AMM markets are not"]
+      },
+      "chains": [
+        { "caip2": "eip155:3223", "name": "XO Network", "role": "settlement", "gas_sponsored": true, "note": "paymaster allowlists ConditionalTokens.redeemPositions; funding route (bridge source chains) unverified" }
+      ],
+      "collateral": {
+        "assets": [{ "symbol": "XO USDC (USDC.e)", "chain_caip2": "eip155:3223", "address": "0x80c12230ce677e6f304027a14780edd2a829ab0c", "decimals": 6, "bridged": true }],
+        "custody": "smart_account",
+        "deposit_routes": [],
+        "withdrawal_notes": "limits and networks shown only in the in-app withdrawal flow; no numeric limits documented"
+      },
+      "fees": {
+        "model": "price_curve",
+        "formula": "fee = C x (feeBps / 10000) x p x (1 - p) per filled leg; taker and maker legs use their own feeBps",
+        "params_source": { "url": "https://orderbooks.xo.market/fee-rate?token_id={token_id}", "granularity": "token", "field": "base_fee (bps)" },
+        "taker": "per-token feeBps (live value not read; vendor says category rate currently 0)",
+        "maker": "0 on rewards-eligible markets",
+        "maker_rebate": "35% of taker fee on eligible fills",
+        "rounding": null,
+        "settlement_fee": null,
+        "deposit_withdraw_fee": null,
+        "fee_payer_mechanics": "charged in collateral to the order's maker address: added to a buy's cost, withheld from a sell's proceeds",
+        "source_urls": ["https://docs.xo.market/guides/fees", "https://docs.xo.market/product/rewards/maker-rebates"],
+        "verified_on": "2026-10-19"
+      },
+      "regulation_geo": {
+        "regulator": null,
+        "licence": null,
+        "us_persons": "unknown",
+        "geo_model": "checked_at_point_of_use",
+        "restricted_iso2": [],
+        "allowed_iso2": [],
+        "geoblock_check_url": null,
+        "bots_policy": "conditional",
+        "bots_policy_note": "ToS: bots must comply with the Terms and not overwhelm or misuse the system; no scraping for unauthorized purposes",
+        "wash_trading_prohibited": true,
+        "source": "https://docs.xo.market/legal/terms-of-service",
+        "as_of": "2026-10-19"
+      },
+      "api": {
+        "read": {
+          "auth": "none",
+          "public_keyless": true,
+          "rate_limit": "Data API 100 requests per 10 s per client IP",
+          "orderbook_depth": "full",
+          "history": "partial",
+          "trade_tape": "caller_scoped",
+          "has": { "fetch_markets": true, "fetch_orderbook": true, "fetch_trades_public": false }
+        },
+        "trade": {
+          "available": true,
+          "auth_scheme": "L1 ClobAuth wallet signature mints L2 HMAC credentials",
+          "signing": { "type": "eip712", "domain": "XO Market CLOB v1, chainId 3223", "signature_types": ["3 = XO smart account (ERC-1271), accepted", "0 = EOA, documented but not currently accepted"] },
+          "order_types": ["GTC", "GTD", "FOK", "FAK"],
+          "credentials": [{ "field": "api key / secret / passphrase", "kind": "venue_api_key", "acquisition": "minted from an L1 ClobAuth signature" }],
+          "sandbox": "testnet",
+          "idempotency": null,
+          "cancel_semantics": "vendor-reported (Predictefy, M): cancel removes from the book but does not invalidate the signed order on-chain"
+        }
+      },
+      "reachability": {
+        "paybox_chain": "unproven",
+        "needs_offchain_typed_data_sign": true,
+        "human_onboarding_steps": ["XO access may be partner-provided (vendor claim); paymaster address obtained from an XO contact during onboarding"],
+        "unattended_ok": null,
+        "builder_program": { "supported": null, "mechanism": "orders carry opaque identifier (bytes16) and metadata (bytes32) tags for fill grouping (partner, campaign, strategy); no builder fee documented", "max_fee_bps_taker": null, "max_fee_bps_maker": null, "docs": "https://docs.xo.market/guides/smart-accounts" }
+      },
+      "liquidity": {
+        "tier": "C",
+        "tier_basis": "DefiLlama 30d volume $50.2M; downgrade risk: 9 ACTIVE vs 1,322 CLOSED markets in Data API on 2026-10-19 and mostly thin/one-sided books (docs/research/10 section 7)",
+        "metrics": [
+          { "metric": "volume_24h_usd", "value": 2443756, "source": "DefiLlama /overview/dexs (XO Market)", "as_of": "2026-10-18T18:15Z", "caveat": "adapter may include AMM/pulse flow; not displayed depth" },
+          { "metric": "volume_30d_usd", "value": 50186659, "source": "DefiLlama /overview/dexs (XO Market)", "as_of": "2026-10-18T18:15Z", "caveat": null },
+          { "metric": "fees_30d_usd", "value": 10385.64, "source": "DefiLlama /overview/fees (XO Market)", "as_of": "2026-10-18T18:15Z", "caveat": "implies a very low effective fee rate" },
+          { "metric": "active_markets", "value": 9, "source": "XO Data API status counts (docs/research/10)", "as_of": "2026-10-19", "caveat": "Orderbook /markets lists a different, much larger catalog" }
+        ],
+        "depth_sample": { "n_markets": 34, "median_spread_cents": null, "median_best_bid_depth_usd": null, "sampled_at": "2026-10-19", "note": "17 of 34 active books two-sided; typical spreads 1.5-16 cents (docs/research/10, single snapshot)" },
+        "volume_integrity": "unknown"
+      },
+      "resolution": {
+        "oracle_types": ["ai_panel", "manual"],
+        "oracle_names": ["MODRA"],
+        "dispute_window": null,
+        "void_policy": { "kind": "refund", "note": "VOIDED terminal state with refund path defined in the market's rules; ToS says offending markets may be resolved invalid with trades reversed or funds returned" },
+        "early_close_possible": null,
+        "rule_text_form": "free_text",
+        "source": "https://docs.xo.market/product/portfolio/how-markets-resolve"
+      },
+      "links": {
+        "shared_liquidity": [],
+        "native_cross_refs": [],
+        "aggregator_coverage": [
+          { "aggregator_id": "predictefy", "role": "trade", "status": "claimed", "as_of": "2026-09-02" },
+          { "aggregator_id": "defillama", "role": "directory", "status": "live", "as_of": "2026-10-18" },
+          { "aggregator_id": "prediction-index", "role": "directory", "status": "live", "as_of": "2026-10-18" }
+        ]
+      },
+      "status": { "state": "live", "launched_year": null, "last_verified": "2026-10-19", "verified_by": "docs/research/14", "ttl_days": 7, "evidence": ["https://docs.xo.market/"], "change_log": [] },
+      "provenance": [
+        { "url": "https://docs.xo.market/guides/fees", "retrieved": "2026-10-19", "confidence": "H", "quote": "fee = C x (feeBps / 10_000) x p x (1 - p)" },
+        { "url": "https://api.llama.fi/overview/dexs", "retrieved": "2026-10-18", "confidence": "H", "quote": null },
+        { "url": "docs/research/10-aggregation-landscape.md", "retrieved": "2026-10-19", "confidence": "M", "quote": null }
+      ]
+    },
+    {
+      "platform_id": "polymarket",
+      "name": "Polymarket (international)",
+      "aliases": ["polymarket.com"],
+      "operator": { "entity": null, "jurisdiction": null, "parent_platform_id": null },
+      "urls": { "site": "https://polymarket.com/", "docs": "https://docs.polymarket.com/", "api_base": ["https://gamma-api.polymarket.com", "https://clob.polymarket.com", "https://data-api.polymarket.com"], "ws": ["wss://ws-subscriptions-clob.polymarket.com/ws/market"], "openapi": null, "status_page": null, "terms": null, "fee_schedule": "https://docs.polymarket.com/trading/fees", "geoblock_check": "https://polymarket.com/api/geoblock", "changelog": null },
+      "external_ids": { "defillama_slug": "polymarket-international", "defillama_id": "711", "prediction_index_id": "polymarket", "ccxt_id": "polymarket", "oddpool_tag": "polymarket", "synpath_id": "polymarket", "predictefy_id": "polymarket" },
+      "kind": { "operator_type": "onchain_protocol", "execution_model": ["clob"], "matching": "offchain_match_onchain_settle", "outcome_types": ["binary", "categorical"], "market_creation": "curated", "neg_risk": true, "money_type": "real" },
+      "chains": [{ "caip2": "eip155:137", "name": "Polygon", "role": "settlement", "gas_sponsored": true, "note": "relayer pays gas for builder-routed operations (docs)" }],
+      "collateral": { "assets": [{ "symbol": "pUSD", "chain_caip2": "eip155:137", "address": null, "decimals": null, "bridged": null }], "custody": "self", "deposit_routes": [], "withdrawal_notes": null },
+      "fees": { "model": "price_curve", "formula": "fee = C x feeRate x p x (1 - p), taker only", "params_source": { "url": "https://gamma-api.polymarket.com/markets", "granularity": "market", "field": "feeSchedule {rate, exponent, takerOnly, rebateRate}" }, "taker": "category rate 0 / 0.04 / 0.05 / 0.07", "maker": 0, "maker_rebate": "15-25% (docs)", "rounding": "5 dp, min 0.00001 USDC", "settlement_fee": null, "deposit_withdraw_fee": null, "fee_payer_mechanics": "builder fee is additive to platform fee and paid by the user", "source_urls": ["https://docs.polymarket.com/trading/fees"], "verified_on": "2026-10-19" },
+      "regulation_geo": { "regulator": null, "licence": null, "us_persons": "close_only", "geo_model": "global_restrictions", "restricted_iso2": [], "allowed_iso2": [], "geoblock_check_url": "https://polymarket.com/api/geoblock", "bots_policy": "unknown", "bots_policy_note": null, "wash_trading_prohibited": true, "source": "https://docs.polymarket.com/api-reference/geoblock", "as_of": "2026-10-19" },
+      "api": { "read": { "auth": "none", "public_keyless": true, "rate_limit": null, "orderbook_depth": "full", "history": "partial", "trade_tape": "public", "has": { "create_order": true, "cancel_order": true, "fetch_markets": true, "watch_orderbook": true } }, "trade": { "available": true, "auth_scheme": "L1 wallet signature + L2 HMAC", "signing": { "type": "eip712", "domain": null, "signature_types": [] }, "order_types": ["GTC", "GTD", "FOK", "FAK"], "credentials": [{ "field": "api key/secret/passphrase", "kind": "venue_api_key", "acquisition": "derived from wallet signature" }], "sandbox": "unknown", "idempotency": null, "cancel_semantics": null } },
+      "reachability": { "paybox_chain": "unknown", "needs_offchain_typed_data_sign": true, "human_onboarding_steps": [], "unattended_ok": null, "builder_program": { "supported": true, "mechanism": "bytes32 builder code inside the signed order; fee = notional x builder_fee_rate_bps / 10000, additive to platform fee, paid to builder wallet", "max_fee_bps_taker": 100, "max_fee_bps_maker": 50, "docs": "https://docs.polymarket.com/programs/builders/fees.md" } },
+      "liquidity": { "tier": "A", "tier_basis": "DefiLlama 30d volume $2.21B", "metrics": [{ "metric": "volume_24h_usd", "value": 92825179, "source": "DefiLlama /overview/dexs (Polymarket International)", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "volume_30d_usd", "value": 2212935953, "source": "DefiLlama /overview/dexs", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "fees_30d_usd", "value": 30358564, "source": "DefiLlama /overview/fees", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "tvl_usd", "value": 371946508, "source": "DefiLlama /protocols", "as_of": "2026-10-18T18:15Z", "caveat": null }], "depth_sample": null, "volume_integrity": "normal" },
+      "resolution": { "oracle_types": ["uma_oo"], "oracle_names": ["UMA Optimistic Oracle"], "dispute_window": "2-hour challenge, then second proposal, then UMA DVM vote", "void_policy": { "kind": "fifty_fifty", "note": "Unknown/50-50: each token redeems for $0.50" }, "early_close_possible": null, "rule_text_form": "free_text", "source": "https://docs.polymarket.com/concepts/resolution.md" },
+      "links": {
+        "shared_liquidity": [
+          { "target_platform_id": "polymarket-us", "relation": "parent_of", "evidence_url": "https://api.llama.fi/protocols", "confidence": "H", "note": "DefiLlama parent#polymarket groups Intl, US, Combos" },
+          { "target_platform_id": "limitless", "relation": "mirrored_by", "evidence_url": null, "confidence": "M", "note": "Limitless markets carry metadata.isPolyArbitrage and resolve by external venue parity (docs/research/09)" },
+          { "target_platform_id": "predict-fun", "relation": "mirrored_by", "evidence_url": null, "confidence": "M", "note": "Predict.fun returns polymarketConditionIds[] per market (docs/research/09)" }
+        ],
+        "native_cross_refs": [],
+        "aggregator_coverage": [{ "aggregator_id": "ccxt-prediction", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "pmxt", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "synpath", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "predictefy", "role": "trade", "status": "claimed", "as_of": "2026-09-02" }]
+      },
+      "status": { "state": "live", "launched_year": 2020, "last_verified": "2026-10-19", "verified_by": "docs/research/14", "ttl_days": 7, "evidence": [], "change_log": [] },
+      "provenance": [{ "url": "https://docs.polymarket.com/programs/builders/fees.md", "retrieved": "2026-10-19", "confidence": "H", "quote": "Builder fees are additive" }, { "url": "https://api.llama.fi/protocols", "retrieved": "2026-10-18", "confidence": "H", "quote": null }]
+    },
+    {
+      "platform_id": "kalshi",
+      "name": "Kalshi",
+      "aliases": [],
+      "operator": { "entity": null, "jurisdiction": "US", "parent_platform_id": null },
+      "urls": { "site": "https://kalshi.com/", "docs": "https://docs.kalshi.com/", "api_base": ["https://api.elections.kalshi.com/trade-api/v2"], "ws": [], "openapi": null, "status_page": null, "terms": null, "fee_schedule": "https://kalshi.com/docs/kalshi-fee-schedule.pdf", "geoblock_check": null, "changelog": null },
+      "external_ids": { "defillama_slug": "kalshi", "defillama_id": "6689", "prediction_index_id": "kalshi", "ccxt_id": "kalshi", "oddpool_tag": "kalshi", "synpath_id": "kalshi", "predictefy_id": "kalshi" },
+      "kind": { "operator_type": "regulated_exchange", "execution_model": ["clob"], "matching": "centralized", "outcome_types": ["binary", "categorical", "scalar"], "market_creation": "curated", "neg_risk": null, "money_type": "real" },
+      "chains": [],
+      "collateral": { "assets": [{ "symbol": "USD", "chain_caip2": null, "address": null, "decimals": null, "bridged": false }], "custody": "venue", "deposit_routes": [], "withdrawal_notes": null },
+      "fees": { "model": "price_curve", "formula": "taker fee = round_up(M x 0.07 x C x P x (1 - P)); maker coefficient 0.0175 only for series with fee_type quadratic_with_maker_fees", "params_source": { "url": "https://api.elections.kalshi.com/trade-api/v2/series/{ticker}", "granularity": "series", "field": "fee_type, fee_multiplier" }, "taker": 0.07, "maker": 0.0175, "maker_rebate": null, "rounding": "round up (cent grid)", "settlement_fee": 0, "deposit_withdraw_fee": null, "fee_payer_mechanics": null, "source_urls": ["https://polykal.net/data/fees.json", "https://docs.kalshi.com/getting_started/fee_rounding.md"], "verified_on": "2026-10-19" },
+      "regulation_geo": { "regulator": "CFTC (designated contract market)", "licence": null, "us_persons": "allowed", "geo_model": "global_restrictions", "restricted_iso2": [], "allowed_iso2": [], "geoblock_check_url": null, "bots_policy": "unknown", "bots_policy_note": null, "wash_trading_prohibited": true, "source": null, "as_of": "2026-10-19" },
+      "api": { "read": { "auth": "none", "public_keyless": true, "rate_limit": null, "orderbook_depth": "full", "history": "partial", "trade_tape": "public", "has": { "create_order": true, "cancel_order": true, "fetch_markets": true } }, "trade": { "available": true, "auth_scheme": "RSA-PSS signed requests", "signing": { "type": "rsa_pss", "domain": null, "signature_types": [] }, "order_types": [], "credentials": [{ "field": "api key id + private key", "kind": "venue_api_key", "acquisition": "KYC'd account, key created in Kalshi UI" }], "sandbox": "unknown", "idempotency": true, "cancel_semantics": null } },
+      "reachability": { "paybox_chain": "no", "needs_offchain_typed_data_sign": false, "human_onboarding_steps": ["KYC'd US-regulated account", "API key creation in UI"], "unattended_ok": null, "builder_program": { "supported": null, "mechanism": "FCM subtrader endpoints and registered-partner OAuth scopes exist in the API (institutional)", "max_fee_bps_taker": null, "max_fee_bps_maker": null, "docs": "https://docs.kalshi.com/llms.txt" } },
+      "liquidity": { "tier": "A", "tier_basis": "DefiLlama 30d volume $14.92B", "metrics": [{ "metric": "volume_24h_usd", "value": 457792632, "source": "DefiLlama /overview/dexs (Kalshi)", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "volume_30d_usd", "value": 14922269381, "source": "DefiLlama /overview/dexs", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "open_interest_usd", "value": 1971333552, "source": "DefiLlama /overview/open-interest (24h field)", "as_of": "2026-10-18T18:15Z", "caveat": "latest value, not a sum" }], "depth_sample": null, "volume_integrity": "normal" },
+      "resolution": { "oracle_types": ["venue_staff"], "oracle_names": [], "dispute_window": "determined -> settlement_timer_seconds; disputed/amended states re-open settlement", "void_policy": { "kind": "last_traded_price", "note": "rulebook last-traded-price fallback (M, practitioner blogs)" }, "early_close_possible": true, "rule_text_form": "free_text", "source": "https://docs.kalshi.com/getting_started/market_lifecycle.md" },
+      "links": {
+        "shared_liquidity": [
+          { "target_platform_id": "robinhood", "relation": "broker_for", "evidence_url": "https://github.com/kachence/prediction-almanac", "confidence": "M", "note": "Almanac lists Robinhood as routing to Kalshi, ForecastEx, Rothera" },
+          { "target_platform_id": "jupiter-prediction", "relation": "broker_for", "evidence_url": "https://github.com/DefiLlama/dimension-adapters/tree/main/dexs/jupiter-prediction", "confidence": "M", "note": "DefiLlama adapter: all fees go to Kalshi; DFlow adapter says 'powered by Kalshi CLP'" }
+        ],
+        "native_cross_refs": [],
+        "aggregator_coverage": [{ "aggregator_id": "ccxt-prediction", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "river-markets", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "kairos", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "oddpool", "role": "matching", "status": "live", "as_of": "2026-10-19" }]
+      },
+      "status": { "state": "live", "launched_year": 2021, "last_verified": "2026-10-19", "verified_by": "docs/research/14", "ttl_days": 7, "evidence": [], "change_log": [] },
+      "provenance": [{ "url": "https://polykal.net/data/fees.json", "retrieved": "2026-10-19", "confidence": "M", "quote": "fee = round_up_to_cent( taker_multiplier x 0.07 x C x P x (1 - P) )" }, { "url": "https://api.llama.fi/overview/dexs", "retrieved": "2026-10-18", "confidence": "H", "quote": null }]
+    },
+    {
+      "platform_id": "limitless",
+      "name": "Limitless Exchange",
+      "aliases": ["limitless.exchange"],
+      "operator": { "entity": null, "jurisdiction": null, "parent_platform_id": null },
+      "urls": { "site": "https://limitless.exchange/", "docs": "https://docs.limitless.exchange/", "api_base": ["https://api.limitless.exchange"], "ws": ["wss://ws.limitless.exchange"], "openapi": "https://api.limitless.exchange/api-json", "status_page": null, "terms": "https://docs.limitless.exchange/user-guide/terms-of-service", "fee_schedule": null, "geoblock_check": null, "changelog": null },
+      "external_ids": { "defillama_slug": "limitless-exchange", "defillama_id": "5181", "prediction_index_id": "limitless", "ccxt_id": "limitless", "synpath_id": "limitless", "predictefy_id": "limitless", "coingecko_category_id": "prediction-markets" },
+      "kind": { "operator_type": "onchain_protocol", "execution_model": ["clob"], "matching": "offchain_match_onchain_settle", "outcome_types": ["binary", "categorical"], "market_creation": "curated", "neg_risk": null, "money_type": "real" },
+      "chains": [{ "caip2": "eip155:8453", "name": "Base", "role": "settlement", "gas_sponsored": null, "note": null }],
+      "collateral": { "assets": [{ "symbol": "USDC", "chain_caip2": "eip155:8453", "address": null, "decimals": 6, "bridged": false }], "custody": "self", "deposit_routes": [], "withdrawal_notes": null },
+      "fees": { "model": "tiered", "formula": "taker buy 0.40-3.00% (3% below 50c), maker free", "params_source": null, "taker": "0.40%-3.00%", "maker": 0, "maker_rebate": null, "rounding": null, "settlement_fee": null, "deposit_withdraw_fee": null, "fee_payer_mechanics": null, "source_urls": ["https://docs.limitless.exchange/user-guide/fees"], "verified_on": "2026-10-18" },
+      "regulation_geo": { "regulator": null, "licence": null, "us_persons": "blocked", "geo_model": "global_restrictions", "restricted_iso2": ["us", "by", "cu", "ir", "kp", "ru", "sy"], "allowed_iso2": [], "geoblock_check_url": null, "bots_policy": "allowed", "bots_policy_note": "ToS 2026-09-15 'Building Responsible Trading Agents': market making not on the prohibited list; no wash trading, spoofing, multi-account", "wash_trading_prohibited": true, "source": "https://docs.limitless.exchange/user-guide/terms-of-service#1-eligibility", "as_of": "2026-10-18" },
+      "api": { "read": { "auth": "none", "public_keyless": true, "rate_limit": null, "orderbook_depth": "full", "history": "none", "trade_tape": "public", "has": { "create_order": true, "cancel_order": true, "fetch_markets": true } }, "trade": { "available": true, "auth_scheme": "wallet-signed login minting HMAC token / scoped API token", "signing": { "type": "eip712", "domain": null, "signature_types": [] }, "order_types": ["GTC", "FAK", "FOK"], "credentials": [{ "field": "API token / HMAC secret", "kind": "venue_api_key", "acquisition": "created from UI login (docs/research/09)" }], "sandbox": "none", "idempotency": true, "cancel_semantics": "cancel through the API, never on-chain (on-chain OrderCancelled can get the maker address blocked)" } },
+      "reachability": { "paybox_chain": "unknown", "needs_offchain_typed_data_sign": true, "human_onboarding_steps": ["human-created credential"], "unattended_ok": null, "builder_program": { "supported": true, "mechanism": "partner sub-accounts for programmatic access (application-based)", "max_fee_bps_taker": null, "max_fee_bps_maker": null, "docs": null } },
+      "liquidity": { "tier": "D", "tier_basis": "DefiLlama 30d volume $3.33M; 10 top-volume books sampled had best-bid depth <= $90 (docs/research/09)", "metrics": [{ "metric": "volume_24h_usd", "value": 15587, "source": "DefiLlama /overview/dexs (Limitless Exchange)", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "volume_30d_usd", "value": 3325632, "source": "DefiLlama /overview/dexs", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "tvl_usd", "value": 362062, "source": "DefiLlama /protocols", "as_of": "2026-10-18T18:15Z", "caveat": null }], "depth_sample": { "n_markets": 10, "median_spread_cents": null, "median_best_bid_depth_usd": null, "sampled_at": "2026-10-18", "note": "all best-bid depths <= $90 (docs/research/09)" }, "volume_integrity": "normal" },
+      "resolution": { "oracle_types": ["pyth", "external_venue_parity", "manual"], "oracle_names": ["Pyth"], "dispute_window": null, "void_policy": { "kind": "unknown", "note": null }, "early_close_possible": null, "rule_text_form": "free_text", "source": "https://docs.limitless.exchange/user-guide/market-resolution" },
+      "links": {
+        "shared_liquidity": [{ "target_platform_id": "polymarket", "relation": "mirror_of", "evidence_url": null, "confidence": "M", "note": "metadata.isPolyArbitrage and 'external venue parity' resolution on some markets (docs/research/09)" }],
+        "native_cross_refs": [{ "field": "metadata.isPolyArbitrage / externalSlug", "target_platform_id": "polymarket", "where": "GET /markets/{slug}" }],
+        "aggregator_coverage": [{ "aggregator_id": "ccxt-prediction", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "pmxt", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "synpath", "role": "trade", "status": "live", "as_of": "2026-10-19" }, { "aggregator_id": "predictefy", "role": "trade", "status": "claimed", "as_of": "2026-09-02" }, { "aggregator_id": "predexon", "role": "data", "status": "live", "as_of": "2026-10-19" }]
+      },
+      "status": { "state": "live", "launched_year": 2024, "last_verified": "2026-10-19", "verified_by": "docs/research/14", "ttl_days": 7, "evidence": [], "change_log": [] },
+      "provenance": [{ "url": "docs/research/09-venues-onchain-clob.md", "retrieved": "2026-10-19", "confidence": "H", "quote": null }, { "url": "https://api.llama.fi/overview/dexs", "retrieved": "2026-10-18", "confidence": "H", "quote": null }]
+    },
+    {
+      "platform_id": "trueo",
+      "name": "Trueo (formerly TrueMarkets)",
+      "aliases": ["Truemarkets", "True Markets"],
+      "operator": { "entity": null, "jurisdiction": null, "parent_platform_id": null },
+      "urls": { "site": "https://trueo.com/", "docs": null, "api_base": [], "ws": [], "openapi": null, "status_page": null, "terms": null, "fee_schedule": null, "geoblock_check": null, "changelog": null },
+      "external_ids": { "defillama_slug": "trueo", "defillama_id": "5251", "prediction_index_id": "truemarkets", "coingecko_category_id": "prediction-markets" },
+      "kind": { "operator_type": "onchain_protocol", "execution_model": ["unknown"], "matching": "unknown", "outcome_types": ["binary"], "market_creation": "unknown", "neg_risk": null, "money_type": "real", "tags": ["Prediction Index says clob; a paper lists an AMM; unresolved"] },
+      "chains": [{ "caip2": "eip155:8453", "name": "Base", "role": "settlement", "gas_sponsored": null, "note": "announced move to Ethereum mainnet 2026-09 (docs/research/10, L)" }],
+      "collateral": { "assets": [], "custody": "unknown", "deposit_routes": [], "withdrawal_notes": null },
+      "fees": { "model": "unknown", "formula": null, "params_source": null, "taker": null, "maker": null, "maker_rebate": null, "rounding": null, "settlement_fee": null, "deposit_withdraw_fee": null, "fee_payer_mechanics": null, "source_urls": [], "verified_on": null },
+      "regulation_geo": { "regulator": null, "licence": null, "us_persons": "unknown", "geo_model": "unknown", "restricted_iso2": [], "allowed_iso2": [], "geoblock_check_url": null, "bots_policy": "unknown", "bots_policy_note": null, "wash_trading_prohibited": null, "source": null, "as_of": null },
+      "api": { "read": { "auth": "unknown", "public_keyless": null, "rate_limit": null, "orderbook_depth": "unknown", "history": "unknown", "trade_tape": "unknown", "has": {} }, "trade": { "available": null, "auth_scheme": null, "signing": { "type": "unknown", "domain": null, "signature_types": [] }, "order_types": [], "credentials": [], "sandbox": "unknown", "idempotency": null, "cancel_semantics": null } },
+      "reachability": { "paybox_chain": "unknown", "needs_offchain_typed_data_sign": null, "human_onboarding_steps": [], "unattended_ok": null, "builder_program": { "supported": null, "mechanism": null, "max_fee_bps_taker": null, "max_fee_bps_maker": null, "docs": null } },
+      "liquidity": { "tier": "X", "tier_basis": "DefiLlama 30d volume $17.1K, 24h $313", "metrics": [{ "metric": "volume_24h_usd", "value": 313, "source": "DefiLlama /overview/dexs (Trueo)", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "volume_30d_usd", "value": 17106, "source": "DefiLlama /overview/dexs", "as_of": "2026-10-18T18:15Z", "caveat": null }, { "metric": "tvl_usd", "value": 1063391, "source": "DefiLlama /protocols", "as_of": "2026-10-18T18:15Z", "caveat": "TVL is not tradable depth" }], "depth_sample": null, "volume_integrity": "unknown" },
+      "resolution": { "oracle_types": ["unknown"], "oracle_names": ["TruthOracle"], "dispute_window": null, "void_policy": { "kind": "unknown", "note": null }, "early_close_possible": null, "rule_text_form": "unknown", "source": "https://api.llama.fi/protocols" },
+      "links": { "shared_liquidity": [], "native_cross_refs": [], "aggregator_coverage": [{ "aggregator_id": "defillama", "role": "directory", "status": "live", "as_of": "2026-10-18" }, { "aggregator_id": "prediction-index", "role": "directory", "status": "live", "as_of": "2026-10-18" }] },
+      "status": { "state": "live", "launched_year": null, "last_verified": "2026-10-19", "verified_by": "docs/research/14", "ttl_days": 7, "evidence": [], "change_log": [] },
+      "provenance": [{ "url": "https://api.llama.fi/protocols", "retrieved": "2026-10-18", "confidence": "H", "quote": null }, { "url": "docs/research/10-aggregation-landscape.md", "retrieved": "2026-10-19", "confidence": "L", "quote": null }]
+    }
+  ]
+}

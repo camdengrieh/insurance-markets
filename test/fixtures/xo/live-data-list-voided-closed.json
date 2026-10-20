@@ -1,0 +1,186 @@
+{
+  "data": [
+    {
+      "id": 24182,
+      "createdAt": "2026-07-28T11:19:48.270Z",
+      "updatedAt": "2026-07-28T11:20:31.702Z",
+      "contractMarketId": "0xbfb28e8cd8d462316389d3eae2a864ce0e1d740f164d965f166fe6b55387ca5c",
+      "conditionId": "0xbfb28e8cd8d462316389d3eae2a864ce0e1d740f164d965f166fe6b55387ca5c",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-07-28T11:19:46.000Z",
+      "creatorId": 47724,
+      "title": "The Hundred, Women: MI London vs London Spirit",
+      "slug": "the-hundred-women-mi-london-vs-london-spirit-8606",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "25205172524",
+      "totalVolumeInUSD": "25205.172524",
+      "totalNotional": "25205172934",
+      "totalNotionalInUSD": "25205.17",
+      "status": "VOIDED_CLOSED",
+      "startsAt": "2026-07-29T14:00:00.000Z",
+      "expiresAt": "2026-07-30T16:00:00.000Z",
+      "resolvedAt": "2026-07-29T17:13:30.000Z",
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/127c4675-137b-408f-b0b9-331a3a0322b8.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/f6eedc59-1d37-4060-9897-71d2e5cc980e.webp",
+      "resolutionSources": [
+        "https://www.thehundred.com/",
+        "https://www.espncricinfo.com/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 48712,
+          "marketId": 24182,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "26903779554813036804493004471262630973251650245175924492133184925976613928804",
+          "title": "MIL-W",
+          "currentPrice": "500000",
+          "volumeTraded": "12602586262",
+          "volumeTradedInUSD": "12602.586262",
+          "notionalTraded": "25205172934",
+          "index": 0
+        },
+        {
+          "id": 48713,
+          "marketId": 24182,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "35715814201137657030520663943288061376567617145627612681481135590525006324486",
+          "title": "LS-W",
+          "currentPrice": "500000",
+          "volumeTraded": "12602586262",
+          "volumeTradedInUSD": "12602.586262",
+          "notionalTraded": "25205172934",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    },
+    {
+      "id": 23629,
+      "createdAt": "2026-07-25T16:12:07.430Z",
+      "updatedAt": "2026-07-25T16:12:36.288Z",
+      "contractMarketId": "0x758fa4686661621e1f0388e6bd2aa336b7357cc43b5003e967b1fe54539e1ed7",
+      "conditionId": "0x758fa4686661621e1f0388e6bd2aa336b7357cc43b5003e967b1fe54539e1ed7",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-07-25T16:12:06.000Z",
+      "creatorId": 47724,
+      "title": "The Hundred, Women: Manchester Super Giants vs Birmingham Phoenix",
+      "slug": "the-hundred-women-manchester-super-giants-vs-birmi-4770",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        }
+      ],
+      "type": 2,
+      "totalVolume": "9684316743",
+      "totalVolumeInUSD": "9684.316743",
+      "totalNotional": "9684316907",
+      "totalNotionalInUSD": "9684.32",
+      "status": "VOIDED_CLOSED",
+      "startsAt": "2026-07-26T10:00:00.000Z",
+      "expiresAt": "2026-07-27T12:00:00.000Z",
+      "resolvedAt": "2026-07-26T12:47:42.000Z",
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/4bfc7c11-0a51-4e35-8d2d-cfc0c849497c.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/0ff37b4b-ef1b-4493-9f76-3e1be03bf0fa.webp",
+      "resolutionSources": [
+        "https://www.thehundred.com/",
+        "https://www.espncricinfo.com/"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 47605,
+          "marketId": 23629,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "64051509343475682557877529392464555319486247391595576309553249373119768999015",
+          "title": "MSG-W",
+          "currentPrice": "500000",
+          "volumeTraded": "4844741704",
+          "volumeTradedInUSD": "4844.741704",
+          "notionalTraded": "9684316907",
+          "index": 0
+        },
+        {
+          "id": 47606,
+          "marketId": 23629,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "25287757490756684448812541768247516392476370060272748601009026799879198051388",
+          "title": "BP-W",
+          "currentPrice": "500000",
+          "volumeTraded": "4839575039",
+          "volumeTradedInUSD": "4839.575039",
+          "notionalTraded": "9684316907",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 3,
+    "itemCount": 14,
+    "pageCount": 5,
+    "hasPreviousPage": false,
+    "hasNextPage": true
+  }
+}

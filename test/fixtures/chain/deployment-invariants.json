@@ -1,0 +1,23 @@
+{
+  "_note": [
+    "Structural invariants of the 34 decoded Kernel v3.1 deployment transactions on XO chain 3223 (docs/research/19-smart-account-derivation.md sec 3.2), taken from docs/research/fixtures/gaps/smart-account-derivation/deployments_decoded.json.",
+    "Only fields that are identical in all 34 rows are kept: no transaction hash, date, owner or account. test/account-derive.test.ts asserts that buildInitData and buildInitCode reproduce them for any owner."
+  ],
+  "rows": 36,
+  "canonicalRows": 34,
+  "legacyRows": 2,
+  "invariants": {
+    "factory": "0xaac5D4240AF87249B3f71BC8E4A2cae074A3E419",
+    "factory_selector": "0xea6d13ac",
+    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "init_selector": "0x3c3b752b",
+    "init_sig": "initialize(bytes21,address,bytes,bytes,bytes[])",
+    "root_validator": "0x01845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "hook": "0x0000000000000000000000000000000000000000",
+    "validator_data_len": 20,
+    "hook_data_len": 0,
+    "init_config_len": 0,
+    "init_data_len": 292,
+    "owner_ne_account": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "kernel-implementation",
+  "address": "0xBAC849bB641841b44E965fB01A4Bf5F074f84b4D",
+  "chain_id": 3223,
+  "size": 22784,
+  "sha256": "0463100c3265da449d6685bac8948b2b929e72d691b67df7001ffa5fa643396b",
+  "keccak256": "0xbe68788047b84fca355f4af55887cc63411d8a196f8af7586e399a16648537e4",
+  "source_url": "https://explorer-mainnet.xo.market/api/v2/smart-contracts/0xBAC849bB641841b44E965fB01A4Bf5F074f84b4D",
+  "source_field": "deployed_bytecode",
+  "captured_at": "2026-10-19"
+}

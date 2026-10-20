@@ -1,0 +1,287 @@
+/*
+  Signing inbox and Signature Card. Tokens from ui/theme.css only; no inline styles, fonts or URLs.
+  Layout target: 360 px wide with the page's 16 px gutter and no sideways page scroll. Long hex strings wrap;
+  wide tables scroll inside their own focusable region; touch targets are at least 44 px.
+*/
+
+.signing {
+  position: relative; /* keeps visually-hidden helper text inside the page width */
+  min-width: 0;
+}
+
+.signing-lead {
+  max-width: 70ch;
+}
+
+.signing-strip {
+  margin-block: 0.5rem;
+}
+
+.signing-reminders-top {
+  margin: 0.5rem 0;
+  padding-inline-start: 1.25rem;
+  max-width: 70ch;
+}
+
+.signing-warning {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.signing-muted {
+  color: var(--text-muted);
+}
+
+.signing-card-wrap {
+  margin-block: 1.5rem;
+  min-width: 0;
+}
+
+.signing-card {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.signing-card[data-verification="failed"] {
+  border-color: var(--danger-fg);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.signing-card[data-verification="viewer_only"] {
+  border-color: var(--warn-fg);
+}
+
+.signing-card[data-verification="verified"] {
+  border-color: var(--ok-fg);
+}
+
+.signing-card h3,
+.signing-card h4 {
+  margin: 0 0 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.signing-card-head p {
+  margin: 0.25rem 0;
+}
+
+.signing-verdict {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+}
+
+.signing-verdict[data-tone="ok"] {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+
+.signing-verdict[data-tone="warn"] {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.signing-verdict[data-tone="danger"] {
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  border-width: 2px;
+}
+
+.signing-verdict p,
+.signing-verdict h4 {
+  margin: 0.25rem 0;
+}
+
+.signing-banner {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--danger-fg);
+  border-radius: var(--radius);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  font-weight: 600;
+}
+
+.signing-mismatch {
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.signing-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.signing-checks li {
+  overflow-wrap: anywhere;
+}
+
+.signing-lines {
+  margin: 0;
+  padding-inline-start: 1.5rem;
+  display: grid;
+  gap: 0.25rem;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 0.875em;
+  white-space: pre-wrap;
+}
+
+.signing-lines li[data-mismatch="true"] {
+  outline: 2px solid var(--danger-fg);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.signing-code {
+  font-family: var(--mono);
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.signing-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.signing-table caption {
+  text-align: start;
+  font-weight: 600;
+  padding-block: 0.25rem;
+}
+
+.signing-table th,
+.signing-table td {
+  text-align: start;
+  vertical-align: top;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.signing-table th[scope="row"] {
+  width: 30%;
+  font-weight: 600;
+}
+
+.signing-calls {
+  margin: 0.75rem 0 0;
+  padding-inline-start: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.signing-args {
+  margin: 0.25rem 0 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.signing-args > div {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+}
+
+.signing-args dt {
+  color: var(--text-muted);
+}
+
+.signing-args dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.signing-arg-item {
+  display: block;
+}
+
+.signing-tags dl {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.signing-tags dl > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+}
+
+.signing-tags dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.signing-tag {
+  font-family: var(--mono);
+  font-size: 1.125rem;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.signing-pre {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  max-height: 20rem;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.signing-reminders ul {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.signing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.signing-reasons {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: var(--text-muted);
+}
+
+.signing-card[data-verification="failed"] .signing-reasons,
+.signing-card[data-verification="failed"] .signing-muted {
+  color: inherit;
+}
+
+.signing-s2 p {
+  margin: 0 0 0.25rem;
+}
+
+@media (max-width: 30rem) {
+  .signing-tags dl > div,
+  .signing-args > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .signing-table th[scope="row"] {
+    width: 38%;
+  }
+}

@@ -1,0 +1,467 @@
+# dApp + PayBox wallet on the hosted page: decision record
+
+Status: decision record, written 2026-10-20 on branch `build/xo-paybox-plugin`. Synthesis of research notes 29 to 34 (`docs/research/29-paybox-web-oauth.md` to `34-paybox-web-terms-risk.md`) against `docs/dapp-design.md`, `docs/plan.md`, `docs/phase1-gap-closing.md` and the shipped `app/`. **Design only. Nothing here was built or run, and nothing has ever been signed through PayBox for this project, by anyone.**
+
+User requirement this answers (2026-10-20, binding): "I want people to be able to use their paybox wallet on the dApp itself." The dApp is the hosted page `https://xo-markets-explorer.vercel.app` (Vercel, static, read-only, no wallet connection today). The user also decided: no fake or placeholder data anywhere; the repo is public; a thin author-operated serverless layer on Vercel is now acceptable if it holds no user keys and the risk is stated.
+
+This record supersedes, for the hosted page only, the earlier refusal of "a browser page acting as a PayBox client" (`docs/dapp-design.md` section 0, section 2.7, fork F2; notes 24, 25, 27, 28). The Cockpit daemon design is untouched.
+
+Ground rules observed while writing: no PayBox MCP tool was called; the schemas and descriptions of `request_wallet_sign` and `request_account_change` were loaded to read their text, nothing more. Only public docs, public npm metadata and unauthenticated GET and OPTIONS probes were used (User-Agent `insurance-markets-research/0.1`). No POST, no registration, no account, no signature, nobody contacted. Third-party text was treated as data. This file holds no email, name, login or home path.
+
+## How to read this
+
+Confidence tags: **H** = read or measured first-hand in a primary source (named); **M** = secondary or inferred; **L** = guess. **NOT FOUND (searched: ...)** is a documented absence. **NOT TESTED** means a test exists that needs a PayBox account, a POST or a signature.
+
+Source keys:
+
+- `[29]` to `[34]` = `docs/research/29-paybox-web-oauth.md`, `30-paybox-web-sdk-cli.md`, `31-paybox-web-signing-surface.md`, `32-paybox-web-bff-design.md`, `33-paybox-web-eip1193-adapter.md`, `34-paybox-web-terms-risk.md`. A fact cited only as `[nn]` was taken from that note; one marked **H[P]**, **H[B]**, **H[D]**, **H[T]** or **H[V]** I re-checked myself today (section 11 lists each).
+- `[P]` my probes of 2026-10-20 (OPTIONS and GET; exact results in section 1.2).
+- `[B]` `https://app.paybox.sh/_expo/static/js/web/entry-1db563483c9812f59f2a958f4cb7d011.js` (15,639,916 bytes, shell `last-modified` 2026-10-20 03:14:20 GMT, unchanged since the notes read it), read as text, never executed. A string in this file is H that the code ships; what it does at runtime is NOT TESTED.
+- `[S]` the PayBox signing-window shell script `https://api.paybox.sh/iframe/assets/v283/app.js`, read as text.
+- `[D]` `https://docs.paybox.sh/llms-full.txt` (64,429 bytes). `[T]` the live tool descriptions of `request_wallet_sign` and `request_account_change`. `[V]` Vercel documentation pages (`functions/limitations`, `limits/fair-use-guidelines`). `[R]` repo files read today.
+- `DD` = `docs/dapp-design.md`; `P1` = `docs/phase1-gap-closing.md`; `EA` = `docs/everyone-architecture.md`.
+
+---
+
+## 0. Bottom line
+
+**Can it be done?** Probably yes, by two independent routes. Neither is proven. Nobody has completed a single signature through PayBox from a web page for this project.
+
+1. **Route F, WalletConnect (no author server).** The PayBox web app contains a WalletConnect v2 wallet (H[B]: `WalletKit`, `session_proposal`, `session_request`, a `wc:` link field, a `?uri=` pairing call). A visitor with a PayBox account pastes the dApp's pairing link into `app.paybox.sh/wc`, approves once, and the dApp can then ask PayBox to sign **text messages** and **EIP-712 typed data** on ten EVM chains (1, 10, 56, 137, 999, 4663, 5042, 8453, 42161, 43114; H[B]). It cannot sign **raw digests**, **transactions** or anything on **chain 3223** (XO). PayBox creates the client with an `autonomous` grant and says it "will sign them without asking again" (H[B]), so while the visitor's PayBox tab is open a compromised dApp could request typed-data signatures with no prompt. The PayBox tab must stay open and signed in. It was never run.
+2. **Route B1, a token-only backend on Vercel.** One Vercel Function runs the OAuth sign-in with PayBox for the visitor, keeps the 60-minute token in an encrypted cookie (the author stores nothing), asks PayBox for a signature through its MCP API, and sends the visitor to PayBox's own page (`https://app.paybox.sh/sign/<request_id>`, route confirmed H[B]) to approve and sign. The author never holds a signing key or a passkey. If PayBox accepts our requests it can carry every intent PayBox's API accepts, including raw digests and chain-3223 typed data (whether it does is NOT TESTED). Whether PayBox's sign page will complete a request created by a different OAuth client than the one PayBox's own app uses is the single biggest unknown.
+
+**What it needs from PayBox.** Nothing, for either route to be attempted. Asks that would help are in section 1.3 (CORS allowlist for the dApp origin, a statement that `/wc` is supported, a grant-mode choice for WalletConnect sessions, a one-line answer on revocation scope). Likely answers are all L. Nobody has been contacted and the user decides whether to.
+
+**What the author must operate.** Route F: nothing, except a free project identifier from Reown (the WalletConnect relay operator) that the author registers once. Route B1: one Vercel Function, one secret (the cookie sealing key), one OAuth registration per sign-in (or one shared registration), a kill switch, and incident duty. B1 sees every connected visitor's PayBox bearer token in memory per request and can raise approval prompts in their PayBox app if the deploy is compromised. It cannot sign alone.
+
+**What the page can honestly do today even if every route works.** The hosted page has no CORS-reachable write path: XO's orderbook and bundler send no CORS headers for third-party origins ([28 section 5.1]; not re-measured today). So the first things a connected PayBox wallet gives the hosted dApp are: the visitor's address, a signed proof that they control it (feeds the address-binding screen, `app/src/core/bindings.ts`, which today accepts only `pasted`, `agent_import` and `derived`), and a generic signing layer that is ready the day a write path exists. XO orders, ClobAuth and UserOps stay on the Cockpit daemon or the user's own agent.
+
+**Unproven (details in section 10).** That WalletConnect works for an ordinary account; that PayBox's sign page completes a request minted by our client; whether PayBox demands a passkey per signature on the WalletConnect path; open registration for an HTTPS redirect on the dApp origin; the consent screen's treatment of a third-party client; revocation scope; whether Cloudflare in front of PayBox accepts Vercel's egress; what the approver sees for typed data and raw digests; whether chain 3223 or raw digests are accepted by the MCP path at all.
+
+**If PayBox or the tests say no.** The floor works today with nothing from anyone: the user's own PayBox-connected agent signs a copied intent and the dApp verifies the returned signature locally (manual hand-off, option G), and the Cockpit daemon is the PayBox client for the local build (option E). Section 2.3 is the ladder.
+
+---
+
+## 1. Options
+
+### 1.1 Table
+
+Letters A to E follow the task. F and G are routes the task list did not name: F is the WalletConnect finding of [29], [31], [32], [33]; G is the manual hand-off of [33]. "Operated" means a component the author deploys.
+
+| # | Route | Feasible? | Operated by | Custody exposure | Visitor steps | Blockers and unknowns |
+|---|---|---|---|---|---|---|
+| A | **OAuth client in the browser** (page registers a public client, runs PKCE, calls `/mcp`) | **No, as measured.** `/oauth/register`, `/oauth/token`, `/oauth/device_authorization`, `/mcp`, `/agent/*` return no `access-control-allow-origin` for the dApp origin (H[P]); only `https://app.paybox.sh` and `https://developer.paybox.sh` are allowed (H[P]). Only `GET /oauth/authorize` (a navigation) works, so the dance dies at registration and token exchange | nobody | n/a | n/a | CORS (section 1.2). Even with CORS opened: OAuth alone never produces a signature (needs a signing surface); rotating refresh tokens in a page need a single-tab lock; tokens would sit in XSS-readable storage ([29 section 5]) |
+| B1 | **Hosted token-only BFF** (Vercel Function; sealed HttpOnly cookie; no refresh token; PayBox's own sign page completes the signature) | **Plausible, unproven.** All pieces exist in PayBox's shipped code (OAuth server, MCP `request_wallet_sign`, `sign/[request_id]` page, H[B], H[D]); the combination was never run | author: one Function, one secret, optionally a registration per sign-in | live bearer token in transit and in an encrypted cookie; no keys, no funds, no passkey, no database. Reach of a stolen token: every MCP tool the grant allows; money and signing still need the visitor's passkey under `always_approve` ([32 section 13]) | 1 Connect (PayBox consent: pick one wallet, mode `always_approve`, passkey). 2 per signature: approve at PayBox, then sign on `app.paybox.sh/sign/<id>` (one screen or two: NOT TESTED). Reconnect hourly | Does the sign page complete our client's request (NOT TESTED). Open registration for an HTTPS redirect (NOT TESTED). Consent screen shows a self-asserted client name (impersonation). Cloudflare vs Vercel egress (NOT TESTED). Terms silent on third-party backends ([34]) |
+| B2 | **Pass-through relay, tokens and a `pbxk1.` agent key in the browser** ([30 W2], [33 TP-b]) | Possible in principle, **rejected for v1** | author: relay | bearer in transit; signing key in the page | OAuth plus an emoji-code pairing at `app.paybox.sh/agent-key`, then per-signature approvals | Rides undocumented routes (`/agent/*`, `/iframe/pairing`, `/api/agent-pairings/token`) that changed twice in 12 days; server-side binding of digest to approved intent unknown ([30 section 8]); XSS can use the key; rotating refresh tokens |
+| B3 | **Server-held tokens or keys** (database of sessions, or a `pbxk1.` key on the server) | Technically possible, **rejected** | author | custody of strangers' credentials, one breach exposes all | n/a | Contradicts the retained rule "no custody of other people's credentials" ([EA section 1]) |
+| C | **PayBox partner or allowlist** (they add the dApp origin to CORS, document `/wc`, offer verified clients or a partner programme) | Not in our control. No partner programme is documented: `partnerSlug` in `@paybox-sh/connect-react` is "routing, not authorization" and only draws Claude and ChatGPT setup help ([34 section 2.9]) | PayBox | none new | n/a | Asks and likely answers in 1.3 (all L). If CORS were allowed, B1 could shrink to no server, at the price of tokens in page memory (weaker against XSS than an HttpOnly cookie, [32 A3]) |
+| D | **Popup or iframe signing window driven by the page** | **No.** `app.paybox.sh` sends `frame-ancestors 'self'`; `api.paybox.sh/iframe/shell` sends `frame-ancestors https://app.paybox.sh` (H[P]); no `postMessage`, redirect or return channel exists for a third party on the approval or signing routes ([31 section 3.2]); the dApp's own `Cross-Origin-Opener-Policy: same-origin` (H[P]) severs a popup's opener. **A plain link-out to PayBox's pages, with the dApp learning the result by polling its own backend, is not this option** and is what B1 does | n/a | n/a | n/a | PayBox would have to add a result channel and a framing allowlist ([31 A6, A8]); very unlikely (L) |
+| E | **Local Cockpit as today** (daemon is the PayBox client or the user's agent signs) | **Works today by design** ([DD section 3.3]); not built as a signer yet; not "on the hosted page" | the user, on their machine | tokens and `pbxk1.` key on the user's machine (their own) | install and run the daemon, device-code login, pairing code | Still needs the live tests T0, DT1 of the Cockpit design. It is the only path for XO chain 3223 and UserOps until a route is proven |
+| F | **WalletConnect v2 into `app.paybox.sh/wc`** | **Plausible, unproven.** Code ships (H[B]); signs `personal_sign` (valid UTF-8 text only) and `eth_signTypedData_v4`, plus Solana message and transaction; refuses `eth_sendTransaction`, `eth_signTransaction`, `eth_sign`, binary `personal_sign`; a typed-data `domain.chainId` that differs from the session chain is refused (H[B]) | author: nothing (a Reown project id is a free third-party registration) | WalletConnect session keys in the visitor's browser; PayBox creates a client `"<app name> (WalletConnect)"` with an `autonomous` grant and no expiry; the PayBox tab signs without per-request prompts (H[B], server policy NOT TESTED) | Paste or open the pairing link at `app.paybox.sh/wc`, approve the proposal, generate a signing key on first use; keep the PayBox tab open, signed in, as the only listening tab | Not run. Chain 3223, raw digests, transactions impossible. Autonomous grant is the weakest approval posture of any route. Needs a WalletConnect library, relay hosts in the CSP and a project id; the repo's dependency rules and DD section 2.7 refuse WalletConnect today |
+| G | **Manual hand-off** (copy the exact intent, the visitor's own PayBox-connected agent signs, the visitor pastes the signature, the page verifies it) | **Works today.** Needs an agent that already has PayBox connected | nobody | none | copy, ask agent, paste | Poor UX. The text pasted into an agent can carry attacker-influenced strings, so the page's own recover-and-compare check is what protects the result |
+
+Excluded, with the reason (one line each): MoonX embedded-wallet SDK `@moon-x/react-sdk` (a different wallet from the visitor's PayBox one, UNLICENSED, needs an origin allowlist with MoonX; [30 W7]); pasting a `pbx_live_` key into the page (a long-lived secret, same relay problem; [30 W8]); the dApp as an MCP-Apps host of `ui://paybox/wallet-sign` (the shell only talks to `app.paybox.sh`; [31 section 3.2]); a browser calling PayBox's first-party `/api/*` routes or sending `x-moonx-*` headers (the docs say an integration never calls them; [34 section 2.2]).
+
+### 1.2 What I measured today (the facts the table rests on)
+
+All GET or OPTIONS, `Access-Control-Request-Method: POST`, `Access-Control-Request-Headers: authorization,content-type`, one request per second. Raw output is in the session scratchpad only.
+
+| Path on `https://api.paybox.sh` | Origin = dApp | Origin = `https://app.paybox.sh` | Origin = `https://developer.paybox.sh` |
+|---|---|---|---|
+| `/oauth/register` | 200, **no ACAO** | ACAO = `https://app.paybox.sh` | ACAO = `https://developer.paybox.sh` |
+| `/oauth/token` | 200, no ACAO | allowed | allowed |
+| `/oauth/device_authorization` | 200, no ACAO | allowed | allowed |
+| `/mcp` | 200, no ACAO | allowed | allowed |
+| `/agent/wallet-sign` | 200, no ACAO | allowed | allowed |
+| `/api/agent-pairings/token` | 200, no ACAO | allowed | allowed |
+| `/iframe/pairing` | **ACAO `*`** | `*` | `*` |
+
+H[P]. This settles note 29 (two allowed origins) against notes 30, 31 and 34 (one). `/iframe/pairing` and `/iframe/pairing/{id}` are open to every origin but are useless alone: the token that authorizes them comes from the blocked `/api/agent-pairings/token`.
+
+Other facts re-checked today:
+
+- `GET https://xo-markets-explorer.vercel.app/` returns the app's strict CSP (`default-src 'none'`, closed `connect-src`, `require-trusted-types-for 'script'`, `trusted-types 'none'`), `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin`; `GET /api/paybox/session` returns **404**, so no Function exists yet (H[P]).
+- `app.paybox.sh` sends `frame-ancestors 'self'` and a `connect-src` that includes `wss://relay.walletconnect.org`, `https://relay.walletconnect.org` and the two `verify.walletconnect.*` hosts (H[P]). `api.paybox.sh/iframe/shell` sends `frame-ancestors https://app.paybox.sh` (H[P]).
+- Bundle `[B]`, counts of exact strings: `WalletKit` 8, `session_proposal` 13, `session_request` 42, `eth_signTypedData_v4` 17, "This message is raw bytes, not text" 2, "PayBox signs but does not broadcast for an app yet" 1, "cannot sign an Ethereum transaction for an app yet" 1, "will sign them without asking again" 1, `sign/[request_id]` 1, "This signing link belongs to your PayBox account" 1, "Complete in PayBox" 1, "No agent signing key is needed" 2, "Another PayBox tab is listening" 1, "will not connect an app reported as malicious" 1, "Generate signing key" 2, `paybox.wc.sessions` 1, `paybox.wc.leader` 2, `.pair({uri` 1.
+- The session approval code builds the grant as `approval_mode: "autonomous"` for each wallet credential whose address matches (H[B]). The WalletConnect method table is `{eip155: ["personal_sign","eth_signTypedData_v4"], solana: ["solana_signMessage","solana_signTransaction"]}` (H[B]). `PORTFOLIO_CHAINS` is Ethereum 1, Base 8453, BNB 56, Polygon 137, Optimism 10, Arbitrum 42161, Avalanche 43114, Robinhood 4663, Arc 5042, Hyperliquid 999, Solana; the number 3223 does not appear as a chain id (H[B]). Note 31's mention of Monad 143 and Celo 42220 is not in that list.
+- The sign page code (H[B]): reads `request_id` from the route, needs the visitor's PayBox web session ("This signing link belongs to your PayBox account. Sign in, then open the link again"), loads the signing payload through the app's own API (`api.signingPayload`, `api.hostedTool`) using that session, and frames `https://api.paybox.sh/iframe/shell?r=<request_id>`. It does not look at which OAuth client created the request in the code I read; whether the server enforces that is NOT TESTED.
+- The shell code `[S]` contains `completion_url` (2), `complete_in_paybox` (2), `paybox_hosted` (2) and a "Complete in PayBox" button that opens `completion_url` for non-submit completions (H[S]). The tool text `[T request_account_change]` says: "For `paybox`, the user completes transactions on the PayBox website without an agent signing key." `[T request_wallet_sign]` says: "On `pending_signature`, use an available in-process signer or a human signing surface; do not assume a window is open." Docs `[D]` describe the signing window only as an in-chat MCP resource; the docs heading "Signing: in the chat, or in your browser" has a body that covers only the chat case (H[D]). So the browser sign page is a first-party route that the public docs do not describe.
+- `@paybox-sh/sdk` latest is still 2.2.0 (published 2026-10-14T20:01Z; H[P] registry).
+- Vercel: with Fluid compute the Node function default and Hobby maximum duration is 300 s; Fluid is the default for new projects; the single default region is `iad1`; Hobby is "non-commercial personal use only" and commercial means financial gain of **anyone** involved in **any part** of production (H[V]). Whether this project has Fluid on, its Root Directory and its plan: NOT FOUND (needs an authenticated Vercel read, not used).
+
+### 1.3 What PayBox would have to do, per route, and the likely answer
+
+No contact was made. Likely answers are all **L**.
+
+| # | Ask (exact) | Unlocks | Likely answer |
+|---|---|---|---|
+| A1 | State that `app.paybox.sh/wc` WalletConnect is a supported public feature for third-party dApps; document its methods, chains and the grant it creates | route F on a supported footing | Plausible: it is in production, the cost of a statement is low |
+| A2 | Let the user choose the grant mode (`always_approve`) when approving a WalletConnect session, instead of the hard-coded `autonomous` | closes the autosign risk of route F | Reasonable security request; unknown |
+| A3 | Add `https://xo-markets-explorer.vercel.app` to the CORS allowlist for `/oauth/register`, `/oauth/token`, `/oauth/device_authorization`, `/mcp` (plus expose `www-authenticate`) | removes the BFF | The list has two entries today, so additions are cheap or deliberately closed; a per-registered-origin rule is the usual product answer; unknown |
+| A4 | Document `app.paybox.sh/sign/<request_id>` and the `X-Paybox-Signing-Surface: browser` behaviour as a supported surface for third-party OAuth clients | B1 on a supported footing | Plausible: both exist |
+| A5 | Say whether replaying a used code or rotated token revokes the whole `client_id` or one user's grant | picks one shared client versus one per sign-in | A one-line answer |
+| A6 | Show the redirect host or a verified-app label on the consent screen, or support Client ID Metadata Documents | reduces consent phishing | Possible; no sign of it |
+| A7 | Add chain 3223 to the catalog; add a raw-digest WalletConnect method | XO over route F | Unlikely (3223 is XO's own chain; raw digests are blind signing) |
+| A8 | Publish a `revocation_endpoint`, MCP rate limits, tool-scoped scopes | hardening | Low priority; no rate limit published today (NOT FOUND) |
+
+The full 12-question list and a draft message are in `docs/research/34-paybox-web-terms-risk.md` section 7. Questions 2, 4, 5 and 8 there decide architecture.
+
+---
+
+## 2. Recommended architecture and the fallback ladder
+
+### 2.1 Shape
+
+One signing layer in the page behind one port; transports plug into it. Nothing in the layer depends on which transport is enabled.
+
+```
+ hosted dApp page (static, strict CSP, Trusted Types)                 PayBox
+ +---------------------------------------------------+
+ | app code: bindings, Signature Card, future writes |
+ |        |  EIP-1193 request()   |  viem LocalAccount |
+ |        v                       v                    |
+ |  PayboxWalletCore (pure): method allowlist, intent |
+ |  build, policy, ONE pending request, local verify  |
+ |        |  SigningTransport port                     |
+ |        v                                            |
+ |  bff transport   walletconnect transport  manual    |    daemon transport
+ +--------|----------------|------------------|--------+    (Cockpit build only)
+          | same-origin    | WC relay          | copy/paste
+          v                v                   v
+ Vercel Function      Reown relay -> app.paybox.sh/wc   user's own agent
+ /api/paybox/*  --> api.paybox.sh/{oauth,mcp}   (visitor's open PayBox tab signs)
+ (sealed cookie)       visitor signs on app.paybox.sh/sign/<id> (route B1)
+```
+
+Rules that hold on every transport (carried from [33]): the core verifies every signature locally with viem before returning it (recover the signer from the digest the page itself computed and compare with the connected address; transport output is never trusted); one pending signature at a time; every refusal is fixed app wording; the provider returns no accounts until a real PayBox credential is connected (no default address, no demo signer, no mock in `src/`).
+
+### 2.2 What to build first (and in what order)
+
+1. **Unconditional, needs nothing from PayBox:** the transport-agnostic core, the viem account, the mock PayBox with a public Anvil key, the connect UI that says "not connected", and the policy amendments of WP0 (section 7). These hold under every outcome.
+2. **Run the cheap live tests before any transport code:** PW-1 (CORS, 1 minute), PW-2 (WalletConnect, about 15 minutes), PW-3 (registration and consent screen), PW-5 (does the sign page complete our client's request). They cost nothing and decide which transport is worth building (section 7.4).
+3. **Then, by evidence:**
+   - PW-5 passes: build B1 as the primary "Connect PayBox", flag OFF. It is the only route with a passkey per signature (`always_approve`) and the only one that could carry chain 3223 and raw digests.
+   - PW-2 passes and the user accepts D2: build F as a second transport, flag OFF, hosted build only, for the visitor who will not use the BFF or when PW-5 failed. Label it "dedicated low-balance wallet only".
+   - Both fail: ship only the core plus G (manual) and keep E.
+4. The page offers only transports that are enabled and whose live-test facts are recorded; capability facts per transport (which ops, which chains, which approval mode) come from recorded observations, never from this document.
+
+Why B1 is preferred over F when both work, and why F still exists: B1 keeps a passkey on each signature and does not auto-sign for a compromised page; F needs no author server, no cookie and no PayBox cooperation but PayBox signs automatically. The first costs operating duty and trust in the author's deploy; the second costs the weakest approval mode. Neither is "safe"; the UI must never say so.
+
+### 2.3 Fallback ladder (what works if PayBox, or a test, says no)
+
+| If this fails | What still works | What is lost |
+|---|---|---|
+| PW-2: WalletConnect not live, or refuses our requests | B1 if PW-5 passes; else G and E | the no-server route |
+| PW-5: sign page refuses a request minted by our client | F for text and typed data on its ten chains; PW-8 (`paybox` mode) is the one more thing to try on the same page; else G and E | raw digests, chain 3223, transactions from the hosted page (they were never possible via F) |
+| PW-3/PW-4: registration refused for an HTTPS redirect, or Cloudflare blocks Vercel egress | F; G; E | B1 entirely (device-code flow still needs registration, so it is not a way around) |
+| PayBox changes `/sign/<id>`, tool shapes or CORS later | kill switch `BFF_KILL=1` (or the firewall rule) turns B1 off; contract tests fail loudly; F, G, E unaffected | B1 until fixed |
+| PayBox removes `/wc` | B1, G, E | route F |
+| PayBox says yes to A3 (CORS) | B1 can move into the page and the Function can go; or stay (cookie custody is stronger against XSS). User's choice, D3 | nothing |
+| PayBox says no to everything | everything above that does not need them | nothing already working |
+| Everything blocked | G and E; the hosted page remains read-only with address binding by paste | "connect" on the hosted page |
+
+---
+
+## 3. Flows
+
+Flow names: BFF = route B1, WC = route F.
+
+### 3.1 Connect (BFF)
+
+1. Visitor presses **Connect PayBox** (a button inside the page; before this the page shows "not connected" and no address).
+2. Page navigates (top-level) to `/api/paybox/login`. Function registers (or reuses) a public OAuth client, creates a PKCE S256 verifier and a random `state`, seals `{state, verifier, ret, exp}` into the short-lived cookie `__Secure-pbx_state` (HttpOnly, `SameSite=Lax`, `Path=/api/paybox`, 10 minutes), and 302s to `https://api.paybox.sh/oauth/authorize` with `response_type=code`, `scope=mcp` (**no `offline_access`**), `resource=https://api.paybox.sh/mcp`, `redirect_uri` fixed from configuration.
+3. At PayBox the visitor signs in, picks **one dedicated wallet credential**, picks **Human approval (`always_approve`)**, and approves with a passkey. (What the consent screen shows for a third-party client is NOT FOUND; PW-3.)
+4. PayBox redirects to `/api/paybox/callback?code=...&state=...`. The Function requires a valid state cookie before any upstream call, clears it in the same response, exchanges the code once, calls MCP `list_credentials`, keeps only EVM wallet credentials with an address, enforces the approval-mode gate (refuses `autonomous`, `iframe`, `paybox`; section 5), seals the session into `__Secure-pbx_sess` (AES-256-GCM, `HttpOnly`, `SameSite=Strict`, `Path=/api/paybox`, `Max-Age` equal to the remaining token life minus 60 s), and 302s to the page.
+5. Page calls `GET /api/paybox/session`, gets `{address, credential suffix, approval mode, expires_at, csrf}`, shows the full EIP-55 address, the mode and a session countdown.
+6. Page asks for an **ownership proof**: the Function issues a message from a fixed template with a stateless nonce (HMAC over session id and time); the visitor signs it (flow 3.3); the page recovers the signer with viem; only if it equals the credential's address does the page add a binding with source `paybox_connected` (a new value; edit to `app/src/core/bindings.ts`). Until then the address is shown as unverified.
+
+### 3.2 Connect (WalletConnect)
+
+1. Visitor presses **Connect PayBox (WalletConnect)**. The page, using a headless sign client (no modal, our own QR and button), creates a pairing with `optionalNamespaces` only: `eip155` methods `personal_sign` and `eth_signTypedData_v4`, events `accountsChanged`, `chainChanged`.
+2. Page shows a link `https://app.paybox.sh/wc?uri=<encoded wc: uri>` (opens in a new tab, `rel="noopener noreferrer"`) and the raw URI for paste.
+3. In PayBox the visitor sees "Connect this app?" with the app name, a Reown Verify badge (verified or "could not be verified"), addresses, chains and "What it can ask for". PayBox warns it "will sign them without asking again" (H[B]) and refuses apps flagged as malicious.
+4. On approval PayBox creates the client `"<app name> (WalletConnect)"` with an `autonomous` grant for each matching wallet (H[B]). On the first request it asks the visitor to generate a signing key that "stays in this browser" (H[B]).
+5. Page receives the session: accounts, chains. The same ownership proof as 3.1 step 6 runs through `personal_sign`.
+
+### 3.3 Sign (BFF)
+
+1. App code calls the provider (`personal_sign` text, or `eth_signTypedData_v4` when a registry entry exists). The core parses, applies policy, computes the digest locally, and shows the **in-page confirmation**: decoded fields, chain, account, digest tag. The visitor can cancel here (nothing is sent).
+2. Page POSTs to `/api/paybox/sign` with `Origin`, `Sec-Fetch-Site: same-origin`, JSON content type and the CSRF header. The Function re-validates against the same policy, rebuilds the PayBox intent itself (it never forwards the page's intent), re-checks the credential's mode with one `list_credentials`, refuses if another request is in flight, and calls MCP `request_wallet_sign`. It returns `{request_id, status, approval_url?, sign_url}`. Links are accepted only if their host is exactly `app.paybox.sh`.
+3. Page persists `request_id` with the intent hash (so a reload can resume), and shows two links as a user click: "Approve in PayBox" (when `approval_url` is present) and "Sign in PayBox" (`https://app.paybox.sh/sign/<request_id>`; the exact URL form is M, PW-5 records the real one).
+4. Visitor approves with a passkey at PayBox, then the signing window on PayBox's page signs client-side (H[D], H[B]). A single screen versus two is NOT TESTED.
+5. Page polls `GET /api/paybox/request?id=...` (3 s for 30 s, then 5 s, then 10 s; pauses while hidden; stops at terminal status or 11 minutes). The Function polls MCP `get_request` and returns an allowlisted projection: `{status, signature?}`; `signature` must be `0x` plus 130 hex or the Function answers `unexpected_shape`.
+6. On `success` the core verifies the signature locally (recover signer from the page's own digest, compare with the connected address; high `s` normalised) and only then resolves the caller's promise. A mismatch is `-32603 signature_mismatch`, the artifact is dropped.
+
+### 3.4 Sign (WalletConnect)
+
+1. Same step 1 as 3.3.
+2. Page sends `session_request` over the relay with a short expiry (a few minutes) and a countdown. If the PayBox tab is closed the request waits on the relay until it expires.
+3. The PayBox tab (the only listening tab) decodes the request: text for `personal_sign` or the typed data with a one-line preview "Typed data for <domain name>" (H[B]); it creates the request under the autonomous client and signs with the in-browser key. Whether PayBox's server insists on a passkey despite `autonomous` is NOT TESTED (docs conflict, [29 section 5], [30 section 4.2]).
+4. The page receives the signature, verifies it as in 3.3 step 6, resolves. Errors come back as `4001`-style rejections or the refusals of section 4.4.
+
+### 3.5 Revoke and disconnect
+
+- **Disconnect in the page:** the page forgets its selection and the transport state; BFF: `POST /api/paybox/logout` clears both cookies; WC: the page disconnects the session. This does **not** revoke the PayBox grant (PayBox has no revocation endpoint in its metadata, H[29]), and a copied BFF cookie stays valid until its expiry, at most 60 minutes. The UI says so and links the visitor to the PayBox **Clients** screen, where revoking the client "immediately kills its access tokens and refresh chain" (H[D]); for WC the client is the one named "(WalletConnect)".
+- **Operator kill:** `BFF_KILL=1`, or a Vercel Firewall rule denying `/api/paybox/`, or removing the connector flag, or (nuclear) removing the registered redirect.
+- **Revoked at PayBox mid-session:** the next MCP call returns 401; the Function answers `reconnect`; the page drops to "not connected".
+
+### 3.6 Errors
+
+| Situation | What the visitor sees | What happens |
+|---|---|---|
+| Visitor cancels in the page before submit | nothing sent | `4001 cancelled_by_page` |
+| Cancel after a PayBox request exists | "Deny or ignore it in PayBox" | PayBox has no cancel call in its public surface (NOT FOUND); the request expires; a late success is dropped |
+| `denied` | "PayBox declined" with PayBox's reason as untrusted text | `4001` (user rejection and policy denial cannot be told apart until PW-6 records the vocabulary) |
+| Approval expires (about 10 minutes, [D]) | "Expired, nothing was spent" | `-32603 approval_expired`; no automatic re-issue (a second prompt only on the visitor's action) |
+| `error` | short code plus untrusted message | `-32603 paybox_error` |
+| Network failure before a request id exists | "A request may or may not exist in PayBox. Check PayBox before retrying" | new signatures blocked for 10 minutes or until the visitor confirms |
+| Session expired (60 minutes) | "Reconnect" | non-sensitive UI state survives in `sessionStorage` across the redirect |
+| Credential changed (mode now `autonomous`, address changed, credential removed) | disconnect with a warning | pending request rejected; an address change is a security event and never auto-reconnects |
+| Signature fails local verification | "PayBox returned a signature that does not match" | `-32603 signature_mismatch`, artifact dropped |
+| Any unknown path or method on `/api/paybox/*` | empty 404 or 405 | no stack traces; every error is a short code |
+
+---
+
+## 4. The in-page adapter
+
+Design in full: `docs/research/33-paybox-web-eip1193-adapter.md`. What this record adopts, and what it changes.
+
+### 4.1 Pieces
+
+- `PayboxWalletCore` (pure; fetch, clock and timers injected): method parsing, policy, state machine, local verification, events. Two faces over it: an EIP-1193 `request({method, params})` object, and a viem `toAccount` account (`signMessage`, `signTypedData`, `signTransaction`, explicit `sign({hash})`). The local-shaped account is the preferred face for transactions: viem builds and sends the transaction itself with `eth_sendRawTransaction`, so the wallet only signs.
+- Transport port `SigningTransport` with `facts()`, `connect()`, `sign(intent)`, `refreshAccounts()`, `disconnect()`. Transports: `bff` (same-origin `/api/paybox/*`; this record's name for [33]'s `proxy`), `walletconnect`, `manual`, and `daemon` (Cockpit build only).
+- Capability facts per transport (`messageText`, `messageBytes`, `typedData`, `rawDigest`, `transaction`, `chains`, `approvalMode`) are filled from recorded live observations; until recorded they read `{ok:false, reason:"not tested"}`.
+
+### 4.2 Method map (condensed from [33 section 5])
+
+| Method | Maps to | Rule |
+|---|---|---|
+| `eth_requestAccounts`, `eth_accounts` | connect flow, then `[address]` | `[]` until a real credential is connected; never a placeholder |
+| `eth_chainId`, `net_version`, `wallet_switchEthereumChain` | page-local active chain | a PayBox EOA has one address on every EVM chain and no "current network"; the value exists because viem asserts it; unknown chain `4902` |
+| `personal_sign` | `{op:"message"}` | only when the bytes are valid UTF-8 and re-encode identically. A hex string passed as `message` signs the 12 characters, not the bytes (vector in [33 section 12.1]), so binary data has no `message` form. Binary goes to `raw` over the EIP-191 digest only on a transport whose `rawDigest` is ok **and** flag `allowEip191Digest` is ON (blind signing); WalletConnect refuses it |
+| `eth_signTypedData_v4` | `{op:"typedData"}` | JSON or object; re-hashed locally with viem `hashTypedData`; `domain.chainId` must equal the active chain (or be on a short named exception list such as Hyperliquid 1337); the transport must list the chain (3223 is not on WalletConnect: `4901`); v1 and v3 `4200` |
+| `eth_signTransaction` | `{op:"transaction"}` (EIP-1559 only) | only where the transport carries it (not WalletConnect); legacy `gasPrice`, access lists, blobs, `to: null` refused. Flag OFF in v1 |
+| `eth_sendTransaction`, `wallet_sendTransaction` | sign, then the core broadcasts with `eth_sendRawTransaction` | flag `allowSend` default **OFF**; only chains that have both a transport that carries them and a CSP-allowed RPC (today 8453, 137, 56, 999, 3223) |
+| `eth_sign`, `wallet_addEthereumChain`, `wallet_watchAsset`, `eth_subscribe`, `wallet_sendCalls`, EIP-7702 | none | `4200`, fixed wording, no PayBox request is ever created for a refusal |
+| read methods (`eth_call`, `eth_getBalance`, ...) | the page's existing allowlisted RPC origins | unreachable endpoint is `-32000 rpc_unreachable`, never an empty or zero answer |
+
+### 4.3 Hazards pinned by the design
+
+- **viem retry fallback** (H[33], read in the installed viem 2.57.2): a failed `eth_sendTransaction` is re-sent as `wallet_sendTransaction` on `-32000`, `-32602` and method-not-found. Any failure after a PayBox request exists therefore uses `4001` or `-32603` only, and the core keeps an idempotency key per call, so a library retry never creates a second PayBox request ("submit once, then poll", H[D]).
+- **No PayBox logos, no MetaMask flags.** The provider sets `isPayBox: true`, never `isMetaMask`. The EIP-6963 announcement (only when the visitor enabled the connector) says "PayBox wallet (unofficial connector)", uses a plain icon authored for this app, and an `rdns` from the deployment's own domain.
+- **Account change:** refresh on focus after 30 s and before every signature; a changed address disconnects and warns; token refresh is not needed for the BFF (no refresh token); WalletConnect session state is shared across tabs by `BroadcastChannel`.
+- **`@moon-x/*` packages are UNLICENSED** and `@paybox-sh/sdk` is Node-only (`node:*` imports): neither is bundled. The few protocol facts needed are re-implemented on viem against golden tests.
+- **Honest scope of v1.** Methods enabled by default in the hosted build: account, chain, read methods, `personal_sign` text (ownership proof and server-templated messages), and `eth_signTypedData_v4` only for entries in a checked-in registry of known venue domains. That registry starts empty for the hosted build because the hosted page has no write path yet (section 0). Transactions, raw digests and send are code-complete only behind OFF flags.
+
+---
+
+## 5. Security and threat table
+
+Principle (from DD section 6): structure over policy. The UI never says "safe", "protected" or "verified" about funds, caps or a policy. In the hosted build there is no daily ledger and no relay: caps are per item only and labelled "advisory; no daily limit".
+
+BFF controls to be built (from [32 sections 6 to 10]): AES-256-GCM sealed cookies (HKDF key per cookie name, key id for rotation, no dependencies); `Origin` equal to a configured constant, `Sec-Fetch-Site: same-origin`, JSON content type and a CSRF token derived from the session id on every state-changing route; no `Access-Control-*` headers at all; one fixed upstream origin, redirects off, 8 s timeout, 1 MB cap; a closed tool allowlist of `list_credentials`, `request_wallet_sign`, `get_request`; one in-flight request per session; a typed logger that is the only writer to stdout and never logs tokens, cookies, addresses, request ids, bodies or IPs; `maxDuration` set to 15 s explicitly; `Cache-Control: no-store` on the whole prefix.
+
+| # | Threat | How it plays out | Control | Residual |
+|---|---|---|---|---|
+| T1 | **Compromised deploy** of the hosted app or Function (stolen Vercel or GitHub access, bad dependency, leaked sealing key) | Controls the page and the Function: reads live bearer tokens during the window, can call any MCP tool the grant allows, can raise approval prompts in each connected visitor's PayBox app, can lie in the confirmation dialog. Cannot complete a signature alone (no signing key anywhere) | no stored tokens; 60-minute tokens; `always_approve` gate; protected branch and review; Vercel account 2FA; tagged builds with published hashes; secret rotation drill; kill switches | A fully compromised deploy defeats every in-page control. The visitor's last line is PayBox's own approval screen, which may show only a hash (NOT FOUND). Strictly worse than the local-first model; this is the price of the requirement |
+| T2 | **XSS or supply-chain script in the page** | Can call `/api/paybox/sign` with in-policy items and ride the session; on route F can request typed data from the autonomous client without a prompt | strict CSP, Trusted Types, pinned dependencies with the 14-day age rule; the Function rebuilds intents and enforces policy; one in-flight request; on B1 a PayBox approval per signature | Route F has no per-signature prompt; approval fatigue on B1 |
+| T3 | **Autosign drainer via route F** | A look-alike site (or a compromised real one) connects, asks for `Permit`, Permit2 or Seaport-style typed data while the visitor's PayBox tab is open | dedicated low-balance wallet text on the connect screen; only the two methods requested; decoded fields shown in the page; Reown Verify registration for the real origin; Clients-screen revoke; deny-by-name list for permit-class types in the core | Advice, not a guarantee. Needs PayBox ask A2 to close |
+| T4 | **Token theft (BFF)** | Cookie copied off the device or by an extension; Vercel runtime logs; referrer | HttpOnly, Secure, SameSite Strict, `Path=/api/paybox`; `Referrer-Policy: no-referrer`; tokens never in URLs, bodies or logs; 60-minute life; revoke at PayBox | A copied cookie is replayable until expiry (no revocation endpoint at PayBox, no memory in the Function) |
+| T5 | **Consent phishing** | Open registration lets anyone register a client with any `client_name`; a clone of the dApp can send visitors to a similar consent screen | authorization-code flow (not device code, which allows attacker-started approvals); the page and docs show the exact client name and the exact origin to check; ask A6 | Not fixable by us; what the consent screen shows is NOT FOUND (PW-3) |
+| T6 | **Replay and revocation blast radius** | Replaying a used code revokes the client; if revocation is per `client_id`, one replay could lock out every visitor | callback consumes its state cookie in the same response; no refresh tokens at all; **one client per sign-in by default (R2)** until PW-7 shows per-user revocation | R2 puts an unauthenticated registration call behind `/login`: rate-limit it hard |
+| T7 | **CSRF and login CSRF** | Cross-site form posts to `/sign`; forced login with an attacker's code | section 5 controls above; sealed single-use state | None known |
+| T8 | **Wrong credential** | Visitor grants several wallets, or a funded one, or an `autonomous` one | refuse to connect unless a granted wallet is `always_approve`; the connect screen asks for one dedicated credential and lists addresses in full | A visitor who ignores it |
+| T9 | **Blind signing** | PayBox's approver may show only a hash or one line for typed data and raw digests | decoded confirmation in the page with a digest tag; `raw` and binary `personal_sign` OFF; Function-side templates for messages | The human comparison; a compromised page can lie |
+| T10 | **PayBox change or outage** | `/sign/<id>`, tool shapes, TTLs or CORS change without notice (the SDK went 2.0.0 to 2.2.0 in 12 days) | three-tool surface, pinned endpoints with a fail-closed check, golden contract tests, one-flag kill switch | Users cannot sign until fixed |
+| T11 | **Duplicate requests** | Library retries or a lost response create a second approval prompt | idempotency key, persisted `request_id`, one in flight, viem-safe error codes | A race can still produce two prompts |
+| T12 | **Abuse and cost** | Floods of `/login` or `/request`; many mints to spam a visitor's PayBox inbox | Vercel WAF rate limit (Hobby has one rule; counters are per region); in-process speed bump; `maxDuration` 15 s; spend alert on Pro | Approximate |
+| T13 | **SSRF, open redirect** | Any user-controlled URL | one fixed upstream; return target is an allowlist key inside the sealed state; links from PayBox checked to host `app.paybox.sh` before use | None known |
+| T14 | **Privacy** | Address plus IP in Vercel's own logs (retention 1 hour Hobby, 1 day Pro; includes the query string, so the OAuth `code` and `state` appear there) | the Function logs no address or IP; the `code` is single-use and useless without the verifier in the visitor's cookie; no log drain, no analytics | Vercel's platform logs exist; state it in the privacy note |
+| T15 | **Impersonation of PayBox** | The page looks like it is PayBox | plain-text "PayBox" only, no logos, "independent app, not affiliated with or endorsed by PayBox or MoonPay" | Trademark status NOT FOUND |
+| T16 | **Look-alike hosted copies** | A clone of the page asks for a connection | the real origin is the only Reown-verified one; docs tell visitors which origin to check | A visitor on the wrong URL |
+
+---
+
+## 6. Terms and legal exposure
+
+Not legal advice. The user's decision "PayBox terms are no obstacle" stands; this section only records what the text says now that the author becomes an operator (details and quotes: `docs/research/34-paybox-web-terms-risk.md`).
+
+- **PayBox.** The contract is the Launchpad Limited (BVI) user agreement, last updated 6 August 2026, with its own section 6B (H[34]). It binds the PayBox user. The dApp author signs nothing and is not named. PayBox's docs invite third-party apps ("If an integration speaks MCP or OAuth 2.1, it can use PayBox"; dynamic registration with auth "none"; H[34], H[D]). Section 6B defines an Agent Client as AI agents and "other software clients"; anything it does with a valid token and grant "is deemed to be authorised by you". The user bears all risk, and Launchpad may "decline to produce a signature" or restrict an account, including for "reputational risk".
+- **Token custody.** The only clause near a hosted backend: section 6B applies the CLI rules on Session Credentials, which say they are "device-bound and should not be shared". The terms do not address third-party backends; the docs allow API keys on "servers". Rating: **medium, unresolved without PayBox** (M[34]). Holding a visitor's `pbx_live_` key or `pbxk1.` key is **high** and is not done. The author's practical exposure is client revocation, account-level action against visitors, and reputation, not a stated contractual breach. No developer, API or acceptable-use terms exist anywhere I could find (NOT FOUND, searched in [34]).
+- **Route F** uses PayBox's own first-party page as a wallet; nothing in the terms addresses it either way.
+- **Undocumented routes.** The licence to the "Interface" is "solely for approved purposes". The documented OAuth and MCP surface is the approved purpose; first-party `/api/*` routes and `x-moonx-*` headers are not and are never used. B1's sign page is a link the visitor opens themselves, not a call by our code, but its route is undocumented, so it is a churn and goodwill risk (L).
+- **Brand.** "Launchpad", "MoonPay", moonpay.com and "all logos related to the Launchpad Services" are listed marks needing prior written consent; "PayBox" is not in that sentence and its status is NOT FOUND. Working rule, which also applies to code identifiers: plain-text "PayBox" in descriptive use only; **no logos or screenshots; no "official", "partner", "powered by", "verified by PayBox"; no `?app=` partner routing; an explicit not-affiliated notice.** Apache-2.0 on the SDK gives no trademark rights.
+- **Region and screening.** The prediction-market jurisdiction list (section 6A) is scoped to MoonPay CLI and Dawn CLI; whether it reaches PayBox signing is NOT FOUND. Expect refusals to be possible and unpredictable. The Function offers a geo-block hook (`GEO_BLOCK_COUNTRIES`, from Vercel's country header); which countries to block is a legal question for the user (D5).
+- **XO and venues.** The old argument that each user "carries their own terms" because traffic leaves from their own machine does not hold for a hosted component. Mitigation: the Function never builds or submits venue traffic; no market-creation UI (O5 unaccepted).
+- **Vercel.** Hobby is non-commercial only; any financial gain for anyone involved in any part of production (builder fees, referrals, a paid signal, a paid consultant writing the code) requires Pro (H[V]). The acceptable-use policy bars "misrepresenting authorization to act on behalf of others", so the consent flow must say whose app it is.
+- **Data protection.** The dApp is its own controller for whatever it receives (PayBox's notice excludes third-party applications, H[34]). The Function stores nothing; it still needs a plain privacy note. Not assessed beyond that.
+- **WalletConnect/Reown.** A project id is an account with Reown (terms and limits not evaluated); the relay is a third party in the path of every WalletConnect message.
+
+### 6.1 Repo statements this record contradicts (to amend before anything ships)
+
+| Statement | Where | Needed change |
+|---|---|---|
+| "nothing the author must operate and no custody of other people's credentials" | `EA` section 1; banner of `DD`; this task's ground rules | qualify: except an optional, flag-OFF PayBox session Function that holds a short-lived bearer token (no keys) |
+| Hosted multi-tenant relay rejected; "author deploys nothing"; fork F2 default "no author deployment" | `EA` section 2.2; `DD` sections 0, 2.7, 8 (F2), threat rows 1, 2, 22 | dated amendment: the author does deploy the hosted page (it is live); add a section for the token-only Function; restate row 22 per section 6 above |
+| "a browser page acting as a PayBox client" refused; "WalletConnect, wagmi, AppKit" refused | `DD` section 0, section 2.7 | superseded narrowly by the 2026-10-20 requirement; WalletConnect only as a headless client behind a flag |
+| "Never an author-operated proxy; no Vercel function of ours" | `[28 section 5.2, C1]` | superseded for the PayBox session routes only; the read-path rule (no proxy for venue data) stands |
+| `NEVER_IN_APP_HOSTS` forbids `api.paybox.sh` and `app.paybox.sh` anywhere in source or bundle | `app/headers.config.ts` lines 107-111; enforced by `check-csp.ts`, `check-origins.ts`, `check-boundaries.ts`, `check-bundle.ts` | keep the rule for the bundle except one policy module holding the two origins as constants for exact-origin validation of PayBox links; the page's `fetch` names only `/api/paybox/...` |
+| `"description": "... Holds no key and talks to no server the author operates."` | `app/package.json` | reword |
+| `viem` reason "no wagmi, no WalletConnect" | `app/scripts/dependencies.json` | only if D2 is yes: add a reviewed entry for the sign client |
+| Example `vercel.json` comment "The author deploys nothing" | `app/vercel.json` header comment (generated) | change the generator in `headers.config.ts` |
+
+---
+
+## 7. Build plan
+
+### 7.1 Ground rules
+
+- All new server code lives in `app/api/` (Vercel only recognises `api/` under the project's Root Directory; `app/vercel.json` carries a `buildCommand` relative to `app/`, so the Root Directory is almost certainly `app/`: M, check it in PW-10; if it is the repo root the folder is `api/` at the repo root and the build command changes) and `app/bff/` for its modules (outside `api/`, so no file there is mistaken for a route). The page code lives in `app/src/features/paybox-wallet/`.
+- The plugin (`src/`, `relay/`), the root `package.json`, the daemon and the bridge contract are **not edited**. The app is its own pnpm workspace (`app/pnpm-workspace.yaml`); `check-root-isolation` keeps it so. The only cross-boundary reuse is the existing `SHARED_ALLOW` of pure files (`@shared/relay/contract`, `@shared/xo/...`); if the Function needs more, `SHARED_ALLOW` in `app/scripts/policy.ts` grows by named files (an app-side edit).
+- Every new path is flag-gated OFF (`PAYBOX_CONNECT_ENABLED`, `PAYBOX_SIGN_ENABLED`, `PAYBOX_RAW_ENABLED`, `allowSend`, `allowEip191Digest` all default `0`/false), and a missing secret makes every route return 503.
+- No `pnpm install`/`add` happens in this record; dependency additions (only for route F) go through `scripts/dependencies.json` and `check-deps`.
+
+### 7.2 Work packages and file ownership
+
+Streams that touch disjoint files can run concurrently.
+
+| WP | Content | Owns (new unless "edit") | Depends on |
+|---|---|---|---|
+| WP0 | Policy and decisions: dated amendments (section 6.1); relax `NEVER_IN_APP_HOSTS` as described; `bindings.ts` source `paybox_connected` (edit `app/src/core/bindings.ts` and its test); generator changes for `vercel.json` (`functions` entry with `maxDuration` 15 and a header block for `/api/paybox/` with `Cache-Control: no-store`); new check rules | edit `docs/dapp-design.md`, `docs/everyone-architecture.md`, `app/package.json` (description), `app/headers.config.ts`, `app/scripts/{policy,check-csp,check-origins,check-boundaries,check-bundle}.ts` and their tests | decisions D1 to D3 |
+| WP1 | Wallet core and kit: port types, provider, methods, policy, verify, pending state machine, viem account, EIP-6963 shim; mock PayBox (OAuth, MCP, sign-page behaviour) with a public Anvil key; golden vectors | `app/src/core/wallet-port.ts`; `app/src/features/paybox-wallet/{provider,methods,policy,verify,pending,account,eip6963}.ts` and tests; `app/e2e/support/paybox-mock/*` | none |
+| WP2 | Function: `api/index.ts` (one Web-Standard fetch handler) and `app/bff/{config,seal,cookies,oauth,mcp,policy,projection,log}.ts`, `routes/{login,callback,session,sign,request,logout}.ts`, tests | `app/api/index.ts`, `app/bff/**` | WP0; a pure zod contract module shared with WP3 (placement decided by `check-boundaries`) |
+| WP3 | BFF transport and UI: `transports/bff.ts`, `ConnectPanel`, `SignRequestDialog`, `PendingBanner`, session countdown, ownership proof flow, binding creation | `app/src/features/paybox-wallet/transports/bff.ts`, `.../*.tsx`, route wiring in `app/src/App.tsx` | WP1, WP2 contract |
+| WP4 | WalletConnect transport (flag OFF; only if D2 is yes and PW-2 passed): headless sign client, CSP delta, dependency entry | `transports/walletconnect.ts`; edit `app/headers.config.ts` (hosted CSP only), `app/scripts/dependencies.json`; the header and drift checks | WP0, WP1, D2, PW-2 |
+| WP5 | Hygiene and e2e: AST hygiene test for `paybox-wallet` (one call site for `transport.sign`; `fetch` only in transports; no `localStorage`; no tokens in logs; no test-helper import); Playwright specs for CSP, callback sanitising, PayBox-link host check, two-tab behaviour, kill switch | `app/src/features/paybox-wallet/hygiene.test.ts`, `app/e2e/paybox-*.spec.ts` | WP1 to WP3 |
+| WP6 | Live-test kit and runbook: zero-dependency scripts for PW-3 to PW-6 and PW-10, and a runbook that turns section 7.4 into copy-paste steps | `app/scripts/live/pw-*.ts`, `docs/dapp-paybox-web-runbook.md` | WP0 |
+
+Recorded result facts (from section 7.4) land in the transport `facts()` tables and in the runbook, never in this record.
+
+### 7.3 Acceptance tests (offline; all signatures real, public Anvil keys only)
+
+- **A1 core mapping.** Every row of section 4.2: accepted params become exactly the intended intent; every refusal code and text; address-mismatch; text round-trip (lone surrogates, BOM, NUL, 32 random bytes); legacy tx fields refused; domain-chain rules. A refusal creates no PayBox request.
+- **A2 verification.** Mock MPC (Anvil key) output assembled as `r || s || (27 + recovery_id)` and verified for message, typed data and transaction; a high `s` is normalised; wrong signer, flipped byte, signature over different content and a changed transaction field are rejected with `signature_mismatch`.
+- **A3 state machine** with a fake clock: every transition and every row of 3.6; concurrent request refused `-32002`; uncertain submission blocks 10 minutes; reload resumes from persisted `request_id`.
+- **A4 Function contract** against the mock: PKCE and state; callback without a state cookie makes no upstream call; replayed callback rejected locally; no `refresh_token` is ever stored (one appearing logs a warning code); approval-mode gate refuses `autonomous`, `iframe`, `paybox`; the tool allowlist passes exactly three tools (a test enumerates PayBox's documented tool list); the intent is rebuilt server-side (a page-supplied divergent intent is ignored); links not on `app.paybox.sh` are dropped; signature shape check; sealed-cookie round trip, tamper, wrong key id, expiry; CSRF/Origin/Fetch-metadata matrix; redaction net on fixtures with `eyJ...`, `pbxk1.`, `pbx_live_`, `Bearer `, 64-byte hex; built Function contains no `console.` outside `log.ts`.
+- **A5 CORS regression.** The mock serves no CORS for the page origin; a test proves the page reaches PayBox only through `/api/paybox/*` and that no response from the Function carries `Access-Control-*`.
+- **A6 viem integration** on a real local chain (the repo's anvil harness): `signMessage`, `signTypedData` and (flag ON) `sendTransaction` through `custom(provider)` and through the local-shaped account; ERC-1271 acceptance of an owner signature on the captured Kernel bytecode for the XO-wrapped digests (proves the wrap math, not XO's acceptance).
+- **A7 hosted checks.** `check:csp`, `check:origins`, `check:boundaries`, `check:bundle`, `check:deps` pass with the amendments; the built bundle has no PayBox host outside the one policy module and no Anvil or mock material; `vercel.json` is generated and drift-tested; `GET /api/paybox/session` returns 503 when unconfigured and 404-style empty answers for unknown paths.
+- **A8 e2e.** Served with the real generated CSP: no console violations; callback parameters removed from the address bar; no request to any origin but self; PayBox links open with `noopener`; a "no placeholder data" test (before connection the provider returns `[]` and the UI shows "not connected").
+- **A9 WalletConnect (WP4 only).** A headless client against a local WalletConnect test peer, with zero CSP and Trusted Types violations (HDR), and a test that only the two requested methods and the optional namespaces are sent.
+
+### 7.4 Live tests the user must run
+
+None was run. Use a **throwaway PayBox account** and one wallet credential that holds nothing. Do not paste tokens, credential ids or addresses into any repo file.
+
+**Budget.** Every test below is signing only: PayBox returns signatures and a signed (unbroadcast) transaction, so **no test spends money**. Default budget: **$0**. If PayBox refuses to sign for an empty wallet (NOT FOUND), the user may fund the throwaway wallet with at most **USD 2** and stop; I make no assumption that this is needed. The Vercel preview in PW-4/PW-10 fits the free Hobby tier for a short test. A Reown project id is free (docs.reown.com).
+
+| ID | Steps | Cost | What it proves | Decides |
+|---|---|---|---|---|
+| PW-1 | Open the live dApp. In the browser console run `fetch('https://api.paybox.sh/.well-known/oauth-authorization-server')` and `fetch('https://api.paybox.sh/oauth/register',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})`. Expect both to fail with a CORS `TypeError`; nothing is created because the preflight fails | $0, 1 min, no account | CORS truth from a real browser | If the first succeeds, PayBox changed its allowlist: recheck route A |
+| PW-2 | In a browser signed in to PayBox, open `https://app.paybox.sh/wc`. Pair with any WalletConnect v2 sample dApp (your own free Reown project id) by pasting its link, or by opening `/wc?uri=<encoded>`. Approve. Then from the sample: `personal_sign("hello")`; `eth_signTypedData_v4` with domain `{name, version, chainId: 137}` on `eip155:137`; the same with `chainId` 3223; the same with `chainId` 137 requested on `eip155:8453`; `personal_sign` over 32 random bytes; `eth_sendTransaction`; `eth_signTransaction`. Record: the proposal text and verify badge; the "Generate signing key" step; whether a passkey or any click is asked per signature; what the preview shows for typed data; each refusal's text and code; signature length, `v` value, low `s`, same payload twice; recover with viem `recoverMessageAddress` and `recoverTypedDataAddress`. Close the PayBox tab, send a request, reopen it within a minute; open two PayBox tabs; repeat on a phone. In PayBox's Clients screen confirm a client named "(WalletConnect)" with mode `autonomous`; switch it to `always_approve` and repeat one typed-data request; finally revoke it and repeat | $0, 20 to 30 min, throwaway wallet, one free Reown id | Whether route F is live for an ordinary account; the exact method/chain behaviour; the per-signature prompt question; whether the grant can be tightened; revocation works | Build WP4 or not; the dedicated-wallet wording; ask A1/A2 |
+| PW-3 | From your own machine, one `POST https://api.paybox.sh/oauth/register` with `client_name` (for example "XO Markets Explorer (independent app)"), `redirect_uris` `["https://xo-markets-explorer.vercel.app/api/paybox/callback"]`, `token_endpoint_auth_method` `none`, `grant_types` `["authorization_code"]`, `response_types` `["code"]`, `scope` `mcp`. Record the exact response (does it accept the HTTPS redirect, `grant_types`, `scope`; the `client_id` shape; any limits). Then open the authorize URL for that client (PKCE S256, `resource` set, no `offline_access`) and **screenshot the consent screen** without personal data: the client name, any redirect host, any "unverified" wording, grant choices. Afterwards look at the Clients screen, then revoke the client. Optional: register a second client with the same name and a different redirect and compare the screens | $0, 20 min, creates 1 to 2 client records on a throwaway account | Open registration for the dApp origin; what a visitor sees (consent phishing, T5) | WP2 feasibility; warning loudness |
+| PW-4 | Repeat the registration `POST` and `GET /.well-known/oauth-authorization-server` from a throwaway Vercel Function on a preview deployment (not the live dApp), and record status, any `cf-` challenge page or 403/429, and latency | $0 (Hobby preview), 20 min | Whether Cloudflare treats Vercel egress normally | Kills B1 if challenged |
+| PW-5 | Run a small local script (WP6, localhost redirect, no `offline_access`): code flow, MCP `list_credentials`, then `request_wallet_sign` `{op:"message", message:"pw-5 test <random>"}` on the throwaway wallet in `always_approve`, once with and once without header `X-Paybox-Signing-Surface: browser`. Record every link field in every result. Open `approval_url`, then `https://app.paybox.sh/sign/<request_id>`; poll `get_request` through every state; record the number of screens, what each shows, the final `output`, the byte length of the access token (JWT), and whether a 60-minute-old token gets `401` with `WWW-Authenticate` | $0, 30 min | **Whether B1 works at all**: that PayBox's sign page completes a request minted by a different OAuth client; the real sign URL; one screen or two; whether tokens fit a 4 KB sealed cookie | Build WP2/WP3 or fall back |
+| PW-6 | Through whichever path passed (PW-5 or PW-2): `message`; `typedData` with chain 137, then 3223, then 1337; `raw` (a fixed 32-byte payload, with and without `0x`); `transaction` (EIP-1559, Base, zero value to self, small gas; sign only, never broadcast). For each: exact `get_request.output` shape, whether the signature is 65 bytes or `{r,s,recovery_id}`, low `s`, determinism (sign the same digest twice), `denied.reason` strings, and **screenshots of what the approver and the sign page show** for message, typed data and raw | $0, 45 min | Output parsing, whether chain 3223 and raw digests are accepted by the MCP path, the blind-signing exposure | Whether B1 can carry XO's data; `PAYBOX_RAW_ENABLED` |
+| PW-7 | (optional, two throwaway accounts) Authorise one client from both accounts, deliberately replay one account's used code, and check whether the other account's token still works | $0, 30 min | Revocation scope | Shared client (R1) versus one per sign-in (R2) |
+| PW-8 | (optional alternative to PW-5) In PayBox's UI set the throwaway credential's mode to `paybox` (the Clients screen "manage" page), call `request_wallet_sign` for a message from any client you control and look for `completion_url` / `complete_in_paybox`; open it and complete | $0, 20 min | Whether `paybox` mode applies to wallet-sign and what its link is | Alternative to `always_approve` for B1 |
+| PW-9 | Open the sign link and the WalletConnect link on iOS Safari and Android Chrome; approve on a phone while the dApp is on a laptop | $0, 20 min | Cross-device behaviour, universal links, background-tab limits | UX only |
+| PW-10 | Deploy the Function skeleton to a Vercel preview: record the project's Root Directory, plan, Fluid on/off and region; cold and warm latency of `/session` and `/request`; confirm `maxDuration` applies; read the runtime logs for any token, cookie, address or query string; try the rewrite form; add the WAF rule; set the headers via the generated `vercel.json` | $0 on Hobby preview | Where `api/` must live, log hygiene, region, whether the generated headers coexist with `functions` | WP2 layout, plan choice (D4) |
+| PW-11 | (only if B2 is ever revived) With a throwaway credential: create a `message` request "A", approve it, and at `pending_signature` post an envelope for the digest of "B" to that request id; then an envelope for "A" to a different pending request; then try before approval | $0 | Whether PayBox binds the signed digest to the approved intent and the envelope to one request | Safety of any browser-held-key variant |
+
+What each ladder rung needs: PW-1 and PW-2 alone decide whether route F is worth a flag. PW-3, PW-4, PW-5 decide whether B1 can exist. PW-6 decides whether it can carry XO. The others refine.
+
+---
+
+## 8. Decisions needed from you
+
+Only real forks. IDs are new to this record.
+
+| ID | Fork | Options | Recommendation |
+|---|---|---|---|
+| D1 | **Accept an author-operated, token-only Function** (exposure in sections 5 and 6: live bearer tokens in transit, approval-prompt abuse if the deploy is compromised, operating duty) | Yes, flag OFF, built only after PW-5 passes / no, rely on route F, G and E | **Yes, flag OFF.** It is the only route with a passkey per signature and the only one that could carry chain 3223 and raw digests. Sessions 60 minutes, no refresh token, one dedicated `always_approve` wallet |
+| D2 | **Accept the WalletConnect connector** (reverses the earlier refusal in `DD` section 2.7; a WalletConnect library under the repo's dependency rules; a Reown project id and the relay in the CSP of the hosted build; PayBox's `autonomous` grant with no per-signature prompt) | Yes, hosted build only, flag OFF, after PW-2 passes / no | **Yes on those terms, only if PW-2 passes**, with "dedicated low-balance wallet" on the connect screen and only `personal_sign` and `eth_signTypedData_v4` requested. If the headless client cannot be pinned within `check-deps` rules, drop it |
+| D3 | **Contact PayBox** (user's call; the rule "nobody contacts the XO team" does not mention PayBox) | No / yes after the live tests, with asks A1, A2, A3 and A5 of section 1.3 and the questions in `34 section 7` | **Yes, after PW-2 and PW-5**, so the questions are about observed behaviour. Everything above works without it; A3 (CORS) would let you drop the Function, A2 would close the weakest part of route F |
+| D4 | **Vercel plan** | Hobby (non-commercial only) / Pro | **Pro if anyone involved expects revenue** (builder fees, referrals, paid signals, a paid consultant). Otherwise stay on Hobby and state "non-commercial" |
+| D5 | **Geo-block list** for `/login` and `/sign` | none / a list | The user decides with counsel. The code carries only the hook, default empty |
+| D6 | **Author-operated prepare/submit proxy** so the hosted page can write to XO | No / design it separately | **No.** Concentrates XO's region and wash-trading terms on one egress; the hosted page stays a signer-capable read cockpit and XO writes stay on the daemon |
+
+Decided here, not forks (veto if you disagree): one dedicated credential and the "caps are advisory, no daily limit in hosted mode" wording; no PayBox logos and the not-affiliated notice; authorization-code flow, never device code, for the hosted page; session length 60 minutes with no refresh token; per-sign-in registration (R2) until PW-7 says otherwise; `raw`, binary `personal_sign`, send and transactions OFF by default; `iframe` and `autonomous` refused on B1.
+
+---
+
+## 9. Conflicts between the notes, and how each was resolved
+
+Where notes disagreed I checked the source myself (section 11).
+
+| # | Conflict | Resolution | Basis |
+|---|---|---|---|
+| C1 | WalletConnect: notes 24, 28, 34 and `DD` say PayBox cannot be connected in; 29, 31, 32, 33 say it ships | **It ships.** The earlier notes searched docs and the SDK, not the app. Note 34 inferred "connect out" from the CSP hosts; the bundle has `session_proposal`/`session_request` handlers, a `.pair({uri` call and an approval path | H[B] counts in 1.2 |
+| C2 | CORS allowlist: one origin (30, 31, 34) versus two (29) | **Two** (`app.paybox.sh`, `developer.paybox.sh`) | H[P] 1.2 |
+| C3 | Where the bearer lives: browser memory plus IndexedDB refresh token (30, 33) versus sealed HttpOnly cookie, no refresh token (32) | **Sealed cookie, no refresh token.** It removes the rotation-race class (a replayed rotated token revokes the client), and a script in the page cannot read the cookie. Cost: the Function sees tokens on every call, as a pass-through would | [29 section 5.1], [32 section 6] |
+| C4 | How the signature is completed: browser `pbxk1.` key plus undocumented routes (30 W2, 33 TP-b) versus PayBox's own sign page (32 P0) versus `paybox` mode (31, 33) | **P0 first.** The route `sign/[request_id]` and its session-based code are in the bundle; the `pbxk1.` routes are undocumented, CORS-blocked and need an unproven digest-binding assumption. `paybox` mode (tool text confirmed H[T]) is the alternative to test on the same page (PW-8) | H[B], H[T] |
+| C5 | Same-origin transport shape: raw pass-through `/pb/*` (33 TP) versus purpose-built routes (32) | **Purpose-built routes** (`/api/paybox/*`): a closed tool allowlist and server-side intent rebuild are not possible in a pass-through. A pass-through is not built | [32 sections 8, 11] |
+| C6 | Device code (30) versus authorization code (32) | **Authorization code + PKCE.** Device-code approval can be attacker-initiated; the registration path needed (HTTPS redirect) is the same either way | [32 section 5.1] |
+| C7 | Static client (32 R1) versus per-browser registration (33) | **Per sign-in (R2) by default**; R1 only after PW-7. Replay-revocation granularity is NOT FOUND and its failure mode (lock out everyone) is worse than a cluttered Clients screen | [32 section 5.2], [33 section 3.1] |
+| C8 | `offline_access`: requested (30) versus omitted (32) | **Omitted** (docs: "omit it and no refresh token is issued") | H[D] |
+| C9 | The BFF in note 32 rebuilds intents from a `Prepared` item, but the hosted page cannot obtain Prepared items (relay and ledger are local-only; XO hosts send no CORS) | **Policy is registry-driven** in the hosted build (server-templated message, registry-listed typed data), and `verifyPrepared` is used only when the Cockpit daemon exists. The hosted v1 therefore signs the ownership proof and nothing else until a write path exists | [32 section 4.2], [28 section 5.1] |
+| C10 | Function default duration: "10 s" (older notes) versus 300 s | **300 s on Fluid; set 15 s explicitly** whatever the project uses | H[V] |
+| C11 | Task text and note 33: "existing viem walletClient code in the dApp" | **Not in the repo today.** The app uses viem for hashing and ABI only; `createWalletClient`/`signTypedData` appear only in hygiene tests that forbid them. The adapter is the first signing-capable port | H[R] grep of `app/src`; [33 section 15] |
+| C12 | WalletConnect chain list: note 31 mentions Monad 143 and Celo 42220 | **Ten EVM chains** as in `PORTFOLIO_CHAINS` (and then intersected with each credential's own chains) | H[B] |
+| C13 | Does `autonomous` need a passkey for signing | **Unresolved**; docs conflict with themselves. Therefore B1 refuses `autonomous` and route F is labelled as the weakest mode until PW-2 observes it | H[D]: "Regardless of mode, sensitive operations (revealing a raw secret, signing, issuing keys) require a fresh passkey assertion" (line 131) versus autonomous wallet signs moving straight to `pending_signature` (lines 203, 632); [29], [30] |
+| C14 | Is `request_wallet_sign` valid in `paybox` mode | **Unknown.** The tool text says "transactions"; the sign page text is generic | H[T] |
+| C15 | Hosted explorer decisions in `DD` (F2: no author deployment) versus the live deployment | **The author deploys it** (live, with the repo's headers); `DD` needs the amendment in 6.1 | H[P] |
+
+---
+
+## 10. Unverified
+
+Everything below is design until its test runs.
+
+1. That WalletConnect pairing, signing and disconnect work for an ordinary PayBox account; whether the feature is gated or rolled out; whether PayBox demands a passkey per signature; the signature layout, determinism and low `s`; mobile and background-tab behaviour; whether the PayBox iOS app supports it (PW-2, PW-9).
+2. That PayBox's sign page completes a request minted by a different OAuth client; whether approve and sign are one screen or two; what URL `approval_url` and `completion_url` really have; whether `X-Paybox-Signing-Surface: browser` returns a sign link (PW-5, PW-8).
+3. Open dynamic registration for an HTTPS redirect on the dApp origin, registration limits and client retention; what the consent screen shows for a third-party client (PW-3).
+4. Whether Cloudflare in front of PayBox treats Vercel egress addresses normally (PW-4).
+5. Revocation scope: per user-client or per `client_id` (PW-7).
+6. What the approver sees for typed data and raw digests; whether chain 3223 or raw digests are accepted by the MCP path; output shapes; the `denied.reason` vocabulary (PW-6).
+7. Whether an `autonomous` grant skips the passkey for wallet-sign.
+8. Whether `request_wallet_sign` supports `paybox` mode.
+9. Access-token size versus a 4 KB cookie; whether `tools/call` works without `initialize` (PW-5).
+10. This Vercel project's Root Directory, Fluid setting, region and plan (PW-10).
+11. Whether PayBox binds a signed digest to the approved intent (only matters if a browser-held `pbxk1.` key is ever revived; PW-11).
+12. Whether PayBox treats a third-party backend holding a visitor's token as acceptable; trademark status of "PayBox"; whether the prediction-market jurisdiction list applies to PayBox signing; any developer terms beyond the user agreement.
+13. The minimal CSP for a headless WalletConnect client and whether Trusted Types breaks it (HDR); Reown Verify "verified" status for a `vercel.app` origin; Reown relay terms and limits.
+14. That XO accepts any PayBox-produced material (the four doors of `P1` are untouched), and that the hosted page can reach any XO write endpoint (not re-measured; [28]).
+15. The SDK's server source (`moonpay/paybox` is private) and any PayBox plan for a browser signing SDK.
+
+---
+
+## 11. Verification (2026-10-20)
+
+Re-checked first-hand while writing this record:
+
+1. Read notes 29 to 34 in full (33 and 34 to their end; 30 and 32 in full), and the parts of `docs/plan.md`, `docs/dapp-design.md` (sections 0, 2.7, 6 rows 1, 2, 22, 8, 9), `app/headers.config.ts` (`NEVER_IN_APP_HOSTS`), `app/vercel.json`, `app/package.json`, `app/scripts/dependencies.json`, `app/pnpm-workspace.yaml`, `app/src/core/bindings.ts` and the `app/src` file layout. `docs/phase1-gap-closing.md` sections 0 and 9, `docs/aggregation-design.md`, `market-linking-design.md`, `platform-registry-design.md` and `venue-census.md` were not re-read; nothing here depends on their detail beyond what the notes and `plan.md` quote.
+2. CORS: 21 `OPTIONS` preflights (7 paths x 3 origins), results in 1.2. No body was sent; no POST.
+3. Fetched `docs.paybox.sh/llms-full.txt` (64,429 bytes) and read the signing-window, request-lifecycle, approval and OAuth passages; grepped for `walletconnect` (0 hits), `offline_access`, `iframe`, `autonomous`.
+4. Fetched `app.paybox.sh/` (headers: CSP, `last-modified`), the entry bundle (15,639,916 bytes), and counted the strings in 1.2; read the code around the sign page, `approval_mode:"autonomous"` grant creation, the "will sign them without asking again" proposal text, `WALLET_CONNECT_METHODS`, `PORTFOLIO_CHAINS`, the `.pair({uri` call. Fetched `api.paybox.sh/iframe/version` (283), `iframe/assets/v283/app.js` and read the `completion_url` code; read `frame-ancestors` of the app and the shell. Nothing was executed or opened in a browser.
+5. Loaded (did not call) the input schema and description text of `request_wallet_sign` and `request_account_change`.
+6. Registry: `@paybox-sh/sdk` latest 2.2.0, published 2026-10-14T20:01Z.
+7. The dApp: `GET /` headers (CSP, COOP, `X-Frame-Options`, `server: Vercel`); `GET /api/paybox/session` is 404.
+8. Vercel docs (`functions/limitations`, `limits/fair-use-guidelines`) for the Fluid default duration, region and the Hobby restriction.
+9. `grep` of `app/src` for `createWalletClient`, `signTypedData`, `walletconnect`: matches only in hygiene tests.
+
+Not re-verified, taken from the notes: the full text of the Launchpad terms and privacy notice; the 12-question list; the Vercel runtime-log, WAF and environment-variable facts; viem 2.57.2 source behaviour and the local signing vectors of [33 section 12]; the SDK 2.2.0 source reading ([30]); MoonX docs; the CORS behaviour of XO's hosts ([28]); the exact wording of PayBox's consent and Clients screens (never seen).
+
+Not done: any POST, registration, account, signature, PayBox tool call, authenticated Vercel read, or contact.
+
+Privacy check: this file contains no email address, personal name, username, GitHub login or home path; the only identifiers are public hostnames, repo-relative paths and the public Anvil test account class. No WalletConnect project id, analytics key, credential id, address or token appears (the PayBox shell's report endpoint carries a public monitoring key that was not copied).
+
+## Sources
+
+- https://docs.paybox.sh/llms-full.txt
+- https://api.paybox.sh/.well-known/oauth-authorization-server ; CORS probes of `/oauth/register`, `/oauth/token`, `/oauth/device_authorization`, `/mcp`, `/agent/wallet-sign`, `/api/agent-pairings/token`, `/iframe/pairing`, `/iframe/version`
+- https://app.paybox.sh/ and https://app.paybox.sh/_expo/static/js/web/entry-1db563483c9812f59f2a958f4cb7d011.js ; https://api.paybox.sh/iframe/shell and `/iframe/assets/v283/app.js`
+- https://registry.npmjs.org/@paybox-sh/sdk
+- https://xo-markets-explorer.vercel.app/
+- https://vercel.com/docs/functions/limitations ; https://vercel.com/docs/limits/fair-use-guidelines
+- Repo: `docs/research/29-paybox-web-oauth.md`, `30-paybox-web-sdk-cli.md`, `31-paybox-web-signing-surface.md`, `32-paybox-web-bff-design.md`, `33-paybox-web-eip1193-adapter.md`, `34-paybox-web-terms-risk.md`, `24-dapp-paybox-tie-in.md`, `28-dapp-architecture-mvp.md`; `docs/dapp-design.md`, `docs/plan.md`, `docs/phase1-gap-closing.md`, `docs/everyone-architecture.md`; `app/headers.config.ts`, `app/vercel.json`, `app/package.json`, `app/scripts/dependencies.json`, `app/src/core/bindings.ts`

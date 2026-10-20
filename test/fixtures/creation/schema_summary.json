@@ -1,0 +1,151 @@
+{
+ "n_files": 138,
+ "n_original_versions": 100,
+ "n_oracle_suggested_versions": 38,
+ "top_level_keys": {
+  "category": {
+   "present": 138,
+   "types": {
+    "str": 138
+   }
+  },
+  "description": {
+   "present": 138,
+   "types": {
+    "str": 138
+   }
+  },
+  "image_url": {
+   "present": 138,
+   "types": {
+    "str": 138
+   }
+  },
+  "outcomes": {
+   "present": 138,
+   "types": {
+    "list": 138
+   }
+  },
+  "resolution_sources": {
+   "present": 138,
+   "types": {
+    "list": 138
+   }
+  },
+  "rules": {
+   "present": 138,
+   "types": {
+    "dict": 138
+   }
+  },
+  "subcategories": {
+   "present": 138,
+   "types": {
+    "list": 138
+   }
+  },
+  "tags": {
+   "present": 138,
+   "types": {
+    "list": 138
+   }
+  },
+  "title": {
+   "present": 138,
+   "types": {
+    "str": 138
+   }
+  }
+ },
+ "rules_keys": {
+  "description": 138,
+  "outcomeRules": 138
+ },
+ "outcomeRules_item_keys": {
+  "outcomeIndex": 276,
+  "rule": 276
+ },
+ "outcomes_item_keys": {
+  "id": 276,
+  "title": 276
+ },
+ "outcome_count": {
+  "2": 138
+ },
+ "outcome_ids": {
+  "(0, 1)": 138
+ },
+ "outcomeRules_outcomeIndex": {
+  "(0, 1)": 138
+ },
+ "category_values_in_sample": {
+  "SPORTS": 73,
+  "CULTURE": 4,
+  "POLITICS": 9,
+  "CRYPTO": 39,
+  "FINANCE": 8,
+  "TECH": 5
+ },
+ "tags_count_original": {
+  "4": 56,
+  "3": 20,
+  "5": 9,
+  "1": 6,
+  "2": 7,
+  "10": 1,
+  "6": 1
+ },
+ "tags_count_oracle_version": {
+  "0": 38
+ },
+ "subcategories_count": {
+  "1": 97,
+  "2": 40,
+  "0": 1
+ },
+ "resolution_sources_count": {
+  "3": 25,
+  "2": 44,
+  "4": 11,
+  "1": 53,
+  "5": 3,
+  "6": 2
+ },
+ "outcome_title_pairs_top": [
+  [
+   "('Yes', 'No')",
+   111
+  ],
+  [
+   "('48 points or more', '47 points or less')",
+   6
+  ],
+  [
+   "('Over 262', 'Under or equal to 262')",
+   2
+  ],
+  [
+   "('Win', 'Draw')",
+   2
+  ],
+  [
+   "('Over 2.5', 'Under 2.5')",
+   2
+  ],
+  [
+   "('44 points or more', '43 points or less')",
+   2
+  ]
+ ],
+ "title_equals_description": 82,
+ "image_url_hosts": {
+  "https://storage.googleapis.com/market-image-mainnet/compressed/": 111,
+  "https://market-images-623756711122.s3.eu-west-1.amazonaws.com/compressed/": 27
+ },
+ "rules_description_chars_original": {
+  "min": 38,
+  "max": 2616
+ },
+ "creator_fields": "none: no creator, wallet, user or seed field in any of the files"
+}

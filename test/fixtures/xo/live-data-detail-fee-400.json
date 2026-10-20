@@ -1,0 +1,141 @@
+{
+  "id": 29879,
+  "createdAt": "2026-08-16T11:11:00.713Z",
+  "updatedAt": "2026-10-09T20:13:39.012Z",
+  "contractMarketId": "0xb63d8f77fc1437a804d5fdeedb4c00dc49e1d7c7738f6410c36f1f44e6cfd654",
+  "conditionId": "0xb63d8f77fc1437a804d5fdeedb4c00dc49e1d7c7738f6410c36f1f44e6cfd654",
+  "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+  "versionId": 3,
+  "createMarketBlockTimestamp": "2026-08-16T11:10:58.000Z",
+  "creatorId": 47724,
+  "title": "Imavov UFC Title 2026",
+  "slug": "imavov-ufc-title-2026-1256",
+  "rules": {
+    "description": "This market will resolve based on whether the listed fighter becomes an official UFC champion of any division at any point after market launch and on or before December 31, 2026, 11:59 PM UTC.\n\nThe market resolves to “Yes” if the listed fighter is officially recognized as champion of any UFC division during the market period.\n\nThe market resolves to “No” if the listed fighter does not become an official UFC champion by the deadline.\n\nOnly official UFC division champions will count. Interim champions will not count. Primary resolution source is official information from the UFC (https://www.ufc.com/athletes). If the primary source is unavailable for more than 48 hours, a consensus of credible reporting may be used. Only official UFC recognition from the primary source (or, if necessary, the consensus of secondary sources) will count. Unofficial reports or interim titles do not qualify. If the outcome cannot be reasonably determined from the designated sources within a reasonable time after the deadline, the market will be voided.",
+    "outcomeRules": [
+      {
+        "rule": "Nassourdine Imavov captures a UFC belt in 2026",
+        "outcomeIndex": 0
+      },
+      {
+        "rule": "Nassourdine Imavov does not capture a UFC belt in 2026",
+        "outcomeIndex": 1
+      }
+    ]
+  },
+  "description": "Will Nassourdine Imavov capture a UFC belt in 2026?",
+  "categoryPath": [
+    {
+      "id": 2,
+      "name": "SPORTS",
+      "slug": null
+    },
+    {
+      "id": 48,
+      "name": "MMA",
+      "slug": "mma"
+    },
+    {
+      "id": 49,
+      "name": "UFC",
+      "slug": "ufc"
+    }
+  ],
+  "type": 2,
+  "totalVolume": "306091829184",
+  "totalVolumeInUSD": "306091.829184",
+  "totalNotional": "306254705016",
+  "totalNotionalInUSD": "306254.71",
+  "collateralTokenId": 2,
+  "collateralToken": {
+    "id": 2,
+    "symbol": "USDC",
+    "name": "Bridged USDC (XO)",
+    "tokenAddress": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+    "decimals": 6,
+    "isActive": true,
+    "networkId": 1,
+    "logoUrl": ""
+  },
+  "status": "ACTIVE",
+  "startsAt": "2026-08-16T13:06:00.000Z",
+  "expiresAt": "2026-12-31T23:59:00.000Z",
+  "resolvedAt": null,
+  "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/210e6e1b-a077-4484-992b-f0395b110131.json",
+  "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/2c338c38-b5d5-4d23-87b6-c51e9a1c92b6.webp",
+  "resolutionEvidence": null,
+  "resolutionSources": [
+    "https://www.ufc.com/athletes"
+  ],
+  "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+  "resolutionType": "MANUAL",
+  "resolutionFlagCount": 0,
+  "priorityScore": 0,
+  "likes": 0,
+  "cpEnabled": true,
+  "cpMultiplier": 1,
+  "creatorBps": 0,
+  "isFeatured": false,
+  "featuredOrder": null,
+  "creator": {
+    "id": 47724,
+    "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+    "username": "REDACTED",
+    "bio": null,
+    "profilePictureUrl": null,
+    "roosterColor": "#FF5588",
+    "achievements": [],
+    "verified": false,
+    "isOg": false,
+    "cpPoints": 0,
+    "tier": "Spectator"
+  },
+  "outcomes": [
+    {
+      "id": 60121,
+      "marketId": 29879,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "68215442288791572296498952759094916177229244750752613990844701608971303593663",
+      "title": "Yes",
+      "currentPrice": "500000",
+      "volumeTraded": "152922574092",
+      "volumeTradedInUSD": "152922.574092",
+      "notionalTraded": "306244705016",
+      "index": 0
+    },
+    {
+      "id": 60122,
+      "marketId": 29879,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "6530318981470987186894988035298961845748217855361759807272408942024241321361",
+      "title": "No",
+      "currentPrice": "500000",
+      "volumeTraded": "153169255092",
+      "volumeTradedInUSD": "153169.255092",
+      "notionalTraded": "306037705016",
+      "index": 1
+    }
+  ],
+  "notes": null,
+  "reviewStatus": "APPROVE",
+  "effectiveFeeConfig": {
+    "eligible": true,
+    "curveModel": "FLAT_BPS",
+    "takerFeeBps": 400,
+    "makerFeeBps": 0,
+    "configId": 3,
+    "configName": "clob_standard",
+    "splitSummary": {
+      "creatorShareBps": 2000,
+      "makerShareBps": 3500,
+      "platformShareBps": 4500
+    },
+    "resolutionPath": [
+      "category:2:2",
+      "settlement:v11"
+    ],
+    "orderbookConfigId": "d13f4f9b-3265-4947-9fbd-2795152b166c",
+    "configVersion": 11,
+    "latestPublishedVersion": 11
+  }
+}

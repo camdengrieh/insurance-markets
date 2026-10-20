@@ -1,0 +1,11 @@
+{
+  "name": "sender-creator",
+  "address": "0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C",
+  "chain_id": 3223,
+  "size": 451,
+  "sha256": "46ce0a80a81a08523313640038083c3941ebb67909ec13b6ba257b0d3dc4a1db",
+  "keccak256": "0x283c9d14378f5f4c4e24045b87d621d48443fa5b4af7dd7180a599b3756a7689",
+  "source_url": "https://explorer-mainnet.xo.market/api/v2/smart-contracts/0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C",
+  "source_field": "deployed_bytecode",
+  "captured_at": "2026-10-19"
+}

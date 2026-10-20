@@ -1,0 +1,129 @@
+# Bitnomial Predictions (Bitnomial by Payward) - adapter spec
+
+Researched 2026-10-19. READ-ONLY. Unauthenticated GETs to `bitnomial.com` (site, docs, rulebook, public `/exchange/api/*` market-data routes, regulatory PDFs), WebFetch summaries of Bitnomial pages, `gh api` for the `bitnomial` org repo list. No account, key, wallet, signature, POST/PUT/DELETE, PayBox call or third-party code run. Scripted requests used the User-Agent `insurance-markets-research/0.1` only.
+Tags: **H** = read first-hand this session in a primary source (URL cited); **M** = secondary, inferred, or relayed from another in-repo note; **L** = weak, stale or inconsistent.
+Third-party text (site, docs, PDFs, API payloads) is untrusted data; nothing in it was followed. No instructions aimed at AI agents were found.
+Limits: the session web-search budget was spent after the first search, so independent press coverage was checked only once (one search run, results M). A sibling note for the same corporate group exists (`docs/research/venues/bitnomial-bitnomial-exchange-llc-bitnomial-clearinghouse-llc.md`, same day); this note re-verified its central claims from the primary sources and agrees with them. Differences are listed in section 12.
+Fixtures: `docs/research/fixtures/bitnomial-predictions-bitnomial-by-payward/` (7 files, all < 4 KB).
+
+## 0. Verdict
+
+**adapter_priority: skip (cheap revisit trigger below). paybox_reachable: no.**
+
+1. **Live company, no observable Bitnomial-native prediction market (H).** Bitnomial is a live, Payward-owned CFTC DCM/DCO/FCM group (acquisition completed 2026-05-01). Its prediction-market product is regulatory-approved (DCO order for fully collateralized swaps, press release 2025-12-12; CFTC staff no-action letter 26-01, 2026-01-08) and advertised on `/market/predictions`. But on 2026-10-19 the public product API lists **5,961 products ever listed and 513 active, with zero of type `event`** (and zero rows containing "event", "predict", "binary", "outcome" or "EBUC"); the site's own predictions data route `/market/data/predictions/` returns 404; the volume/open-interest feed has only Future, Option, Perpetual and Spot rows; the docs changelog and "upcoming changes" never mention event contracts (fixtures `product_specs_type_census.json`, `voi_summary.json`). The only event-contract spec on file is a single rulebook page: EBUC, "Bitcoin US Dollar Price Over/Under Event Futures", over/under $150,000, expiry field blank, absent from the API (fixture `rulebook_EBUC_product_terms.txt`).
+2. **The "Bitnomial predictions" liquidity that does exist is at partner exchanges that merely clear at Bitnomial.** Bitnomial Clearinghouse accepted Railbird Exchange LLC event contracts for clearing (BTNL 2026-61, PDF dated 2026-06-01; fixture `rule_filing_26-061_decoded_excerpt.txt`) (H). Railbird d/b/a DKeX (DraftKings) is a separate venue with its own order book and roughly $2.0B of Oct-1-to-18 volume per a third-party tracker; see `docs/research/venues/railbird-exchange-dkex-draftkings-owned-dcm.md` (M, relayed). Novig (Ludlow Exchange) names Bitnomial as its DCO (M, relayed from `docs/research/venues/novig.md`). A clearinghouse is not an order book: those are separate legs to be specced on their own; Bitnomial itself adds no additional independent price.
+3. **No usable trade path for an EVM wallet or an agent.** The public REST API has no order routes (only `GET /orders`, `/orders/working`, `/fills`, HMAC-signed). Order entry is BTP (binary) over private network links (PrivateLink, Direct Connect, VPN) or via an FCM/CQG. Accounts are KYC'd US futures accounts. No chain, token or on-chain contract exists.
+4. **Revisit trigger (H plumbing):** poll `GET https://bitnomial.com/exchange/api/v1/prod/product/specs?active=true` daily; flip the adapter on if any row has `type == "event"`. Bitnomial's own market-data page script already routes `type === 'event'` rows to `/market/data/predictions/?series=...` (https://bitnomial.com/js/market/data/market-data.js), so launched contracts will most likely appear in that same feed with the same `/product/data` and WebSocket plumbing. Re-check `/market/predictions` and the news page at the same time.
+
+## 1. Liveness (2026)
+
+| Evidence | Value | Tag |
+|---|---|---|
+| Public product API, 2026-10-19 | 513 active products: 125 futures, 125 calendar spreads, 198 options, 34 perpetuals, 31 spot; max `product_id` 6763; newest `first_trading_day` 2026-09-28 | H (fixture `product_specs_type_census.json`) |
+| News room | TRX futures 2026-07-27; Wedbush joins DKeX and Bitnomial Clearinghouse 2026-06-29; Payward completes acquisition 2026-05-01; Reuters on US perps 2026-04-22; Payward to acquire 2026-04-17 | H (https://bitnomial.com/news) |
+| 2026 rule filings | listed up to BTNL 2026-121 (Doge update, PDF dated 2026-10-02); 2026-117 dated 2026-09-29; titles are listings, delistings and spot updates | H (https://bitnomial.com/exchange/regulatory; fixture `regulatory_rule_filings_2026_metadata.json`) |
+| July 2026 rulebook amendments (2026-64, 2026-75) retain "Fully Collateralized Swap" language ("The Exchange may list Fully Collateralized Swaps that are accepted for clearing by the Clearinghouse", Rule 502) | the swap framework is still in the rulebook | M (crude PDF decode) / H (Rule 502 page, https://bitnomial.com/exchange/rulebook/chapter/5/rule/502/) |
+| Prediction product page | "received CFTC approval to offer prediction markets, becoming the only full-service U.S. exchange and clearinghouse offering perpetuals, futures, options, leveraged spot, and prediction markets under one regulatory framework with unified liquidity"; no contract list, no launch date, no fees, no API mention | H (https://bitnomial.com/market/predictions) |
+| Independent press | Dec 2025 clearinghouse approval and Jan 2026 no-action letter; "I didn't find a confirmed date for when the markets went live to customers" (search summary) | M (WebSearch, 2026-10-19) |
+| Prediction trading data | none: voi feed `productType` values are only Future / Option / Perpetual / Spot | H (fixture `voi_summary.json`) |
+
+So: **venue live; prediction product approved but not observably launched.** If a launch occurred after the sibling note or between 2026-10-19 snapshots, the revisit trigger catches it.
+
+## 2. Kind and market model
+
+- **kind**: regulated-exchange (CFTC DCM Bitnomial Exchange, LLC + DCO Bitnomial Clearinghouse, LLC + FCM Bitnomial Clearing, LLC). Payward (Kraken's parent) completed the acquisition 2026-05-01; Bitnomial "will continue to operate within the Payward group, with its existing licenses, regulatory structure, and third-party clearing operations intact". Payward's stated first products are spot margin on Kraken, then perps and options; prediction markets are not mentioned (H, https://bitnomial.com/news/2026-05-01/payward-completes-acquisition-bitnomial/).
+- **Order book vs AMM**: central limit order book, price-time matching, **limit orders only, Day or IOC, no market/stop orders** (H, https://bitnomial.com/exchange/docs/api/btp/order-entry/). Post-only arrives with BTP v4 (not finalised).
+- **Prediction contract design (H)**:
+  - Legal form: "Fully Collateralized Swaps" accepted for clearing; CFTC Letter 26-01 (2026-01-08, https://bitnomial.com/exchange/regulatory/cftc/no-action-letters/26-01.pdf) covers "binary and bounded swaps referencing digital assets, economic indicators, and financial outcomes", cleared solely through Bitnomial Clearinghouse. A fully collateralized position is a contract where the DCO "hold[s], at all times, funds ... sufficient to cover" the maximum loss (Reg. 39.2, quoted in the letter).
+  - Binary yes/no at $1.00 / $0.00 for partner contracts: the Railbird clearing filing says Bitnomial "clears binary contracts versus scalar contracts" and the contracts "settle at $1.00 if the event occurs (Yes) and $0.00 if it does not (No), with prices ranging from 1 cent to 99 cents" (filing BTNL 2026-61). "Bounded" swaps in the letter hint at scalar-with-caps; none specified. Categorical = sets of separate binaries (M, inferred).
+  - **The one native spec on file, EBUC (H, rulebook product page, fixture `rulebook_EBUC_product_terms.txt`)**: contract size $1.00, tick $0.01, price limit $0-$1.00, position limit 1,000,000 contracts, margin in USD, settlement method "Financially - BUC Implied Spot Price", over/under price $150,000, final settlement $1.00 if the computed settlement (Rule 509.6) is at or above the over/under price, else $0.00; expiry date-time blank; hours "23/5". It is named "Event Futures", i.e. a futures-style contract, not a swap (the sibling note also cites self-certification BTNL 2025-24, 2025-07-21, M).
+- **Tokenisation**: none. Positions are ledger entries at the clearinghouse. The GitHub org (`bitnomial`, repos sorted by push date) holds Haskell libraries, a Python BTP client, a Wireshark BTP plugin and Terraform modules; no contract, ABI or token repo (H, `gh api orgs/bitnomial/repos`).
+- **Hours**: 24/7, weekly maintenance Fridays 17:00-18:00 CT, holidays "Trading Open - No Settlement" (H, https://bitnomial.com/exchange/docs/market-operations/market-hours/). EBUC's own table says 23/5: unresolved inconsistency (L).
+
+## 3. Chains and collateral
+
+- No blockchain. Collateral is held at the DCO/FCM: USD (0% haircut), BTC 15% haircut ($100M limit), ETH 20% ($45M), XRP 40% ($15M) for Bitnomial's own derivatives (H, https://bitnomial.com/clearinghouse). The December 2025 release says participants "can post and settle in digital assets for approved products, in addition to USD" (H, https://bitnomial.com/news/2025-12-12/prediction-markets-approval). Fully collateralized event contracts are in practice funded by USD (M, inferred).
+- Deposit/withdrawal chains: NOT FOUND (searched: clearinghouse page, exchange page, help center; the clearinghouse page only says users pay blockchain network fees on digital-asset deposits and withdrawals, and names no chain).
+- Clearing members: Hidden Road Partners CIV US LLC, Marex Capital Markets, NinjaTrader Clearing, R.J. O'Brien & Associates, Wedbush Securities, Bitnomial Clearing (H, clearinghouse page).
+
+## 4. Read API
+
+Official docs: https://bitnomial.com/exchange/docs (REST, WebSocket, BTP, FIX). No prediction-specific API documentation exists (changelog has 8 entries 2021-2025, none about events; "upcoming changes" lists only BTP v4) (H).
+
+| Surface | Endpoint | Access | Tag |
+|---|---|---|---|
+| REST base | `https://bitnomial.com/exchange/api/v1/prod/` | market-data routes labelled "Market Data (Public)"; Orders and Fills "Account Data (Authenticated)" | H (docs api/rest/overview) |
+| Product specs | `GET /product/specs[?active=true]`, `/product/spec/:id` | no auth in practice (unfiltered 3.1 MB, active 289 KB; I fetched both with no credentials) | H |
+| Product data | `GET /product/data[?active=true]`, `/product/data/:id` | public; fields include `last_price`, `settlement_price`, `volume`, `notional_volume` (cents), `open_interest`, `mark_price`; no bid/ask in the REST row | H (fixture `product_data_sample.json`) |
+| Other public REST | block trades, indexes, funding rates, charts, market stats | public; `/exchange/api/web/charts/*` and `/web/market/stats/*` are web-internal, "draft", subject to change | H (docs); M (draft status from sibling) |
+| WebSocket | `wss://bitnomial.com/exchange/ws`, JSON; channels `trade`, `book`, `block`, `status`; subscribe `{"type":"subscribe","product_codes":[...],"channels":[{"name":"book","product_codes":[...]}]}` | docs describe no login for subscribing; client must send `subscribe` within 10 s or is disconnected; I did not open a socket | H (docs only) |
+| BTP (binary) | order entry + pricefeed | login with connection id + auth token, DMA network only | H |
+| FIX 4.4 | drop copy | DMA | M (sibling) |
+
+- **Rate limits**: "The exchange API is rate-limited to 200 requests per 5 minutes. Exceeding this rate will result in HTTP 403 responses." (H, https://bitnomial.com/exchange/docs/api/rest/overview). BTP: 50,000 messages per second per connection (H). WebSocket rate or connection limits: NOT FOUND (searched: websocket overview and subscribe pages).
+- **Private REST auth**: headers `BTNL-AUTH-TIMESTAMP` (within 30 s of API time), `BTNL-CONNECTION-ID` (hex), `BTNL-SIGNATURE` = base64(HMAC-SHA256, secret = the connection's hex AuthToken, message = `method + requestPath + queryString + headers + body`); connections are created in the customer portal (H, https://bitnomial.com/exchange/docs/api/rest/authentication).
+- **Resolution data**: spec rows carry `product_status` (`active`/`expired`/`forthcoming`); data rows carry `settlement_price`, `settlement_time`, `settlement_price_comment`. An event title, outcome label or reference source field is NOT FOUND in any documented response type or live row (searched: docs products page, all 5,961 live spec rows).
+- **Gotchas (H)**: always pass `active=true` (the unfiltered specs list is 3 MB); `notional_volume` is in cents; the REST doc types lag the live JSON (`type` also takes `perpetual` and `spot`, live rows carry `quote_asset`, `funding_*`).
+- **Public tape condition**: the no-action letter requires Bitnomial to publish time-and-sales (timestamp, contract, quantity, price in USD) on its website promptly after execution; none exists for events today.
+
+Fixtures (all unauthenticated, 2026-10-19): `product_specs_type_census.json` (counts by type and status, `event_type_count_all: 0`), `product_specs_sample.json` (one active product per type), `product_data_sample.json`, `voi_summary.json`, `regulatory_rule_filings_2026_metadata.json` (PDF titles and creation dates only), `rule_filing_26-061_decoded_excerpt.txt` (partial machine decode of the Railbird clearing filing), `rulebook_EBUC_product_terms.txt`. No event-contract response shape exists to save: there are no event rows. Event-row shape is therefore NOT FOUND.
+
+## 5. Trade path
+
+- **Programmatic order entry exists but is not retail-reachable (H).** BTP `Open` (limit, Day/IOC, product id, price in ticks, quantity) after `Login` with connection id and auth token, over DMA only: "AWS PrivateLink is the primary option for Direct Market Access (DMA) network connectivity", also Direct Connect and VPN, onboarding by emailing the exchange help desk (https://bitnomial.com/exchange/docs/api/network-setup). The public REST docs have no order placement or cancel route (H, https://bitnomial.com/exchange/docs/api/rest/orders). Indirect access via the clearing members above or CQG.
+- **Retail front end**: the Botanical app (https://botanical.finance) is a trading platform whose futures accounts are offered by Bitnomial Clearing, LLC; its landing page describes perpetual and physically settled futures and options and does not mention prediction markets (H). That the site's "Start Trading" button leads to Botanical is relayed from the sibling note (M). "Signing up with Bitnomial, LLC requires additional verification with an FCM to trade futures" (H, site footer). I did not open the app.
+- **Auth/signing**: shared-secret HMAC-SHA256 per connection. No EVM, Solana or EIP-712 signing anywhere.
+
+## 6. PayBox reachability
+
+**paybox_reachable: no.** There is no on-chain market, no transaction proposal and no signed-order flow a wallet can use. Trading needs a KYC'd futures account (FCM verification) and an HMAC connection or DMA link; funding is USD or an accepted digital asset deposited to the clearinghouse, which is not a PayBox primitive (M). Treat Bitnomial as read-only / signal at best, and today there is nothing prediction-shaped to read.
+
+## 7. Fees
+
+- Posted schedule on https://bitnomial.com/exchange, "inclusive of both Exchange & Clearinghouse fees": Bitcoin/Crypto Complex products with no minimum contract size $0.07 per side (Participants) / $0.10 (Non-Participants) per executed transaction; with a minimum contract size $0.0007 / $0.0010 per side per minimum contract; Spot Complex 2 bps per side (H, fetched 2026-10-19). Clearinghouse page lists no separate clearing fee (H).
+- **Event-contract fee: NOT FOUND** (searched: exchange fee block, clearinghouse page, predictions page, terms; the fetch of the exchange page states "The page lists no separate fees for prediction markets or event contracts"). If the generic $0.07-$0.10 per side applied to a $1.00 binary it would be 7-10% of face per side and would kill arbitrage (L, hypothetical).
+- Partner exchanges that clear here set their own fees.
+
+## 8. Resolution mechanism and dispute risk
+
+- **Design (H)**: Rule 509 "Futures & Swaps Settlement Prices" gives the exchange "sole discretion to determine an alternative Settlement Price" where the stated one is "not representative of the fair value of the Contract", and reserves the right "to adjust Daily and Final Settlement Prices as it deems necessary based on current market conditions or otherwise" (https://bitnomial.com/exchange/rulebook/chapter/5/rule/509/). The Rule 509 page text I fetched contains no event-contract settlement section; EBUC cites Rule 509.6, which I could not find on that page (NOT FOUND). EBUC settles on the exchange's own implied spot price ("BUC Implied Spot Price"), so for native crypto-price contracts Bitnomial is its own oracle with its own reference, a larger basis risk against Polymarket or Kalshi markets that settle on third-party indices (M).
+- **Partner contracts**: settle against "an official, pre-defined Reference Source mentioned in the contract specifications (e.g., Bureau of Labor Statistics for inflation, a sports governing body for game results)" set by the partner exchange; funds credited immediately once the data source confirms (H, filing BTNL 2026-61). Disputes sit with the listing exchange, not Bitnomial.
+- Event-specific dispute procedure: NOT FOUND (searched: rulebook index, rules 502, 509, EBUC page, regulatory filings titles).
+- **Regulatory fragility (H)**: the no-action letter "is not binding on the Commission", staff "retain the authority to ... further condition, modify, suspend, terminate or otherwise restrict" it, and it expressly does not address consistency with CEA 5c(c)(5)(C) or Reg. 40.11 (the event-contract public-interest rules). Conditions: contracts cleared solely at Bitnomial Clearinghouse, fully collateralized, time-and-sales published on the website, data to the CFTC under Reg. 16.02.
+
+## 9. Geo, ToS, automation
+
+- US-regulated. The Terms list no restricted countries and state materials may not be "appropriate or available for use in any jurisdiction" where unlawful (H, https://bitnomial.com/terms). Botanical says "U.S.-Regulated Perpetual Futures are available globally" and "U.S. traders are welcome, no workarounds needed" (H, https://botanical.finance); neither sentence is about prediction markets. Eligibility for prediction contracts specifically: NOT FOUND (searched: terms, predictions page, Botanical, clearinghouse page).
+- **Automation**: API order entry is a documented mechanism for onboarded Participants (H, docs). Participant requirements (Rule 303) tie access to a Clearing Member (M, sibling) - not an anonymous agent wallet.
+- **Data-use terms are restrictive for an aggregator (H, https://bitnomial.com/terms)**: the Data Feed may be used "solely for personal, informational, or non-commercial purposes" plus authorised internal business use, evaluation, compliance and research; the terms prohibit "using bots, scraping tools, spiders, or other automated means" and "any redistribution, reproduction, rebroadcasting, sublicensing, or dissemination" without authorisation. The terms do not name APIs; whether the documented public REST/WebSocket routes count as the "Data Feed" is unclear. Practical reading (L, not legal advice): an internal scanner on the documented routes within 200 requests per 5 minutes is plausible; showing Bitnomial prices to end users needs written permission.
+
+## 10. Liquidity (with dates)
+
+- **Bitnomial-native prediction contracts: no listings, no volume, no open interest on 2026-10-19 (H, absence).**
+- Whole-venue scale only (fixture `voi_summary.json`: `/exchange/api/web/charts/voi`, 19 trading dates 2026-09-21 to 2026-10-16, notional assumed in cents; L because the endpoint is draft/unstable): spot $1.68B and perps $200.6M notional in the window (spot $62.6M on 2026-10-13, $77.6M on 10-14, $38.8M on 10-16); futures and options $0 notional volume; open interest on 2026-10-16: perps about $1.49M, everything else $0. The derivatives complex that would back crypto-price prediction contracts is thin; prediction liquidity would have to be built from scratch.
+- Clearinghouse-level volume for partner contracts is not published by Bitnomial. DKeX ~$2.0B for 2026-10-01 to 10-18 (M, DeFi Rate figure relayed from the DKeX note, not independently checked).
+
+## 11. Event coverage, overlap and shared liquidity
+
+- Declared scope: "crypto and economic events", "token price movements to macroeconomic indicators" (H, predictions page and 2025-12-12 release). That would overlap Polymarket and Kalshi crypto-price and macro (CPI, Fed, jobs) markets **if** any listing appeared. Actual listings: none. Sports and politics: not announced for native contracts.
+- Partner clearing: Railbird/DKeX (sports, per sibling note; filing examples include BLS inflation and sports results) and Novig (sports). Those are the overlap with Kalshi/Polymarket sports and belong in their own venue specs.
+- **Shared liquidity**: Bitnomial's own book is separate from every other venue (CLOB). Clearing is shared infrastructure, not shared liquidity: Bitnomial Clearinghouse is the DCO for Railbird (H, filing 26-061; CFTC letter 26-13 per sibling note, M) and Novig/Ludlow (M). Prices are independent; counterparty/default risk is correlated across those venues (a clearinghouse event would hit them together). The predictions page claims "unified liquidity" across Bitnomial's own product suite, i.e. cross-product margining, not shared order books with outside venues (M, interpretation).
+- **Signal use**: Bitnomial BTC/ETH options and perps could in principle give option-implied probabilities for price-threshold markets, but options show zero volume and open interest in the window above, so there is no usable signal today (H numbers, L endpoint).
+
+## 12. Not found, open questions, differences from the sibling note
+
+- Not found: any listed `event` product or launch date for native contracts; event-contract fee schedule; event-row JSON shape; WebSocket rate limits; event dispute procedure; Rule 509.6 text; deposit chains; eligibility for prediction contracts specifically; whether the public WebSocket works unauthenticated (docs imply yes, not opened); whether the Botanical app exposes prediction contracts (needs an account).
+- Why EBUC is absent from the API (never listed, hidden type, or delisted) is unknown.
+- Differences from the sibling note: the Railbird clearing filing sits under `.../cftc/rule-filings/26-061.pdf` (the sibling cites a `product-filings` path); the voi window holds 19 trading dates, not 26 days; I added the 404 on `/market/data/predictions/`, the changelog and upcoming-changes checks, the WebFetch fee-page confirmation that no event fee is listed, and the DKeX cross-reference. All of its core numbers (5,961 products, 513 active, zero event) reproduced.
+- Weak points: filing text was machine-decoded from glyph-coded PDFs, so exact wording of BTNL 2026-61 should be read from the PDF before quoting; Novig and DKeX clearing facts are relayed from sibling notes.
+
+## Sources
+
+- Site and news (H): https://bitnomial.com/market/predictions ; https://bitnomial.com/news ; https://bitnomial.com/news/2025-12-12/prediction-markets-approval ; https://bitnomial.com/news/2026-05-01/payward-completes-acquisition-bitnomial/ ; https://bitnomial.com/news/2026-06-29/wedbush-dkex-bitnomial-clearinghouse/ ; https://bitnomial.com/exchange ; https://bitnomial.com/clearinghouse ; https://bitnomial.com/terms ; https://botanical.finance ; https://bitnomial.com/market/data/predictions/ (404)
+- API docs (H): https://bitnomial.com/exchange/docs/api/rest/overview ; `.../api/rest/authentication` ; `.../api/rest/orders` ; `.../api/websocket/overview` ; `.../api/websocket/subscribe` ; `.../api/btp/order-entry/` ; `.../api/network-setup` ; `.../market-operations/market-hours/` ; `.../change-management/changelog` ; `.../change-management/upcoming-changes`
+- Live endpoints (H, 2026-10-19): `https://bitnomial.com/exchange/api/v1/prod/product/specs` (and `?active=true`), `.../product/data?active=true`, `https://bitnomial.com/exchange/api/web/charts/voi?begin_time=2026-09-19T00:00:00Z&end_time=now`
+- Site JavaScript (H): https://bitnomial.com/js/market/data/market-data.js
+- Rulebook (H): https://bitnomial.com/exchange/rulebook/chapter/5/rule/502/ ; `.../rule/509/` ; https://bitnomial.com/exchange/rulebook/product/bitcoin/ebuc/
+- CFTC and filings (H): CFTC Letter 26-01 https://bitnomial.com/exchange/regulatory/cftc/no-action-letters/26-01.pdf ; https://bitnomial.com/exchange/regulatory (index) ; rule filings under https://bitnomial.com/exchange/regulatory/cftc/rule-filings/ (26-061, 26-064, 26-075 read via partial decode; others by PDF title only)
+- GitHub (H): `gh api orgs/bitnomial/repos` (listing only)
+- Secondary (M): WebSearch 2026-10-19 "Bitnomial prediction markets launch" (KFOR/PRNewswire 2025-12-12 https://kfor.com/business/press-releases/cision/20251212CG45610/bitnomial-gains-cftc-approval-to-launch-prediction-markets/ ; Crypto.news https://crypto.news/bitnomial-cftc-approval-launch-prediction-markets-2026/ ; Cointelegraph via TradingView); in-repo notes `docs/research/venues/bitnomial-bitnomial-exchange-llc-bitnomial-clearinghouse-llc.md`, `docs/research/venues/railbird-exchange-dkex-draftkings-owned-dcm.md`, `docs/research/venues/novig.md`

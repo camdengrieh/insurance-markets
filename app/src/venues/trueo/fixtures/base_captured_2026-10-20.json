@@ -1,0 +1,887 @@
+{
+ "_note": "Verbatim eth_call results from Base mainnet (chain 8453), decoded with the adapter's ABIs; bigints are decimal strings. Captured 2026-10-20 over JSON-RPC batches on a public RPC. 14 of the Manager's 1361 active markets (indices 1345 to 1358), the two hooks' fee numerators, TYD vault reads, and V4Quoter results for the live ladder sizes on the pools of the first two markets.",
+ "capturedAt": "2026-10-20T06:01:38.132Z",
+ "rpc": "https://base-rpc.publicnode.com",
+ "manager": {
+  "activeCount": 1361,
+  "firstIndex": 1345,
+  "paused": false
+ },
+ "tyd": {
+  "decimals": 6,
+  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "convertToAssets1e6": "1045656"
+ },
+ "hooks": [
+  {
+   "address": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4",
+   "feeNumerator": "80",
+   "denominator": "10000"
+  },
+  {
+   "address": "0x1cFeAD8E66cebC5E51093Dfd247Ad34f841740c4",
+   "feeNumerator": "20",
+   "denominator": "10000"
+  }
+ ],
+ "markets": [
+  {
+   "address": "0x46f340aDcBE3fb79ec181c7CAFD03c4F58C34453",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Will Arbitrum announce a new TradFi chain partnership before Feb 2027?",
+   "marketSource": "\u2022 Official Arbitrum Foundation and Offchain Labs communications (blog, X)\n\n\u2022 Official communications from the TradFi partner\n\n\u2022 Consensus of credible reports from reputable news organizations",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if, after the creation of this market and before January 31, 2027 \u2013 00:00 PST, Arbitrum (the Arbitrum Foundation or Offchain Labs) or a new TradFi partner officially announces that the partner will build or launch its own dedicated blockchain using Arbitrum technology. \n\nOtherwise, this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 A \u201cTradFi partner\u201d is a traditional financial institution or established financial services company, such as a bank, broker-dealer, asset manager, stock or derivatives exchange, payments company, insurer, or custodian.\n\n\u2022 Robinhood and any chain partnership announced before the creation of this market do not qualify. Only new announcements made after market deployment are eligible.\n\n\u2022 The announcement must be made through an official channel of Arbitrum, Offchain Labs, or the TradFi partner. A testnet launch or a stated plan to build qualifies, but rumors, reports without official confirmation, and non-chain integrations (e.g., tokenized assets deployed on the existing Arbitrum One network) do not qualify.\n\n\u2022 Crypto-native companies and protocols (e.g., exchanges or DeFi projects without a traditional finance business) do not qualify as a TradFi partner.",
+   "endOfTrading": "1792647273",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x4E86Bc3336f1d6617DEe908010a003653748244c",
+   "noToken": "0xe6623a3897f0fE7320FE1B56198e5D34E3e71Abc",
+   "getPoolKeys": [
+    {
+     "currency0": "0x4E86Bc3336f1d6617DEe908010a003653748244c",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xe6623a3897f0fE7320FE1B56198e5D34E3e71Abc",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x3de165b21f8cc348d1608e49bddd6f25a9efe4d2ee741fe2e906f39cb7c13322",
+    "0x46b1bd18fe120142914c76ea2c4b7116127a224ab6fc8441906dfd5cad8269fd"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x3de165b21f8cc348d1608e49bddd6f25a9efe4d2ee741fe2e906f39cb7c13322",
+     "sqrtPriceX96": "51095070545816355024951",
+     "tick": -285098,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "115303554645154",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x46b1bd18fe120142914c76ea2c4b7116127a224ab6fc8441906dfd5cad8269fd",
+     "sqrtPriceX96": "87492868945561617374432222130790246",
+     "tick": 278308,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "452769256906",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0x3D57b2e8761B6B14b7ea119E92635a8Fe491c98a",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Hyperliquid October revenue exceeds $60M?",
+   "marketSource": "\u2022 DefiLlama Hyperliquid analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total revenue of Hyperliquid protocol for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $60,000,000, as reported by DefiLlama.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is defined as the \u201cRevenue\u201d metric for the Hyperliquid protocol on DefiLlama (not gross \u201cFees\u201d), summed over all days in October 2026.\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xD036bc26861c64B61fF1AF0C5F48cA90A90c439C",
+   "noToken": "0x7E5Fc21069830aDD501dF90091a5Cfd43EF97817",
+   "getPoolKeys": [
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xD036bc26861c64B61fF1AF0C5F48cA90A90c439C",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x7E5Fc21069830aDD501dF90091a5Cfd43EF97817",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x406a2c44d144c8c6a5608c21a9ab8e20eb56b8b72812c9640aa00c64d5e3918a",
+    "0x2e1f9b20af7704c7001cdfbe9e79cb32532dac2f05cf88f635809accb1db2468"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x406a2c44d144c8c6a5608c21a9ab8e20eb56b8b72812c9640aa00c64d5e3918a",
+     "sqrtPriceX96": "91169656216243041855150173474380823",
+     "tick": 279131,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "1139543891800945",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x2e1f9b20af7704c7001cdfbe9e79cb32532dac2f05cf88f635809accb1db2468",
+     "sqrtPriceX96": "41923602969070664237963",
+     "tick": -289055,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "529150262212",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xAD5374e6CC185D64e02b2C9E4B8bd14820781553",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Pumpfun October revenue exceeds $70M?",
+   "marketSource": "\u2022 DefiLlama Pumpfun analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total revenue of Pumpfun for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $70,000,000, as reported by DefiLlama.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is defined as the \u201cRevenue\u201d metric for Pumpfun on DefiLlama (not gross \u201cFees\u201d), summed over all days in October 2026.\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x2Cc8f36B5b1d3a7b9A27E27d630517B8BF1F854f",
+   "noToken": "0x28f4659Cf2C0454f07bFe592Df94C136d9d844d7",
+   "getPoolKeys": [
+    {
+     "currency0": "0x2Cc8f36B5b1d3a7b9A27E27d630517B8BF1F854f",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x28f4659Cf2C0454f07bFe592Df94C136d9d844d7",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x2424e9feee622194f8dc065f1cc5e8737f7b8b6b94118861381bbeb634585ca3",
+    "0x0b631f88ad60af8d8688072f2cb6cefd805c69f4b164045bee50d663f0acc345"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x2424e9feee622194f8dc065f1cc5e8737f7b8b6b94118861381bbeb634585ca3",
+     "sqrtPriceX96": "44818216779828911934985",
+     "tick": -287719,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "565685424949",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x0b631f88ad60af8d8688072f2cb6cefd805c69f4b164045bee50d663f0acc345",
+     "sqrtPriceX96": "65333216513982708697748",
+     "tick": -280181,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "824621125123",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0x58629774a3837752f9dbfb3CB082D39237fb994F",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Uniswap October revenue exceeds $10M?",
+   "marketSource": "\u2022 DefiLlama Uniswap analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total revenue of Uniswap for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $10,000,000, as reported by DefiLlama.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is defined as the \u201cRevenue\u201d metric for Uniswap on DefiLlama (not gross \u201cFees\u201d), summed over all days in October 2026.\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xA3854C4703713E49B3f387A22F8aA7a94ed7eBc8",
+   "noToken": "0x4480Ac6E885223bACd243CC90b79D4b8B8Ac1bca",
+   "getPoolKeys": [
+    {
+     "currency0": "0xA3854C4703713E49B3f387A22F8aA7a94ed7eBc8",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x4480Ac6E885223bACd243CC90b79D4b8B8Ac1bca",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0xb12f3d54ffa0ad76fad036260e059f4b6d9d9be2b9733bf55eee1a1df48d22a5",
+    "0xcb374aaf7f3386e75d89d361a77aa8250bd13d1374709da41a5911dd4b1373ae"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0xb12f3d54ffa0ad76fad036260e059f4b6d9d9be2b9733bf55eee1a1df48d22a5",
+     "sqrtPriceX96": "32666608256991354348874",
+     "tick": -294045,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "412310562561",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xcb374aaf7f3386e75d89d361a77aa8250bd13d1374709da41a5911dd4b1373ae",
+     "sqrtPriceX96": "73026361889625179597740",
+     "tick": -277955,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "2120927629728394",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xD671F0D68477cBf94b0Bff05c255f152e5Da8512",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Papertrade October revenue exceeds $85M?",
+   "marketSource": "\u2022 DefiLlama Papertrade analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total revenue of Papertrade for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $85,000,000, as reported by DefiLlama.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is defined as the \u201cRevenue\u201d metric for Papertrade on DefiLlama (not gross \u201cFees\u201d), summed over all days in October 2026.\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xA63860f0A5c3E3979d9C16e7d1AB9db2e88449D0",
+   "noToken": "0x361146E546f8b08e23AF3Ac3606A3f2862f70d65",
+   "getPoolKeys": [
+    {
+     "currency0": "0xA63860f0A5c3E3979d9C16e7d1AB9db2e88449D0",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x361146E546f8b08e23AF3Ac3606A3f2862f70d65",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0xf46b3a0c0b20d5a0d9e60c9bcaf00465ae05aa1310135680fb0dee270a1edf6d",
+    "0xcfa41e0a7086d9891307027ede8bda7ac80ddd51d53bbcf57852c521f34c0270"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0xf46b3a0c0b20d5a0d9e60c9bcaf00465ae05aa1310135680fb0dee270a1edf6d",
+     "sqrtPriceX96": "65333216513982708697748",
+     "tick": -280181,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "824621125123",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xcfa41e0a7086d9891307027ede8bda7ac80ddd51d53bbcf57852c521f34c0270",
+     "sqrtPriceX96": "44818216779828911934985",
+     "tick": -287719,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "565685424949",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xb1cF4F31B29579045143de99Fec3789d3941173C",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Aero Protocol October revenue exceeds $10M?",
+   "marketSource": "\u2022 DefiLlama Aero Protocol analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total revenue of Aero Protocol for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $10,000,000, as reported by DefiLlama.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is defined as the \u201cRevenue\u201d metric for Aero Protocol on DefiLlama (not gross \u201cFees\u201d), summed over all days in October 2026.\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x9eEfaCb6ca98F1619638CCf700c029aE63E1D4f8",
+   "noToken": "0xb2c09Ea49B0C965E2A2cBa53c882cB15748176Df",
+   "getPoolKeys": [
+    {
+     "currency0": "0x9eEfaCb6ca98F1619638CCf700c029aE63E1D4f8",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xb2c09Ea49B0C965E2A2cBa53c882cB15748176Df",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x0dc51e26b7834a0b0a3dae48a4e0f6388069b6ebec1bf63fca5a6830419f4900",
+    "0xae26a40604f58236e6d11bdb03783551d910e58a55a310ce1f01041c5a30a1df"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x0dc51e26b7834a0b0a3dae48a4e0f6388069b6ebec1bf63fca5a6830419f4900",
+     "sqrtPriceX96": "44818216779828911934985",
+     "tick": -287719,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "565685424949",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xae26a40604f58236e6d11bdb03783551d910e58a55a310ce1f01041c5a30a1df",
+     "sqrtPriceX96": "96078259579386336320217808812989580",
+     "tick": 280180,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "824621125123",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xf9cA121126254874f5AE553CF5FCc21E1816651d",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Aave bad debt or exploit in October 2026?",
+   "marketSource": "\u2022 Onchain data\n\u2022 DefiLlama hacks dashboard",
+   "additionalInfo": "This market will resolve to \"Yes\" if the Aave protocol suffers a qualifying bad debt event or exploit at any time after the creation of this market and before November 1, 2026 - 00:00 UTC.\n\nOtherwise, this market will resolve to \"No.\"\n\nFor the purposes of this market:\n\n\u2022 \"Exploit\" is defined as a hack, smart contract vulnerability exploit, oracle manipulation, or compromised key attack on any official Aave-governed deployment (e.g., Aave V2, V3, or V4 on any chain) resulting in a verifiable loss of $1,000,000 or more in a single incident.\n\n\u2022 \"Bad debt\" is defined as unrecoverable debt on any official Aave deployment, where liquidated or undercollateralized positions leave the protocol with unpaid debt of $1,000,000 or more in a single incident, as confirmed by onchain data.\n\n\u2022 Only incidents occurring after market creation are eligible. Incidents that began before market creation do not qualify.\n\n\u2022 Losses must be realized and not covered in full by the protocol's own mechanisms within the same incident (e.g., Umbrella/Safety Module coverage does not negate qualifying bad debt, but recovery of exploited funds does not negate an exploit that has already occurred).\n\n\u2022 Exploits of third-party protocols that merely integrate Aave, bridged or wrapped asset depegs without resulting protocol bad debt, and temporary price volatility or normal liquidations do not qualify.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xe92D5bAb89cAa7185A63b3692c27c680Fe4a05C4",
+   "noToken": "0xFa070370405b56f4D904c3f966cEE431737659F0",
+   "getPoolKeys": [
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xe92D5bAb89cAa7185A63b3692c27c680Fe4a05C4",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xFa070370405b56f4D904c3f966cEE431737659F0",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x597beea13e57ff02a6c2178dd31feda58bc71e5beda8dcb503c64a5913d15920",
+    "0xa3855bdd7b3c4f909c8f07837ee18ae8c28e4ea1c63c6d0bd5bcdaa0c6b571e7"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x597beea13e57ff02a6c2178dd31feda58bc71e5beda8dcb503c64a5913d15920",
+     "sqrtPriceX96": "299454306921933315985456861668233688",
+     "tick": 302917,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "264575131106",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xa3855bdd7b3c4f909c8f07837ee18ae8c28e4ea1c63c6d0bd5bcdaa0c6b571e7",
+     "sqrtPriceX96": "82155777389543955897666998264185589",
+     "tick": 277049,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "964365076099",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xfBea206412a44180B41D8e0e81A7cd3b9416eb72",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Morpho bad debt or exploit in October 2026?",
+   "marketSource": "\u2022 Onchain data\n\u2022 DefiLlama hacks dashboard",
+   "additionalInfo": "This market will resolve to \"Yes\" if the Morpho protocol suffers a qualifying bad debt event or exploit at any time after the creation of this market and before November 1, 2026 - 00:00 UTC.\n\nOtherwise, this market will resolve to \"No.\"\n\nFor the purposes of this market:\n\n\u2022 \"Exploit\" is defined as a hack, smart contract vulnerability exploit, oracle manipulation, or compromised key attack on any official Morpho deployment resulting in a verifiable loss of $1,000,000 or more in a single incident.\n\n\u2022 \"Bad debt\" is defined as unrecoverable debt on any official Morpho deployment, where liquidated or undercollateralized positions leave the protocol with unpaid debt of $1,000,000 or more in a single incident, as confirmed by onchain data.\n\n\u2022 Only incidents occurring after market creation are eligible. Incidents that began before market creation do not qualify.\n\n\u2022 Losses must be realized and not covered in full by the protocol's own mechanisms within the same incident (recovery of exploited funds does not negate an exploit that has already occurred).\n\n\u2022 Exploits of third-party protocols that merely integrate Morpho, bridged or wrapped asset depegs without resulting protocol bad debt, and temporary price volatility or normal liquidations do not qualify.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x331f492038986aaa4F40732E050777F2660CceA5",
+   "noToken": "0x2F8d48D6dB5DFE4939a818aA463c2EF4614fd74f",
+   "getPoolKeys": [
+    {
+     "currency0": "0x331f492038986aaa4F40732E050777F2660CceA5",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x2F8d48D6dB5DFE4939a818aA463c2EF4614fd74f",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x6e990bec458facaf9c1ca0cae3d761893c693664363fbba46a38fee7db0a0142",
+    "0x466356cbe606ade37a34d32230658a82a05278016747e38c90aab6a0fd89e515"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x6e990bec458facaf9c1ca0cae3d761893c693664363fbba46a38fee7db0a0142",
+     "sqrtPriceX96": "27445440573005959520497",
+     "tick": -297528,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "346410161513",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x466356cbe606ade37a34d32230658a82a05278016747e38c90aab6a0fd89e515",
+     "sqrtPriceX96": "74322604415751464381725",
+     "tick": -277603,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "938083151964",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xD916185821cbdd8ee4251801058CE151D3Cc83Ab",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Robinhood Chain DEX volume above $40B in October?",
+   "marketSource": "\u2022 DefiLlama DEX Volume dashboard for Robinhood Chain\n\u2022 Onchain data",
+   "additionalInfo": "This market will resolve to \"Yes\" if the total DEX volume on Robinhood Chain for the calendar month of October 2026 (October 1, 2026 - 00:00 UTC to November 1, 2026 - 00:00 UTC) exceeds $40,000,000,000 USD, as reported by DefiLlama.\n\nOtherwise, this market will resolve to \"No.\"\n\nFor the purposes of this market:\n\n\u2022 \"DEX volume\" is the aggregate spot DEX trading volume on Robinhood Chain as shown on DefiLlama's DEX volume dashboard for the Robinhood Chain.\n\n\u2022 If DefiLlama methodology changes, the figure as reported by DefiLlama at resolution will be used.",
+   "endOfTrading": "1793491200",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x6dd904D0056246a1122dD8e489DDecbe0B1451B8",
+   "noToken": "0x05aFE92de269374189A90C4e12785Ef70B35Fa32",
+   "getPoolKeys": [
+    {
+     "currency0": "0x6dd904D0056246a1122dD8e489DDecbe0B1451B8",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x05aFE92de269374189A90C4e12785Ef70B35Fa32",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0xeea44a7308620b595fd86d92c02057d22f2581c255307dbf33d56cd783f5e7e9",
+    "0xae592c2aac4a2b5e99dc86686fa0b9dfc7cd746ba3fbb870595c647bb5ec378b"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0xeea44a7308620b595fd86d92c02057d22f2581c255307dbf33d56cd783f5e7e9",
+     "sqrtPriceX96": "34534755388209561562289",
+     "tick": -292933,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "435889894354",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xae592c2aac4a2b5e99dc86686fa0b9dfc7cd746ba3fbb870595c647bb5ec378b",
+     "sqrtPriceX96": "71305346262837903834189",
+     "tick": -278432,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "899999999999",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xFc5F8261249be62B0505401b16FdBe3551f27AfF",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Robinhood Chain RWA market cap above $330M on October 31?",
+   "marketSource": "\u2022 DefiLlama RWA dashboard (Robinhood Chain)\n\u2022 Onchain data",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if the total RWA onchain market cap on Robinhood Chain is greater than $330,000,000 USD on October 31, 2026 - 00:00 PDT (UTC-7).\n\nOtherwise, this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRWA onchain market cap\u201d is the onchain AUM figure for Robinhood Chain shown on the DefiLlama RWA dashboard, using the value for October 31, 2026.\n\n\u2022 Only the value on the resolution date is considered. Values reached before that date, or before market deployment, do not qualify.",
+   "endOfTrading": "1793430000",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x2339330Bcf4a0f63b5b85837BF0FbA7f6864Aa0B",
+   "noToken": "0xB8675aa01CA5f03D45ba5699A26ECA0258b7Ed51",
+   "getPoolKeys": [
+    {
+     "currency0": "0x2339330Bcf4a0f63b5b85837BF0FbA7f6864Aa0B",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xB8675aa01CA5f03D45ba5699A26ECA0258b7Ed51",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x305957004b07e2d979b42ec8aee4a3e72bd38942559cc1946af0ff6a00ca4cf0",
+    "0xfc108a126ce88498dca191289ecbbec80d55894e13c175fb555ab83662984543"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x305957004b07e2d979b42ec8aee4a3e72bd38942559cc1946af0ff6a00ca4cf0",
+     "sqrtPriceX96": "61879173059971278723644",
+     "tick": -281268,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "781024967590",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xfc108a126ce88498dca191289ecbbec80d55894e13c175fb555ab83662984543",
+     "sqrtPriceX96": "126866593927785587823771049329267670",
+     "tick": 285740,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "624499799839",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xa014136Ae20121366FcE5668A9eEead22d83394D",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Pump revenue be above Hyperliquid revenue this week?",
+   "marketSource": "\u2022 DefiLlama Hyperliquid analytics page\n\u2022 DefiLlama Pumpfun analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if Pump (pump.fun) total daily revenue summed over the period from October 19, 2026 - 00:00 UTC to October 26, 2026 - 00:00 UTC is greater than Hyperliquid's total daily revenue summed over the same period.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is the revenue metric reported by DefiLlama for the Pump (pump.fun) protocol and the Hyperliquid protocol, respectively, summed across all days of the period (Monday-Sunday UTC week).\n\n\u2022 If the two totals are exactly equal, this market will resolve to \u201cDraw.\u201d",
+   "endOfTrading": "1792972800",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xB7c04cDB48b00465724FdBF9bBf6Cfa0a5b07cf6",
+   "noToken": "0x3cfbc19fc195E3F1eA010a47428f42D639C3D00b",
+   "getPoolKeys": [
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xB7c04cDB48b00465724FdBF9bBf6Cfa0a5b07cf6",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x3cfbc19fc195E3F1eA010a47428f42D639C3D00b",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x330da10a9127898f01e6c0d29d1f127b1325e325e041d77874d24f1862c3a38b",
+    "0xd7c633ab0328926056ebdf844a4877c034b17618afde86addf4dc4df376d0aa6"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x330da10a9127898f01e6c0d29d1f127b1325e325e041d77874d24f1862c3a38b",
+     "sqrtPriceX96": "119612997799873019272911328048502757",
+     "tick": 284563,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "292763606880763",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0xd7c633ab0328926056ebdf844a4877c034b17618afde86addf4dc4df376d0aa6",
+     "sqrtPriceX96": "63875786711408435665991",
+     "tick": -280633,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "806225774829",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0x7032589088B661CBD6aE3EfE811ce599719aC681",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Uniswap revenue be above Aero Protocol revenue this week?",
+   "marketSource": "\u2022 DefiLlama Uniswap analytics page\n\u2022 DefiLlama Aero Protocol analytics page",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if Uniswap\u2019s total daily revenue summed over the period from October 19, 2026 - 00:00 UTC to October 26, 2026 - 00:00 UTC is greater than Aero Protocol\u2019s total daily revenue summed over the same period.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market:\n\n\u2022 \u201cRevenue\u201d is the revenue metric reported by DefiLlama for the Uniswap protocol and the Aero Protocol protocol, respectively, summed across all days of the period (Monday-Sunday UTC week).\n\n\u2022 If the two totals are exactly equal, this market will resolve to \u201cDraw.\u201d",
+   "endOfTrading": "1792972800",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0x16dF54B3992720b79C6E04a8C7999F48198CC165",
+   "noToken": "0x399acF8381322DA4faB7a3DB064d834D765a57b2",
+   "getPoolKeys": [
+    {
+     "currency0": "0x16dF54B3992720b79C6E04a8C7999F48198CC165",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x399acF8381322DA4faB7a3DB064d834D765a57b2",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0xb7a836aa48991ed314032c3ff7e8a3d4ceacb824693616d6f4f80099ab3aa4ac",
+    "0x983cb4b98859b996db72bd5b488b03c09016195d7c1c5af7adf1fb586ba36284"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0xb7a836aa48991ed314032c3ff7e8a3d4ceacb824693616d6f4f80099ab3aa4ac",
+     "sqrtPriceX96": "54316091682223786074494",
+     "tick": -283875,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "685565460040",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x983cb4b98859b996db72bd5b488b03c09016195d7c1c5af7adf1fb586ba36284",
+     "sqrtPriceX96": "60651429770826732780737",
+     "tick": -281669,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "539950756197486",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0xa285f4934c8A7D02A307723a7c958012f1865846",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Will there be a $1M+ hack this week?",
+   "marketSource": "\u2022 Onchain data\n\u2022 DefiLlama hacks dashboard",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if a smart contract/program, set of related smart contracts/programs, crypto project, crypto business, or crypto service suffers from a hack/exploit totalling $1,000,000 or more, at anytime between the initiation date of this market and exactly 7 days later.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market, the loss of funds must be verifiable onchain.\nCompromised private keys (leading to loss of funds) will count under a \u201chack\u201d for the purposes of this market, as long as the loss is provably verifiable onchain.\n\nOracle manipulation/misconfigurations leading to loss of funds count under a \u201chack.\u201d\nThe value exploited must total $1,000,000 or more in a single incident to qualify for a \u201cYes\u201d outcome.\n\nThe value of an exploit is measured by the realized loss incurred by users or the protocol(s) affected as a result of the incident. Unrealized losses by protocols or users do not count towards the measurable value of the exploit.",
+   "endOfTrading": "1793077441",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xC21b0f5aDdE7bf3730d9f8e2E1747A419EB44035",
+   "noToken": "0xDe4a126b6315E4Bdc7C568D61C9DcFe55C80C0cC",
+   "getPoolKeys": [
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xC21b0f5aDdE7bf3730d9f8e2E1747A419EB44035",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xDe4a126b6315E4Bdc7C568D61C9DcFe55C80C0cC",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0x77d41ca734515582fa7f1de84cf00d3a9261407fa9aff92abfd8e89d9c19e600",
+    "0x99170ef05f66f3e3ca8ffefa1d78b1ab7ff9541453a890e34be47919ca3b7d2f"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0x77d41ca734515582fa7f1de84cf00d3a9261407fa9aff92abfd8e89d9c19e600",
+     "sqrtPriceX96": "93371284957976899864553230379096952",
+     "tick": 279609,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "848528137423",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x99170ef05f66f3e3ca8ffefa1d78b1ab7ff9541453a890e34be47919ca3b7d2f",
+     "sqrtPriceX96": "149727153460966657992728430834116844",
+     "tick": 289054,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "529150262212",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  },
+  {
+   "address": "0x83568A6291D0496036200E2381eE60Fb28a9b14C",
+   "VERSION": "2.0.0",
+   "marketQuestion": "Will there be a $5M+ hack this week?",
+   "marketSource": "\u2022 Onchain data\n\u2022 DefiLlama hacks dashboard",
+   "additionalInfo": "This market will resolve to \u201cYes\u201d if a smart contract/program, set of related smart contracts/programs, crypto project, crypto business, or crypto service suffers from a hack/exploit totalling $5,000,000 or more, at anytime between the initiation date of this market and exactly 7 days later.\n\nOtherwise this market will resolve to \u201cNo.\u201d\n\nFor the purposes of this market, the loss of funds must be verifiable onchain.\nCompromised private keys (leading to loss of funds) will count under a \u201chack\u201d for the purposes of this market, as long as the loss is provably verifiable onchain.\n\nOracle manipulation/misconfigurations leading to loss of funds count under a \u201chack.\u201d\nThe value exploited must total $5,000,000 or more in a single incident to qualify for a \u201cYes\u201d outcome.\n\nThe value of an exploit is measured by the realized loss incurred by users or the protocol(s) affected as a result of the incident. Unrealized losses by protocols or users do not count towards the measurable value of the exploit.",
+   "endOfTrading": "1793077441",
+   "getCurrentStatus": 0,
+   "winningPosition": "0",
+   "paymentToken": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+   "yesToken": "0xd9550C1c8a341df071b82Eb2Af3230d3937Cb657",
+   "noToken": "0x002c9f73A616f22335E70AC364A69B0B010E8446",
+   "getPoolKeys": [
+    {
+     "currency0": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "currency1": "0xd9550C1c8a341df071b82Eb2Af3230d3937Cb657",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    },
+    {
+     "currency0": "0x002c9f73A616f22335E70AC364A69B0B010E8446",
+     "currency1": "0xb13CF163d916917d9cD6E836905cA5f12a1dEF4B",
+     "fee": 1,
+     "tickSpacing": 60,
+     "hooks": "0x3E83479B2276EcFb7C7181F67b5d092d3511e0C4"
+    }
+   ],
+   "getPoolIds": [
+    "0xd839e2b1c1200b64b0107dc454336aa92443f1c9663bc8785dc337019ce2b2c3",
+    "0x07306bae256cf7febcffb42e18ec67650fd30e6d06ef2d2bfe310456e9e25396"
+   ],
+   "paused": false,
+   "pools": {
+    "yes": {
+     "id": "0xd839e2b1c1200b64b0107dc454336aa92443f1c9663bc8785dc337019ce2b2c3",
+     "sqrtPriceX96": "112332881386788672903460320832194254",
+     "tick": 283307,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "428435155901118",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    },
+    "no": {
+     "id": "0x07306bae256cf7febcffb42e18ec67650fd30e6d06ef2d2bfe310456e9e25396",
+     "sqrtPriceX96": "58220571425474755576019",
+     "tick": -282487,
+     "protocolFee": 0,
+     "lpFee": 1,
+     "liquidity": "734846922834",
+     "poolPaused": false,
+     "tokenDecimals": 18
+    }
+   }
+  }
+ ],
+ "quotes": {
+  "0x3de165b21f8cc348d1608e49bddd6f25a9efe4d2ee741fe2e906f39cb7c13322": {
+   "market": "0x46f340aDcBE3fb79ec181c7CAFD03c4F58C34453",
+   "side": "yes",
+   "buy": {
+    "1": "421596",
+    "5": "2156495",
+    "25": "12184704",
+    "100": null,
+    "500": null
+   },
+   "sell": {
+    "1": "410287",
+    "5": "2006788",
+    "25": "9049206",
+    "100": "25290083",
+    "500": "25295775"
+   }
+  },
+  "0x46b1bd18fe120142914c76ea2c4b7116127a224ab6fc8441906dfd5cad8269fd": {
+   "market": "0x46f340aDcBE3fb79ec181c7CAFD03c4F58C34453",
+   "side": "no",
+   "buy": {
+    "1": "836138",
+    "5": "4226017",
+    "25": "22340514",
+    "100": null,
+    "500": null
+   },
+   "sell": {
+    "1": "271146",
+    "5": "369744",
+    "25": "398742",
+    "100": "404693",
+    "500": "406309"
+   }
+  },
+  "0x406a2c44d144c8c6a5608c21a9ab8e20eb56b8b72812c9640aa00c64d5e3918a": {
+   "market": "0x3D57b2e8761B6B14b7ea119E92635a8Fe491c98a",
+   "side": "yes",
+   "buy": {
+    "1": "761818",
+    "5": "3820750",
+    "25": "19400786",
+    "100": "82176271",
+    "500": null
+   },
+   "sell": {
+    "1": "748581",
+    "5": "3731531",
+    "25": "18378408",
+    "100": "20544560",
+    "500": "20552706"
+   }
+  },
+  "0x2e1f9b20af7704c7001cdfbe9e79cb32532dac2f05cf88f635809accb1db2468": {
+   "market": "0x3D57b2e8761B6B14b7ea119E92635a8Fe491c98a",
+   "side": "no",
+   "buy": {
+    "1": "283873",
+    "5": "1432802",
+    "25": "7520025",
+    "100": "36969695",
+    "500": null
+   },
+   "sell": {
+    "1": "138880",
+    "5": "231465",
+    "25": "267073",
+    "100": "275006",
+    "500": "277201"
+   }
+  }
+ }
+}

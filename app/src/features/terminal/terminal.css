@@ -1,0 +1,179 @@
+/*
+  Read terminal and observer pane. Tokens from ui/theme.css only; no inline styles, fonts or URLs.
+  Layout target: 360 px wide with the page's 16 px gutter and no sideways page scroll. Long ids wrap; wide tables
+  scroll inside their own focusable region; touch targets are at least 44 px.
+*/
+
+.terminal {
+  min-width: 0;
+}
+
+.terminal-lead {
+  max-width: 70ch;
+}
+
+.terminal-observer,
+.terminal-console {
+  margin-block: 1.5rem;
+  min-width: 0;
+}
+
+.terminal-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.75rem;
+  margin-block: 0.5rem;
+}
+
+.terminal-form .ui-field {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.terminal-input {
+  font-family: var(--mono);
+  width: 100%;
+}
+
+.terminal-muted {
+  color: var(--text-muted);
+}
+
+.terminal-warning {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.terminal-log {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.terminal-entry {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.terminal-entry-head {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.terminal-calls {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.terminal-call {
+  overflow-wrap: anywhere;
+}
+
+.terminal-args {
+  margin-inline-start: 0.5rem;
+  color: var(--text-muted);
+}
+
+.terminal-result {
+  min-width: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.terminal-id {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+.terminal-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-facts {
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.terminal-pair {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.terminal-pair dt {
+  color: var(--text-muted);
+}
+
+.terminal-pair dd {
+  margin: 0;
+  min-width: 0;
+}
+
+@media (max-width: 30rem) {
+  .terminal-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.terminal-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.terminal-subhead {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.terminal-flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-inline-start: 0.25rem;
+}
+
+.terminal-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.terminal-audit {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.terminal-help {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.terminal-book {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}

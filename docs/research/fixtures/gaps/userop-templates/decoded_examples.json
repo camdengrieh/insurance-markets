@@ -1,0 +1,1553 @@
+{
+ "aggregate": {
+  "opsWithKnownOwner": 14,
+  "eip191Match": 14,
+  "rawMatch": 0,
+  "neither": 0,
+  "byAccountType": {}
+ },
+ "operatorAccountSignerStability": {
+  "0x92e491..4232": {
+   "ops": 8,
+   "distinctRawRecoveredSigners": 2,
+   "distinctEip191RecoveredSigners": 8,
+   "rawSigners": [
+    "0xfEC20A..490D",
+    "0x942D02..701E"
+   ]
+  }
+ },
+ "examples": [
+  {
+   "action": "enableTrading_firstOp_withAccountDeploy",
+   "tx": "0xc9ef8950c7c5f9489261ed9c65a7e6f8cedbfe4e5c3e213708dc5fc0f704013a",
+   "block": "12589192",
+   "bundlerEOA": "0x67bc52..e961",
+   "sender": "0x70e718..2648",
+   "userOpHash": "0xbd0dcbef3d92d93ef7ce3305977099c21d1c57baf52779ebead30bd72bed6f86",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "0"
+   },
+   "factory": "kernelFactory",
+   "deploysAccount": true,
+   "factoryOwnerInInitCode": "0x5e325B..7c3b",
+   "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "setApprovalForAll",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      true
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "297342",
+    "callGasLimit": "74916",
+    "preVerificationGas": "56214",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 440,
+   "callDataBytes": 676,
+   "recoveredSignerRawHash": "0x027Bd8..8d2f",
+   "recoveredSignerEip191": "0x5e325B..7c3b",
+   "knownOwner": "0x5e325B..7c3b",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "enableTrading_firstOp_withAccountDeploy",
+   "tx": "0x0999a02198426d2f324bd4cb5e4308d26eb67a2d088c03eecf7b57d1c3e0690f",
+   "block": "12589787",
+   "bundlerEOA": "0x0523d7..f095",
+   "sender": "0x9b97D4..9fB5",
+   "userOpHash": "0x1750f31ada4ee6c9516bf6e64f2636488e02fb806d8c37217ca60ea1c8428ae0",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "0"
+   },
+   "factory": "kernelFactory",
+   "deploysAccount": true,
+   "factoryOwnerInInitCode": "0xD20DcE..1c79",
+   "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "setApprovalForAll",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      true
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "297342",
+    "callGasLimit": "74916",
+    "preVerificationGas": "56214",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 440,
+   "callDataBytes": 676,
+   "recoveredSignerRawHash": "0x3C9142..25CF",
+   "recoveredSignerEip191": "0xD20DcE..1c79",
+   "knownOwner": "0xD20DcE..1c79",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "enableTrading_firstOp_withAccountDeploy",
+   "tx": "0xc097b149544c980afb98bf6b949edc6a3cfb39cc620d093f251cead4fbfe17f2",
+   "block": "12604908",
+   "bundlerEOA": "0x13073e..5068",
+   "sender": "0x293849..CcAa",
+   "userOpHash": "0xc24cad2420db0e7ff1e864b377aba3823744b752c1f8e2392564a4cd4f48fbc7",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000000",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "0"
+   },
+   "factory": "kernelFactory",
+   "deploysAccount": true,
+   "factoryOwnerInInitCode": "0xbfDCB3..C38c",
+   "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "setApprovalForAll",
+     "value": "0",
+     "args": [
+      "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+      true
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "297342",
+    "callGasLimit": "74916",
+    "preVerificationGas": "56214",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 440,
+   "callDataBytes": 676,
+   "recoveredSignerRawHash": "0xF96DE4..3CC2",
+   "recoveredSignerEip191": "0xbfDCB3..C38c",
+   "knownOwner": "0xbfDCB3..C38c",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_single",
+   "tx": "0x2a544e2adfb356ee1a1e16448494002bdbdd991c794f984f84b0333a43faab79",
+   "block": "12601956",
+   "bundlerEOA": "0xa76dc9..9d30",
+   "sender": "0x812dbC..e7B5",
+   "userOpHash": "0x053423fd89f999a20e6ebbc111965517c69a7a401a1c86b4ac13f92f5d458120",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000082",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "130"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xf4832113c327cb461b65b9f3a065ce4ffe77e0ec2a530e699e132a14f2c80d21",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "87869",
+    "callGasLimit": "126186",
+    "preVerificationGas": "51195",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0x109865..fd0e",
+   "recoveredSignerEip191": "0xFC0849..c08F",
+   "knownOwner": "0xfc0849..c08f",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_single",
+   "tx": "0xe3abd2b178d8f9925b9b0c76777da6885845dee3f0c6c83376a0db2f13aac410",
+   "block": "12602053",
+   "bundlerEOA": "0xdaf62d..3cbc",
+   "sender": "0xe05e14..E301",
+   "userOpHash": "0x5e956f57fdc4ed3f9d950d416daf8a62d84910f13d435c4576e0e88bd78f77c8",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57000000000000000001b6",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "438"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xc1db79f20ab941cc484bc269a0b191166de6dd26e08cfc25f8afbfeeb01ba119",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "87869",
+    "callGasLimit": "126186",
+    "preVerificationGas": "51208",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "5958"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0x56782c..B0af",
+   "recoveredSignerEip191": "0x77F2F8..1C75",
+   "knownOwner": "0x77f2f8..1c75",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_single",
+   "tx": "0x8ddd70241d25d83fe0b5d39f0d78e753e909eedad469bdf112f4403f8588a5a8",
+   "block": "12603923",
+   "bundlerEOA": "0xc9f846..a9ae",
+   "sender": "0xF712dD..7999",
+   "userOpHash": "0xe3fbf1fc4879e39d42b18f467372fa8830fe2e1c7e58934ff271e3ea06c7a8bf",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000008",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "8"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x95ae587983818f307a827bb64c080d44a1db58210a2efc0adb5c2d02f302c26a",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "87869",
+    "callGasLimit": "89564",
+    "preVerificationGas": "51195",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0xd7594c..d723",
+   "recoveredSignerEip191": "0x69BaA9..39E3",
+   "knownOwner": "0x69baa9..39e3",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_single",
+   "tx": "0x113e9348d488ed101a68335ceddf285a644bce70308be10483538d64377488a6",
+   "block": "12603120",
+   "bundlerEOA": "0xbf123b..e4bc",
+   "sender": "0xdc4389..C3BD",
+   "userOpHash": "0x98c6d30a7dc876cafd57db100c5d7506b3a1e7f0aa8246217d8fa17a847e6337",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000002d2c",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "11564"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xd6d2c3661c9a2220b47247b1478ca0731dc2dd2bfc6297d701410c5c8af7adaa",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "200000",
+    "callGasLimit": "600000",
+    "preVerificationGas": "100000",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "100000",
+    "paymasterPostOpGasLimit": "150000"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0x5fd4d9..66fc",
+   "recoveredSignerEip191": "0x1aac5e..90d9",
+   "knownOwner": "0x1aac5e..90d9",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_single",
+   "tx": "0xf1d762974d59520bd9fa8c2791768c12bf3034b1d0c20d9ff21527faca48822d",
+   "block": "12600993",
+   "bundlerEOA": "0xdaf62d..3cbc",
+   "sender": "0x5D020d..6a4E",
+   "userOpHash": "0x8f16dfd7c8c70d00ec4e657e0a43879a57798c9d8141d8d49889b39b0d70ea80",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57000000000000000004aa",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "1194"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x6a6950c539587f3fc65a6912923891b327e28a65bb3172522af0ad33a2df0785",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "109837",
+    "callGasLimit": "130267",
+    "preVerificationGas": "64010",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "50328",
+    "paymasterPostOpGasLimit": "7448"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0x51b75a..2f2d",
+   "recoveredSignerEip191": "0xE6c516..2928",
+   "knownOwner": "0xe6c516..2928",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_batch_noPaymaster",
+   "tx": "0x89ede19a1517a89bb9f7211cb50ddd0e5d18952b7315e87b5255eb60aacddb55",
+   "block": "12589053",
+   "bundlerEOA": "0xdaf62d..3cbc",
+   "sender": "0x5939F5..f779",
+   "userOpHash": "0x614661980c2447ad036e78b3f4189462c55b34f6373c6059f4e5ce04fd818e32",
+   "hashMatchesUserOperationEventLog": false,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": "log page truncated; see RPC receipt",
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000004a76",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "19062"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 62,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x8c133e4d4e840f535a25857050bce07a5d97075832a07e4447917ed5bb8e4d27",
+      [
+       "1"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xf7443183af4b6e039e51378ceab9f712c7e27157d6613da2e22e95258a063228",
+      [
+       "1"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0232bb5d3fb2365f2a73968c412b8b6323acf8759e7487d3278824d5fd29ec66",
+      [
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "221170",
+    "callGasLimit": "1862026",
+    "preVerificationGas": "228195",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0"
+   },
+   "paymaster": null,
+   "paymasterDataBytes": null,
+   "paymasterAndDataBytes": 0,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 23972,
+   "recoveredSignerRawHash": "0x026E71..cb30",
+   "recoveredSignerEip191": "0x601A21..D5A7",
+   "knownOwner": "0x601a21..d5a7",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_batch_noPaymaster",
+   "tx": "0x8b5a58228ce273c1cbcbbe895d06dab4115c37e7e715d600938574e15dba69c1",
+   "block": "12590114",
+   "bundlerEOA": "0xe8b7a2..3905",
+   "sender": "0x5939F5..f779",
+   "userOpHash": "0x12a9b26a0ed50d8888c7cfc5bcf0d6a400f024e02d02688ed5e79abf14ef3cd6",
+   "hashMatchesUserOperationEventLog": false,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": "log page truncated; see RPC receipt",
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000004a7c",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "19068"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 62,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x8c133e4d4e840f535a25857050bce07a5d97075832a07e4447917ed5bb8e4d27",
+      [
+       "1"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xf7443183af4b6e039e51378ceab9f712c7e27157d6613da2e22e95258a063228",
+      [
+       "1"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0232bb5d3fb2365f2a73968c412b8b6323acf8759e7487d3278824d5fd29ec66",
+      [
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "221170",
+    "callGasLimit": "1862026",
+    "preVerificationGas": "228195",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0"
+   },
+   "paymaster": null,
+   "paymasterDataBytes": null,
+   "paymasterAndDataBytes": 0,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 23972,
+   "recoveredSignerRawHash": "0xaF8AA1..66Cb",
+   "recoveredSignerEip191": "0x601A21..D5A7",
+   "knownOwner": "0x601a21..d5a7",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "redeemPositions_batch_noPaymaster",
+   "tx": "0x2ad969f42f33a07606633de2d6f2c947969916638fa3f3cebbb5553f4e584b8b",
+   "block": "12590477",
+   "bundlerEOA": "0x9b10ae..1242",
+   "sender": "0x623cAB..afa5",
+   "userOpHash": "0x25b66dc6155eb1ee32cc7784fa75e5b6c13f4a10e17d10ab83dc27a73c16b9dc",
+   "hashMatchesUserOperationEventLog": false,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": "log page truncated; see RPC receipt",
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000004f6a",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "20330"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 73,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x4b378c64ce1c0536325d00c0b5f7788cf5829a4d6e0542021e22908793c32beb",
+      [
+       "2"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x87559da7b724b4002430bf22da4fe1abcbe2b41d6d73acb824cdca29d5f25e05",
+      [
+       "1"
+      ]
+     ]
+    },
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xce0b5a8d6ac2b9cadd5aca6a5e7c2b44cf8291542682a38ce0f9d8f0cffc67a3",
+      [
+       "1"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "240214",
+    "callGasLimit": "2345424",
+    "preVerificationGas": "260114",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0"
+   },
+   "paymaster": null,
+   "paymasterDataBytes": null,
+   "paymasterAndDataBytes": 0,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 28196,
+   "recoveredSignerRawHash": "0x1fa393..6Fbc",
+   "recoveredSignerEip191": "0x7B44D8..07f3",
+   "knownOwner": "0x7b44d8..07f3",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "mergePositions",
+   "tx": "0xf80507d3da7ade09ad239e28e4682fda0858260548f91ccbf6d0cb5ad3a58ea3",
+   "block": "12607678",
+   "bundlerEOA": "0x9b10ae..1242",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x9a01cab8aa40a4c6cb80bf2d32d1f06cb9ba3d0e94de8d1bd3eac1d051a63b9c",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x115f2",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "71154"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "mergePositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x01c9457b2e60f4e729a4df4656834a90cee1ae4ba2c315e2e0e3ccdf734fe70a",
+      [
+       "1",
+       "2"
+      ],
+      "317383"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "46111",
+    "callGasLimit": "145333",
+    "preVerificationGas": "76741",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "150000",
+    "paymasterPostOpGasLimit": "8937"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0xfEC20A..490D",
+   "recoveredSignerEip191": "0x13827d..6AeD",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "mergePositions",
+   "tx": "0x42db6d37ff9d59de83c2274db55c0298f7c4a20d5c4d5a04489466b2dc0e7a6c",
+   "block": "12607747",
+   "bundlerEOA": "0x67bc52..e961",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x7d147cf2e73ab08e196474fd343736e5717899d7f1d5d6483a9f53d4f215b431",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x115f4",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "71156"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "mergePositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x49a13de7de910588d4413b6f5659d451333c8ed2bac27facd65ab77a4ed54f04",
+      [
+       "1",
+       "2"
+      ],
+      "320000"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "46111",
+    "callGasLimit": "134346",
+    "preVerificationGas": "76720",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "150000",
+    "paymasterPostOpGasLimit": "8937"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0xfEC20A..490D",
+   "recoveredSignerEip191": "0x9C6E62..BC4D",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "mergePositions",
+   "tx": "0x03218f49a39a3d2423d21bf8de0b024d916062d9184850df1a07afac930db699",
+   "block": "12608777",
+   "bundlerEOA": "0x65e503..1e4f",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x0c4ca95415ea2bafc439969c5bc9e27dcbbe4cf7c47992279c898c3bbfea30c0",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x115f9",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "71161"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "mergePositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xf2f44a90a44f911d435b3f76183edb0e61989b151c8d5c58bd7d31f797a0d04f",
+      [
+       "1",
+       "2"
+      ],
+      "5549382"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "46111",
+    "callGasLimit": "167305",
+    "preVerificationGas": "76741",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "150000",
+    "paymasterPostOpGasLimit": "8937"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0xfEC20A..490D",
+   "recoveredSignerEip191": "0xb157D7..502F",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "splitPosition",
+   "tx": "0x15bb7450b4a632a4aa4a41f4001349adecf491cc51f8d98d6354bdf248393166",
+   "block": "5399909",
+   "bundlerEOA": "0xbf123b..e4bc",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x73e44d485789b189254ff5fb76921bf6de27c4c960821af03e30373b771d78e2",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x1",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "1"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "splitPosition",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xde7b4d623367296bca8071893e22a39c66c9d33c52a2071ea1c611c6624d2a9a",
+      [
+       "1",
+       "2"
+      ],
+      "2500000000"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "30741",
+    "callGasLimit": "155483",
+    "preVerificationGas": "51134",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "5958"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0x942D02..701E",
+   "recoveredSignerEip191": "0x0ea59f..efe2",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "splitPosition",
+   "tx": "0x97ade4c892095ca08009dd4d341fc1cd5666b016329f934bd3495e6b79fbc025",
+   "block": "5783066",
+   "bundlerEOA": "0xbf123b..e4bc",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x9cd271d15c07e513159cb3157d699c24a539d5b3d0703ac6c0fa17469140d1b8",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0xcab",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "3243"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "splitPosition",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x9ec0da13c7ad8c5c83419a4ec9ca154e8e23a5cdaea3370dd7fd18b5c4199fed",
+      [
+       "1",
+       "2"
+      ],
+      "2500000000"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "30741",
+    "callGasLimit": "133510",
+    "preVerificationGas": "51147",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "5958"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0x942D02..701E",
+   "recoveredSignerEip191": "0x270d42..d88F",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "splitPosition",
+   "tx": "0xe8b9f8faf42fda4c611f40906796a060d86d9bcb3ee33b8757638cb211379c18",
+   "block": "5783160",
+   "bundlerEOA": "0x13073e..5068",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0xef6ec09e418b339fa10cd31d7d63b8248011c367dd9da9e7e350f9424d28f6d9",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0xcae",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "3246"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "splitPosition",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0xd4f3ff7655d7869ac4a61bee00a109e3bb3391939d20abae9ffecb290b1b20a0",
+      [
+       "1",
+       "2"
+      ],
+      "2500000000"
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "30741",
+    "callGasLimit": "140834",
+    "preVerificationGas": "51134",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "5958"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 420,
+   "recoveredSignerRawHash": "0x942D02..701E",
+   "recoveredSignerEip191": "0x5EF371..8Bbb",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "createConvictionMarket",
+   "tx": "0xbcc79750f764a7c34c6270fccc15494d98949cebfe40abc3142934b190c757da",
+   "block": "12551478",
+   "bundlerEOA": "0x199413..5486",
+   "sender": "0x0cC88b..A5B8",
+   "userOpHash": "0x01a7c2dfc645164de1eb59e45f1ed72e82786d5e27863b457b74b29d0f9b20b4",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce570000000000000000000a",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "10"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "manager",
+     "fn": "createConvictionMarket",
+     "value": "0",
+     "args": [
+      1792237026,
+      1792443600,
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "https://market-metad.."
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "105442",
+    "callGasLimit": "977594",
+    "preVerificationGas": "55800",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 900,
+   "recoveredSignerRawHash": "0x5af3FE..6d93",
+   "recoveredSignerEip191": "0x4AB605..257c",
+   "knownOwner": "0x4ab605..257c",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "createConvictionMarket",
+   "tx": "0xec8d1956f04e18366d9fd86732091c6a35a3ec549fa0cc826187cfde9118b5ab",
+   "block": "12552471",
+   "bundlerEOA": "0x67bc52..e961",
+   "sender": "0x488AfD..9315",
+   "userOpHash": "0x88b6aecbf6d4cfeaf089e787444396a9a2a64e7c5d091c733884e6075d4c1008",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000368",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "872"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "manager",
+     "fn": "createConvictionMarket",
+     "value": "0",
+     "args": [
+      1792239159,
+      1794873540,
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "https://market-metad.."
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "105442",
+    "callGasLimit": "1056696",
+    "preVerificationGas": "55814",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "26478"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1c",
+   "initCodeBytes": 0,
+   "callDataBytes": 900,
+   "recoveredSignerRawHash": "0x58d94b..Ed57",
+   "recoveredSignerEip191": "0xB22D0e..cDc5",
+   "knownOwner": "0xb22d0e..cdc5",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "createConvictionMarket",
+   "tx": "0xcaed7961d6dc52ba9cafd911d8078cd30441c72dded0de4cdf5a0a0963de49ba",
+   "block": "12553083",
+   "bundlerEOA": "0x10de51..bfdb",
+   "sender": "0x488AfD..9315",
+   "userOpHash": "0xa162e04b569efe664c9acbae4fb57ebb623346fb5fd77e3baca10ecd5f8a4d95",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x845adb2c711129d4f3966735ed98a9f09fc4ce5700000000000000000369",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x845adb2c711129d4f3966735ed98a9f09fc4ce57",
+    "nonceKey": 0,
+    "sequence": "873"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "batch",
+   "execType": "default(revert)",
+   "execMode": "0x0100000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 2,
+   "calls": [
+    {
+     "target": "usdce",
+     "fn": "approve",
+     "value": "0",
+     "args": [
+      "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+     ]
+    },
+    {
+     "target": "manager",
+     "fn": "createConvictionMarket",
+     "value": "0",
+     "args": [
+      1792240465,
+      1793520000,
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "https://market-metad.."
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "105442",
+    "callGasLimit": "995173",
+    "preVerificationGas": "55814",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "40262",
+    "paymasterPostOpGasLimit": "5958"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 900,
+   "recoveredSignerRawHash": "0x09A46c..efF2",
+   "recoveredSignerEip191": "0xB22D0e..cDc5",
+   "knownOwner": "0xb22d0e..cdc5",
+   "rawHashRecoversToOwner": false,
+   "eip191RecoversToOwner": true
+  },
+  {
+   "action": "transferRemote_outbound_NOT_userop",
+   "tx": "0xa4b40b5b5bc4a674e3aa264726ef885f3bc07a2230eaedae605a6c5e91b84fcd",
+   "viaEntryPoint": false,
+   "to": "0x5d1d6fa733bfba0ec7b143de0d7e8a4afa9f9ba9"
+  },
+  {
+   "action": "transferRemote_outbound_NOT_userop",
+   "tx": "0xd95bf9a4b710de0924a87300fa65c748ff11be8c7f12ae4c98bb9c4aa4afd0c7",
+   "viaEntryPoint": false,
+   "to": "0x5d1d6fa733bfba0ec7b143de0d7e8a4afa9f9ba9"
+  },
+  {
+   "action": "transferRemote_outbound_NOT_userop",
+   "tx": "0x4d5cf1ec257e00e09b83896e7df45e88362d48ecbb2ff9ecb062684ab35e676a",
+   "viaEntryPoint": false,
+   "to": "0x5d1d6fa733bfba0ec7b143de0d7e8a4afa9f9ba9"
+  },
+  {
+   "action": "operator_account_raw_signature_redeem",
+   "tx": "0x547571b5e1d716f099a32f974626c62ce0a9b0d115478ae11596ec968d00b0d4",
+   "block": "12590100",
+   "bundlerEOA": "0xa76dc9..9d30",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0xe9b8c21cf9a10cd60065a58eff7cbad41bfa2e7a79b3a6a395f5771f5798cd5f",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x11595",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "71061"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x985cc636aee034525d4e660596a08dc3bfda8657d87713879c10ab65274e837e",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "46111",
+    "callGasLimit": "156319",
+    "preVerificationGas": "76435",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "150000",
+    "paymasterPostOpGasLimit": "8937"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0xfEC20A..490D",
+   "recoveredSignerEip191": "0x4261D4..92b9",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  },
+  {
+   "action": "operator_account_raw_signature_redeem",
+   "tx": "0xe7557956984b3c24932e27fc280e812be1c8f9b8dc193f671e3ade7533e8ed52",
+   "block": "12590284",
+   "bundlerEOA": "0x13073e..5068",
+   "sender": "0x92E491..4232",
+   "userOpHash": "0x9cd2694755c6f3fc94ed7869612bc2b6b6f3998355e2def2fb8df6de7fd60ecb",
+   "hashMatchesUserOperationEventLog": true,
+   "viemHashAgrees": true,
+   "opSuccessInEventLog": true,
+   "nonce": {
+    "raw": "0x11596",
+    "mode": "0x00",
+    "type": "0x00",
+    "identifier": "0x0000000000000000000000000000000000000000",
+    "nonceKey": 0,
+    "sequence": "71062"
+   },
+   "factory": null,
+   "deploysAccount": false,
+   "factoryOwnerInInitCode": null,
+   "salt": null,
+   "callType": "single",
+   "execType": "default(revert)",
+   "execMode": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nCalls": 1,
+   "calls": [
+    {
+     "target": "conditionalTokens",
+     "fn": "redeemPositions",
+     "value": "0",
+     "args": [
+      "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x6aed71cd895e5c1e3ddc262e1c6e539febc1e4b27453bf49fe31233822378e17",
+      [
+       "1",
+       "2"
+      ]
+     ]
+    }
+   ],
+   "gas": {
+    "verificationGasLimit": "46111",
+    "callGasLimit": "123360",
+    "preVerificationGas": "76435",
+    "maxFeePerGas": "0",
+    "maxPriorityFeePerGas": "0",
+    "paymasterVerificationGasLimit": "150000",
+    "paymasterPostOpGasLimit": "8937"
+   },
+   "paymaster": "paymaster",
+   "paymasterDataBytes": 0,
+   "paymasterAndDataBytes": 52,
+   "signatureBytes": 65,
+   "sigV": "1b",
+   "initCodeBytes": 0,
+   "callDataBytes": 388,
+   "recoveredSignerRawHash": "0xfEC20A..490D",
+   "recoveredSignerEip191": "0x6208c5..718A",
+   "knownOwner": null,
+   "rawHashRecoversToOwner": null,
+   "eip191RecoversToOwner": null
+  }
+ ]
+}

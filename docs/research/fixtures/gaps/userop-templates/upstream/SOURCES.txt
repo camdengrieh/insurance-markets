@@ -1,0 +1,6 @@
+Third-party source excerpts kept as read-only evidence (MIT licensed upstream). Never executed.
+v3.1_src_*.sol   : github.com/zerodevapp/kernel, tag v3.1 (tag object sha 03f7f5cf5871cda0070e4223f196f5b577f6cde2), fetched with
+                   gh api -H "Accept: application/vnd.github.raw" "repos/zerodevapp/kernel/contents/<path>?ref=v3.1"
+kernel-7579-plugins_master_ECDSAValidator.sol : github.com/zerodevapp/kernel-7579-plugins, src/validators/ECDSAValidator.sol at master 332deed6eeef (2026-04-21). NEWER than the deployed v3.1 validator; shown only for comparison.
+sdk_core_constants.ts / sdk_ecdsa_constants.ts : github.com/zerodevapp/sdk packages/core/constants.ts and plugins/ecdsa/constants.ts (Kernel 0.3.1 addresses and initCodeHash).
+Deployed bytecode on chain 3223 was compared to the same addresses on Base (transcripts/09, 10): EntryPoint, KernelFactory and ECDSAValidator byte-identical; Kernel impl differs only in the cached chainId/domain-separator immutables.

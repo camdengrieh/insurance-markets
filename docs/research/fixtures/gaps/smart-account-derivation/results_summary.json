@@ -1,0 +1,321 @@
+{
+ "_note": "Compact results of the smart-account-derivation stream (gate 3). Third-party addresses truncated. Anvil account 0 (0xf39F..2266) is the public Anvil/Hardhat TEST account.",
+ "base_factory_getAddress_vs_local_and_observed": [
+  {
+   "label": "observed",
+   "owner": "0xa155b6..23a3",
+   "local": "0x924963..44e4",
+   "base_getAddress": "0x924963..44e4",
+   "observed_xo_account": "0x924963..44e4",
+   "local_equals_base": true
+  },
+  {
+   "label": "observed",
+   "owner": "0xf8Cd9D..5416",
+   "local": "0xC4531B..7930",
+   "base_getAddress": "0xc4531b..7930",
+   "observed_xo_account": "0xC4531B..7930",
+   "local_equals_base": true
+  },
+  {
+   "label": "observed",
+   "owner": "0x6F3427..c3d7",
+   "local": "0x7a8bFB..6D53",
+   "base_getAddress": "0x7a8bfb..6d53",
+   "observed_xo_account": "0x7a8bFB..6D53",
+   "local_equals_base": true
+  },
+  {
+   "label": "observed",
+   "owner": "0x183889..A1F4",
+   "local": "0x5EA9Bb..3168",
+   "base_getAddress": "0x5ea9bb..3168",
+   "observed_xo_account": "0x5EA9Bb..3168",
+   "local_equals_base": true
+  },
+  {
+   "label": "observed",
+   "owner": "0x713DEC..aBdC",
+   "local": "0xc1Af4a..91Ee",
+   "base_getAddress": "0xc1af4a..91ee",
+   "observed_xo_account": "0xc1Af4a..91Ee",
+   "local_equals_base": true
+  },
+  {
+   "label": "observed",
+   "owner": "0xEe333B..88e8",
+   "local": "0x5A265c..2e12",
+   "base_getAddress": "0x5a265c..2e12",
+   "observed_xo_account": "0x5A265c..2e12",
+   "local_equals_base": true
+  },
+  {
+   "label": "anvil0-TEST",
+   "owner": "0xf39Fd6..2266",
+   "local": "0xB3729F..d30d",
+   "base_getAddress": "0xb3729f..d30d",
+   "observed_xo_account": null,
+   "local_equals_base": true
+  }
+ ],
+ "anvil0_TEST_counterfactual": {
+  "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "index": 0,
+  "address": "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d",
+  "xo_chain_3223_code": "none (explorer smart-contracts endpoint 404; no AccountDeployed event)",
+  "base_chain_code_bytes": 61,
+  "base_validator_stored_owner": "0xf39fd6e5..2266 (= Anvil account 0)"
+ },
+ "validator_semantics_probe_base_eth_call_state_override": [
+  {
+   "label": "1271 owner=recover(raw digest)",
+   "result": "0x1626ba7e00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "userOp owner=recover(raw digest)",
+   "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "1271 owner=recover(EIP-191 hash of digest)",
+   "result": "0x1626ba7e00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "userOp owner=recover(EIP-191 hash of digest)",
+   "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "1271 control: unrelated owner",
+   "result": "0xffffffff00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "userOp control: unrelated owner",
+   "result": "0x0000000000000000000000000000000000000000000000000000000000000001"
+  },
+  {
+   "label": "readback ecdsaValidatorStorage(S) with owner=Xraw",
+   "result": "0x00000000000000000000000099ab66eabe8b17613dca5e7393e336787365634f"
+  }
+ ],
+ "kernel_fullpath_probe_base": [
+  {
+   "label": "read validator.ecdsaValidatorStorage(K) (no override)",
+   "result": "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+  },
+  {
+   "label": "K.isValidSignature, owner := recover(raw wrapped digest)",
+   "result": "0x1626ba7e00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "K.isValidSignature, owner := recover(EIP-191 of wrapped digest)",
+   "result": "0x1626ba7e00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "control: unrelated owner",
+   "result": "0xffffffff00000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "label": "control: wrong validator prefix (0x01 || other address)",
+   "result": "ERR {\"code\": 3, \"message\": \"execution reverted: h*n|\", \"data\": \"0x682a6e7c\"}"
+  }
+ ],
+ "balance_allowance_smart_account_field": {
+  "observed_owner_EOAs_tested": 18,
+  "owner_resolves_to_account": 0,
+  "registry_nonnull_on_sample": 13,
+  "sample_size": 18,
+  "anvil0_TEST_owner": "null",
+  "anvil0_TEST_counterfactual_account": "null",
+  "usdc_e_contract": "null",
+  "entrypoint_v07": "null",
+  "kernel_v31_implementation": "null"
+ },
+ "registry_vs_deployed_sample": [
+  {
+   "acct": "0x924963..44e4",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x3DdE77..8124",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x48151F..EeB2",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xf9f029..9b03",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 404,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xB9D108..8618",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xC4531B..7930",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x82c9A7..A486",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x72190B..C267",
+   "via_account_smart_account": false,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x777777"
+  },
+  {
+   "acct": "0xdbB752..401F",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xc29C5B..3B5b",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x7a8bFB..6D53",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 404,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xb7b087..FF9F",
+   "via_account_smart_account": false,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x777777"
+  },
+  {
+   "acct": "0xee9286..e770",
+   "via_account_smart_account": false,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x777777"
+  },
+  {
+   "acct": "0x24c061..8237",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0xE9b59D..785D",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x5EA9Bb..3168",
+   "via_account_smart_account": false,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x777777"
+  },
+  {
+   "acct": "0x55DD88..9a4a",
+   "via_account_smart_account": true,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  },
+  {
+   "acct": "0x03E914..5Ec9",
+   "via_account_smart_account": false,
+   "via_owner_smart_account": false,
+   "dataapi_portfolio_status": 200,
+   "deploy_paymaster": "0x2353B2"
+  }
+ ],
+ "accounts_with_matched_onchain_orders_29": {
+  "orderbook_smart_account_nonnull": 29,
+  "dataapi_user_found": 4,
+  "dataapi_404": 25
+ },
+ "onchain_order_signature_recovery": {
+  "orders": 52,
+  "txs": 26,
+  "distinct_makers": 29,
+  "signatureType3": 52,
+  "sig_len_86": 52,
+  "sig_prefix_0x01_validator_0x845A": 52,
+  "nonce0": 52,
+  "expiration0": 52,
+  "registered_owner_check": "18 of 18 makers checked: EIP-191(Kernel-wrapped digest) recovers to the validator-registered owner; raw-digest recovers to it in 0 of 18",
+  "userop_deploy_sigs": "34 of 34 deploying UserOps recover to the initCode owner under EIP-191(userOpHash); 0 under raw"
+ },
+ "bytecode_3223_vs_base": {
+  "factory": "identical (989 bytes)",
+  "validator": "identical (1819 bytes)",
+  "kernel_impl": "22784 bytes; differs in 34 bytes = cached EIP-712 domain separator (32 B) + chainId (2 B: 0x0c97 vs 0x2105); both recomputed with cast"
+ },
+ "population_derivation_check": {
+  "ownerRegistered_events": 2627,
+  "salt0_create2_matches": 2627,
+  "distinct_owners": 2627,
+  "owners_with_two_accounts": 0,
+  "windows": "r0 blocks 140k-506k (capped 1000), m1 2.0-3.0M, m2 5.0-6.0M, m3 8.0-9.0M, m4 10.5-11.5M, r1 12.0M-12.6M (2025-10-28..2026-10-18; windowed sample, not a census)"
+ },
+ "owner_activity_34_decoded": {
+  "base_nonce_gt0": 0,
+  "eth_nonce_gt0": 0,
+  "measured": 34
+ },
+ "owner_activity_r1_238": {
+  "total_owners": 238,
+  "base_measured": 238,
+  "eth_measured": 238,
+  "base_nonce_gt0": 1,
+  "eth_nonce_gt0": 0,
+  "either": 1
+ },
+ "paymaster_global_selectors": {
+  "count": 34,
+  "kernel_owner_change_selectors_matched": false,
+  "identified": [
+   "approve(address,uint256) 0x095ea7b3"
+  ],
+  "unidentified": 33
+ },
+ "bundler_probe": {
+  "host": "mainnet-bundler.xo.market",
+  "method": "eth_supportedEntryPoints",
+  "http": 200,
+  "result": [
+   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+   "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+  ],
+  "auth": "no key needed for this read method; sendUserOperation NOT tested"
+ },
+ "v_byte_probe": "validator returns success for v=27/28 and reverts InvalidSignature (0x8baa579f) for v=0/1"
+}

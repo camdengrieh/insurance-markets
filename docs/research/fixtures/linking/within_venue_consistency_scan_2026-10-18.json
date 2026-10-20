@@ -1,0 +1,180 @@
+{
+ "snapshot": {
+  "polymarket": "2026-10-18T17:59:17Z",
+  "kalshi": "2026-10-18T18:00:43Z"
+ },
+ "polymarket_negrisk": {
+  "n_sets": 421,
+  "n_fully_quoted": 131,
+  "sell_gross_pos": 7,
+  "sell_net_pos": 0,
+  "buy_gross_pos": 8,
+  "buy_net_pos": 5,
+  "buy_gross_pos_augmented_or_other": 6,
+  "max_sell_gross": 0.010999999999999899,
+  "max_buy_gross": 0.37,
+  "examples_sell": [
+   [
+    "Alberta Independence Referendum: Margin of Victory",
+    1.011,
+    6,
+    0.018
+   ],
+   [
+    "Elon Musk # tweets October 19 - October 21, 2026?",
+    1.008,
+    10,
+    0.037
+   ],
+   [
+    "Who wins the Senate pending Hormuz Agreement by Oct 23 and oil below $80 before the midterms?",
+    1.005,
+    4,
+    0.019
+   ],
+   [
+    "NHL: 2027 Champion",
+    1.003,
+    32,
+    0.028
+   ]
+  ],
+  "examples_buy": [
+   [
+    "Who will be the next US Ambassador to Greece?",
+    0.63,
+    7,
+    true,
+    false
+   ],
+   [
+    "Tlaxcala Governor Election Winner",
+    0.942,
+    15,
+    true,
+    false
+   ],
+   [
+    "UFC: Who Will Natalia Silva Fight Next?",
+    0.949,
+    3,
+    true,
+    false
+   ],
+   [
+    "IA-04 House Election Winner",
+    0.985,
+    2,
+    true,
+    false
+   ]
+  ]
+ },
+ "kalshi_mutually_exclusive": {
+  "n_sets": 410,
+  "n_fully_quoted": 212,
+  "sell_gross_pos": 6,
+  "sell_net_pos": 0,
+  "buy_gross_pos": 18,
+  "buy_net_pos": 11,
+  "buy_gross_pos_augmented_or_other": 0,
+  "max_sell_gross": 0.020000000000000018,
+  "max_buy_gross": 0.847,
+  "examples_sell": [
+   [
+    "Democratic Senate Seat Count (2028)",
+    1.02,
+    14,
+    0.066
+   ],
+   [
+    "Prime Minister of Spain after the next election?",
+    1.02,
+    3,
+    0.025
+   ],
+   [
+    "2028 House winner",
+    1.01,
+    2,
+    0.027
+   ],
+   [
+    "Alaska Governor-Senate combo",
+    1.01,
+    4,
+    0.035
+   ]
+  ],
+  "examples_buy": [
+   [
+    "What will be the 51st state in Trump's term?",
+    0.153,
+    8,
+    false,
+    false
+   ],
+   [
+    "Who will the next Pope be?",
+    0.373,
+    7,
+    false,
+    false
+   ],
+   [
+    "Who will win the next Manitoba PC leadership election?",
+    0.54,
+    5,
+    false,
+    false
+   ],
+   [
+    "Who will be the next COO of Goldman Sachs?",
+    0.68,
+    5,
+    false,
+    false
+   ]
+  ]
+ },
+ "kalshi_threshold_ladders": {
+  "n_ladders": 1337,
+  "pairs": 63832,
+  "gross_violating_pairs": 2,
+  "net_positive_pairs": 0,
+  "top_gross": [
+   [
+    0.007000000000000006,
+    "KXMIDTERMMOV-MO04R",
+    "KXMIDTERMMOV-MO04R-P11",
+    "KXMIDTERMMOV-MO04R-P14"
+   ],
+   [
+    0.0040000000000000036,
+    "KXMIDTERMMOV-COGOVD",
+    "KXMIDTERMMOV-COGOVD-P9",
+    "KXMIDTERMMOV-COGOVD-P12"
+   ]
+  ]
+ },
+ "kalshi_date_ladders": {
+  "n_ladders": 100,
+  "pairs": 1228,
+  "gross_violating_pairs": 0,
+  "net_positive_pairs": 0,
+  "top_gross": []
+ },
+ "polymarket_touch_ladders": {
+  "n_ladders": 36,
+  "pairs": 1692,
+  "gross_violating_pairs": 0,
+  "net_positive_pairs": 0
+ },
+ "polymarket_date_ladders": {
+  "n_ladders": 26,
+  "pairs": 264,
+  "gross_violating_pairs": 0,
+  "net_positive_pairs": 0,
+  "top_gross": []
+ }
+}

@@ -1,0 +1,164 @@
+/*
+  Trade screens. Tokens from ui/theme.css only; no inline styles, fonts or URLs.
+  Layout target: 360 px wide with the page's 16 px gutter and no sideways page scroll. Long ids and hashes wrap;
+  wide tables scroll inside their own focusable region; touch targets are at least 44 px.
+*/
+
+.tr-root {
+  min-width: 0;
+}
+
+.tr-section {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.tr-section > h2 {
+  font-size: 1.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.tr-mono {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.tr-note {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin: 0.25rem 0;
+}
+
+.tr-kv {
+  margin: 0;
+}
+
+.tr-kv > div {
+  padding-block: 0.375rem;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.tr-kv dt {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.tr-kv dd {
+  margin: 0.125rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.tr-block {
+  font-family: var(--mono);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.tr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+}
+
+.tr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.tr-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.75rem;
+}
+
+.tr-inline .ui-field {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.tr-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  padding-block: 0.25rem;
+}
+
+.tr-check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.tr-fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.tr-pick,
+.tr-facts,
+.tr-reasons,
+.tr-flags,
+.tr-owners,
+.tr-issues,
+.tr-calls,
+.tr-lines {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.tr-pick,
+.tr-facts,
+.tr-flags,
+.tr-owners {
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.tr-pick > li + li,
+.tr-facts > li + li,
+.tr-flags > li + li {
+  margin-top: 0.375rem;
+}
+
+.tr-calls > li {
+  margin-bottom: 1rem;
+}
+
+.tr-call-title,
+.tr-h4 {
+  font-weight: 600;
+  margin: 0 0 0.375rem;
+}
+
+.tr-h4 {
+  font-size: 1rem;
+}
+
+.tr-gate {
+  border-inline-start: 4px solid var(--border-strong);
+  padding-inline-start: 0.75rem;
+}
+
+.tr-handoff {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+}
+
+.tr-issues {
+  border-inline-start: 4px solid var(--border-strong);
+  padding-inline-start: 1.5rem;
+}

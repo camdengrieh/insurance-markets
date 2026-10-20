@@ -1,0 +1,49 @@
+dist/
+node_modules/
+.tools/
+
+# Third-party data we must not redistribute (Kalshi Developer Agreement v1.1 bars caching/aggregating/sharing API data; Quotient terms bar redistribution).
+# Raw venue dumps stay local. Derived numbers and our own scripts are fine. Scan for raw venue data and personal identifiers before any commit.
+docs/research/fixtures/kalshi/
+docs/research/fixtures/**/*kalshi*.json
+docs/research/fixtures/**/*quotient*
+docs/research/fixtures/linking/native_grouping_coverage_*.json
+
+# Per-machine agent settings can hold local paths; never commit them.
+.claude/settings.local.json
+
+# Python bytecode caches (embed absolute paths)
+__pycache__/
+*.pyc
+
+# The Cockpit's static client (app/) and daemon (bridge/): installed dependencies, build output, caches,
+# the project-local Playwright browser download and test artefacts. Nothing here is committed.
+app/node_modules/
+app/dist/
+app/.cache/
+app/test-results/
+app/playwright-report/
+bridge/node_modules/
+bridge/dist/
+bridge/.cache/
+.playwright-browsers/
+.playwright/
+ms-playwright/
+
+# Raw third-party API dumps from the venue census: only the venues the tests use are kept, and the
+# restricted-terms venues (Kalshi, Quotient, Novig, OG/Crypto.com, Gemini, Underdog) are never committed.
+docs/research/fixtures/*
+!docs/research/fixtures/xo/
+!docs/research/fixtures/gaps/
+!docs/research/fixtures/linking/
+!docs/research/fixtures/polymarket/
+!docs/research/fixtures/manifold/
+!docs/research/fixtures/pascal/
+!docs/research/fixtures/limitless/
+!docs/research/fixtures/sx-bet/
+!docs/research/fixtures/defillama/
+!docs/research/fixtures/hyperliquid-hip-4-outcome-markets/
+
+# Kalshi terms bar caching its data and this repo is public: never commit recorded Kalshi bodies
+app/src/venues/kalshi/fixtures/*_recorded.json
+**/kalshi*recorded*

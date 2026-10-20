@@ -1,0 +1,42 @@
+{
+  "note": "One entry per direct dependency of app/package.json (docs/dapp-design.md section 6 row 3). scripts/check-deps.ts fails if package.json and this file disagree. A dependency without npm provenance needs an exception with a reason. Facts were read from registry.npmjs.org metadata (GET) on 2026-10-19.",
+  "checkedAt": "2026-10-19",
+  "minimumAgeDays": 14,
+  "parity": {
+    "note": "The shared plugin sources compile against these, so the app and the plugin (root package.json) must pin the same versions.",
+    "packages": ["viem", "zod", "typescript", "@types/node"]
+  },
+  "direct": {
+    "react": { "kind": "runtime", "version": "19.3.0", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-09-09T17:21:30Z", "reason": "UI library" },
+    "react-dom": { "kind": "runtime", "version": "19.3.0", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-09-09T17:17:39Z", "reason": "DOM renderer; React 19 renders text through text nodes, not innerHTML" },
+    "viem": { "kind": "runtime", "version": "2.57.2", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-10-01T00:44:54Z", "reason": "Address, hashing and ABI helpers shared with the plugin sources; no wagmi, no WalletConnect" },
+    "zod": { "kind": "runtime", "version": "4.4.3", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-05-04T07:06:40Z", "reason": "Strict schemas for every untrusted response and for bridge/contract.ts" },
+    "@tanstack/react-query": { "kind": "runtime", "version": "5.104.1", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-10-02T10:04:57Z", "reason": "Caching, in-flight dedupe and backoff; per-source staleTime hangs the request budgets off it" },
+    "wouter": { "kind": "runtime", "version": "3.13.0", "license": "Unlicense", "installHooks": false, "provenance": true, "published": "2026-09-30T18:26:13Z", "reason": "Tiny hash router; no rewrites needed on any static host" },
+    "idb": { "kind": "runtime", "version": "8.0.3", "license": "ISC", "installHooks": false, "provenance": false, "published": "2025-05-07T08:12:54Z", "reason": "IndexedDB wrapper for the browser-only address book and cache; zero dependencies" },
+    "vite": { "kind": "dev", "version": "8.3.2", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-10-01T10:17:44Z", "reason": "Build and dev server" },
+    "@vitejs/plugin-react": { "kind": "dev", "version": "6.1.1", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-08-28T03:30:56Z", "reason": "JSX transform; 6.1.2 was 14.1 days old on 2026-10-19, one version older keeps a margin on the 14-day rule" },
+    "vitest": { "kind": "dev", "version": "5.0.3", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-09-30T11:30:42Z", "reason": "Unit and component test runner for app/" },
+    "jsdom": { "kind": "dev", "version": "30.1.2", "license": "MIT", "installHooks": false, "provenance": true, "published": "2026-10-04T09:15:00Z", "reason": "DOM for component tests that opt in with a vitest-environment comment. The package.json 'prepare' script is for its own repository and does not run for a dependency" },
+    "@playwright/test": { "kind": "dev", "version": "1.63.0", "license": "Apache-2.0", "installHooks": false, "provenance": true, "published": "2026-09-04T22:44:00Z", "reason": "End-to-end tests of our own build only; browsers are installed by a separate step into a project-local directory" },
+    "@axe-core/playwright": { "kind": "dev", "version": "4.13.0", "license": "MPL-2.0", "installHooks": false, "provenance": true, "published": "2026-08-11T17:07:40Z", "reason": "Automated accessibility checks. MPL-2.0 is file-level copyleft and fine as a devDependency; note it in NOTICE. Its 'prepare' script is for its own repository" },
+    "typescript": { "kind": "dev", "version": "5.9.3", "license": "Apache-2.0", "installHooks": false, "provenance": false, "published": "2025-09-30T21:19:38Z", "reason": "Matches the plugin so the shared sources type-check with one compiler" },
+    "@types/jsdom": { "kind": "dev", "version": "30.0.0", "license": "MIT", "installHooks": false, "provenance": false, "published": "2026-08-07T17:47:54Z", "reason": "Types for the jsdom used by the bundle runtime test and by component tests" },
+    "@types/node": { "kind": "dev", "version": "24.12.2", "license": "MIT", "installHooks": false, "provenance": false, "published": "2026-04-03T11:15:02Z", "reason": "Types for build scripts and the Vite config only; app/src has no Node types" },
+    "@types/react": { "kind": "dev", "version": "19.3.0", "license": "MIT", "installHooks": false, "provenance": false, "published": "2026-09-09T18:08:49Z", "reason": "React types" },
+    "@types/react-dom": { "kind": "dev", "version": "19.3.0", "license": "MIT", "installHooks": false, "provenance": false, "published": "2026-09-09T18:07:51Z", "reason": "React DOM types" }
+  },
+  "provenanceExceptions": {
+    "idb": "No attestation on 8.0.3; zero dependencies and a few hundred lines, reviewed as a wrapper only. Raw IndexedDB is the fallback if it is ever dropped.",
+    "typescript": "Microsoft does not publish an attestation for 5.9.x; version pinned to the plugin's.",
+    "@types/node": "DefinitelyTyped types, no runtime code; version pinned to the plugin's.",
+    "@types/jsdom": "DefinitelyTyped types, no runtime code.",
+    "@types/react": "DefinitelyTyped types, no runtime code.",
+    "@types/react-dom": "DefinitelyTyped types, no runtime code."
+  },
+  "transitiveInstallScripts": {
+    "note": "Packages in the lockfile whose registry metadata declares an install script. allowBuilds is empty, so pnpm runs none of them.",
+    "fsevents@2.3.3": "Optional macOS file-watching addon pulled by the file watcher; its install script is denied and not needed (watching falls back to polling)."
+  },
+  "allowBuilds": {}
+}

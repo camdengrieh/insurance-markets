@@ -1,0 +1,205 @@
+{
+  "synthetic": true,
+  "note": "Synthetic golden vectors for pm/links hash recipes rules-v2 and mask-v1. Inputs are invented text, not market data. 'sha256' is the SHA-256 of the UTF-8 canonical/masked string and can be re-checked with any independent tool.",
+  "fieldSeparator": "␟",
+  "arraySeparator": "␞",
+  "rulesV2": [
+    {
+      "name": "plain",
+      "fields": [
+        "Resolves YES if Team A wins."
+      ],
+      "canonical": "Resolves YES if Team A wins.",
+      "sha256": "cc0e365df67bf1c4ce171f3407a4d921fcbec45577dc1d6043ecd88936c1ac19"
+    },
+    {
+      "name": "html-and-entities",
+      "fields": [
+        "<p>Resolves <b>YES</b> if A &amp; B &lt;win&gt;.</p><script>alert(1)</script>"
+      ],
+      "canonical": "<p>Resolves <b>YES</b> if A & B <win>.</p><script>alert(1)</script>",
+      "sha256": "96df93b937a93d5e02660d520d94e4e24312560383938f2a08f992dcbc7ec39a"
+    },
+    {
+      "name": "fullwidth-kept-by-nfc",
+      "fields": [
+        "Ｒesolves　ＹＥＳ １２３"
+      ],
+      "canonical": "Ｒesolves ＹＥＳ １２３",
+      "sha256": "dd7e8e6fb2b08f4bc192e427eb25e749740c8af9c33b135accc01c165d60a171"
+    },
+    {
+      "name": "invisible-and-whitespace",
+      "fields": [
+        "Re​solves‮ YES\t\n if A"
+      ],
+      "canonical": "Resolves YES if A",
+      "sha256": "5d9c2f43750b801fd58203f47edd5f03b26e7a53b7376c932c692b7e67afc683"
+    },
+    {
+      "name": "two-fields",
+      "fields": [
+        "Rules A",
+        "Source B"
+      ],
+      "canonical": "Rules A␟Source B",
+      "sha256": "e3408eaaeb246d05a70fab1455845050e80d8d33b09ca08a1d9e36f0605f1b34"
+    },
+    {
+      "name": "array-field",
+      "fields": [
+        "Rules",
+        [
+          "src one",
+          "src two"
+        ]
+      ],
+      "canonical": "Rules␟src one␞src two",
+      "sha256": "1dbaebb96f3d7071842bac04dcaf4d4ee619ff09db26c8464beb4d40f6cdfc88"
+    },
+    {
+      "name": "single-decode",
+      "fields": [
+        "&amp;lt;"
+      ],
+      "canonical": "&lt;",
+      "sha256": "3885ff5ae3386f58e4f1f1363d4863d8c9a5f280fe15e346ad7c78a09529637a"
+    },
+    {
+      "name": "null-field-keeps-slot",
+      "fields": [
+        "Rules A",
+        null,
+        "End"
+      ],
+      "canonical": "Rules A␟␟End",
+      "sha256": "e956f7de0fcd0f0f0862d2c30d126ea3b070795f798147daf26fba58f863abcb"
+    },
+    {
+      "name": "html-comment",
+      "fields": [
+        "Keep<!-- hidden -->this"
+      ],
+      "canonical": "Keep<!-- hidden -->this",
+      "sha256": "e702417214b4b0eaf409da3904b208ebe6eefcf2934e6a1113511bc42abc3753"
+    },
+    {
+      "name": "superscript-vs-plain",
+      "fields": [
+        "limit 10² units"
+      ],
+      "canonical": "limit 10² units",
+      "sha256": "d28e291bfe3b26e6961f19c8a4f5fddec259008e57e4fc374cacc412424c20a7"
+    },
+    {
+      "name": "less-than-keeps-later-fields",
+      "fields": [
+        "Resolves YES if A<B holds",
+        "Source https://x.example/1"
+      ],
+      "canonical": "Resolves YES if A<B holds␟Source https://x.example/1",
+      "sha256": "eb5971b1b5148ea6befd4a2513c3794ae9ed4935865f20299fa3d341ca7afee2"
+    }
+  ],
+  "maskV1": [
+    {
+      "name": "date-time-venue",
+      "canonical": "Resolves YES if X occurs by December 31, 2026 11:59 PM ET according to Polymarket.",
+      "masked": "Resolves YES if X occurs by ⟦DATE⟧ ⟦TIME⟧ according to ⟦VENUE⟧.",
+      "sha256": "ed032270141bdbe3b8e28956afc0cd41c6930352b741844a547f4b55ee7323ed"
+    },
+    {
+      "name": "iso-number-percent",
+      "canonical": "Price above $100,000 at 2026-12-31T23:59:00Z with a 5% margin and 3 attempts.",
+      "masked": "Price above ⟦NUM⟧ at ⟦DATE⟧ with a ⟦NUM⟧ margin and ⟦NUM⟧ attempts.",
+      "sha256": "8692f090b244cccde9ee566a358a5249cf5d3cc8fcec4ee54624523c43ef96bd"
+    },
+    {
+      "name": "url-and-address",
+      "canonical": "See https://example.invalid/rules and contract 0xabababababababababababababababababababab for detail.",
+      "masked": "See ⟦URL⟧ and contract ⟦ADDR⟧ for detail.",
+      "sha256": "120bb2c309ecf12a7f70854d7267f9f1c0114572432243851358a2c7157447f6"
+    },
+    {
+      "name": "entities-case-insensitive",
+      "canonical": "Arsenal beat Chelsea FC and arsenal fans cheered.",
+      "entities": [
+        "Arsenal",
+        "Chelsea FC"
+      ],
+      "masked": "⟦ENT⟧ beat ⟦ENT⟧ and ⟦ENT⟧ fans cheered.",
+      "sha256": "69ef0cdf78d9a852daf5a53bc22359ba54a26fe8fc0ace10cda8df7204efd184"
+    },
+    {
+      "name": "forged-marker-removed",
+      "canonical": "⟦NUM⟧ stays literal text",
+      "masked": "NUM stays literal text",
+      "sha256": "161498d22fc1771680169c3ba6d581eb8c71f73594b60c4d4bd53353e79e4c12"
+    },
+    {
+      "name": "month-forms",
+      "canonical": "From 5 March 2026 until Mar 7 and again in April 2027, 01/02/2026.",
+      "masked": "From ⟦DATE⟧ until ⟦DATE⟧ and again in ⟦DATE⟧, ⟦DATE⟧.",
+      "sha256": "2ad78a99da82123a99cc8fc89b9ed0dd4cf6a4b2b1dc6c31d212c1d41d8e1913"
+    },
+    {
+      "name": "no-masking-needed",
+      "canonical": "Resolves YES if the home side wins in regular time.",
+      "masked": "Resolves YES if the home side wins in regular time.",
+      "sha256": "547b808c99a263e7b65f57598997de23beb3d48c4e92b3a64d9d4792c1dcbe01"
+    }
+  ],
+  "records": [
+    {
+      "name": "xo",
+      "venue": "xo",
+      "record": {
+        "rules": "SYNTHETIC rules: resolves YES if the synthetic event happens by 2026-12-31.",
+        "resolutionSources": [
+          "https://example.invalid/source"
+        ],
+        "resolverAddress": "0x1111111111111111111111111111111111111111",
+        "expiresAt": "2026-12-31T23:59:00Z",
+        "title": "ignored by the recipe"
+      },
+      "canonical": "SYNTHETIC rules: resolves YES if the synthetic event happens by 2026-12-31.␟https://example.invalid/source␟0x1111111111111111111111111111111111111111␟2026-12-31T23:59:00Z",
+      "rulesSha256": "81bfacf583a25eaa55c8fcc1a7f976638e95e4cdf596aedcffaabe6148fb38fc",
+      "maskedSha256": "056e808fcc341ea307fc81069b566da5268c3d388aef8161abd56b63bc0797ab"
+    },
+    {
+      "name": "polymarket",
+      "venue": "polymarket",
+      "record": {
+        "description": "SYNTHETIC description. Resolves per the named source.",
+        "resolutionSource": "https://example.invalid/source",
+        "endDate": "2026-12-31T00:00:00Z"
+      },
+      "canonical": "SYNTHETIC description. Resolves per the named source.␟https://example.invalid/source␟2026-12-31T00:00:00Z",
+      "rulesSha256": "d1cf005f11467c1837174ce61bcf876f3694c22ffe6f799a9db7a668c81a932e",
+      "maskedSha256": "53a86f4e5f5f18debda56873f45ab55e1356a02ef5475d39797b79a291f10216"
+    },
+    {
+      "name": "kalshi",
+      "venue": "kalshi",
+      "record": {
+        "rules_primary": "SYNTHETIC primary rule.",
+        "rules_secondary": "",
+        "close_time": "2026-12-31T23:59:00Z"
+      },
+      "canonical": "SYNTHETIC primary rule.␟␟2026-12-31T23:59:00Z",
+      "rulesSha256": "9e961f121addbbed1e59f627f4a6e607022d8d541fa0d58ca40f5793f3646f4d",
+      "maskedSha256": "d84f01aced7f7f829dd10ad837a1087a949127eb3227b9ffb78e15073ea6aaea"
+    },
+    {
+      "name": "limitless",
+      "venue": "limitless",
+      "record": {
+        "description": "SYNTHETIC limitless text",
+        "expirationTimestamp": 1798761540000
+      },
+      "canonical": "SYNTHETIC limitless text␟1798761540000",
+      "rulesSha256": "0afd1390c4f6415daaa5d53a0d2bc80c83183994c154f1407261a0e0175cb7fb",
+      "maskedSha256": "05c97ad2d2923b9b7afe7077b61c61e29d2be4158d758e6fc7d9183407982895"
+    }
+  ]
+}

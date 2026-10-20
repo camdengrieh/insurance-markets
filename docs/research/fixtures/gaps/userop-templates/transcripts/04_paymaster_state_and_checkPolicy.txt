@@ -1,0 +1,39 @@
+{
+ "paused": "false",
+ "dailyTxLimit": "10000",
+ "owner": "0x0498B2632c3D2bb24DaB53717f0e74DDEE46DE2f",
+ "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+ "SECONDS_PER_DAY": "86400",
+ "getDeposit": "2599578730852719530944",
+ "entryPointDepositInfo": {
+  "deposit": "2599578730852719530944",
+  "staked": false,
+  "stake": "0",
+  "unstakeDelaySec": 0,
+  "withdrawTime": 0
+ }
+}
+checkPolicy(account=never-seen, target, selector) -> (allowed, reason)
+  USDC.e    0x095ea7b3 true  Globally allowed selector        approve(address,uint256)
+  USDC.e    0xa9059cbb true  Allowed selector on contract     transfer(address,uint256)
+  USDC.e    0x23b872dd false Contract/selector not allowed    transferFrom(address,address,uint256)
+  CTF       0xa22cb465 true  Allowed selector on contract     setApprovalForAll(address,bool)
+  CTF       0x01b7037c true  Allowed selector on contract     redeemPositions(address,bytes32,bytes32,uint256[])
+  CTF       0x72ce4275 true  Allowed selector on contract     splitPosition(address,bytes32,bytes32,uint256[],uint256)
+  CTF       0x9e7212ad true  Allowed selector on contract     mergePositions(address,bytes32,bytes32,uint256[],uint256)
+  CTF       0xf242432a true  Allowed selector on contract     safeTransferFrom(address,address,uint256,uint256,bytes)
+  CTF       0x2eb2c2d6 false Contract/selector not allowed    safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)
+  Manager   0x7f54a7a2 true  Allowed selector on contract     createConvictionMarket(uint40,uint40,address,string)
+  Manager   0x1de5facd true  Allowed selector on contract     respondToUpdateRequest(bytes32,bool)
+  Manager   0xbdb83289 true  Allowed selector on contract     cancelMarket(bytes32)
+  Manager   0x507cedd3 true  Allowed selector on contract     createConvictionMarketFor(address,uint40,uint40,address,string)
+  Manager   0xa375765e false Contract/selector not allowed    updateMetadata(bytes32,string)
+  HypRoute  0x81b4e8b4 false Contract/selector not allowed    transferRemote(uint32,bytes32,uint256)
+  Exchange  0x627cdcb9 false Contract/selector not allowed    incrementNonce()
+  (any)     0x095ea7b3 true  Globally allowed selector        approve(address,uint256)
+  (any)     0xa9059cbb false Contract/selector not allowed    transfer(address,uint256)
+ acct never-seen                               unlimited false remainingToday 10000 usedToday 0
+ acct Enable-Trading acct (first-op example)   unlimited false remainingToday 9999 usedToday 1
+ acct bot 0x5939                               unlimited false remainingToday 10000 usedToday 0
+ acct bot 0x623c                               unlimited false remainingToday 10000 usedToday 0
+ acct market-maker-like 0x92E4                 unlimited false remainingToday 9882 usedToday 118

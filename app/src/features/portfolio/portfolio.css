@@ -1,0 +1,43 @@
+/* Portfolio and wallet screens. Tokens only (ui/theme.css): no inline style, no font or image from elsewhere. */
+.pf-root h3,
+.wl-root h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.pf-venue {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.pf-venue > * + * {
+  margin-top: 0.75rem;
+}
+
+.pf-note {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.pf-flags {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.8125rem;
+}
+
+.pf-binding {
+  font-weight: normal;
+  color: var(--text-muted);
+}
+
+.pf-tile > * + * {
+  margin-top: 0.5rem;
+}
+
+.pf-root code,
+.wl-root code {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}

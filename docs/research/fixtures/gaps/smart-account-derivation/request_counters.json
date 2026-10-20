@@ -1,0 +1,11 @@
+{
+ "count": {
+  "api-mainnet.xo.market": 69,
+  "explorer-mainnet.xo.market": 121,
+  "orderbooks.xo.market": 91,
+  "mainnet.base.org": 21,
+  "mainnet-bundler.xo.market": 2,
+  "ethereum-rpc.publicnode.com": 7
+ },
+ "blocked": {}
+}

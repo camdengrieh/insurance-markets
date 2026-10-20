@@ -1,0 +1,55 @@
+{
+  "market": "0x86bfb53af7250a40928975c551d12c185b762fa4ce0b40c6a64a50c946d72587",
+  "asset_id": "51939490109676186832507970701169130490548061087912630009168726706475001411420",
+  "timestamp": "1792344896057",
+  "hash": "9b4fcef2dd59843d26b7ca31ab5490748aee4019",
+  "min_order_size": "5",
+  "tick_size": "0.01",
+  "neg_risk": true,
+  "last_trade_price": "0.380",
+  "bids": [
+    {
+      "price": "0.33",
+      "size": "305730"
+    },
+    {
+      "price": "0.34",
+      "size": "425794.47"
+    },
+    {
+      "price": "0.35",
+      "size": "173636.48"
+    },
+    {
+      "price": "0.36",
+      "size": "765426.39"
+    },
+    {
+      "price": "0.37",
+      "size": "7523.41"
+    }
+  ],
+  "asks": [
+    {
+      "price": "0.42",
+      "size": "8379.7"
+    },
+    {
+      "price": "0.41",
+      "size": "9728.3"
+    },
+    {
+      "price": "0.4",
+      "size": "660188.54"
+    },
+    {
+      "price": "0.39",
+      "size": "2314334.84"
+    },
+    {
+      "price": "0.38",
+      "size": "850398.71"
+    }
+  ],
+  "_note": "fixture trimmed by jq to the 5 best levels per side (best = last element); original had 30 bids / 54 asks"
+}

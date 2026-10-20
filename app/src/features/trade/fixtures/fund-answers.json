@@ -1,0 +1,119 @@
+{
+ "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+ "account": "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d",
+ "answers": {
+  "fund_approve": {
+   "tool": "xo_fund_account",
+   "args": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "amount_usd": "3"
+   },
+   "recorded_at_ms": 1893456000000,
+   "is_error": false,
+   "structured": {
+    "io.paybox/transactionProposal": {
+     "version": "1",
+     "expiresAt": "2030-01-01T00:04:00Z",
+     "kind": "evm",
+     "chain": "eip155:8453",
+     "transaction": {
+      "to": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "value": "0",
+      "data": "0x095ea7b300000000000000000000000054716a535c3b5616e3f0d4d5005fc4bb660cdf5f00000000000000000000000000000000000000000000000000000000002dc6c0"
+     }
+    }
+   },
+   "text": "FUNDING STEP 1 OF 2 (approve). Nothing has been signed or sent; PayBox will show the raw call and ask before anything moves.\nProposal: approve exactly 3 USDC (Circle USDC on Base) for the Hyperlane warp router. Value 0. Expires 2030-01-01T00:04:00Z.\nXO smart account (derived from owner 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266): 0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d (relay state: registered).\nRelay reservation: funding_id 0123456789abcdef0123456789abcdef, 3 USD reserved until 2030-01-01T00:05:00Z.\nNext: when PayBox shows this request succeeded, call xo_fund_account again with the same owner and amount_usd. It returns step 2 (the transfer). Keep funding_id 0123456789abcdef0123456789abcdef and xo_balance_before_usd 0.\nSend this request from the PayBox wallet 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266: PayBox does not tell this plugin which wallet signs, and the allowance and balance above were read for that address. It also needs a little ETH on Base for gas.\nWarning: Only the Base side of the route was verified; the XO side was not read.\nWarning: Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4).\nThe per-order and daily caps are enforced by this plugin and its relay only. They are advisory against a compromised or prompt-injected agent, which can ask PayBox to sign directly and bypass them.\nUse a dedicated PayBox credential as the XO owner and put only what you can afford to lose behind it: one approval of an opaque digest can also move that wallet's funds elsewhere."
+  },
+  "fund_transfer": {
+   "tool": "xo_fund_account",
+   "args": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "amount_usd": "3"
+   },
+   "recorded_at_ms": 1893456000000,
+   "is_error": false,
+   "structured": {
+    "io.paybox/transactionProposal": {
+     "version": "1",
+     "expiresAt": "2030-01-01T00:04:00Z",
+     "kind": "evm",
+     "chain": "eip155:8453",
+     "transaction": {
+      "to": "0x54716A535c3B5616e3f0d4D5005Fc4bB660cDF5F",
+      "value": "0",
+      "data": "0x81b4e8b40000000000000000000000000000000000000000000000000000000000000c97000000000000000000000000b3729f7e1ab0b4a50e7de5599ecc321b8775d30d00000000000000000000000000000000000000000000000000000000002dc6c0"
+     }
+    }
+   },
+   "text": "FUNDING STEP 2 OF 2 (transfer). Nothing has been signed or sent; PayBox will show the raw call and ask before anything moves.\nProposal: transferRemote of 3 USDC to the XO chain (domain 3223), recipient the XO smart account below. Value 0. Expires 2030-01-01T00:04:00Z.\nXO smart account (derived from owner 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266): 0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d (relay state: registered).\nRelay reservation: funding_id 0123456789abcdef0123456789abcdef, 3 USD reserved until 2030-01-01T00:05:00Z.\nNext: when PayBox shows this request succeeded, call xo_fund_account once more with the same owner and amount_usd plus tx_hash (the Base transaction hash of this transfer), funding_id 0123456789abcdef0123456789abcdef and xo_balance_before_usd 0. That follows the delivery and reports the hash to the relay (POST /v1/funding/report). Do NOT call it again without tx_hash after the transfer: that would begin a second funding.\nSend this request from the PayBox wallet 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266: PayBox does not tell this plugin which wallet signs, and the allowance and balance above were read for that address. It also needs a little ETH on Base for gas.\nWarning: Only the Base side of the route was verified; the XO side was not read.\nWarning: Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4).\nThe per-order and daily caps are enforced by this plugin and its relay only. They are advisory against a compromised or prompt-injected agent, which can ask PayBox to sign directly and bypass them.\nUse a dedicated PayBox credential as the XO owner and put only what you can afford to lose behind it: one approval of an opaque digest can also move that wallet's funds elsewhere."
+  },
+  "fund_refused_flag_off": {
+   "tool": "xo_fund_account",
+   "args": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "amount_usd": "3"
+   },
+   "recorded_at_ms": 1893456000000,
+   "is_error": true,
+   "structured": {
+    "outcome": "refused",
+    "code": "flag_off",
+    "message": "ENABLE_FUNDING is off. The operator has to switch this write path on.",
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "account": "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d",
+    "amount_usd": "3",
+    "warnings": [
+     "Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+    ],
+    "next_action": "The operator has not switched this write path on (ENABLE_FUNDING for funding, ENABLE_WITHDRAW for withdrawals).",
+    "report_endpoint": "POST /v1/funding/report"
+   },
+   "text": "REFUSED (flag_off): ENABLE_FUNDING is off. The operator has to switch this write path on. Nothing was signed or sent.\nNext: The operator has not switched this write path on (ENABLE_FUNDING for funding, ENABLE_WITHDRAW for withdrawals).\nWarning: Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+  },
+  "fund_refused_over_test_amount": {
+   "tool": "xo_fund_account",
+   "args": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "amount_usd": "50"
+   },
+   "recorded_at_ms": 1893456000000,
+   "is_error": true,
+   "structured": {
+    "outcome": "refused",
+    "code": "above_test_amount",
+    "message": "The amount is above the recorded test amount. Larger fundings stay refused until the test deposit has been seen to arrive (delivery) and to be credited by the XO orderbook, and there is no verified way to take money back out.",
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "account": "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d",
+    "amount_usd": "50",
+    "warnings": [
+     "Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+    ],
+    "next_action": "Fund the recorded test amount or less. Larger amounts stay refused until a first small deposit has been seen to arrive and to be credited.",
+    "report_endpoint": "POST /v1/funding/report"
+   },
+   "text": "REFUSED (above_test_amount): The amount is above the recorded test amount. Larger fundings stay refused until the test deposit has been seen to arrive (delivery) and to be credited by the XO orderbook, and there is no verified way to take money back out. Nothing was signed or sent.\nNext: Fund the recorded test amount or less. Larger amounts stay refused until a first small deposit has been seen to arrive and to be credited.\nWarning: Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+  },
+  "fund_refused_bad_amount": {
+   "tool": "xo_fund_account",
+   "args": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "amount_usd": "0.0000001"
+   },
+   "recorded_at_ms": 1893456000000,
+   "is_error": true,
+   "structured": {
+    "outcome": "refused",
+    "code": "invalid_amount",
+    "message": "amount allows at most 6 decimal places",
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "warnings": [
+     "Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+    ],
+    "next_action": "Pass amount_usd as a plain decimal string such as 1 or 2.5 (up to 6 decimals, greater than zero).",
+    "report_endpoint": "POST /v1/funding/report"
+   },
+   "text": "REFUSED (invalid_amount): amount allows at most 6 decimal places Nothing was signed or sent.\nNext: Pass amount_usd as a plain decimal string such as 1 or 2.5 (up to 6 decimals, greater than zero).\nWarning: Funding is one-way until an exit is proven: there is no verified withdrawal path (test T4)."
+  }
+ }
+}

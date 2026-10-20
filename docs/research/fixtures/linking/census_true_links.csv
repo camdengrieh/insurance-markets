@@ -1,0 +1,18 @@
+venues,label,sim,a,b,net_bps,gross_bps,capital_usd,size_contracts,days_locked,apr_net_pct,flags,persist_recheck
+kalshi/limitless,Dm,0.86,Nigerian Senate election winner? — APC,Nigerian Senate Election Winner APC,245.9,416.7,480.96,501.0,132.9,6.75,,True
+kalshi/limitless,Dm,0.761,Who will officially lead Venezuela at the end ,Venezuela leader end of 2026? María Corina Mac,234.0,266.9,974.0,1000.0,74.0,11.54,extreme_price_leg,True
+kalshi/limitless,I,0.969,2028 Republican presidential nominee — Marco R,Republican Presidential Nominee 2028 Marco Rub,164.1,309.3,970.0,1000.0,751.5,0.8,,True
+polymarket/kalshi,I,0.739,Will Michelle Obama win the 2028 Democratic pr,2028 Democratic presidential nominee — Michell,92.8,104.5,81923.7109,82779.5,751.5,0.45,extreme_price_leg,True
+kalshi/limitless,Dm,0.722,Who will officially lead Venezuela at the end ,Venezuela leader end of 2026? Nicolás Maduro,73.5,309.3,34.6678,35.74,74.0,3.63,,True
+kalshi/limitless,I,0.97,2028 Republican presidential nominee — Ron DeS,Republican Presidential Nominee 2028 Ron DeSan,59.0,94.8,990.6078,1000.0,751.5,0.29,extreme_price_leg,True
+kalshi/limitless,I,0.732,Europa League Champion — Juventus,UEFA Europa League: 2027 Champion Juventus,55.2,204.1,8.4574,8.63,224.2,0.9,,True
+polymarket/kalshi,I,0.847,Will Lamine Yamal win the 2026 Ballon d'Or?,Who will win the Ballon d'Or in 2026? — Lamine,46.6,254.4,3968.2942,4069.23,74.9,2.27,,True
+kalshi/limitless,I,0.97,2028 Democratic presidential nominee — Andy Be,Democratic Presidential Nominee 2028 Andy Besh,45.7,90.8,991.0,1000.0,751.5,0.22,,True
+kalshi/limitless,I,0.942,Serie A Champion — Roma,Serie A: 2027 Champion Roma,41.9,204.1,76.6164,78.18,224.3,0.68,,False
+polymarket/kalshi,Dm,0.696,Will Édouard Philippe win the 2027 French pres,Next French presidential election winner? — Éd,40.5,204.1,7571.6858,7726.21,224.8,0.66,,True
+polymarket/xo,I,0.665,Will the Fed decrease interest rates by 50+ bp,Fed cuts rates by 50+ bps after October 2026 m,39.1,40.2,0.7885,0.7916,10.4,13.72,extreme_price_leg,True
+polymarket/xo,I,0.679,Will the Fed increase interest rates by 50+ bp,Fed hikes rates by 50+ bps after October 2026 ,38.2,40.2,0.3053,0.3065,10.4,13.39,extreme_price_leg,True
+polymarket/kalshi,I,0.746,Will Mark Cuban win the 2028 Democratic presid,2028 Democratic presidential nominee — Mark Cu,15.8,20.8,56356.2151,56473.48,751.5,0.08,extreme_price_leg,True
+polymarket/kalshi,I,0.731,Will Roy Cooper win the 2028 Democratic presid,2028 Democratic presidential nominee — Roy Coo,11.8,17.3,5454.61,5464.03,751.5,0.06,extreme_price_leg,True
+polymarket/kalshi,I,0.704,Will Stephen A. Smith win the 2028 Democratic ,2028 Democratic presidential nominee — Stephen,7.1,10.0,20901.8372,20922.76,751.5,0.03,extreme_price_leg,True
+polymarket/kalshi,I,0.702,Will Chris Murphy win the 2028 Democratic pres,2028 Democratic presidential nominee — Chris M,4.9,10.0,1281.3973,1282.68,751.5,0.02,extreme_price_leg,True

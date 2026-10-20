@@ -1,0 +1,31 @@
+{
+ "status": "success",
+ "data": [
+  {
+   "leagueId": 11000,
+   "leagueLabel": "Bitcoin",
+   "sportId": 14,
+   "eventId": "XBTCUSDT-ABOVE-20261019",
+   "provider": "CRYPTO",
+   "status": 1,
+   "participantOneId": "BTC",
+   "participantOneName": "Bitcoin (BTC) above on October 19",
+   "participantTwoId": "",
+   "participantTwoName": "",
+   "startDate": "2026-10-19T16:00:00.000Z"
+  },
+  {
+   "leagueId": 11000,
+   "leagueLabel": "Bitcoin",
+   "sportId": 14,
+   "eventId": "XBTCUSDT-ABOVE-20261020",
+   "provider": "CRYPTO",
+   "status": 1,
+   "participantOneId": "BTC",
+   "participantOneName": "Bitcoin (BTC) above on October 20",
+   "participantTwoId": "",
+   "participantTwoName": "",
+   "startDate": "2026-10-20T16:00:00.000Z"
+  }
+ ]
+}

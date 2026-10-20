@@ -1,0 +1,38 @@
+{
+ "note": "Unauthenticated GET /orderbook-v3/snapshot?marketHash=... (legacy path; changelog 2026-10-13 says a much stricter rate limit applies from 2026-12-01). BTC above 82,000 daily (expires 2026-10-19T16:00Z), fetched ~2026-10-19 00:55 UTC. Odds are maker-frame implied probability x1e20; size = resting maker stake in USDC base units (6 dp).",
+ "response": {
+  "status": "success",
+  "data": {
+   "marketHash": "0xaeb353d9220796213a94ba3be8e68a8911fdf18034e7f430923d142b5770e689",
+   "outcomeOne": [
+    {
+     "percentageOdds": "63750000000000000000",
+     "size": "63750000"
+    },
+    {
+     "percentageOdds": "63000000000000000000",
+     "size": "189000000"
+    },
+    {
+     "percentageOdds": "61125000000000000000",
+     "size": "183375000"
+    }
+   ],
+   "outcomeTwo": [
+    {
+     "percentageOdds": "32750000000000000000",
+     "size": "32750000"
+    },
+    {
+     "percentageOdds": "32000000000000000000",
+     "size": "96000000"
+    },
+    {
+     "percentageOdds": "31375000000000000000",
+     "size": "94125000"
+    }
+   ],
+   "version": "000001000014424003"
+  }
+ }
+}

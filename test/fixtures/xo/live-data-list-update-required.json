@@ -1,0 +1,108 @@
+{
+  "data": [
+    {
+      "id": 29878,
+      "createdAt": "2026-08-16T11:11:00.404Z",
+      "updatedAt": "2026-08-16T16:20:03.359Z",
+      "contractMarketId": "0x543a818982dcb0b200912051937d3d9662a7cebed9705f95ca38ecd4bd8c64a9",
+      "conditionId": "0x543a818982dcb0b200912051937d3d9662a7cebed9705f95ca38ecd4bd8c64a9",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-08-16T11:10:58.000Z",
+      "creatorId": 47724,
+      "title": "Pantoja UFC Title 2026",
+      "slug": "pantoja-ufc-title-2026-8576",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 2,
+          "name": "SPORTS",
+          "slug": null
+        },
+        {
+          "id": 48,
+          "name": "MMA",
+          "slug": "mma"
+        },
+        {
+          "id": 49,
+          "name": "UFC",
+          "slug": "ufc"
+        }
+      ],
+      "type": 2,
+      "totalVolume": "0",
+      "totalVolumeInUSD": "0",
+      "totalNotional": "0",
+      "totalNotionalInUSD": "0.00",
+      "status": "UPDATE_REQUIRED",
+      "startsAt": "2026-08-16T13:06:00.000Z",
+      "expiresAt": "2026-12-31T23:59:00.000Z",
+      "resolvedAt": null,
+      "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/fc72abef-9ea1-4bda-a603-39bd0435d2c2.json",
+      "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/703230ac-4d1b-427f-8db6-a46d2bbce940.webp",
+      "resolutionSources": [
+        "https://www.ufc.com/athletes"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 47724,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 0,
+        "tier": "Spectator"
+      },
+      "outcomes": [
+        {
+          "id": 60119,
+          "marketId": 29878,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "11391663534206084427319566581821776514981246241357392035390171284739203173484",
+          "title": "Yes",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 0
+        },
+        {
+          "id": 60120,
+          "marketId": 29878,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "44819965271471691502588394728284367098710113493505608494556847943125077172087",
+          "title": "No",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 3,
+    "itemCount": 1,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "id": 39308,
+  "createdAt": "2026-09-14T14:22:25.894Z",
+  "updatedAt": "2026-10-14T11:29:33.836Z",
+  "contractMarketId": "0xc433e0159778d1d50c4190ec7e22538210bd0672957122022ac2f2fd7ffcfc9e",
+  "conditionId": "0xc433e0159778d1d50c4190ec7e22538210bd0672957122022ac2f2fd7ffcfc9e",
+  "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+  "versionId": 3,
+  "createMarketBlockTimestamp": "2026-09-14T14:22:23.000Z",
+  "creatorId": 47724,
+  "title": "Jack Barton will be announced as the next James Bond.",
+  "slug": "jack-barton-will-be-announced-as-the-next-james-bo-2536",
+  "rules": {
+    "description": "This market will resolve based on the first actor officially announced as the next James Bond after market launch and on or before December 31, 2026, 23:59 UTC.\n\nThe market resolves to the listed actor if that actor is the first person officially announced as the next James Bond during the market period.The market resolves to No for that listed actor if any other actor is announced first, or if no actor is officially announced as the next James Bond by the deadline.\n\nThe first official announcement counts, even if the choice later changes. These outcomes are mutually exclusive - only one can resolve to Yes.Primary resolution source is official information from Amazon MGM Studios. If the primary source is unavailable for more than 48 hours, a consensus of credible reporting may be used. Only official recognition from the primary source (or, if necessary, the consensus of secondary sources) will count. Unofficial reports, rumors, or fan casting do not qualify. If the outcome cannot be reasonably determined from the designated sources within a reasonable time after the deadline, the market will be voided.",
+    "outcomeRules": [
+      {
+        "rule": "Jack Barton is the first actor officially announced as the next James Bond by December 31, 2026, 23:59 UTC.",
+        "outcomeIndex": 0
+      },
+      {
+        "rule": "Jack Barton is not the first actor officially announced as the next James Bond by December 31, 2026, 23:59 UTC.",
+        "outcomeIndex": 1
+      }
+    ]
+  },
+  "description": "Will Jack Barton be officially announced as the next James Bond actor by December 31, 2026, 11:59 PM UTC?",
+  "categoryPath": [
+    {
+      "id": 9,
+      "name": "CULTURE",
+      "slug": null
+    },
+    {
+      "id": 87,
+      "name": "Movies",
+      "slug": "movies"
+    }
+  ],
+  "type": 2,
+  "totalVolume": "2535023660082",
+  "totalVolumeInUSD": "2535023.660082",
+  "totalNotional": "10081178593289",
+  "totalNotionalInUSD": "10081178.59",
+  "collateralTokenId": 2,
+  "collateralToken": {
+    "id": 2,
+    "symbol": "USDC",
+    "name": "Bridged USDC (XO)",
+    "tokenAddress": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+    "decimals": 6,
+    "isActive": true,
+    "networkId": 1,
+    "logoUrl": ""
+  },
+  "status": "ACTIVE",
+  "startsAt": "2026-09-14T17:08:00.000Z",
+  "expiresAt": "2026-12-31T23:59:00.000Z",
+  "resolvedAt": null,
+  "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/63b3c511-9c11-4f79-b6d1-05a258fae7d7.json",
+  "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/0ff01047-a907-4326-9bfd-f299e1897580.webp",
+  "resolutionEvidence": null,
+  "resolutionSources": [
+    "https://press.amazonmgmstudios.com",
+    "https://x.com/AmazonMGMStudio",
+    "https://www.aboutamazon.com/news/entertainment"
+  ],
+  "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+  "resolutionType": "MANUAL",
+  "resolutionFlagCount": 0,
+  "priorityScore": 0,
+  "likes": 0,
+  "cpEnabled": false,
+  "cpMultiplier": 1,
+  "creatorBps": 0,
+  "isFeatured": false,
+  "featuredOrder": null,
+  "creator": {
+    "id": 47724,
+    "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+    "username": "REDACTED",
+    "bio": null,
+    "profilePictureUrl": null,
+    "roosterColor": "#FF5588",
+    "achievements": [],
+    "verified": false,
+    "isOg": false,
+    "cpPoints": 0,
+    "tier": "Spectator"
+  },
+  "outcomes": [
+    {
+      "id": 78977,
+      "marketId": 39308,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "42354992342168343237406153717649127110110175778428379760615491859902975634862",
+      "title": "Yes",
+      "currentPrice": "500000",
+      "volumeTraded": "595321490487",
+      "volumeTradedInUSD": "595321.490487",
+      "notionalTraded": "8079604076463",
+      "index": 0
+    },
+    {
+      "id": 78978,
+      "marketId": 39308,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "66953884917108720627204838970547557432848656853057816955034737867180201609172",
+      "title": "No",
+      "currentPrice": "500000",
+      "volumeTraded": "1939702169595",
+      "volumeTradedInUSD": "1939702.169595",
+      "notionalTraded": "2090427050414",
+      "index": 1
+    }
+  ],
+  "notes": null,
+  "reviewStatus": "APPROVE",
+  "effectiveFeeConfig": {
+    "eligible": true,
+    "curveModel": "FLAT_BPS",
+    "takerFeeBps": 0,
+    "makerFeeBps": 0,
+    "configId": null,
+    "configName": null,
+    "splitSummary": null
+  },
+  "convictionSeed": {
+    "conditionId": "0xc433e0159778d1d50c4190ec7e22538210bd0672957122022ac2f2fd7ffcfc9e",
+    "creator": null,
+    "commitment": null
+  },
+  "rootEventSlug": "who-will-be-the-next-james-bond"
+}

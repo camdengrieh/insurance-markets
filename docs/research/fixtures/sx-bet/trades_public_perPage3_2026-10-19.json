@@ -1,0 +1,64 @@
+{
+ "status": "success",
+ "data": {
+  "trades": [
+   {
+    "tradeId": "0xe67d0a6564c11fe1251fd1c8326cd2f0e946f03aaba331dd165af09050fc082d",
+    "marketHash": "0x47c39b1673b2a82a4f3efaac97391f9826a0d576a015883e61f6ff4b684d6c22",
+    "isBettingOutcomeOne": false,
+    "isParlay": false,
+    "totalStake": "5330000",
+    "totalReturn": "25380952",
+    "weightedAverageOdds": "21000000315197002854",
+    "betTime": "2026-10-19T00:44:31.654Z",
+    "gameTime": "2026-10-18T23:05:00.000Z",
+    "outcomeLabel": "Not Llaneros FC",
+    "teamOneName": "Llaneros FC",
+    "teamTwoName": "Independiente Santa Fe",
+    "type": 1,
+    "leagueLabel": "Primera A",
+    "sportId": 5,
+    "eventId": "L20457730"
+   },
+   {
+    "tradeId": "0xc40b74408e45c073b690718d2f97562edf17d898717541161319cf7059b829f1",
+    "marketHash": "0xf993a02835749b4e3f7b3b0b87ac04a0b66d08cb0a565249a2c7019c3bf4a6bf",
+    "isBettingOutcomeOne": true,
+    "isParlay": false,
+    "totalStake": "90000000",
+    "totalReturn": "174757281",
+    "weightedAverageOdds": "51500000163083333849",
+    "betTime": "2026-10-19T00:44:31.049Z",
+    "gameTime": "2026-10-19T14:30:00.000Z",
+    "userAddress": "0x7017b86d75A1B4b21636112E5A1238A5426d00C7",
+    "username": "ichiroar",
+    "outcomeLabel": "Over 21.5",
+    "teamOneName": "Mikhail Kukushkin",
+    "teamTwoName": "Stefanos Sakellaridis",
+    "type": 166,
+    "leagueLabel": "Almaty Open ATP",
+    "sportId": 6,
+    "eventId": "L20569262"
+   },
+   {
+    "tradeId": "0x527d43140f69a0439fa7aeafb4c987a176a71549088b5b8d38e45352343f7889",
+    "marketHash": "0x47c39b1673b2a82a4f3efaac97391f9826a0d576a015883e61f6ff4b684d6c22",
+    "isBettingOutcomeOne": false,
+    "isParlay": false,
+    "totalStake": "31877468",
+    "totalReturn": "151797466",
+    "weightedAverageOdds": "21000000092228153531",
+    "betTime": "2026-10-19T00:44:22.274Z",
+    "gameTime": "2026-10-18T23:05:00.000Z",
+    "outcomeLabel": "Not Llaneros FC",
+    "teamOneName": "Llaneros FC",
+    "teamTwoName": "Independiente Santa Fe",
+    "type": 1,
+    "leagueLabel": "Primera A",
+    "sportId": 5,
+    "eventId": "L20457730"
+   }
+  ],
+  "nextKey": "eyJiZXRUaW1lIjoiMjAyNi0xMC0xOVQwMDo0NDoyMi4yNzRaIiwidHJhZGVJZCI6IjB4NTI3ZDQzMTQwZjY5YTA0MzlmYTdhZWFmYjRjOTg3YTE3NmE3MTU0OTA4OGI1YjhkMzhlNDUzNTIzNDNmNzg4OSJ9"
+ }
+}

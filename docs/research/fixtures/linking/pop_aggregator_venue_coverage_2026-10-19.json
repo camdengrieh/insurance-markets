@@ -1,0 +1,463 @@
+{
+ "_meta": {
+  "purpose": "who covers which venue (levels: 1 registry, 3 library, 4 hosted API, 5 trading layer, 6 aggregator-of-aggregators)",
+  "snapshot": "2026-10-19",
+  "method": "vendor docs/READMEs/source read first-hand this session; a venue list is a claim of coverage, not proof of working execution",
+  "by": "docs/research/14-platform-of-platforms.md"
+ },
+ "rows": [
+  {
+   "id": "ccxt-prediction",
+   "level": 3,
+   "kind": "library (MIT)",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "limitless",
+    "opinion",
+    "predictfun",
+    "myriad",
+    "sxbet",
+    "hyperliquid",
+    "binance"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": false,
+   "health": "ccxt 4.5.88 published 2026-10-14; prediction/ dir first commit 2026-07-15",
+   "source": "github.com/ccxt/ccxt ts/src/prediction/*.ts + exchanges.json \"prediction\" list",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "pmxt",
+   "level": 3,
+   "kind": "library (MIT) + hosted Router",
+   "venues": [
+    "polymarket",
+    "polymarket_us",
+    "kalshi",
+    "limitless",
+    "probable",
+    "baozi",
+    "myriad",
+    "opinion",
+    "metaculus",
+    "smarkets",
+    "hyperliquid",
+    "gemini",
+    "suibets",
+    "rain",
+    "hunch"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "hosted Router (read-only)",
+   "health": "last release v2.54.0 2026-07-18; main quiet since",
+   "source": "docs/research/10 section 1.1 (core/COMPLIANCE.md)",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "dr-manhattan",
+   "level": 3,
+   "kind": "library (no licence file)",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "opinion",
+    "limitless",
+    "predictfun"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": false,
+   "health": "last commit 2026-07-12; single 0.0.1 release",
+   "source": "github.com/guzus/dr-manhattan README",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "synpath",
+   "level": 3,
+   "kind": "library (MIT) + hosted matching API",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "polymarket_us",
+    "opinion",
+    "hyperliquid",
+    "predict_fun",
+    "limitless",
+    "sx_bet"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "hosted GET /match/market (key required), SOR \"buckets\" for Kalshi+Polymarket",
+   "health": "v0.8.1 2026-10-14; repo created 2026-09-28",
+   "source": "github.com/Synpath-ai/synpath README; synpath.dev docs",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "predictefy",
+   "level": 4,
+   "kind": "hosted API (closed server, MIT SDK)",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "opinion",
+    "hyperliquid",
+    "limitless",
+    "polymarket_us",
+    "sxbet",
+    "myriad",
+    "gemini",
+    "rain",
+    "predictfun",
+    "pascal",
+    "xo",
+    "pred (darked 2026-08-13)",
+    "predictstreet",
+    "novig"
+   ],
+   "read": true,
+   "trade": "hosted build/submit lanes ARMED for 13 venues incl. xo (vendor claim; no XO order ever submitted per vendor docs)",
+   "cross_venue_matching": "/v1/clusters, /v1/discrepancies, router pseudo-venue",
+   "health": "npm 1.0.0-beta.11 2026-10-07",
+   "source": "docs.predictefy.com llms-full.txt (fetched 2026-10-19)",
+   "conf": "H for the vendor claim, M for execution reality",
+   "lists_xo": true,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "predexon",
+   "level": 4,
+   "kind": "hosted API",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "opinion",
+    "limitless",
+    "predict.fun",
+    "binance (reference)"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": "unified search only (no arb endpoints shown)",
+   "health": "live site 2026-10-19",
+   "source": "predexon.com + predexon.com/pricing",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "blockrun-pm",
+   "level": 6,
+   "kind": "x402 pass-through reseller of Predexon v2",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "limitless",
+    "opinion",
+    "predictfun",
+    "binance"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": "GET /v1/pm/markets/search (\"matching\" category)",
+   "health": "402 live 2026-10-19; flat $0.0085/call (Base USDC)",
+   "source": "blockrun.ai/llms.txt; live 402 response",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "oddpool",
+   "level": 4,
+   "kind": "hosted API (proprietary)",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "polymarket_us"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": "basis_class/divergence_axes matched events (enterprise) + /arbitrage/current (Premium)",
+   "health": "docs live 2026-10-19",
+   "source": "docs.oddpool.com/institutions/reference-data/venues.md",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "polyrouter",
+   "level": 4,
+   "kind": "hosted API (open beta)",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "manifold",
+    "limitless",
+    "prophetx",
+    "novig",
+    "sxbet"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": false,
+   "health": "last changelog 2026-01-06",
+   "source": "docs/research/10 section 1.4; interexy.com 2026-03-04",
+   "conf": "M",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "adjacent",
+   "level": 4,
+   "kind": "hosted API",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "polymarket_us",
+    "gemini"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": false,
+   "health": "n/a",
+   "source": "docs/research/10 section 1.5",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "prediction-hunt",
+   "level": 4,
+   "kind": "hosted API v2 (prediction.com)",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "polymarket_us",
+    "prophetx",
+    "underdog",
+    "novig",
+    "predictfun",
+    "predictit",
+    "opinion"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": "/matching-markets (group_id, platforms), /arb Dev+ plan",
+   "health": "site live 2026-10-18",
+   "source": "prediction.com + prediction.com/api/docs",
+   "conf": "M (docs say \"eight venues\", name three)",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "pdata.world",
+   "level": 4,
+   "kind": "free keyless data aggregator (CC BY 4.0)",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "manifold",
+    "predict.fun",
+    "myriad",
+    "opinion",
+    "limitless",
+    "gemini"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": "claims to link same question across venues; method undocumented on the page",
+   "health": "nightly bulk files",
+   "source": "pdata.world/data",
+   "conf": "M",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": true
+  },
+  {
+   "id": "river-markets",
+   "level": 5,
+   "kind": "prime brokerage API (YC, proprietary)",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "polymarket_us",
+    "crypto_com",
+    "novig",
+    "rothera (planned)"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "none: one River ID per exchange listing",
+   "health": "docs live 2026-10-19",
+   "source": "docs.rivermarkets.com concepts/exchanges.md, river-ids.md",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "kairos",
+   "level": 5,
+   "kind": "cross-venue terminal + enterprise API",
+   "venues": [
+    "kalshi",
+    "polymarket",
+    "hyperliquid",
+    "predict.fun"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "merged ladder, NBBO endpoint routes to best venue",
+   "health": "live 2026-10-19",
+   "source": "kairos.trade",
+   "conf": "M (vendor page)",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "matchr",
+   "level": 5,
+   "kind": "aggregator app + API",
+   "venues": [
+    "polymarket",
+    "kalshi",
+    "predictit (docs example)",
+    "manifold/metaculus (third-party list)"
+   ],
+   "read": true,
+   "trade": "claimed (\"One click. Best price. Automatic routing\")",
+   "cross_venue_matching": "AI-driven, 900+ matched pairs claimed, method undocumented",
+   "health": "docs live 2026-10-19",
+   "source": "docs.matchr.xyz",
+   "conf": "L-M",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "parsec",
+   "level": 4,
+   "kind": "hosted API + MCP (46 tools)",
+   "venues": [
+    "five exchanges (names not recoverable)"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "markets.list returns duplicate_ids (SDK)",
+   "health": "parsecapi.com, docs., app., api. do not resolve on 2026-10-19; SDK last push 2026-07-18; npm parsec-mcp 0.1.0 (2026-03-09)",
+   "source": "github.com/parsecular/*",
+   "conf": "M (service appears offline)",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "jupiter-prediction",
+   "level": 5,
+   "kind": "Solana DEX-aggregator front end",
+   "venues": [
+    "kalshi (DefiLlama adapter: fees go to Kalshi)",
+    "polymarket (provider field in Jupiter docs example)"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": "none documented",
+   "health": "DefiLlama 30d volume ~$6.07M",
+   "source": "developers.jup.ag/docs/prediction/events-and-markets; DefiLlama dimension-adapters dexs/jupiter-prediction",
+   "conf": "M",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "metamask-predictions",
+   "level": 5,
+   "kind": "wallet front end",
+   "venues": [
+    "polymarket"
+   ],
+   "read": true,
+   "trade": true,
+   "cross_venue_matching": false,
+   "health": "DefiLlama 30d volume ~$4.95M; 4% fee to MetaMask+Polymarket",
+   "source": "metamask.io/prediction-markets; DefiLlama",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  },
+  {
+   "id": "defillama",
+   "level": 1,
+   "kind": "registry (keyless API)",
+   "venues": [
+    "133 prediction-market protocols incl. kalshi, polymarket (intl, US, combos), xo-market, trueo, limitless-exchange, opinion, predict-fun, myriad, hyperliquid-outcomes, sx-bet-v3"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": false,
+   "health": "adapters updated daily (repo pushed 2026-10-18)",
+   "source": "api.llama.fi/protocols",
+   "conf": "H",
+   "lists_xo": true,
+   "lists_trueo": true,
+   "lists_limitless": true
+  },
+  {
+   "id": "prediction-index",
+   "level": 1,
+   "kind": "directory website",
+   "venues": [
+    "314 projects incl. XO Market and Truemarkets"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": false,
+   "health": "lists Dome as live; omits pmxt, Predictefy, Synpath, River, Oddpool, Matchr",
+   "source": "predictionindex.xyz/ecosystem embedded JSON",
+   "conf": "H",
+   "lists_xo": true,
+   "lists_trueo": true,
+   "lists_limitless": false
+  },
+  {
+   "id": "prediction-almanac",
+   "level": 1,
+   "kind": "GitHub YAML registry (MIT code, CC0 data)",
+   "venues": [
+    "21 platform YAML files (16 rendered): no XO, no Trueo"
+   ],
+   "read": true,
+   "trade": false,
+   "cross_venue_matching": false,
+   "health": "daily rebuild; 100 commits 2026-08-17..2026-10-18",
+   "source": "github.com/kachence/prediction-almanac",
+   "conf": "H",
+   "lists_xo": false,
+   "lists_trueo": false,
+   "lists_limitless": false
+  }
+ ]
+}

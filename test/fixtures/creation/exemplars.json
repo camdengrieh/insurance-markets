@@ -1,0 +1,227 @@
+{
+ "approved_gcs": {
+  "first_review_note": "Market approved by admin",
+  "metadata": {
+   "title": "Real Madrid vs Real Sociedad: 10 or more corner kicks?",
+   "description": "10 or more corners. Even though it looks like a yes.. I'm going with my usual NOPE for 10+ corners.",
+   "category": "SPORTS",
+   "tags": [
+    "Football",
+    "Real Madrid",
+    "Real Sociedad",
+    "Corners"
+   ],
+   "subcategories": [
+    "Football"
+   ],
+   "image_url": "https://storage.googleapis.com/market-image-mainnet/compressed/8482bba3-4bdb-4c73-9b5a-6cbae625a616.webp",
+   "rules": {
+    "description": "This market resolves based on whether the total number of corner kicks in the match between Real Madrid and Real Sociedad on August 26, 2026, is greater than or equal to 10. Extra time and penalty shootouts are excluded unless specifically stated. Primary source: La Liga Official Website (https://www.laliga.com). If the primary source is unavailable, incomplete, or inconsistent, resolution falls back to ESPN FC (https://www.espn.com/soccer). If the match is abandoned before completion and official corner statistics are not published, the market voids and all positions resolve equally.",
+    "outcomeRules": [
+     {
+      "outcomeIndex": 0,
+      "rule": "Resolves to Yes if the total number of corner kicks in the match is 10 or greater according to the primary official source."
+     },
+     {
+      "outcomeIndex": 1,
+      "rule": "Resolves to No if the total number of corner kicks in the match is 9 or fewer according to the primary official source."
+     }
+    ]
+   },
+   "resolution_sources": [
+    "https://www.laliga.com",
+    "https://www.espn.com/soccer",
+    "https://www.fotmob.com/matches/real-sociedad-vs-real-madrid/2g087q#5868018:tab=h2h"
+   ],
+   "outcomes": [
+    {
+     "id": 0,
+     "title": "Yes"
+    },
+    {
+     "id": 1,
+     "title": "No"
+    }
+   ]
+  }
+ },
+ "approved_s3": {
+  "first_review_note": "This market is clear and ready to resolve.",
+  "metadata": {
+   "title": "Will Bitcoin reach $100,000 by the end of 2026?",
+   "description": "Will Bitcoin reach $100,000 by the end of 2026?",
+   "category": "CRYPTO",
+   "tags": [
+    "bitcoin",
+    "crypto",
+    "price",
+    "btc"
+   ],
+   "subcategories": [
+    "Bitcoin"
+   ],
+   "image_url": "https://market-images-623756711122.s3.eu-west-1.amazonaws.com/compressed/1396841c-91e1-4a89-bbc0-b0c4007d10be.webp",
+   "rules": {
+    "description": "This market resolves based on whether Bitcoin (BTC) achieves a spot price of $100,000 USD or higher on the Binance BTCUSDT exchange pair before or at 2026-12-31T23:59:59Z. Futures mark prices do not count; only spot market execution prices apply. Prices on decentralized exchanges or other centralized exchanges besides Binance and the secondary fallback do not count. Primary source: Binance (https://www.binance.com). If the primary source is unavailable, incomplete, or inconsistent, resolution falls back to CoinGecko (https://www.coingecko.com). Binance official API primary source governs, with CoinGecko index acting as the secondary fallback if Binance data is unavailable. If The Binance BTCUSDT trading pair is delisted permanently prior to resolution or Prolonged and unrecoverable exchange data feed failure preventing verification at the cutoff time, the market voids and all positions resolve equally.",
+    "outcomeRules": [
+     {
+      "outcomeIndex": 0,
+      "rule": "Resolves to Yes if Binance BTCUSDT spot price reaches or exceeds $100,000 USD prior to or at the cutoff time."
+     },
+     {
+      "outcomeIndex": 1,
+      "rule": "Resolves to No if the Binance BTCUSDT spot price fails to reach or exceed $100,000 USD at any point prior to or at the cutoff time."
+     }
+    ]
+   },
+   "resolution_sources": [
+    "https://www.tradingview.com",
+    "https://www.coinbase.com",
+    "https://coinedition.com",
+    "https://blockchain-council.org",
+    "https://www.binance.com",
+    "https://www.coingecko.com"
+   ],
+   "outcomes": [
+    {
+     "id": 0,
+     "title": "Yes"
+    },
+    {
+     "id": 1,
+     "title": "No"
+    }
+   ]
+  }
+ },
+ "rejected_substantive": {
+  "first_review_note": "## MODRA Review\n\n**Decision:** REJECT\n**Quality score:** 0.00\n**Mode:** proposal\n\n### Summary\nThis market was rejected for the reasons below.\n\n### Rejection reasons\n- [API-Football] Could not extract team names from market. Market must clearly identify both teams.",
+  "metadata": {
+   "title": "UEFA Nations League: Germany & Netherlands win. Norway to draw. And 1 red card.",
+   "description": "My usual Sunday drama combo.",
+   "category": "SPORTS",
+   "tags": [
+    "football",
+    "uefa",
+    "accumulator",
+    "red-card"
+   ],
+   "subcategories": [
+    "Football",
+    "UEFA Nations League"
+   ],
+   "image_url": "https://storage.googleapis.com/market-image-mainnet/compressed/7f9d0e46-cdc6-4a39-bd4f-aa3efea79e33.webp",
+   "rules": {
+    "description": "This market resolves based on whether Germany wins, Norway draws with Portugal, Netherlands wins, and at least one red card is issued in one of these matches on October 4th. Friendly matches outside the specified UEFA window are excluded. Primary source: UEFA (https://www.uefa.com). If the primary source is unavailable, incomplete, or inconsistent, resolution falls back to ESPN FC (https://www.espn.com/soccer/). UEFA official match reports govern over secondary sports news sources. If any of the specified matches are abandoned or postponed beyond the tournament window or official match results are not published, the market resolves to No.",
+    "outcomeRules": [
+     {
+      "outcomeIndex": 0,
+      "rule": "Germany wins their match, Norway draws with Portugal, Netherlands wins their match, and at least one red card is shown in one of these fixtures."
+     },
+     {
+      "outcomeIndex": 1,
+      "rule": "Any of the conditions fail, including if Germany does not win, Norway and Portugal do not draw, Netherlands does not win, or zero red cards are shown across all specified fixtures. Or a match gets cancelled."
+     }
+    ]
+   },
+   "resolution_sources": [
+    "https://www.uefa.com",
+    "https://www.espn.com/soccer/"
+   ],
+   "outcomes": [
+    {
+     "id": 0,
+     "title": "Yes"
+    },
+    {
+     "id": 1,
+     "title": "No"
+    }
+   ]
+  }
+ },
+ "update_required_pair": {
+  "oracle_note": "The rules were tightened and made more specific. The deadline is now 23:59 UTC on Dec 31, 2026, and the market resolves YES only if there is a formal official claim, otherwise NO. Social media, rallies, interviews, and vague statements about “controlling” the strait are explicitly excluded. “Official ownership” now requires one of three things: an executive order/law/treaty in the Federal Register",
+  "original": {
+   "title": "Will the US officially claim sovereign ownership of the Strait of Hormuz by December 31, 2026?",
+   "description": "Will the US officially claim sovereign ownership of the Strait of Hormuz by December 31, 2026?",
+   "category": "POLITICS",
+   "tags": [
+    "Middle East",
+    "Geopolitics",
+    "US Foreign Policy"
+   ],
+   "subcategories": [
+    "Middle East"
+   ],
+   "image_url": "https://storage.googleapis.com/market-image-mainnet/compressed/ec743100-4392-4cfa-a84f-a98b2d627005.webp",
+   "rules": {
+    "description": "This market resolves based on whether the United States officially claims or establishes territorial ownership over the Strait of Hormuz by December 31, 2026. Social media posts, informal rhetoric, military patrols, freedom of navigation operations, and temporary blockades do not constitute ownership. Primary sources include the U.S. Department of State and The White House.",
+    "outcomeRules": [
+     {
+      "outcomeIndex": 0,
+      "rule": "The United States government officially and formally claims or establishes legal sovereign ownership of the Strait of Hormuz through official state action or diplomatic instruments."
+     },
+     {
+      "outcomeIndex": 1,
+      "rule": "The United States does not officially claim or establish sovereign ownership of the Strait of Hormuz by the cutoff time, or actions remain restricted to rhetoric, social media posts, or military patrols."
+     }
+    ]
+   },
+   "resolution_sources": [
+    "https://www.state.gov",
+    "https://www.whitehouse.gov",
+    "https://www.ctvnews.ca/world/trump-says-no-iran-talks-planned-claims-hormuz-new-u-s-territory-1.8023194",
+    "https://www.trtworld.com/world/trt-world/ru-and-gcc-reject-unlawful-sovereignty-claim-over-strait-of-hormuz"
+   ],
+   "outcomes": [
+    {
+     "id": 0,
+     "title": "Yes"
+    },
+    {
+     "id": 1,
+     "title": "No"
+    }
+   ]
+  },
+  "oracle_suggested": {
+   "title": "Will the US officially claim sovereign ownership of the Strait of Hormuz by December 31, 2026?",
+   "description": "Will the US officially claim sovereign ownership of the Strait of Hormuz by December 31, 2026?",
+   "category": "POLITICS",
+   "tags": [],
+   "subcategories": [
+    "Middle East"
+   ],
+   "image_url": "https://storage.googleapis.com/market-image-mainnet/compressed/ec743100-4392-4cfa-a84f-a98b2d627005.webp",
+   "rules": {
+    "description": "This market resolves YES only if the United States officially claims or establishes territorial or sovereign ownership over the Strait of Hormuz by 23:59 UTC on December 31, 2026; otherwise it resolves NO. Social media posts (including Truth Social), informal rhetoric, interviews, rally speeches, press gaggles, military patrols, freedom of navigation operations, temporary blockades, security control, or statements about \"controlling\" or \"protecting\" the waterway do not constitute ownership and will not be used for resolution. \"Officially claims or establishes territorial ownership\" requires at least one of the following: an executive order, law, or treaty published in the Federal Register or enacted by Congress that explicitly states the U.S. claims, assumes, or establishes sovereignty or sovereign ownership over the Strait of Hormuz (or uses equivalent wording such as \"the Strait of Hormuz is hereby declared U.S. territory\"); or an official White House or State Department press release published on whitehouse.gov or state.gov explicitly stating the U.S. claims or establishes sovereign ownership of the Strait of Hormuz; or an official U.S. diplomatic note to the UN or the UNCLOS depositary asserting U.S. sovereignty or sovereign ownership over the Strait of Hormuz. Statements describing naval blockades, freedom of navigation operations, security operations, or describing the strait as \"effectively\" or \"essentially\" U.S. territory do not qualify as an official claim of ownership. Primary sources for resolution are official publications on whitehouse.gov, state.gov, and the Federal Register; if these are unavailable, major wire services such as Reuters, AP, or AFP quoting the exact text of an official document or press release may be used instead. If no such explicit official claim or establishment of sovereign ownership is made by the deadline, the market resolves to NO.",
+    "outcomeRules": [
+     {
+      "outcomeIndex": 0,
+      "rule": "The United States government officially and formally claims or establishes legal sovereign ownership of the Strait of Hormuz through official state action or diplomatic instruments."
+     },
+     {
+      "outcomeIndex": 1,
+      "rule": "The United States does not officially claim or establish sovereign ownership of the Strait of Hormuz by the cutoff time, or actions remain restricted to rhetoric, social media posts, or military patrols."
+     }
+    ]
+   },
+   "resolution_sources": [
+    "https://www.state.gov",
+    "https://www.whitehouse.gov",
+    "https://www.reuters.com/"
+   ],
+   "outcomes": [
+    {
+     "id": 0,
+     "title": "Yes"
+    },
+    {
+     "id": 1,
+     "title": "No"
+    }
+   ]
+  }
+ }
+}

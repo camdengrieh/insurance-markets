@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["./**/*.ts", "../headers.config.ts", "../../bridge/test/e2e/corpus.ts", "../../bridge/test/e2e/harness.ts", "../playwright.config.ts"],
+  "exclude": ["../node_modules"]
+}

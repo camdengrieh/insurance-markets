@@ -1,0 +1,108 @@
+{
+  "data": [
+    {
+      "id": 48778,
+      "createdAt": "2026-10-13T11:46:08.257Z",
+      "updatedAt": "2026-10-13T12:06:33.659Z",
+      "contractMarketId": "0x9e4e1628c7765b3a6780485d675db99f0a4ee786f0f919fc44e7e2ac0dcd635c",
+      "conditionId": "0x9e4e1628c7765b3a6780485d675db99f0a4ee786f0f919fc44e7e2ac0dcd635c",
+      "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+      "versionId": 3,
+      "createMarketBlockTimestamp": "2026-10-13T11:46:06.000Z",
+      "creatorId": 2,
+      "title": "Will Bitcoin reach $100,000 by the end of 2026?",
+      "slug": "will-bitcoin-reach-100000-by-the-end-of-2026-8743",
+      "rules": {},
+      "categoryPath": [
+        {
+          "id": 1,
+          "name": "CRYPTO",
+          "slug": null
+        },
+        {
+          "id": 56,
+          "name": "Bitcoin",
+          "slug": "bitcoin"
+        }
+      ],
+      "type": 4,
+      "totalVolume": "0",
+      "totalVolumeInUSD": "0",
+      "totalNotional": "0",
+      "totalNotionalInUSD": "0.00",
+      "status": "VOIDED",
+      "startsAt": "2026-10-13T11:46:03.000Z",
+      "expiresAt": "2026-12-31T23:59:59.000Z",
+      "resolvedAt": "2026-10-13T12:06:27.000Z",
+      "metadataUri": "https://market-metadata-623756711122.s3.eu-west-1.amazonaws.com/5897bbd2-4637-404e-86da-074c87c2162c.json",
+      "imageUrl": "https://market-images-623756711122.s3.eu-west-1.amazonaws.com/compressed/1396841c-91e1-4a89-bbc0-b0c4007d10be.webp",
+      "resolutionSources": [
+        "https://www.tradingview.com",
+        "https://www.coinbase.com",
+        "https://coinedition.com",
+        "https://blockchain-council.org",
+        "https://www.binance.com",
+        "https://www.coingecko.com"
+      ],
+      "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+      "resolutionType": "MANUAL",
+      "resolutionFlagCount": 0,
+      "priorityScore": 0,
+      "likes": 0,
+      "cpEnabled": true,
+      "cpMultiplier": 1,
+      "creatorBps": 0,
+      "isFeatured": false,
+      "featuredOrder": null,
+      "creator": {
+        "id": 2,
+        "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+        "username": "REDACTED",
+        "bio": null,
+        "profilePictureUrl": null,
+        "roosterColor": "#FF5588",
+        "achievements": [],
+        "verified": false,
+        "isOg": false,
+        "cpPoints": 12981.05,
+        "tier": "Believer"
+      },
+      "outcomes": [
+        {
+          "id": 97917,
+          "marketId": 48778,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "29200899628790811293408169270685167190502807533124337348224939920775133530156",
+          "title": "Yes",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 0
+        },
+        {
+          "id": 97918,
+          "marketId": 48778,
+          "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+          "outcomeTokenId": "12088027843022060008110305617068821017667468582866500124132106184879164271176",
+          "title": "No",
+          "currentPrice": "500000",
+          "volumeTraded": "0",
+          "volumeTradedInUSD": "0",
+          "notionalTraded": "0",
+          "index": 1
+        }
+      ],
+      "notes": null,
+      "reviewStatus": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "take": 5,
+    "itemCount": 1,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  }
+}

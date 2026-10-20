@@ -1,0 +1,102 @@
+{
+  "_note": [
+    "Owner to smart-account pairs for test/account-derive.test.ts. Public chain data only: no transaction hash, date or label.",
+    "anvil: the ten well-known Anvil/Hardhat test addresses (address only, never a key). Accounts were derived with Foundry cast 1.7.1 (calldata, keccak, checksum), independently of viem; index 0 equals the spec's section 2.1 vector, which the live Base factory's getAddress also returns.",
+    "observed: ten pairs from OwnerRegistered events on XO chain 3223 (kernel to owner), copied from docs/research/fixtures/gaps/userop-templates/owners.json, where the key is the account and the value the owner. Every pair must re-derive from the owner."
+  ],
+  "initCodeHash": "0x85d96aa1c9a65886d094915d76ccae85f14027a02c1647dde659f869460f03e6",
+  "anvil": [
+    {
+      "index": 0,
+      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "account": "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d"
+    },
+    {
+      "index": 1,
+      "owner": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "account": "0xEC4b217240f0292c65Bf136b341e400e2D28cA6F"
+    },
+    {
+      "index": 2,
+      "owner": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "account": "0xBCB0FC9aE4908e04F89E328E3F6720C7bB856781"
+    },
+    {
+      "index": 3,
+      "owner": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "account": "0x6338AEc4Ff300027aE912c496DbA97B47e7CB43B"
+    },
+    {
+      "index": 4,
+      "owner": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "account": "0x0F68B1A35a4B79829c3b3C0e3d45d9756194c3F0"
+    },
+    {
+      "index": 5,
+      "owner": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "account": "0x6826b3e90c69c487159967D3f9A8534ab4DF44d3"
+    },
+    {
+      "index": 6,
+      "owner": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "account": "0xEb453A24D0C95ac0329DdD493B6f26B55C8033d2"
+    },
+    {
+      "index": 7,
+      "owner": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "account": "0xAca38CB4d74A9958dE123B80CD3601084801A8C9"
+    },
+    {
+      "index": 8,
+      "owner": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "account": "0xC5BC11BbA60898DE765E17FEa054A916295F87B6"
+    },
+    {
+      "index": 9,
+      "owner": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+      "account": "0xEc854E25fDC52C85e09828017fD60c9C2b6AFdC8"
+    }
+  ],
+  "observed": [
+    {
+      "owner": "0x4AB6055287534d183D30b29110835Af6D3D3257c",
+      "account": "0x0cC88b0bcA38781Bcd419bE51B36c17d85ECA5B8"
+    },
+    {
+      "owner": "0x5e325B0BdE135fc5E0DBdFd1547D17B26ED27c3b",
+      "account": "0x70e71875088B5c5605EFdE7B416Cfb3B32552648"
+    },
+    {
+      "owner": "0xFC08497e5492e4A53062Badb4240c6aD532Fc08F",
+      "account": "0x812dbCc180e8795A9AE37Dba95D665ECA122e7B5"
+    },
+    {
+      "owner": "0x77F2F801e691CD6f47baA17b4445Fc8323121C75",
+      "account": "0xe05e1498DFAD526fEAd959B192C6d1B901f1E301"
+    },
+    {
+      "owner": "0x69BaA9DfB311A868d01636c1Aa8F0A47E9E239E3",
+      "account": "0xF712dD0714fD5d7F844Ea909D029EC4F4E3b7999"
+    },
+    {
+      "owner": "0x1aac5ebF1096F4bB0bA7b50fe97f5AC8d51090d9",
+      "account": "0xdc438933B36388A5582cEee28fe39e04Bf40C3BD"
+    },
+    {
+      "owner": "0xE6c51610fB660918058E78bDae23573a35462928",
+      "account": "0x5D020d3Ad464274a9972Bdd60145B2B4b8136a4E"
+    },
+    {
+      "owner": "0x601A217E2CF562431e6e63Df8C25BAf1BbB6D5A7",
+      "account": "0x5939F5f9e7b9eD593F13BdE2e6F94736925Cf779"
+    },
+    {
+      "owner": "0x7B44D89BD4894f95dcAf0FA3a27E0cDF448207f3",
+      "account": "0x623cABbAe9f6f5ADA9d64751De53248d14D5afa5"
+    },
+    {
+      "owner": "0xB22D0eDCc8B26b7320A1d5ec515ee431D8e1cDc5",
+      "account": "0x488AfD46Dc703Ac0DdC0Cd946Bf2Ffc299979315"
+    }
+  ]
+}

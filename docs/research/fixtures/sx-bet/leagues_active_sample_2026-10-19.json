@@ -1,0 +1,110 @@
+{
+ "status": "success",
+ "data": [
+  {
+   "leagueId": 30,
+   "label": "Champions League_UEFA",
+   "sportId": 5,
+   "popularity": 2940744.721004,
+   "eventsByType": {
+    "1X2": 18,
+    "game-lines": 18
+   }
+  },
+  {
+   "leagueId": 246,
+   "label": "NCAAF",
+   "sportId": 8,
+   "popularity": 2634942.429644,
+   "eventsByType": {
+    "first-half-lines": 2,
+    "game-lines": 56
+   }
+  },
+  {
+   "leagueId": 243,
+   "label": "NFL",
+   "sportId": 8,
+   "popularity": 1869746.067016,
+   "eventsByType": {
+    "first-half-lines": 12,
+    "first-period-lines": 2,
+    "game-lines": 28,
+    "player-props": 3,
+    "second-period-lines": 2,
+    "third-period-lines": 2
+   }
+  },
+  {
+   "leagueId": 29,
+   "label": "English Premier League",
+   "sportId": 5,
+   "popularity": 1254010.157004,
+   "eventsByType": {
+    "1X2": 11,
+    "game-lines": 11
+   }
+  },
+  {
+   "leagueId": 1113,
+   "label": "Serie A",
+   "sportId": 5,
+   "popularity": 1095128.405126,
+   "eventsByType": {
+    "1X2": 12,
+    "game-lines": 12
+   }
+  },
+  {
+   "leagueId": 1115,
+   "label": "Major League Soccer",
+   "sportId": 5,
+   "popularity": 1094301.885191,
+   "eventsByType": {
+    "1X2": 14,
+    "game-lines": 14
+   }
+  },
+  {
+   "leagueId": 1114,
+   "label": "La Liga",
+   "sportId": 5,
+   "popularity": 930045.238378,
+   "eventsByType": {
+    "1X2": 11,
+    "game-lines": 11
+   }
+  },
+  {
+   "leagueId": 31,
+   "label": "Europa League_UEFA",
+   "sportId": 5,
+   "popularity": 819522.019732,
+   "eventsByType": {
+    "1X2": 18,
+    "game-lines": 18
+   }
+  },
+  {
+   "leagueId": 11000,
+   "label": "Bitcoin",
+   "sportId": 14,
+   "popularity": 1275.233431,
+   "eventsByType": {
+    "game-lines": 7
+   },
+   "eventsByDay": {
+    "1792425600": 1,
+    "1792512000": 1,
+    "1792598400": 1,
+    "1792684800": 1,
+    "1792771200": 1,
+    "1792857600": 1,
+    "1792944000": 1
+   },
+   "extra": {
+    "priceSymbol": "BTCUSDT"
+   }
+  }
+ ]
+}

@@ -1,0 +1,1428 @@
+{
+ "xo_account": {
+  "title": "Get an XO account",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true,
+   "readOnlyHint": true
+  },
+  "meta": null,
+  "description_sha256": "3ff61d6deeef04f0cfde74023b058c452dde0f63e68c952850b02b86e94ded99",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "The PayBox EVM wallet address that owns the XO account (EIP-55, or all lower case). The XO smart account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "owner"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "982f7e8d0af625b10f8db198466d9d81939054d256b9f1aa650b72440c5edb3d",
+   "properties": [
+    "account",
+    "anomalies",
+    "balance",
+    "capabilities",
+    "caps",
+    "claimable",
+    "credentials",
+    "deployed",
+    "exchange_trading_state",
+    "fetched_at",
+    "flags",
+    "kill_switch",
+    "notes",
+    "notice",
+    "omitted_fields",
+    "owner",
+    "profile",
+    "registered",
+    "relay",
+    "source",
+    "state",
+    "state_reason",
+    "trading_enabled",
+    "tripwires",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "account",
+    "anomalies",
+    "balance",
+    "capabilities",
+    "caps",
+    "claimable",
+    "credentials",
+    "deployed",
+    "exchange_trading_state",
+    "fetched_at",
+    "flags",
+    "kill_switch",
+    "notes",
+    "notice",
+    "omitted_fields",
+    "owner",
+    "profile",
+    "registered",
+    "relay",
+    "source",
+    "state",
+    "state_reason",
+    "trading_enabled",
+    "tripwires",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_connect": {
+  "title": "Connect the XO account to the relay (two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "23a85346a4f1f81171e080c2d00031c8a40bbfff6f0ccae1a889249ba935808a",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "Only for step \"prepare\": the PayBox EVM wallet address that owns the XO account.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "f4b605393d5864900fe1efa4dfdf38f12d5a8de03bb035d167f9fdd69e6f92df",
+   "properties": [
+    "account",
+    "code",
+    "credentials",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "unproven_capabilities",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_deploy_enable_trading": {
+  "title": "Deploy the XO account and enable trading (two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "b760b7931f423621316b98c18884eab91fd735b95331bdf6f7163bfc7b1dad4c",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "allowance_usd": {
+     "description": "Only for step \"prepare\": a capped USDC.e allowance for the exchange, such as \"50\", instead of XO's own unlimited approval (the default). A cap needs the exchange to accept it (live test T8).",
+     "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+     "type": "string"
+    },
+    "owner": {
+     "description": "Only for step \"prepare\": the PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "5dfb6d71d34607be73a9c95c9788a5ebb69ac2967f9173edec5895fceda6b8e5",
+   "properties": [
+    "account",
+    "action",
+    "code",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "user_op_hash",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_revoke_trading": {
+  "title": "Revoke trading on chain (two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "b5167044d09e0689b500678a3488c2acd668eaded5ec9106f8ce0eaa515c90fd",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "Only for step \"prepare\": the PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "5dfb6d71d34607be73a9c95c9788a5ebb69ac2967f9173edec5895fceda6b8e5",
+   "properties": [
+    "account",
+    "action",
+    "code",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "user_op_hash",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_redeem": {
+  "title": "Redeem resolved positions (two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "6ecb2cc78d52597df33cd71b7dc25a8b9f4b3384c87fe60aee12198c50371ecf",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "condition_ids": {
+     "description": "Only for step \"prepare\": the resolved markets to redeem (condition_id, 0x plus 64 hex digits), at most 50. Duplicates are removed. xo_account lists claimable ones.",
+     "items": {
+      "pattern": "^0x[0-9a-fA-F]{64}$",
+      "type": "string"
+     },
+     "maxItems": 50,
+     "minItems": 1,
+     "type": "array"
+    },
+    "owner": {
+     "description": "Only for step \"prepare\": the PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "5dfb6d71d34607be73a9c95c9788a5ebb69ac2967f9173edec5895fceda6b8e5",
+   "properties": [
+    "account",
+    "action",
+    "code",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "user_op_hash",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_submit_userop": {
+  "title": "Submit a signed user operation",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "5c8606a88d495f33370080c9ab58f4d7f0d2894b4d646f3009bb9a1ff7e10285",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "prepared_id": {
+     "description": "The prepared_id a prepare step returned for a user operation (for example from xo_withdraw).",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "The signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    }
+   },
+   "required": [
+    "prepared_id",
+    "signature"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "d9d91776fe17b1017d923e9cd38eecae6035a5ed56ad4b29cafdf11321310ac8",
+   "properties": [
+    "account",
+    "code",
+    "flag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "relay_details",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "user_op_hash",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_userop_status": {
+  "title": "Check a user operation",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true,
+   "readOnlyHint": true
+  },
+  "meta": null,
+  "description_sha256": "00afc4336a093a71176ca722d8799befa587c6c8efb7f1cd69a678bf526b5e2c",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "user_op_hash": {
+     "description": "The user_op_hash a prepare or submit step returned.",
+     "pattern": "^0x[0-9a-fA-F]{64}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "user_op_hash"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "93157b36cece09e2e5f9af3b6f100581fb0dc8e0ae8b7e036d47b7782d808695",
+   "properties": [
+    "account",
+    "code",
+    "fetched_at",
+    "flag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "relay_details",
+    "source",
+    "status",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "fetched_at",
+    "message",
+    "next_action",
+    "outcome",
+    "source",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_prepare_order": {
+  "title": "Prepare an XO order",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "be5adb6558d514329a80a54c73044e7bfd08448df1516cb8ea96ee2f2713cb58",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "The PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "post_only": {
+     "description": "Only for GTD: reject the order instead of letting it take liquidity (a maker-only order).",
+     "type": "boolean"
+    },
+    "price": {
+     "description": "Limit price in dollars per share, 0.001 to 0.999 in steps of 0.001, such as \"0.55\". It is also the implied probability.",
+     "pattern": "^0\\.[0-9]{1,3}$",
+     "type": "string"
+    },
+    "shares": {
+     "description": "Order size in shares, a multiple of 0.001, such as \"10\" or \"2.5\".",
+     "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+     "type": "string"
+    },
+    "side": {
+     "description": "BUY pays USDC.e for shares; SELL sells shares you hold.",
+     "enum": [
+      "BUY",
+      "SELL"
+     ],
+     "type": "string"
+    },
+    "tif": {
+     "description": "GTD (default) rests on the book until its expiry. FOK fills completely at once or not at all; FAK fills what it can at once. FOK and FAK are taker orders and the submit call can take a few seconds.",
+     "enum": [
+      "GTD",
+      "FOK",
+      "FAK"
+     ],
+     "type": "string"
+    },
+    "token_id": {
+     "description": "The outcome token to trade: a decimal string, from outcomes[].token_id in xo_get_market.",
+     "pattern": "^[1-9][0-9]{0,77}$",
+     "type": "string"
+    },
+    "ttl_s": {
+     "description": "How long the signed order stays valid, in seconds. Omit it for the relay's default (300). The operator's XO_ORDER_EXPIRY_SECONDS is the upper limit. A signed order cannot be cancelled on chain, so keep it short.",
+     "maximum": 3600,
+     "minimum": 1,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "owner",
+    "token_id",
+    "side",
+    "price",
+    "shares"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "84a8cc0ed1cfc5c910a721f1ccad16772a2b248197ae663eaa275b47a7267bf9",
+   "properties": [
+    "account",
+    "code",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "unproven_capabilities",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_submit_order": {
+  "title": "Submit a signed XO order",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "cd8aa073a79449dfd6d5f39d5f376d363bb1f1b6e4806c9e90b3094706fcb93c",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "prepared_id": {
+     "description": "The prepared_id xo_prepare_order returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "The signature PayBox returned for sign_with_paybox (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    }
+   },
+   "required": [
+    "prepared_id",
+    "signature"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "b9e33792fea5600d11a6494cee9f095c8cff8cc96c51be9a80f975138707c72c",
+   "properties": [
+    "account",
+    "code",
+    "flag",
+    "message",
+    "next_action",
+    "order_hash",
+    "outcome",
+    "owner",
+    "relay_details",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_order_status": {
+  "title": "Check an XO order",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true,
+   "readOnlyHint": true
+  },
+  "meta": null,
+  "description_sha256": "bcb2b0c11b8dfc3b46d7906f4281695a3738b5532994a999c4f4da0c1068cf85",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "order_hash": {
+     "description": "The order_hash xo_submit_order returned.",
+     "pattern": "^0x[0-9a-fA-F]{64}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "order_hash"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "6e57f15143a943da566cca9e9c4aa74d9a2e51fc9bef00245c0b537fbca89336",
+   "properties": [
+    "account",
+    "code",
+    "fetched_at",
+    "flag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "relay_details",
+    "source",
+    "status",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "fetched_at",
+    "message",
+    "next_action",
+    "outcome",
+    "source",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_cancel_order": {
+  "title": "Cancel an XO order (best effort)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": null,
+  "description_sha256": "c1a0b7ddbb6ff0eb017e984e613b146db528b66dd539e4826da411abc9c2b26b",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "order_hash": {
+     "description": "The order to cancel: its order_hash, from xo_submit_order or xo_list_orders.",
+     "pattern": "^0x[0-9a-fA-F]{64}$",
+     "type": "string"
+    },
+    "owner": {
+     "description": "The PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "owner",
+    "order_hash"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "5d1d24a7ca487a4171d234f7e647820046b3ff423723b415d83bb376e4fc6110",
+   "properties": [
+    "account",
+    "cancel",
+    "code",
+    "flag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "relay_details",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_list_orders": {
+  "title": "List open XO orders",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true,
+   "readOnlyHint": true
+  },
+  "meta": null,
+  "description_sha256": "0c5d160b601bbb36167c67c3ccce6db01cd184693383310cf0fc475e875e4451",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "The PayBox EVM wallet address that owns the XO account. The XO account is derived from it.",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "owner"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "134f5ac8fe5916fa4952f904fc87ba72a78446fa0fe310da404cf2a8fcd36638",
+   "properties": [
+    "account",
+    "code",
+    "fetched_at",
+    "flag",
+    "message",
+    "next_action",
+    "orders",
+    "outcome",
+    "owner",
+    "relay_details",
+    "source",
+    "total",
+    "truncated",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "fetched_at",
+    "message",
+    "next_action",
+    "outcome",
+    "source",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "xo_get_prepared": {
+  "title": "Get a prepared item by id",
+  "annotations": {
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true,
+   "readOnlyHint": true
+  },
+  "meta": null,
+  "description_sha256": "380ff6c491d3294d97a9f0de99d6237f7082be2ce2205b7c4f9a6b82d9810b43",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "prepared_id": {
+     "description": "The prepared_id of an item the relay already holds: from a prepare tool, or the one the Cockpit page shows for an item it asked the relay to prepare.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "prepared_id"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "d533c06f558b7d04ed0fa91462af51c78198f79b6cb9b0f4a28cc6502900d1c9",
+   "properties": [
+    "account",
+    "code",
+    "digest_tag",
+    "fetched_at",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "source",
+    "step",
+    "units",
+    "unproven_capabilities",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "fetched_at",
+    "message",
+    "next_action",
+    "outcome",
+    "source",
+    "units",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ }
+}

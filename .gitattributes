@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Keep line endings LF on every OS so source bytes (and the reproducible bundle) do not vary
+* text=auto eol=lf

@@ -1,0 +1,62 @@
+{
+  "status": "success",
+  "data": {
+    "trades": [
+      {
+        "tradeId": "0x3896b464eb6cacbd244166fa4d5c9959fc7292821d0c437f693aa6bf239e4d82",
+        "marketHash": "0x21d3202a2e05fc9c98808fa9e1c9a265cdb459d493f40e060cf241ab3c793586",
+        "isBettingOutcomeOne": true,
+        "isParlay": false,
+        "totalStake": "40010000",
+        "totalReturn": "187181288",
+        "weightedAverageOdds": "21374999834385154994",
+        "betTime": "2026-10-18T17:42:21.838Z",
+        "gameTime": "2026-10-18T18:45:00.000Z",
+        "outcomeLabel": "Nice",
+        "teamOneName": "Lyon",
+        "teamTwoName": "Nice",
+        "type": 1,
+        "leagueLabel": "Ligue 1",
+        "sportId": 5,
+        "eventId": "L20256000"
+      },
+      {
+        "tradeId": "0xc5be50a1d22194fbaceaa3230dcfb35475beb42c77ffec4b63d3e0391b9ef68b",
+        "marketHash": "0xd370ec3918143e4b2bac3ba9c42f26d71f2a8799a7d01945b3596bec34dc163d",
+        "isBettingOutcomeOne": true,
+        "isParlay": false,
+        "totalStake": "2500000",
+        "totalReturn": "14492753",
+        "weightedAverageOdds": "17250000741750031895",
+        "betTime": "2026-10-18T17:42:02.265Z",
+        "gameTime": "2026-10-18T18:45:00.000Z",
+        "outcomeLabel": "Lazio",
+        "teamOneName": "Juventus",
+        "teamTwoName": "Lazio",
+        "type": 1,
+        "leagueLabel": "Serie A",
+        "sportId": 5,
+        "eventId": "L20263164"
+      },
+      {
+        "tradeId": "0x6d7a0f0d377d4c543aeaabfeaa041d98e2915a3848fb465587ef21fbaa258cf7",
+        "marketHash": "0x68de92dce4438079e4a32ba870e554f578abdd6c34ca0b637efdeff3e230c620",
+        "isBettingOutcomeOne": true,
+        "isParlay": false,
+        "totalStake": "7300000",
+        "totalReturn": "9153605",
+        "weightedAverageOdds": "79750000136558219411",
+        "betTime": "2026-10-18T17:42:00.818Z",
+        "gameTime": "2026-10-18T19:00:00.000Z",
+        "outcomeLabel": "Real Madrid",
+        "teamOneName": "Real Madrid",
+        "teamTwoName": "Sevilla",
+        "type": 1,
+        "leagueLabel": "La Liga",
+        "sportId": 5,
+        "eventId": "L20261654"
+      }
+    ],
+    "nextKey": "eyJiZXRUaW1lIjoiMjAyNi0xMC0xOFQxNzozODoyMS44NTdaIiwidHJhZGVJZCI6IjB4MWE1YmQxY2Y5NDBiYWFkYWFkOWE2ZDQxMWU5ODY5Y2RjZmM0YWNmYzhmNDRjNmEyNGU2YTZlNzk5N2JkNWM4NSJ9"
+  }
+}

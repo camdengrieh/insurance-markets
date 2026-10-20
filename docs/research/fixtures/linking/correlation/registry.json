@@ -1,0 +1,955 @@
+{
+ "legs": {
+  "PM_SEN_D": {
+   "venue": "PM",
+   "event_slug": "which-party-will-win-the-senate-in-2026",
+   "question": "Will the Democratic Party control the Senate after the 2026 Midterm elections?",
+   "token": "113287701564209339913693347405685749986285999146352375265161592243948562084773",
+   "condition": "0x307a1ed89d60b61002dd5bbf00e1408c5ed2ab3fcdb056191ca7ef9bc34d38f3",
+   "end": "2026-11-04",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.64,
+   "snap_ask": 0.65,
+   "snap_vol": 4045197.016733
+  },
+  "PM_HOU_D": {
+   "venue": "PM",
+   "event_slug": "which-party-will-win-the-house-in-2026",
+   "question": "Will the Democratic Party control the House after the 2026 Midterm elections?",
+   "token": "83247781037352156539108067944461291821683755894607244160607042790356561625563",
+   "condition": "0xd5d9fc47718bd553592d126b1fa5e87183d27f3936975b0c04cc0f2dec1f1bb4",
+   "end": "2026-11-04",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.9,
+   "snap_ask": 0.91,
+   "snap_vol": 10656618.172523003
+  },
+  "PM_FED_H0": {
+   "venue": "PM",
+   "event_slug": "fed-decision-in-october-20260617190323537",
+   "question": "Will there be no change in Fed interest rates after the October 2026 meeting?",
+   "token": "111061902544814266207267295505639408607400625795891618462682726460921782993748",
+   "condition": "0xdf9bf27ee5757c55b44b8b9826ddc9ec3a8809aa3278634c45edbb7fc8f1a3e3",
+   "end": "2026-10-29",
+   "fee_rate": 0.05,
+   "fees_enabled": true,
+   "snap_bid": 0.86,
+   "snap_ask": 0.87,
+   "snap_vol": 13449454.985387
+  },
+  "PM_FED_H25": {
+   "venue": "PM",
+   "event_slug": "fed-decision-in-october-20260617190323537",
+   "question": "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?",
+   "token": "55159722761418013044126414276680602270318000841690689684819994448621694923050",
+   "condition": "0x12aa13b3da17ceae1b0a59b5d5b77121e91bb79b4bb0b52bf6543ed3f8d0953b",
+   "end": "2026-10-29",
+   "fee_rate": 0.05,
+   "fees_enabled": true,
+   "snap_bid": 0.13,
+   "snap_ask": 0.14,
+   "snap_vol": 10296718.10724
+  },
+  "PM_BOP_DD": {
+   "venue": "PM",
+   "event_slug": "balance-of-power-2026-midterms",
+   "question": "2026 Balance of Power: D Senate, D House",
+   "token": "34722410608062854697106861099776685947172185964394483545370684749662285977831",
+   "condition": "0x16c63b7cc37f012b9f59ee164ec03877914c701d06d48291ae8d6fc08a088b0d",
+   "end": "2026-11-04",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.62,
+   "snap_ask": 0.63,
+   "snap_vol": 5803065.993665
+  },
+  "PM_BOP_DSRH": {
+   "venue": "PM",
+   "event_slug": "balance-of-power-2026-midterms",
+   "question": "2026 Balance of Power: D Senate, R House",
+   "token": "70997927349469817841862065582625658840347600365813612622959588796331622340305",
+   "condition": "0x0808de4f0cfd47947f2d1be51f9a9c52ea0fec76f73a75cfbe79ddec98d8a908",
+   "end": "2026-11-04",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.008,
+   "snap_ask": 0.01,
+   "snap_vol": 4323917.181540001
+  },
+  "PM_TX_D": {
+   "venue": "PM",
+   "event_slug": "texas-senate-election-winner",
+   "question": "Will the Democrats win the Texas Senate race in 2026?",
+   "token": "15290572385458522370285732869432740297199321382471116558439914335588167718663",
+   "condition": "0x34918035a590555ba1fb1d6a019d766ab6e557d63e7f3140b63b4550eee7f417",
+   "end": "2026-11-04",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.62,
+   "snap_ask": 0.63,
+   "snap_vol": 1838746.5246579999
+  },
+  "PM_VANCE_NOM": {
+   "venue": "PM",
+   "event_slug": "republican-presidential-nominee-2028",
+   "question": "Will J.D. Vance win the 2028 Republican presidential nomination?",
+   "token": "40081275558852222228080198821361202017557872256707631666334039001378518619916",
+   "condition": "0x18b1c135d0a40c5894da9412e77311827d9caf16cf4cd6591b247a34730af919",
+   "end": "2028-11-08",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.466,
+   "snap_ask": 0.478,
+   "snap_vol": 15916907.947392002
+  },
+  "PM_VANCE_WIN": {
+   "venue": "PM",
+   "event_slug": "presidential-election-winner-2028",
+   "question": "Will JD Vance win the 2028 US Presidential Election?",
+   "token": "16040015440196279900485035793550429453516625694844857319147506590755961451627",
+   "condition": "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422",
+   "end": "2028-11-08",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.204,
+   "snap_ask": 0.205,
+   "snap_vol": 17167672.444877997
+  },
+  "PM_NEWSOM_NOM": {
+   "venue": "PM",
+   "event_slug": "democratic-presidential-nominee-2028",
+   "question": "Will Gavin Newsom win the 2028 Democratic presidential nomination?",
+   "token": "54533043819946592547517511176940999955633860128497669742211153063842200957669",
+   "condition": "0x0f49db97f71c68b1e42a6d16e3de93d85dbf7d4148e3f018eb79e88554be9f75",
+   "end": "2028-11-08",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.159,
+   "snap_ask": 0.16,
+   "snap_vol": 27992029.354762994
+  },
+  "PM_NEWSOM_WIN": {
+   "venue": "PM",
+   "event_slug": "presidential-election-winner-2028",
+   "question": "Will Gavin Newsom win the 2028 US Presidential Election?",
+   "token": "98250445447699368679516529207365255018790721464590833209064266254238063117329",
+   "condition": "0x4567b275e6b667a6217f5cb4f06a797d3a1eaf1d0281fb5bc8c75e2046ae7e57",
+   "end": "2028-11-08",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.089,
+   "snap_ask": 0.09,
+   "snap_vol": 18626971.957952004
+  },
+  "PM_NBA_OKC_CH": {
+   "venue": "PM",
+   "event_slug": "nba-2027-champion",
+   "question": "Will Oklahoma City Thunder win the 2027 NBA Finals?",
+   "token": "75380520575699614146969771004200063966336258265950378178665003767694841394115",
+   "condition": "0x422b44717de3606ba08c2e00503d29e8330583b00b0bed63f89772b9c384e41f",
+   "end": "2027-07-01",
+   "fee_rate": 0.03,
+   "fees_enabled": true,
+   "snap_bid": 0.19,
+   "snap_ask": 0.2,
+   "snap_vol": 720992.551661
+  },
+  "PM_NBA_OKC_W": {
+   "venue": "PM",
+   "event_slug": "nba-2027-western-conference-champion-20260624160106318",
+   "question": "Will the Oklahoma City Thunder be the 2027 NBA Western Conference Champion?",
+   "token": "115316238635919931406930709880032745257848005608498550698464796135072238626100",
+   "condition": "0x4f608b730e069ca6e594773bc9af86304523737263a85376bb29da9115b41459",
+   "end": "2027-07-01",
+   "fee_rate": 0.03,
+   "fees_enabled": true,
+   "snap_bid": 0.33,
+   "snap_ask": 0.34,
+   "snap_vol": 8126.186948
+  },
+  "PM_BTC_90K": {
+   "venue": "PM",
+   "event_slug": "what-price-will-bitcoin-hit-before-2027",
+   "question": "Will Bitcoin reach $90,000 by December 31, 2026?",
+   "token": "89384721767526056909881321094852287855436067743554155484781205764118128944311",
+   "condition": "0xbb379a14cd03f68c35c279ddbd928a6326f4fd2e21827f8cdaaf59715d6df50e",
+   "end": "2027-01-01",
+   "fee_rate": 0.07,
+   "fees_enabled": true,
+   "snap_bid": 0.5,
+   "snap_ask": 0.52,
+   "snap_vol": 2442238.291566
+  },
+  "PM_BTC_100K": {
+   "venue": "PM",
+   "event_slug": "what-price-will-bitcoin-hit-before-2027",
+   "question": "Will Bitcoin reach $100,000 by December 31, 2026?",
+   "token": "56078938060096976448086754249497300447360333783952000147427828224794011030104",
+   "condition": "0xdaa4866bae18be58c5a79d2aeeffd035ec78f1bb49dbd88f72993997778a990f",
+   "end": "2027-01-01",
+   "fee_rate": 0.07,
+   "fees_enabled": true,
+   "snap_bid": 0.2,
+   "snap_ask": 0.21,
+   "snap_vol": 3877433.061181
+  },
+  "PM_BTC_110K": {
+   "venue": "PM",
+   "event_slug": "what-price-will-bitcoin-hit-before-2027",
+   "question": "Will Bitcoin reach $110,000 by December 31, 2026?",
+   "token": "74843373582432484858627201602003648342208168490128239235522790524493414154441",
+   "condition": "0x63eaf41ce1f475323e2202d7dfa3b1def8b82cd166f7007c50bfbf47615c7b01",
+   "end": "2027-01-01",
+   "fee_rate": 0.07,
+   "fees_enabled": true,
+   "snap_bid": 0.08,
+   "snap_ask": 0.1,
+   "snap_vol": 2024344.912378
+  },
+  "PM_BTC_120K": {
+   "venue": "PM",
+   "event_slug": "what-price-will-bitcoin-hit-before-2027",
+   "question": "Will Bitcoin reach $120,000 by December 31, 2026?",
+   "token": "65965214225073605704712365855887384729237451947822407248598722221769498441791",
+   "condition": "0xf9b6b5c3c6e07afe4aad6ed9ce4fa7545f9c2baa9f1dc632cd81a085c99acfe4",
+   "end": "2027-01-01",
+   "fee_rate": 0.07,
+   "fees_enabled": true,
+   "snap_bid": 0.05,
+   "snap_ask": 0.06,
+   "snap_vol": 2218123.158832
+  },
+  "PM_ETH_3500": {
+   "venue": "PM",
+   "event_slug": "what-price-will-ethereum-hit-before-2027",
+   "question": "Will Ethereum reach $3,500 by December 31, 2026?",
+   "token": "114795982188663428564917597167716379346421811703835638076510302263064007011486",
+   "condition": "0x42945ea5657d6f6e77969a06661b29d6f6295083d1ef3479b42efd90647c9dfc",
+   "end": "2027-01-01",
+   "fee_rate": 0.07,
+   "fees_enabled": true,
+   "snap_bid": 0.12,
+   "snap_ask": 0.14,
+   "snap_vol": 1008189.7374459999
+  },
+  "PM_IRAN_OCT22": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through October 22?",
+   "token": "11703355753646866721510451780813586747644200170798817311988936815535980370261",
+   "condition": "0x04fb634139d4654febf4b62c425b209806e06d9eff93ac2e7c5301ecdaf5e4ca",
+   "end": "2026-10-23",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.95,
+   "snap_ask": 0.96,
+   "snap_vol": 180715.48175000004
+  },
+  "PM_IRAN_OCT31": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through October 31?",
+   "token": "67102598924726349989742049657609063097299442010642912942032681022413402597017",
+   "condition": "0x3738ad9665480991affe3ba286cd035516e17d1f8b7703e05088ec19c70c21a4",
+   "end": "2026-10-31",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.82,
+   "snap_ask": 0.83,
+   "snap_vol": 3874085.720927001
+  },
+  "PM_IRAN_NOV15": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through November 15?",
+   "token": "87031907950659152062446134694384505777054725343079883521973171236915469964057",
+   "condition": "0xc83347e2b7a1d1341cba0fc6d03696c3be31c783b732355a04c8f8621ef4df09",
+   "end": "2026-11-16",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.57,
+   "snap_ask": 0.6,
+   "snap_vol": 297514.172416
+  },
+  "PM_IRAN_NOV30": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through November 30?",
+   "token": "1759128163540908136861900527987306673081148337830189221001436012323578054934",
+   "condition": "0xb70b8da7839ecb8b166e0f3a8553e079b38e139ee164f5d8bfd99183d535fc33",
+   "end": "2026-11-30",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.44,
+   "snap_ask": 0.45,
+   "snap_vol": 673095.796015
+  },
+  "PM_IRAN_DEC31": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through December 31?",
+   "token": "30473344794239220995088264915766809943868068209555159167607047748901899155342",
+   "condition": "0x32851891e7ccfb249b1e120d77db70370fa92a13d821ce6c949de69402742aab",
+   "end": "2026-12-31",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.33,
+   "snap_ask": 0.34,
+   "snap_vol": 554437.6042000001
+  },
+  "PM_WTI_H110": {
+   "venue": "PM",
+   "event_slug": "what-price-will-wti-hit-in-october-2026",
+   "question": "Will WTI Crude Oil (WTI) hit (HIGH) $110 in October?",
+   "token": "48826694677500007830254034120105004977134115589121199841803945556544556178546",
+   "condition": "0x28c4c18e1933cc4af657f84bd048e88ab6b157ecbe588b7fc05486a56e0aae4e",
+   "end": "2026-11-01",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.23,
+   "snap_ask": 0.24,
+   "snap_vol": 147395.000919
+  },
+  "PM_WTI_H105": {
+   "venue": "PM",
+   "event_slug": "what-price-will-wti-hit-in-october-2026",
+   "question": "Will WTI Crude Oil (WTI) hit (HIGH) $105 in October?",
+   "token": "92486150847481559635821292273831823790692101017511327793926232995659212100399",
+   "condition": "0x33f529b87bb00a1ff2a948694a0b72cb67f8e267246c9e7658bb6198eb2d9af4",
+   "end": "2026-11-01",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.47,
+   "snap_ask": 0.48,
+   "snap_vol": 199271.31860700002
+  },
+  "PM_WTI_L85": {
+   "venue": "PM",
+   "event_slug": "what-price-will-wti-hit-in-october-2026",
+   "question": "Will WTI Crude Oil (WTI) hit (LOW) $85 in October?",
+   "token": "37443918355406790186953837735364455851084814926073733891970251944311181670654",
+   "condition": "0xa01984a038cf05bb3fec2133890a29ab93a52e90d9dbb0de9d01a821588b9a2a",
+   "end": "2026-11-01",
+   "fee_rate": 0.04,
+   "fees_enabled": true,
+   "snap_bid": 0.08,
+   "snap_ask": 0.09,
+   "snap_vol": 241472.601539
+  },
+  "PM_IRAN_OCT9": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through October 9?",
+   "token": "101194021513060341880019185797774462810036128745444195153693970445982799412376",
+   "condition": "0x3813e7ca5c549da6fe72623153d024245a3e1fb28d9d77bf86174645a10d7f0f",
+   "end": "2026-10-10",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.999,
+   "snap_ask": 1,
+   "snap_vol": 344931.64662699995
+  },
+  "PM_IRAN_OCT12": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through October 12?",
+   "token": "107540403103917101723616128435236138591116364556711257437238922612332295492509",
+   "condition": "0x334954cfe7d8ae24e350972470c156f5b2cdd4616dcaa5bfb71b4e2b2298d690",
+   "end": "2026-10-13",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.999,
+   "snap_ask": 1,
+   "snap_vol": 1988649.8114429999
+  },
+  "PM_IRAN_OCT15": {
+   "venue": "PM",
+   "event_slug": "us-iran-ceasefire-continues-throughptptpt",
+   "question": "US x Iran ceasefire continues through October 15?",
+   "token": "16433157430487286816362342013001121290769377529788531146050707169389503371968",
+   "condition": "0x530f6772a065a821ca8c6e05217f4e20e8650a97e31b0e64fabac311e5c9054f",
+   "end": "2026-10-16",
+   "fee_rate": null,
+   "fees_enabled": false,
+   "snap_bid": 0.999,
+   "snap_ask": 1,
+   "snap_vol": 2116265.9022079995
+  },
+  "PM_FEDSEP_H25": {
+   "venue": "PM",
+   "event_slug": "fed-decision-in-september-762",
+   "question": "Will the Fed increase interest rates by 25 bps after the September 2026 meeting?",
+   "token": "63842529068710005716169325380315470359047749786610778647370693404952498013178",
+   "condition": "0x876506d8b2bd7a0d3fa4fe18c024eee6e1dd81ee24c26795dadd6cfe4a7b5d0d",
+   "end": "2026-09-16",
+   "fee_rate": 0.05,
+   "fees_enabled": true,
+   "snap_bid": 0.999,
+   "snap_ask": 1,
+   "snap_vol": 42158279.47949004,
+   "resolved": true
+  },
+  "PM_FEDSEP_H0": {
+   "venue": "PM",
+   "event_slug": "fed-decision-in-september-762",
+   "question": "Will there be no change in Fed interest rates after the September 2026 meeting?",
+   "token": "5615282760875985231868508008056959876238536896643315063916840237042205273721",
+   "condition": "0xa3b36b2d6104d34af4e6c6215fc818e43352e78a748fbfb0b85e3a35f71dec9a",
+   "end": "2026-09-16",
+   "fee_rate": 0.05,
+   "fees_enabled": true,
+   "snap_bid": null,
+   "snap_ask": 0.001,
+   "snap_vol": 56435144.72298723,
+   "resolved": true
+  },
+  "K_FEDSEP_H25": {
+   "venue": "K",
+   "event": "KXFEDDECISION-26SEP",
+   "series": "KXFEDDECISION",
+   "ticker": "KXFEDDECISION-26SEP-H25",
+   "title": "Will the Federal Reserve Hike rates by 25bps at their September 2026 meeting?",
+   "sub": "Hike 25bps",
+   "close": "2026-09-16",
+   "snap_bid": "0.0000",
+   "snap_ask": "1.0000",
+   "snap_vol": "18770408.08",
+   "resolved": true
+  },
+  "K_FEDSEP_H0": {
+   "venue": "K",
+   "event": "KXFEDDECISION-26SEP",
+   "series": "KXFEDDECISION",
+   "ticker": "KXFEDDECISION-26SEP-H0",
+   "title": "Will the Federal Reserve Hike rates by 0bps at their September 2026 meeting?",
+   "sub": "Fed maintains rate",
+   "close": "2026-09-16",
+   "snap_bid": "0.0000",
+   "snap_ask": "1.0000",
+   "snap_vol": "48286115.02",
+   "resolved": true
+  },
+  "K_SEN_D": {
+   "venue": "K",
+   "event": "CONTROLS-2026",
+   "series": "CONTROLS",
+   "ticker": "CONTROLS-2026-D",
+   "title": "Will Democrats win the U.S. Senate in 2026?",
+   "sub": "Democratic Party",
+   "close": "2027-02-01",
+   "snap_bid": "0.6200",
+   "snap_ask": "0.6300",
+   "snap_vol": "6820777.69"
+  },
+  "K_HOU_D": {
+   "venue": "K",
+   "event": "CONTROLH-2026",
+   "series": "CONTROLH",
+   "ticker": "CONTROLH-2026-D",
+   "title": "Will Democrats win the House in 2026?",
+   "sub": "Democratic Party",
+   "close": "2027-02-01",
+   "snap_bid": "0.9010",
+   "snap_ask": "0.9020",
+   "snap_vol": "19947727.74"
+  },
+  "K_FED_H0": {
+   "venue": "K",
+   "event": "KXFEDDECISION-26OCT",
+   "series": "KXFEDDECISION",
+   "ticker": "KXFEDDECISION-26OCT-H0",
+   "title": "Will the Federal Reserve Hike rates by 0bps at their October 2026 meeting?",
+   "sub": "Fed maintains rate",
+   "close": "2026-10-28",
+   "snap_bid": "0.8600",
+   "snap_ask": "0.8700",
+   "snap_vol": "5680737.11"
+  },
+  "K_FED_H25": {
+   "venue": "K",
+   "event": "KXFEDDECISION-26OCT",
+   "series": "KXFEDDECISION",
+   "ticker": "KXFEDDECISION-26OCT-H25",
+   "title": "Will the Federal Reserve Hike rates by 25bps at their October 2026 meeting?",
+   "sub": "Hike 25bps",
+   "close": "2026-10-28",
+   "snap_bid": "0.1200",
+   "snap_ask": "0.1300",
+   "snap_vol": "4090643.55"
+  },
+  "K_FED_H26": {
+   "venue": "K",
+   "event": "KXFEDDECISION-26OCT",
+   "series": "KXFEDDECISION",
+   "ticker": "KXFEDDECISION-26OCT-H26",
+   "title": "Will the Federal Reserve Hike rates by >25bps at their October 2026 meeting?",
+   "sub": "Hike >25bps",
+   "close": "2026-10-28",
+   "snap_bid": "0.0000",
+   "snap_ask": "0.0100",
+   "snap_vol": "987306.61"
+  },
+  "K_FED_T400": {
+   "venue": "K",
+   "event": "KXFED-26OCT",
+   "series": "KXFED",
+   "ticker": "KXFED-26OCT-T4.00",
+   "title": "Will the upper bound of the federal funds rate be above 4.00% following the Fed's Oct 28, 2026 meeting?",
+   "sub": "Above 4.00%",
+   "close": "2026-10-28",
+   "snap_bid": "0.1400",
+   "snap_ask": "0.1500",
+   "snap_vol": "243822.75"
+  },
+  "K_BOP_DD": {
+   "venue": "K",
+   "event": "KXBALANCEPOWERCOMBO-27FEB",
+   "series": "KXBALANCEPOWERCOMBO",
+   "ticker": "KXBALANCEPOWERCOMBO-27FEB-DD",
+   "title": "Will House Control be Democratic AND Senate Control be Democratic for Feb 2027?",
+   "sub": "Democrats sweep",
+   "close": "2027-02-01",
+   "snap_bid": "0.6100",
+   "snap_ask": "0.6200",
+   "snap_vol": "5281919.95"
+  },
+  "K_BOP_RD": {
+   "venue": "K",
+   "event": "KXBALANCEPOWERCOMBO-27FEB",
+   "series": "KXBALANCEPOWERCOMBO",
+   "ticker": "KXBALANCEPOWERCOMBO-27FEB-RD",
+   "title": "Will House Control be Republican AND Senate Control be Democratic for Feb 2027?",
+   "sub": "R-House, D-Senate",
+   "close": "2027-02-01",
+   "snap_bid": "0.0070",
+   "snap_ask": "0.0080",
+   "snap_vol": "12898053.08"
+  },
+  "K_TX_D": {
+   "venue": "K",
+   "event": "SENATETX-26",
+   "series": "SENATETX",
+   "ticker": "SENATETX-26-D",
+   "title": "Will Democratics win the Senate race in Texas?",
+   "sub": "James Talarico",
+   "close": "2027-11-03",
+   "snap_bid": "0.6100",
+   "snap_ask": "0.6200",
+   "snap_vol": "10831331.49"
+  },
+  "K_VANCE_NOM": {
+   "venue": "K",
+   "event": "KXPRESNOMR-28",
+   "series": "KXPRESNOMR",
+   "ticker": "KXPRESNOMR-28-JDV",
+   "title": "Will J.D. Vance be the nominee for the Presidency for the Republican party?",
+   "sub": "J.D. Vance",
+   "close": "2028-11-07",
+   "snap_bid": "0.4200",
+   "snap_ask": "0.4300",
+   "snap_vol": "4658894.20"
+  },
+  "K_VANCE_WIN": {
+   "venue": "K",
+   "event": "KXPRESPERSON-28",
+   "series": "KXPRESPERSON",
+   "ticker": "KXPRESPERSON-28-JVAN",
+   "title": "Who will win the next presidential election?",
+   "sub": "J.D. Vance",
+   "close": "2029-11-07",
+   "snap_bid": "0.2000",
+   "snap_ask": "0.2100",
+   "snap_vol": "4500502.33"
+  },
+  "K_NEWSOM_NOM": {
+   "venue": "K",
+   "event": "KXPRESNOMD-28",
+   "series": "KXPRESNOMD",
+   "ticker": "KXPRESNOMD-28-GN",
+   "title": "Will Gavin Newsom be the Democratic Presidential nominee in 2028?",
+   "sub": "Gavin Newsom",
+   "close": "2028-11-07",
+   "snap_bid": "0.1300",
+   "snap_ask": "0.1400",
+   "snap_vol": "10825487.79"
+  },
+  "K_NEWSOM_WIN": {
+   "venue": "K",
+   "event": "KXPRESPERSON-28",
+   "series": "KXPRESPERSON",
+   "ticker": "KXPRESPERSON-28-GNEWS",
+   "title": "Who will win the next presidential election?",
+   "sub": "Gavin Newsom",
+   "close": "2029-11-07",
+   "snap_bid": "0.1000",
+   "snap_ask": "0.1100",
+   "snap_vol": "4711342.38"
+  },
+  "K_NBA_OKC_W": {
+   "venue": "K",
+   "event": "KXNBAWEST-27",
+   "series": "KXNBAWEST",
+   "ticker": "KXNBAWEST-27-OKC",
+   "title": "Will Oklahoma City win the Pro Basketball Western Conference Finals in the 2026-27 season?",
+   "sub": "Oklahoma City",
+   "close": "2029-06-29",
+   "snap_bid": "0.3300",
+   "snap_ask": "0.3400",
+   "snap_vol": "44876.21"
+  },
+  "K_BTC_100K": {
+   "venue": "K",
+   "event": "KXBTCMAXY-26DEC31",
+   "series": "KXBTCMAXY",
+   "ticker": "KXBTCMAXY-26DEC31-99999.99",
+   "title": "Will Bitcoin be above $99,999.99 by Dec 31, 2026 at 11:59 PM ET?",
+   "sub": "Above $99,999.99",
+   "close": "2027-01-01",
+   "snap_bid": "0.2400",
+   "snap_ask": "0.2500",
+   "snap_vol": "1609339.62"
+  },
+  "K_BTC_110K": {
+   "venue": "K",
+   "event": "KXBTCMAXY-26DEC31",
+   "series": "KXBTCMAXY",
+   "ticker": "KXBTCMAXY-26DEC31-109999.99",
+   "title": "Will Bitcoin be above $109,999.99 by Dec 31, 2026 at 11:59 PM ET?",
+   "sub": "Above $109,999.99",
+   "close": "2027-01-01",
+   "snap_bid": "0.0700",
+   "snap_ask": "0.0800",
+   "snap_vol": "716282.30"
+  },
+  "K_BTC_120K": {
+   "venue": "K",
+   "event": "KXBTCMAXY-26DEC31",
+   "series": "KXBTCMAXY",
+   "ticker": "KXBTCMAXY-26DEC31-119999.99",
+   "title": "Will Bitcoin be above $119,999.99 by Dec 31, 2026 at 11:59 PM ET?",
+   "sub": "Above $119,999.99",
+   "close": "2027-01-01",
+   "snap_bid": "0.0400",
+   "snap_ask": "0.0700",
+   "snap_vol": "644223.05"
+  }
+ },
+ "clusters": [
+  {
+   "id": "X01_senate_D",
+   "kind": "XV",
+   "a": "PM_SEN_D",
+   "b": "K_SEN_D",
+   "res": "2026-11-04",
+   "note": "Senate control, Democratic. Rule text differs (VP tiebreak / independents / early call) - see 08-venues notes"
+  },
+  {
+   "id": "X02_house_D",
+   "kind": "XV",
+   "a": "PM_HOU_D",
+   "b": "K_HOU_D",
+   "res": "2026-11-04",
+   "note": "House control, Democratic"
+  },
+  {
+   "id": "X03_fed_oct_hold",
+   "kind": "XV",
+   "a": "PM_FED_H0",
+   "b": "K_FED_H0",
+   "res": "2026-10-28",
+   "note": "FOMC Oct 2026, no change"
+  },
+  {
+   "id": "X04_fed_oct_hike25",
+   "kind": "XV",
+   "a": "PM_FED_H25",
+   "b": "K_FED_H25",
+   "res": "2026-10-28",
+   "note": "FOMC Oct 2026, +25bp"
+  },
+  {
+   "id": "X05_bop_dem_sweep",
+   "kind": "XV",
+   "a": "PM_BOP_DD",
+   "b": "K_BOP_DD",
+   "res": "2026-11-04",
+   "note": "Balance of power: Democrats sweep"
+  },
+  {
+   "id": "X06_tx_senate_D",
+   "kind": "XV",
+   "a": "PM_TX_D",
+   "b": "K_TX_D",
+   "res": "2026-11-04",
+   "note": "Texas Senate race, Democratic nominee wins"
+  },
+  {
+   "id": "X07_vance_nominee",
+   "kind": "XV",
+   "a": "PM_VANCE_NOM",
+   "b": "K_VANCE_NOM",
+   "res": "2028-08-31",
+   "note": "Vance GOP 2028 nomination"
+  },
+  {
+   "id": "X08_newsom_nominee",
+   "kind": "XV",
+   "a": "PM_NEWSOM_NOM",
+   "b": "K_NEWSOM_NOM",
+   "res": "2028-08-31",
+   "note": "Newsom Dem 2028 nomination"
+  },
+  {
+   "id": "X09_vance_winner",
+   "kind": "XV",
+   "a": "PM_VANCE_WIN",
+   "b": "K_VANCE_WIN",
+   "res": "2028-11-08",
+   "note": "Vance wins 2028 presidency"
+  },
+  {
+   "id": "X10_okc_west",
+   "kind": "XV",
+   "a": "PM_NBA_OKC_W",
+   "b": "K_NBA_OKC_W",
+   "res": "2027-06-01",
+   "note": "OKC wins 2027 West title (thin on PM)"
+  },
+  {
+   "id": "X11_btc_100k_2026",
+   "kind": "XV",
+   "a": "PM_BTC_100K",
+   "b": "K_BTC_100K",
+   "res": "2026-12-31",
+   "note": "BTC reaches $100k in 2026. NOT the same contract: PM = Binance 1m high 'reach', Kalshi = max-in-year rule; treat as basis pair"
+  },
+  {
+   "id": "XR1_fed_sep_hike25_resolved",
+   "kind": "XV",
+   "a": "PM_FEDSEP_H25",
+   "b": "K_FEDSEP_H25",
+   "res": "2026-09-16",
+   "valid_to": "2026-09-16T17:00",
+   "note": "RESOLVED control: FOMC Sep 2026 +25bp (resolved YES on both venues)"
+  },
+  {
+   "id": "XR2_fed_sep_hold_resolved",
+   "kind": "XV",
+   "a": "PM_FEDSEP_H0",
+   "b": "K_FEDSEP_H0",
+   "res": "2026-09-16",
+   "valid_to": "2026-09-16T17:00",
+   "note": "RESOLVED control: FOMC Sep 2026 no change (resolved NO)"
+  },
+  {
+   "id": "L01_pm_btc_100_110",
+   "kind": "LAD",
+   "hi": "PM_BTC_100K",
+   "lo": "PM_BTC_110K",
+   "note": "P(reach 110k) <= P(reach 100k)"
+  },
+  {
+   "id": "L02_pm_btc_110_120",
+   "kind": "LAD",
+   "hi": "PM_BTC_110K",
+   "lo": "PM_BTC_120K",
+   "note": "P(reach 120k) <= P(reach 110k)"
+  },
+  {
+   "id": "L03_pm_btc_90_100",
+   "kind": "LAD",
+   "hi": "PM_BTC_90K",
+   "lo": "PM_BTC_100K",
+   "note": "P(reach 100k) <= P(reach 90k)"
+  },
+  {
+   "id": "L04_k_btc_100_110",
+   "kind": "LAD",
+   "hi": "K_BTC_100K",
+   "lo": "K_BTC_110K",
+   "note": "Kalshi max-BTC-2026 rungs"
+  },
+  {
+   "id": "L05_k_btc_110_120",
+   "kind": "LAD",
+   "hi": "K_BTC_110K",
+   "lo": "K_BTC_120K",
+   "note": "Kalshi max-BTC-2026 rungs"
+  },
+  {
+   "id": "L06_pm_iran_oct31_nov15",
+   "kind": "LAD",
+   "hi": "PM_IRAN_OCT31",
+   "lo": "PM_IRAN_NOV15",
+   "note": "ceasefire through later date <= earlier date"
+  },
+  {
+   "id": "L07_pm_iran_nov15_nov30",
+   "kind": "LAD",
+   "hi": "PM_IRAN_NOV15",
+   "lo": "PM_IRAN_NOV30",
+   "note": "date ladder"
+  },
+  {
+   "id": "L08_pm_iran_nov30_dec31",
+   "kind": "LAD",
+   "hi": "PM_IRAN_NOV30",
+   "lo": "PM_IRAN_DEC31",
+   "note": "date ladder"
+  },
+  {
+   "id": "L09_pm_iran_oct22_oct31",
+   "kind": "LAD",
+   "hi": "PM_IRAN_OCT22",
+   "lo": "PM_IRAN_OCT31",
+   "note": "date ladder"
+  },
+  {
+   "id": "L10_pm_wti_105_110",
+   "kind": "LAD",
+   "hi": "PM_WTI_H105",
+   "lo": "PM_WTI_H110",
+   "note": "WTI HIGH hit ladder, October"
+  },
+  {
+   "id": "LR1_iran_oct9_oct12_resolved",
+   "kind": "LAD",
+   "hi": "PM_IRAN_OCT9",
+   "lo": "PM_IRAN_OCT12",
+   "valid_to": "2026-10-08T00:00",
+   "note": "RESOLVED control: ceasefire date ladder (both resolved YES), analysed until 1 day before the earlier rung resolves"
+  },
+  {
+   "id": "LR2_iran_oct12_oct15_resolved",
+   "kind": "LAD",
+   "hi": "PM_IRAN_OCT12",
+   "lo": "PM_IRAN_OCT15",
+   "valid_to": "2026-10-11T00:00",
+   "note": "RESOLVED control: ceasefire date ladder"
+  },
+  {
+   "id": "P01_pm_vance_win_le_nom",
+   "kind": "PC",
+   "child": "PM_VANCE_WIN",
+   "parent": "PM_VANCE_NOM",
+   "note": "win presidency => nominee (ignores independent runs)"
+  },
+  {
+   "id": "P02_pm_newsom_win_le_nom",
+   "kind": "PC",
+   "child": "PM_NEWSOM_WIN",
+   "parent": "PM_NEWSOM_NOM",
+   "note": "win presidency => nominee"
+  },
+  {
+   "id": "P03_k_vance_win_le_nom",
+   "kind": "PC",
+   "child": "K_VANCE_WIN",
+   "parent": "K_VANCE_NOM",
+   "note": "Kalshi version"
+  },
+  {
+   "id": "P04_k_newsom_win_le_nom",
+   "kind": "PC",
+   "child": "K_NEWSOM_WIN",
+   "parent": "K_NEWSOM_NOM",
+   "note": "Kalshi version"
+  },
+  {
+   "id": "P05_pm_okc_champ_le_west",
+   "kind": "PC",
+   "child": "PM_NBA_OKC_CH",
+   "parent": "PM_NBA_OKC_W",
+   "note": "NBA champion => conference champion (PM, thin West market)"
+  },
+  {
+   "id": "P06_xv_pm_vance_win_le_k_nom",
+   "kind": "PC",
+   "child": "PM_VANCE_WIN",
+   "parent": "K_VANCE_NOM",
+   "note": "cross-venue implication"
+  },
+  {
+   "id": "P07_xv_k_vance_win_le_pm_nom",
+   "kind": "PC",
+   "child": "K_VANCE_WIN",
+   "parent": "PM_VANCE_NOM",
+   "note": "cross-venue implication"
+  },
+  {
+   "id": "I01_pm_senateD_identity",
+   "kind": "IDENT",
+   "parent": "PM_SEN_D",
+   "children": [
+    "PM_BOP_DD",
+    "PM_BOP_DSRH"
+   ],
+   "note": "P(D Senate) = P(D sweep) + P(D Senate, R House)"
+  },
+  {
+   "id": "I02_k_senateD_identity",
+   "kind": "IDENT",
+   "parent": "K_SEN_D",
+   "children": [
+    "K_BOP_DD",
+    "K_BOP_RD"
+   ],
+   "note": "Kalshi: D Senate = DD + 'R-House, D-Senate'"
+  },
+  {
+   "id": "I03_k_fed_hike_identity",
+   "kind": "IDENT",
+   "parent": "K_FED_T400",
+   "children": [
+    "K_FED_H25",
+    "K_FED_H26"
+   ],
+   "valid_from": "2026-09-17",
+   "note": "'rate > 4.00% after Oct' = hike 25 + hike >25 (assuming upper bound is 4.00% now)"
+  },
+  {
+   "id": "F01_btc100k_vs_fed_hike25",
+   "kind": "FAC",
+   "a": "PM_BTC_100K",
+   "b": "PM_FED_H25",
+   "note": "crypto level vs rates (both PM)"
+  },
+  {
+   "id": "F02_btc100k_vs_eth3500",
+   "kind": "FAC",
+   "a": "PM_BTC_100K",
+   "b": "PM_ETH_3500",
+   "note": "crypto vs crypto (both PM)"
+  },
+  {
+   "id": "F03_iran_oct31_vs_wti110",
+   "kind": "FAC",
+   "a": "PM_IRAN_OCT31",
+   "b": "PM_WTI_H110",
+   "note": "geopolitics vs oil (both PM)"
+  },
+  {
+   "id": "F04_senateD_vs_fed_hike25",
+   "kind": "FAC",
+   "a": "PM_SEN_D",
+   "b": "PM_FED_H25",
+   "note": "politics vs rates (both PM)"
+  },
+  {
+   "id": "F05_k_btc100k_vs_k_fed_hike25",
+   "kind": "FAC",
+   "a": "K_BTC_100K",
+   "b": "K_FED_H25",
+   "note": "crypto vs rates (both Kalshi)"
+  },
+  {
+   "id": "F06_pm_btc100k_vs_k_fed_hike25",
+   "kind": "FAC",
+   "a": "PM_BTC_100K",
+   "b": "K_FED_H25",
+   "note": "cross-venue factor pair"
+  }
+ ]
+}

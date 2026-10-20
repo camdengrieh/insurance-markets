@@ -1,0 +1,137 @@
+{
+  "id": 35311,
+  "createdAt": "2026-09-02T15:06:41.357Z",
+  "updatedAt": "2026-10-12T14:42:02.849Z",
+  "contractMarketId": "0x2b6a0353a7bb3459dbde9f3c3a5805e96afe0c40fc0a70e09eb5c2de65b95a0e",
+  "conditionId": "0x2b6a0353a7bb3459dbde9f3c3a5805e96afe0c40fc0a70e09eb5c2de65b95a0e",
+  "marketContractAddress": "0xE1654812Ac8896A69Efa3b6Aa71090E4b44Eb307",
+  "versionId": 3,
+  "createMarketBlockTimestamp": "2026-09-02T15:06:40.000Z",
+  "creatorId": 5,
+  "title": "Will $PONS market cap reach $1B by September 2, 2027?",
+  "slug": "will-pons-market-cap-reach-1b-by-september-2-2027-8156",
+  "rules": {
+    "description": "This market resolves Yes if the circulating market capitalization of $PONS reaches or exceeds $1,000,000,000 USD at any time from market launch until September 2, 2027, 23:59 UTC. Only official data is used: CoinMarketCap is the primary source, and CoinGecko is used if CoinMarketCap data is unavailable, incomplete, or clearly wrong. Unofficial sites and DEX prices not listed on these aggregators do not count. If $PONS is delisted from both CoinMarketCap and CoinGecko, the market resolves No. If the token permanently stops trading before hitting $1 billion, the market resolves No. If both sources fail to provide verifiable circulating market cap data, the market voids and all positions are resolved equally.",
+    "outcomeRules": [
+      {
+        "rule": "Resolves to Yes if CoinMarketCap reports a market capitalization of $1,000,000,000 USD or higher for $PONS at any time during the observation period.",
+        "outcomeIndex": 0
+      },
+      {
+        "rule": "Resolves to No if the observation period ends and $PONS has failed to reach a market capitalization of $1,000,000,000 USD on CoinMarketCap.",
+        "outcomeIndex": 1
+      }
+    ]
+  },
+  "description": "Tone, you down?",
+  "categoryPath": [
+    {
+      "id": 1,
+      "name": "CRYPTO",
+      "slug": null
+    },
+    {
+      "id": 60,
+      "name": "Memecoins",
+      "slug": "memecoins"
+    }
+  ],
+  "type": 4,
+  "totalVolume": "35546570315",
+  "totalVolumeInUSD": "35546.570315",
+  "totalNotional": "36627654023",
+  "totalNotionalInUSD": "36627.65",
+  "collateralTokenId": 2,
+  "collateralToken": {
+    "id": 2,
+    "symbol": "USDC",
+    "name": "Bridged USDC (XO)",
+    "tokenAddress": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+    "decimals": 6,
+    "isActive": true,
+    "networkId": 1,
+    "logoUrl": ""
+  },
+  "status": "ACTIVE",
+  "startsAt": "2026-09-02T15:06:37.000Z",
+  "expiresAt": "2027-09-02T23:59:00.000Z",
+  "resolvedAt": null,
+  "metadataUri": "https://storage.googleapis.com/market-metadata-mainnet/687a0337-8bdb-4814-a64b-610259502f6a.json",
+  "imageUrl": "https://storage.googleapis.com/market-image-mainnet/compressed/eb1e4fb8-e68e-4cf1-8020-150a74ed113c.webp",
+  "resolutionEvidence": null,
+  "resolutionSources": [
+    "https://coinmarketcap.com/currencies/pons/",
+    "https://www.coingecko.com/en/coins/pons"
+  ],
+  "resolverAddress": "0xREDACTED_THIRD_PARTY_WALLET",
+  "resolutionType": "MANUAL",
+  "resolutionFlagCount": 0,
+  "priorityScore": 0,
+  "likes": 0,
+  "cpEnabled": true,
+  "cpMultiplier": 1,
+  "creatorBps": 0,
+  "isFeatured": false,
+  "featuredOrder": null,
+  "creator": {
+    "id": 5,
+    "walletPublicKey": "0xREDACTED_THIRD_PARTY_WALLET",
+    "username": "REDACTED",
+    "bio": null,
+    "profilePictureUrl": null,
+    "roosterColor": "#5555FF",
+    "achievements": [],
+    "verified": true,
+    "isOg": false,
+    "cpPoints": 73595.41,
+    "tier": "Caller"
+  },
+  "outcomes": [
+    {
+      "id": 70983,
+      "marketId": 35311,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "92405223113781133805412284720343870251774119932157196615021237861128430695593",
+      "title": "Yes",
+      "currentPrice": "500000",
+      "volumeTraded": "17801215756",
+      "volumeTradedInUSD": "17801.215756",
+      "notionalTraded": "36206731267",
+      "index": 0
+    },
+    {
+      "id": 70984,
+      "marketId": 35311,
+      "outcomeTokenAddress": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+      "outcomeTokenId": "61977498321074613607222269545722478188282262493653997887437356451704165781345",
+      "title": "No",
+      "currentPrice": "500000",
+      "volumeTraded": "17745354559",
+      "volumeTradedInUSD": "17745.354559",
+      "notionalTraded": "34875350536",
+      "index": 1
+    }
+  ],
+  "notes": null,
+  "reviewStatus": "UPDATE_REQUIRED",
+  "effectiveFeeConfig": {
+    "eligible": true,
+    "curveModel": "CONVICTION_CURVE",
+    "takerFeeBps": 400,
+    "makerFeeBps": 0,
+    "configId": 2,
+    "configName": "convictions",
+    "splitSummary": {
+      "creatorShareBps": 2000,
+      "makerShareBps": 3500,
+      "platformShareBps": 4500
+    },
+    "resolutionPath": [
+      "market_type:4",
+      "settlement:v5"
+    ],
+    "orderbookConfigId": "bfddcf69-3c90-437f-94ea-69469dd1be0a",
+    "configVersion": 5,
+    "latestPublishedVersion": 5
+  }
+}

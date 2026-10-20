@@ -1,0 +1,14 @@
+Stream: creation-and-metadata-onchain (Phase 0 gate 5). Read-only. GET only. User-Agent insurance-markets-research/0.1
+Set SCRATCH to an empty working directory containing subfolders raw/ and work/, copy these scripts into work/, then run with python3 -I from SCRATCH.
+Python 3 standard library plus Foundry cast (offline ABI/keccak only). Per-host ledger in work/ledger.json enforces a hard cap of 150 requests per host and >=300 ms spacing.
+ 1. Fetch the verified manager ABI once (explorer smart-contracts endpoint for 0x60a1...fcda) into raw/manager_impl.json; fetch all MarketCreationFeeCharged logs (topic0 in event_topics.json) into raw/fee_events.json (585 rows).
+ 2. make_topics.py            -> work/event_topics.json
+ 3. scan_created.py           -> work/created_t2_t4.json   (CLOBMarketCreated, greedy block paging below the 1000-row cap)
+ 4. scan_events.py <Event>    -> work/ev_<Event>.json      (MarketReviewed, UpdateRequestResponded, MarketCancelledByOwner, MetadataUpdated, MarketExpiryUpdated)
+ 5. analyze_chain.py          -> work/conviction_joined.json
+ 6. fetch_dataapi.py          -> work/dataapi_t4.json
+ 7. fetch_meta.py, schema_scan.py, pairs_diff.py, feature_compare.py -> metadata sample, schema, original-vs-oracle diffs
+ 8. first_trade.py, seed_books.py, fetch_seed_detail.py, fetch_seed_detail2.py, orderid_test.py -> seed-order timing evidence
+ 9. decode_userop.py (+ the sample-tx selection snippet in the notes) -> creation UserOp structure
+10. rules_of_thumb.py, inline_analyses.py -> breakdown tables;  crosscheck_decode.py -> cast vs hand decoder;  export_*.py -> anonymised fixtures.
+No wallet addresses, keys, e-mail addresses or home-directory paths are written by these scripts.

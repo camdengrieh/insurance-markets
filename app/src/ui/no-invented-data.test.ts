@@ -1,0 +1,93 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+// Source rules for "no fake or placeholder data" in everything that ships to users: no sample markets or accounts,
+// no prefilled example amounts or addresses, no demo mode. Test builders, fixtures and test kits are excluded.
+
+const src = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function production(): Array<{ readonly name: string; readonly text: string }> {
+  const out: Array<{ name: string; text: string }> = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "fixtures" || entry.name === "testing") continue;
+        walk(full);
+      } else if (/\.(?:tsx?|css)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) && !/(?:test-support|testkit|view-harness)\./.test(entry.name) && entry.name !== "fixtures.ts" && entry.name !== "fakes.ts") {
+        out.push({ name: relative(src, full), text: readFileSync(full, "utf8") });
+      }
+    }
+  };
+  walk(src);
+  return out;
+}
+
+function code(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+const all = production();
+
+// Full 20-byte addresses that may appear in shipped code: pinned protocol constants and the zero/burn sentinels.
+const PINNED_ADDRESS_FILES = new Set([
+  "core/address.ts", // zero and burn sentinels used to refuse a destination
+  "features/trade/vet.ts", // the zero address, to refuse an order that redirects proceeds
+  "features/wallet/rpc.ts", // Multicall3, the same address on every chain
+  "venues/limitless/constants.ts", // Base USDC
+  "venues/quotient/constants.ts", // Base USDC and the pay-to address of the x402 route
+  "venues/trueo/constants.ts", // the Trueo contracts on Base
+]);
+
+describe("no invented data in shipped code", () => {
+  it("scans the files it should", () => {
+    const names = all.map((file) => file.name);
+    for (const expected of ["App.tsx", "features/wallet/FundingPanel.tsx", "features/trade/ActionPanels.tsx", "venues/trueo/constants.ts"]) expect(names).toContain(expected);
+    expect(names.some((name) => name.includes("fixtures"))).toBe(false);
+  });
+
+  it("holds a full address only in the files that pin one", () => {
+    for (const { name, text } of all) {
+      if (PINNED_ADDRESS_FILES.has(name)) continue;
+      expect(code(text), name).not.toMatch(/0x[0-9a-fA-F]{40}\b/);
+    }
+  });
+
+  it("has no input placeholder that looks like data", () => {
+    for (const { name, text } of all) {
+      for (const match of code(text).matchAll(/\bplaceholder\s*=\s*(?:"([^"]*)"|\{\s*["'`]([^"'`]*)["'`]\s*\})/g)) {
+        const value = match[1] ?? match[2] ?? "";
+        expect(value, `${name}: placeholder ${value}`).not.toMatch(/0x|[0-9]/);
+      }
+    }
+  });
+
+  it("prefills no amount, address or id in a form field", () => {
+    // Every state seeded with a non-empty string literal in a screen is a choice (a filter, a sort, a mode, a spend limit),
+    // never an amount, an address or an id. Each one is listed; a new one fails here until it is reviewed.
+    const allowed = new Map<string, number>([
+      ["features/signals/SignalsView.tsx", 2], // the user's own daily spend limit (a safety cap on paid calls) and the coverage filter
+      ["features/signals/CallPanel.tsx", 2], // status filter "active" and the route "mispriced"
+      ["features/explorer/MarketsView.tsx", 2], // status filter "active" and sort "closing"
+      ["features/trade/ActionPanels.tsx", 1], // allowance mode "unlimited" (a radio choice; the capped amount starts empty)
+      ["features/terminal/prepare/PrepareConsole.tsx", 1], // origin tag "typed"
+      ["features/wallet/services.tsx", 1], // load status "loading"
+      ["features/wallet/BindingsPanel.tsx", 1], // address kind "eoa" (a select choice; the address starts empty)
+    ]);
+    const literal = /useState(?:<[^>]*>)?\(\s*(?:"[^"]+"|'[^']+'|`[^`]+`)\s*\)/g;
+    for (const { name, text } of all) {
+      if (!name.startsWith("features/")) continue;
+      const found = [...code(text).matchAll(literal)].map((match) => match[0]);
+      expect(found.length, `${name}: ${found.join(", ")}`).toBeLessThanOrEqual(allowed.get(name) ?? 0);
+    }
+  });
+
+  it("has no demo, sample, dummy or lorem content", () => {
+    for (const { name, text } of all) {
+      expect(code(text), name).not.toMatch(/\b(?:lorem ipsum|dummy (?:data|market|address)|sample (?:market|position|address|data)|demo mode|example\.com)\b/i);
+    }
+  });
+});

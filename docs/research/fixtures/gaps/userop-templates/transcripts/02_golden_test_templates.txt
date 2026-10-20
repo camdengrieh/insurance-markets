@@ -1,0 +1,23 @@
+0xc9ef8950c7c5 enableTrading_firstOp_withAccountDeploy  rebuilt OK so far; pass 9 fail 0
+0x0999a0219842 enableTrading_firstOp_withAccountDeploy  rebuilt OK so far; pass 18 fail 0
+0xc097b149544c enableTrading_firstOp_withAccountDeploy  rebuilt OK so far; pass 27 fail 0
+0x2a544e2adfb3 redeemPositions_single                   rebuilt OK so far; pass 34 fail 0
+0xe3abd2b178d8 redeemPositions_single                   rebuilt OK so far; pass 41 fail 0
+0x8ddd70241d25 redeemPositions_single                   rebuilt OK so far; pass 48 fail 0
+0x113e9348d488 redeemPositions_single                   rebuilt OK so far; pass 55 fail 0
+0xf1d762974d59 redeemPositions_single                   rebuilt OK so far; pass 62 fail 0
+0x89ede19a1517 redeemPositions_batch_noPaymaster        rebuilt OK so far; pass 69 fail 0
+0x8b5a58228ce2 redeemPositions_batch_noPaymaster        rebuilt OK so far; pass 76 fail 0
+0x2ad969f42f33 redeemPositions_batch_noPaymaster        rebuilt OK so far; pass 83 fail 0
+0xf80507d3da7a mergePositions                           rebuilt OK so far; pass 90 fail 0
+0x42db6d37ff9d mergePositions                           rebuilt OK so far; pass 97 fail 0
+0x03218f49a39a mergePositions                           rebuilt OK so far; pass 104 fail 0
+0x15bb7450b4a6 splitPosition                            rebuilt OK so far; pass 111 fail 0
+0x97ade4c89209 splitPosition                            rebuilt OK so far; pass 118 fail 0
+0xe8b9f8faf42f splitPosition                            rebuilt OK so far; pass 125 fail 0
+0xbcc79750f764 createConvictionMarket                   rebuilt OK so far; pass 132 fail 0
+0xec8d1956f04e createConvictionMarket                   rebuilt OK so far; pass 139 fail 0
+0xcaed7961d6dc createConvictionMarket                   rebuilt OK so far; pass 146 fail 0
+0x547571b5e1d7 operator_account_raw_signature_redeem    rebuilt OK so far; pass 152 fail 0
+0xe7557956984b operator_account_raw_signature_redeem    rebuilt OK so far; pass 158 fail 0
+TOTAL pass 158 fail 0

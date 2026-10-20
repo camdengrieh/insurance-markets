@@ -1,0 +1,7 @@
+bundler eth_chainId HTTP 200 {"jsonrpc": "2.0", "id": 1, "result": "0xc97"}
+bundler eth_supportedEntryPoints HTTP 200 {"jsonrpc": "2.0", "id": 1, "result": ["0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", "0x0000000071727De22E5E9d8BAf0edAc6f37da032"]}
+bundler web3_clientVersion HTTP 200 {"jsonrpc": "2.0", "id": 1, "error": {"message": "Validation error: Invalid discriminator value. Expected 'eth_chainId' | 'eth_supportedEntryPoints' | 'eth_estimateUserOperationGas' | 'eth_sendUserOperation' | 'boost_sendUserOperation' | 'eth_getUserOperationByHash' | 'eth_getUserOperationReceipt' |
+rpc eth_chainId HTTP 200 {"jsonrpc": "2.0", "id": 1, "result": "0xc97"}
+rpc eth_supportedEntryPoints HTTP 200 {"jsonrpc": "2.0", "id": 1, "error": {"code": -32601, "message": "Method not found"}}
+rpc web3_clientVersion HTTP 200 {"jsonrpc": "2.0", "id": 1, "result": "reth/v2.0.0-eb4c15e/x86_64-unknown-linux-gnu"}
+{'blocked': {}, 'hosts': {'explorer-mainnet.xo.market': 91, 'mainnet-bundler.xo.market': 3, 'rpc-mainnet-2.xo.market': 94, 'mainnet.base.org': 5}}
