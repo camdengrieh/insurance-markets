@@ -34,7 +34,7 @@ const all = files();
 describe("shell source hygiene", () => {
   it("scans the files it should", () => {
     const names = all.map((file) => file.name);
-    for (const expected of ["App.tsx", "main.tsx", "ui/UntrustedText.tsx", "ui/Tiles.tsx", "ui/Shell.tsx", "ui/theme.css", "ui/testing/dom.tsx"]) expect(names).toContain(expected);
+    for (const expected of ["App.tsx", "main.tsx", "ui/UntrustedText.tsx", "ui/Tiles.tsx", "ui/Shell.tsx", "ui/theme.css", "ui/fonts.css", "ui/dither.tsx", "ui/HeroBand.tsx", "ui/testing/dom.tsx"]) expect(names).toContain(expected);
   });
 
   it("has no string-to-HTML or string-to-code sink", () => {

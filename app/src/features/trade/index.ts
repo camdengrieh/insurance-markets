@@ -1,7 +1,9 @@
-// Public surface of the trade screens, for the route file and for tests.
+// Public surface of the trade feature: the desk the market modal hosts for XO markets in the Cockpit build, and the
+// pure modules (ticket arithmetic, vetting, prepare) other features and tests use.
 import "./trade.css";
 
-export { TradeView } from "./TradeView";
+export { TradeDesk, type TradeDeskProps } from "./TradeDesk";
+export { OrderPanel, type TokenChoice } from "./ActionPanels";
 export { TradeServicesProvider, createTradeServices, useTradeServices, setTradeFactsSource, type TradeServices, type TradeServicesOptions, type OwnerChoice } from "./services";
 export { TradeClient, DaemonError, isDaemonError, type TradeCallResult, type TradeClientDeps } from "./client";
 export { TRADE_TOOLS, TRADE_READ_TOOLS, TRADE_PREPARE_TOOLS, isTradeTool, toolClassOf, type TradeTool } from "./tools";

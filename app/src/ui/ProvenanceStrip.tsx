@@ -1,11 +1,12 @@
 import type { Freshness, Prov, Transport } from "../core/ports";
-import { Badge, type Tone } from "./primitives";
 import { useNow } from "./context";
 import { formatAge, formatUtc, toIso } from "./format-time";
 import { venueName } from "./venue-names";
 
-// The strip every screen shows above its data: where it came from, how it travelled, when, and how fresh.
-// dapp-design 4.5: "Every screen has a provenance strip (venue, transport, fetched-at, freshness)".
+// Provenance is one mono line, wherever a number is: "venue · source · transport · fetched (age) · freshness",
+// plus "own use only: memory only, no export" when the licence says so. dapp-design 4.5: "Every screen has a
+// provenance strip (venue, transport, fetched-at, freshness)". Every word here is fixed app text; `source` is
+// the adapter's own name for its endpoint, never anything a venue sent.
 
 const TRANSPORT_TEXT: Readonly<Record<Transport, string>> = Object.freeze({
   T0: "browser direct",
@@ -15,49 +16,56 @@ const TRANSPORT_TEXT: Readonly<Record<Transport, string>> = Object.freeze({
   T3: "imported from your agent",
 });
 
-const FRESHNESS: Readonly<Record<Freshness, { readonly tone: Tone; readonly text: string }>> = Object.freeze({
-  live: { tone: "ok", text: "live" },
-  recent: { tone: "info", text: "recent" },
-  stale: { tone: "warn", text: "stale" },
-  unknown: { tone: "warn", text: "freshness unknown" },
+const FRESHNESS_TEXT: Readonly<Record<Freshness, string>> = Object.freeze({
+  live: "live",
+  recent: "recent",
+  stale: "stale",
+  unknown: "freshness unknown",
 });
+
+export const OWN_USE_TEXT = "own use only: memory only, no export";
+
+function Separator() {
+  return (
+    <span className="ui-provenance-sep" aria-hidden="true">
+      {" · "}
+    </span>
+  );
+}
 
 export function ProvenanceStrip({ prov }: { readonly prov: Prov }) {
   const now = useNow(10_000);
-  const freshness = Object.hasOwn(FRESHNESS, prov.freshness) ? FRESHNESS[prov.freshness] : FRESHNESS.unknown;
+  const freshness = Object.hasOwn(FRESHNESS_TEXT, prov.freshness) ? FRESHNESS_TEXT[prov.freshness] : FRESHNESS_TEXT.unknown;
   const transport = Object.hasOwn(TRANSPORT_TEXT, prov.transport) ? TRANSPORT_TEXT[prov.transport] : "unknown route";
+  const source = typeof prov.source === "string" && prov.source.trim() !== "" ? prov.source.trim() : null;
   return (
-    <div className="ui-provenance" role="group" aria-label={`Source of this data: ${venueName(prov.venue)}`} data-venue={prov.venue}>
-      <dl>
-        <div className="ui-provenance-item">
-          <dt>Venue</dt>
-          <dd>{venueName(prov.venue)}</dd>
-        </div>
-        <div className="ui-provenance-item">
-          <dt>Via</dt>
-          <dd>{transport}</dd>
-        </div>
-        <div className="ui-provenance-item">
-          <dt>Fetched</dt>
-          <dd>
-            <time dateTime={toIso(prov.fetchedAtMs)}>{formatUtc(prov.fetchedAtMs)}</time> ({formatAge(prov.fetchedAtMs, now)})
-          </dd>
-        </div>
-        <div className="ui-provenance-item">
-          <dt>Freshness</dt>
-          <dd>
-            <Badge tone={freshness.tone}>{freshness.text}</Badge>
-          </dd>
-        </div>
-        {prov.license === "own_use_only" ? (
-          <div className="ui-provenance-item">
-            <dt>Terms</dt>
-            <dd>
-              <Badge tone="warn">own use only: memory only, no export</Badge>
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-    </div>
+    <p className="ui-provenance" role="group" aria-label={`Source of this data: ${venueName(prov.venue)}`} data-venue={prov.venue} data-freshness={prov.freshness}>
+      <span className="ui-provenance-item">{venueName(prov.venue)}</span>
+      {source === null ? null : (
+        <>
+          <Separator />
+          <span className="ui-provenance-item">{source}</span>
+        </>
+      )}
+      <Separator />
+      <span className="ui-provenance-item">{transport}</span>
+      <Separator />
+      <span className="ui-provenance-item">
+        <time dateTime={toIso(prov.fetchedAtMs)}>{formatUtc(prov.fetchedAtMs)}</time> ({formatAge(prov.fetchedAtMs, now)})
+      </span>
+      <Separator />
+      <span className="ui-provenance-item" data-freshness={prov.freshness}>
+        {freshness}
+      </span>
+      {prov.license === "own_use_only" ? (
+        <>
+          <Separator />
+          <span className="ui-provenance-item">{OWN_USE_TEXT}</span>
+        </>
+      ) : null}
+    </p>
   );
 }
+
+// The design's name for the same line.
+export const ProvenanceLine = ProvenanceStrip;

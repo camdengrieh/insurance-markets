@@ -37,7 +37,16 @@ export async function domProblems(page: Page): Promise<DomProblems> {
       const tag = element.tagName.toLowerCase();
       // The build's own tags are script/link/meta in <head> only; nothing in <body> may be one of these.
       if (element.closest("body") !== null && ["script", "iframe", "object", "embed", "img", "svg", "style", "link", "meta", "base", "audio", "video", "source", "template", "frame", "frameset", "applet"].includes(tag)) {
-        dangerous.push(tag);
+        // The page draws its own glyphs, dither bars and dialog scrims as inline SVG. One is exempt only when it is
+        // decorative (aria-hidden), outside every untrusted slot, and holds nothing that can load, link or run:
+        // no nested element the payload corpus uses, and no href on anything inside it.
+        const decorativeOwnSvg =
+          tag === "svg" &&
+          element.getAttribute("aria-hidden") === "true" &&
+          element.closest("[data-trust], .ui-untrusted-block") === null &&
+          element.querySelector("script, foreignObject, use, image, a, set, animate, animateMotion, animateTransform, style, iframe, img") === null &&
+          element.querySelector("[href], [xlink\\:href]") === null;
+        if (!decorativeOwnSvg) dangerous.push(tag);
       }
     }
     for (const anchor of Array.from(document.querySelectorAll("a"))) {

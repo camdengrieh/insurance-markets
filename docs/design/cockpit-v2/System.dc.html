@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dither system: tokens, type, components, motion and the component map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e8e5db}
+a{color:#1a1b1f}a:hover{color:#2443c8}
+.ck-focus:focus-visible{outline:3px solid #2443c8;outline-offset:2px}
+@keyframes ck-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.ck-live{animation:ck-pulse 1.6s steps(2,end) infinite}
+@media (prefers-reduced-motion:reduce){.ck-live{animation:none}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<pattern id="y2" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2z" fill="currentColor"/></pattern>
+<pattern id="y4" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0z" fill="currentColor"/></pattern>
+<pattern id="y6" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3z" fill="currentColor"/></pattern>
+<pattern id="y8" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1z" fill="currentColor"/></pattern>
+<pattern id="y10" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 2h1v1H3z" fill="currentColor"/></pattern>
+<pattern id="y12" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 2h1v1H3zM3 0h1v1H3zM1 2h1v1H1z" fill="currentColor"/></pattern>
+<pattern id="y14" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 2h1v1H3zM3 0h1v1H3zM1 2h1v1H1zM0 1h1v1H0zM2 3h1v1H2z" fill="currentColor"/></pattern>
+</defs>
+</svg>
+
+<div style="min-height:100vh;background:#e8e5db;color:#1a1b1f;font-family:'Archivo',system-ui,sans-serif;font-size:14px;line-height:1.5">
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;min-height:56px;padding:6px 24px;border-bottom:2px solid #1a1b1f">
+<a href="Main.dc.html" style="font-weight:700;font-size:17px;text-decoration:none">Cockpit</a>
+<span style="font-size:12px;color:#5b5952">Dither system · v2 · 2026-10-20</span>
+</header>
+
+<main style="max-width:1280px;margin:0 auto;padding:36px 24px 56px;display:flex;flex-direction:column;gap:44px">
+
+<section aria-labelledby="s0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:24px;align-items:end">
+<div>
+<h1 id="s0" style="margin:0;font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-0.025em;text-wrap:pretty">Paper, one ink, two sides.</h1>
+<p style="margin:14px 0 0;color:#5b5952;max-width:58ch">A risograph desk. Warm grey paper, a near-black ink, ultramarine for Yes and rust for No at equal weight, and every tone between made by ordered dither rather than a gradient. Dither carries atmosphere and depth; it never sits under text.</p>
+</div>
+<div style="color:#1a1b1f">
+<svg width="100%" height="72" aria-hidden="true"><rect x="0%" width="12.5%" height="72" fill="url(#y2)"/><rect x="12.5%" width="12.5%" height="72" fill="url(#y4)"/><rect x="25%" width="12.5%" height="72" fill="url(#y6)"/><rect x="37.5%" width="12.5%" height="72" fill="url(#y8)"/><rect x="50%" width="12.5%" height="72" fill="url(#y10)"/><rect x="62.5%" width="12.5%" height="72" fill="url(#y12)"/><rect x="75%" width="12.5%" height="72" fill="url(#y14)"/><rect x="87.5%" width="12.5%" height="72" fill="currentColor"/></svg>
+<div style="display:grid;grid-template-columns:repeat(8,1fr);font-family:'Martian Mono',monospace;font-size:11px;color:#5b5952;margin-top:4px"><span>2/16</span><span>4/16</span><span>6/16</span><span>8/16</span><span>10/16</span><span>12/16</span><span>14/16</span><span>solid</span></div>
+</div>
+</section>
+
+<section aria-labelledby="s1">
+<h2 id="s1" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Colour</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px">
+<sc-for list="{{swatches}}" as="s" hint-placeholder-count="9">
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea">
+<div style="height:56px;background:{{s.hex}}"></div>
+<div style="padding:8px 10px;font-size:12px;display:flex;flex-direction:column;gap:2px"><strong style="font-weight:600;font-size:13px">{{s.name}}</strong><span style="font-family:'Martian Mono',monospace">{{s.hex}}</span><span style="color:#5b5952">{{s.use}}</span><span style="color:#5b5952">{{s.ratio}}</span></div>
+</div>
+</sc-for>
+</div>
+<p style="margin:10px 0 0;font-size:12.5px;color:#5b5952;max-width:90ch">Ratios are against paper for text and against ink for the dark theme. Yes and No differ in lightness as well as hue, so they read apart without colour. Caution is a word plus a dashed border plus amber text, never a fill. The dark theme swaps paper and ink and keeps both accents; the app already has the token pairs in ui/theme.css, this maps onto them one to one.</p>
+</section>
+
+<section aria-labelledby="s2">
+<h2 id="s2" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Dither</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px">
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:8px">
+<strong style="font-weight:600">Static tone: SVG pattern fills</strong>
+<p style="margin:0;font-size:12.5px;color:#5b5952">A 4×4 Bayer matrix at 2 px cells, eight steps, each step containing the sparser ones. Used for depth bars, scrims behind modals, rules and empty fills. Zero network, zero images, prints and exports as vector.</p>
+</div>
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:8px">
+<strong style="font-weight:600">Live tone: the hero canvas</strong>
+<p style="margin:0;font-size:12.5px;color:#5b5952">One canvas drawn each frame at a low resolution and scaled with pixelated rendering. A scalar field (two moving waves plus a drifting blob) thresholded by the same Bayer matrix into three inks: paper, accent, ink. Honours prefers-reduced-motion by drawing one frame. Cell size is a tweak (3 to 10 px). In the app this is the one place that moves on its own.</p>
+</div>
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:8px">
+<strong style="font-weight:600">Rules</strong>
+<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#5b5952;display:flex;flex-direction:column;gap:4px">
+<li>Never under text. Text sits on paper or a flat panel.</li>
+<li>Depth bars use the 12/16 step in the side's ink; width is size relative to the deepest shown level.</li>
+<li>Modal scrims are the 4/16 step at half opacity over the page, so the table stays legible behind the dialog.</li>
+<li>Live dither appears once per page, in the hero band. Nowhere else animates on its own.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="s3">
+<h2 id="s3" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Type</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:16px">
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:18px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:12px;color:#5b5952">Archivo · UI, headings, body · sentence case throughout</span>
+<div style="font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-0.025em">Markets 40/700</div>
+<div style="font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-0.02em">Modal title 26/700</div>
+<div style="font-size:18px;line-height:1.2;font-weight:600;letter-spacing:-0.01em">Inspector title 18/600</div>
+<div style="font-size:14px">Body 14/400 on a 1.45 line, under 64 characters.</div>
+<div style="font-size:12px;color:#5b5952">Secondary 12 in dim ink, 5.6:1.</div>
+</div>
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:18px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:12px;color:#5b5952">Martian Mono · every number, id, hash, time and command</span>
+<div style="font-family:'Martian Mono',monospace;font-size:28px;line-height:1">02:00</div>
+<div style="font-family:'Martian Mono',monospace;font-size:18px">$102,186.86 USDC.e</div>
+<div style="font-family:'Martian Mono',monospace;font-size:12.5px">0.025 / 0.026 · spread 0.001</div>
+<div style="font-family:'Martian Mono',monospace;font-size:12px">0x5bb8…52a7 · ok-7f3a·c1d9 · 12 s</div>
+<div style="font-size:12px;color:#5b5952">A number is never set in Archivo; a sentence is never set in mono. That split is the whole hierarchy.</div>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="s4">
+<h2 id="s4" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Components</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px">
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">Buttons</strong>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button type="button" class="ck-focus" style="min-height:44px;padding:0 16px;background:#1a1b1f;color:#e8e5db;border:1.5px solid #1a1b1f;font:inherit;font-weight:600;cursor:pointer">Primary</button>
+<button type="button" class="ck-focus" style="min-height:44px;padding:0 16px;background:#f3f1ea;color:#1a1b1f;border:1.5px solid #1a1b1f;font:inherit;font-weight:600;cursor:pointer">Secondary</button>
+<button type="button" class="ck-focus" style="min-height:44px;padding:0 16px;background:#f3f1ea;color:#b5401a;border:1.5px solid #b5401a;font:inherit;font-weight:600;cursor:pointer">Reject</button>
+<button type="button" disabled style="min-height:44px;padding:0 16px;background:#c7c3b6;color:#5b5952;border:1.5px solid #7e7b72;font:inherit;font-weight:600">Off in this build</button>
+</div>
+<span style="font-size:12px;color:#5b5952">Square corners, 1.5 px lines, 44 px minimum. A disabled button says why in its label.</span>
+</div>
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">View chips and marks</strong>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span style="min-height:36px;padding:0 12px;border:1.5px solid #1a1b1f;background:#1a1b1f;color:#e8e5db;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px">All <span style="font-family:'Martian Mono',monospace;font-size:11px">9</span></span>
+<span style="min-height:36px;padding:0 12px;border:1.5px solid #c7c3b6;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px">Holdings <span style="font-family:'Martian Mono',monospace;font-size:11px">3</span></span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+<span style="font-size:10.5px;font-weight:600;padding:1px 5px;border:1.5px solid #1a1b1f">held</span>
+<span style="font-size:10.5px;font-weight:600;padding:1px 5px;border:1.5px solid #2443c8;color:#2443c8">link</span>
+<span style="font-size:10.5px;font-weight:600;padding:1px 5px;border:1.5px solid #b5401a;color:#b5401a">Q</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="display:inline-block;width:9px;height:9px;background:#2443c8"></span>Polymarket</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="display:inline-block;width:9px;height:9px;background:#1a1b1f"></span>XO</span>
+</div>
+<span style="font-size:12px;color:#5b5952">Holdings, Linked and Signals are states of one table, not screens. Marks are outlined words, never coloured fills.</span>
+</div>
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">Untrusted text slot</strong>
+<span style="background:#e8e5db;padding:3px 6px;border-left:2px solid #c7c3b6;font-size:14px">Will Gavin Newsom win the 2028 Democratic presidential nomination?</span>
+<span style="font-size:12px;color:#5b5952">Every venue-written title or rule sits in this slot: a flat well with a left rule, plain text, never a heading, never a command.</span>
+</div>
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">Caution tile</strong>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px dashed #7e7b72;font-size:12.5px;background:#e8e5db">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a5a00" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" style="flex:none"><path d="M12 3l10 18H2zM12 10v5M12 18v1"/></svg>
+<span>Order book needs the Cockpit. Your daemon reads it on your machine; this page cannot.</span>
+</div>
+<span style="font-size:12px;color:#5b5952">Replaces the four status tiles. One shape for unproven, needs-Cockpit, restricted terms and refused, told apart by the words.</span>
+</div>
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">Depth bar and provenance</strong>
+<div style="display:grid;grid-template-columns:52px 1fr 58px;align-items:center;gap:6px;font-family:'Martian Mono',monospace;font-size:12px"><span>0.026</span><svg height="10" width="100%" aria-hidden="true" style="color:#b5401a"><rect width="72%" height="10" fill="url(#y12)"/></svg><span style="text-align:right;color:#5b5952">1,505</span></div>
+<div style="display:grid;grid-template-columns:52px 1fr 58px;align-items:center;gap:6px;font-family:'Martian Mono',monospace;font-size:12px"><span>0.025</span><svg height="10" width="100%" aria-hidden="true" style="color:#2443c8"><rect width="100%" height="10" fill="url(#y12)"/></svg><span style="text-align:right;color:#5b5952">20,000</span></div>
+<span style="font-family:'Martian Mono',monospace;font-size:11px;color:#5b5952">gamma 559651 · direct · 12 s · fresh</span>
+<span style="font-size:12px;color:#5b5952">Provenance is one mono line: source, transport, age, freshness. It appears wherever a number does.</span>
+</div>
+
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:16px;display:flex;flex-direction:column;gap:10px">
+<strong style="font-weight:600">Live indicator</strong>
+<span style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#5b5952"><span class="ck-live" style="width:8px;height:8px;background:#2443c8;display:inline-block"></span>Local Cockpit · 6 of 11 venues read</span>
+<span style="font-size:12px;color:#5b5952">A two-step blink, not a fade: motion in this system is quantised like the dither. Off under reduced motion.</span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="s5">
+<h2 id="s5" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Where things live</h2>
+<div style="overflow-x:auto;border:1.5px solid #c7c3b6;background:#f3f1ea">
+<div style="min-width:720px">
+<div style="display:grid;grid-template-columns:180px 1fr 1fr 1fr;gap:12px;padding:10px 16px;border-bottom:1.5px solid #1a1b1f;font-size:12px;font-weight:600;color:#5b5952"><span>Surface</span><span>Holds</span><span>Opens from</span><span>On a phone</span></div>
+<sc-for list="{{places}}" as="p" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:180px 1fr 1fr 1fr;gap:12px;padding:10px 16px;border-bottom:1px solid #c7c3b6;font-size:13px;align-items:start"><strong style="font-weight:600">{{p.name}}</strong><span>{{p.holds}}</span><span>{{p.from}}</span><span style="color:#5b5952">{{p.phone}}</span></div>
+</sc-for>
+</div>
+</div>
+<p style="margin:10px 0 0;font-size:12.5px;color:#5b5952;max-width:90ch">The old build had eight routes. This keeps three real places (the surface, a modal, the dock) and treats everything else as a state or an overlay, so a person never loses the table while acting on a row.</p>
+</section>
+
+<section aria-labelledby="s6">
+<h2 id="s6" style="margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-0.01em">Component map (21st.dev)</h2>
+<p style="margin:0 0 12px;font-size:12.5px;color:#5b5952;max-width:90ch">Candidates found in the 21st.dev catalogue on 2026-10-20 for the build. Each is a starting point to restyle into this system, not a drop-in: the app loads nothing from a third-party origin at run time, so every one is vendored and stripped of remote assets.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px">
+<sc-for list="{{parts}}" as="c" hint-placeholder-count="6">
+<div style="border:1.5px solid #c7c3b6;background:#f3f1ea;padding:14px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><strong style="font-weight:600">{{c.role}}</strong><span style="font-family:'Martian Mono',monospace;font-size:11px;color:#5b5952">{{c.id}}</span></div>
+<a href="{{c.url}}" style="font-size:13px">{{c.name}}</a>
+<span style="font-size:12px;color:#5b5952">{{c.why}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      swatches: [
+        { name: 'Paper', hex: '#e8e5db', use: 'page ground', ratio: 'base' },
+        { name: 'Panel', hex: '#f3f1ea', use: 'inspector, modals, wells', ratio: 'ink 15.6:1' },
+        { name: 'Ink', hex: '#1a1b1f', use: 'text, lines, primary fill; dark-theme ground', ratio: '14.5:1' },
+        { name: 'Dim ink', hex: '#5b5952', use: 'secondary text', ratio: '5.6:1' },
+        { name: 'Yes', hex: '#2443c8', use: 'Yes side, links, selection rule, live dot', ratio: '6.9:1' },
+        { name: 'No', hex: '#b5401a', use: 'No side, reject, Quotient mark', ratio: '5.1:1' },
+        { name: 'Caution', hex: '#8a5a00', use: 'caution glyph and text only', ratio: '5.9:1' },
+        { name: 'Line', hex: '#c7c3b6', use: 'row and panel rules', ratio: 'decorative' },
+        { name: 'Strong line', hex: '#7e7b72', use: 'control outlines', ratio: '3.5:1' }
+      ],
+      places: [
+        { name: 'Surface', holds: 'Table and inspector. Views: All, Holdings, Linked, Signals. Sort, status, search.', from: 'Always open; the only route.', phone: 'Cards; inspector is a sheet.' },
+        { name: 'Market modal', holds: 'Full book both sides, same question elsewhere, Quotient, ticket or worksheet.', from: 'A row, the inspector, a search hit.', phone: 'Full-screen page with a back link.' },
+        { name: 'Signature Card', holds: 'One prepared item: decoded summary, both tags, arm window, reject, copy, sign.', from: 'Prepare, the dock, the inbox count.', phone: 'Full-screen; countdown pinned to the top.' },
+        { name: 'Connect', holds: 'Pair, sign in, or just watch an address.', from: 'The wallet chip in the top bar.', phone: 'Sheet.' },
+        { name: 'Terminal dock', holds: 'Transcript, command line, observer: posture, arm, inbox, audit, kill switch.', from: 'The footer strip; stays collapsed until there is something to say.', phone: 'Hidden behind the footer strip; read only.' },
+        { name: 'Settings', holds: 'Venue switches with their terms clause, RPC URLs, Quotient mode and budget, polling, wipe.', from: 'Command palette or the theme button’s menu.', phone: 'Full-screen page.' }
+      ],
+      parts: [
+        { role: 'Hero field', id: '#29928', name: 'Shader Dithering (framecn)', url: 'https://21st.dev/@framecn/components/shader-dithering', why: 'Ordered-dither shader on a gradient field. Swap its palette for paper, Yes and ink; or keep the canvas routine in this canvas, which needs no WebGL.' },
+        { role: 'Hero field, fallback', id: '#17827', name: 'Dithering (paper-design)', url: 'https://21st.dev/@paper-design/components/dithering', why: 'Apache-2.0 Paper Shaders variant with a 4-colour palette, zero dependencies. Closest to the look if WebGL is acceptable under the CSP.' },
+        { role: 'Depth', id: '#29968', name: 'Depth Chart', url: 'https://21st.dev/@arihantcodes_1f7b8c4d/components/depth-chart', why: 'Cumulative bid and ask with a crosshair that reports resting size to any price. Restyle fills to the 12/16 dither step.' },
+        { role: 'Modal and sheet', id: '#1354', name: 'Credenza', url: 'https://21st.dev/@redpangilinan/components/credenza', why: 'One API that is a dialog on desktop and a drawer on a phone. Carries the market, Signature Card and connect flows.' },
+        { role: 'Modal, alternative', id: '#4514', name: 'Modal (efferd)', url: 'https://21st.dev/@efferd/components/modal', why: 'Same auto-switch via context on Radix and vaul; pick whichever matches the app’s existing Dialog primitive.' },
+        { role: 'Edge sheet', id: '#35214', name: 'Sheet (kevingirelli)', url: 'https://21st.dev/@kevingirelli/components/sheet', why: 'For the inspector on narrow widths and the settings panel.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

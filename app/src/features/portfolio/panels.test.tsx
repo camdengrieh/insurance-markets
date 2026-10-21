@@ -5,19 +5,23 @@ import { createRequire } from "node:module";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { AddressBinding } from "../../core/bindings";
+import { FetchError } from "../../core/fetch";
 import { recorded, SENATE_YES } from "../../venues/polymarket/fixtures/load";
-import { act, allText, cleanup, must, render } from "../../ui/testing/dom";
+import { ConnectActionProvider, useRegisterConnectAction } from "../../ui";
+import { act, allText, cleanup, click, must, render } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";
 import { fakeNetwork, type FakeNetwork } from "../wallet/testkit";
 import { eventually, harness } from "../wallet/view-harness";
-import { PortfolioView, VenueSection } from "./PortfolioView";
 import { prov, row } from "./fixtures";
-import type { VenueReadOk } from "./types";
-import { FetchError } from "../../core/fetch";
+import { useHoldings } from "./holdings";
+import { NoAddressWatched, NoVenueSelected, OutcomeTile, TotalsPanel, VenueSection } from "./panels";
 import type { PortfolioAdapters } from "./readers";
+import type { VenueReadOk } from "./types";
 
-// The portfolio screen in jsdom: acceptance M2-4 (the excluded count is printed), M2-5 (synthetic-shape label),
-// M2-6 (one venue failing leaves the others), M2-7 (candidate wording), hostile text, and structure.
+// The Holdings view's library in jsdom: acceptance M2-4 (the excluded count is printed), M2-5 (synthetic-shape
+// label), M2-6 (one venue failing leaves the others), M2-7 (candidate wording), hostile text, and structure. The
+// screen that used to host these panels is gone; the Markets surface's Holdings view renders them, and this host
+// stands in for it.
 
 let axeSource = "";
 beforeAll(() => {
@@ -50,19 +54,74 @@ async function seed(h: ReturnType<typeof harness>, venues: AddressBinding["venue
   await h.bindings.setVenues(added.binding.id, venues);
 }
 
-describe("portfolio screen", () => {
-  it("no saved address: says so and points to the wallet screen", async () => {
+// What the Holdings view renders from the hook, without the rest of the Markets surface.
+function HoldingsHost() {
+  const holdings = useHoldings();
+  const { state } = holdings;
+  switch (state.kind) {
+    case "loading":
+      return <p role="status">Loading your watched addresses</p>;
+    case "no_address":
+      return <NoAddressWatched />;
+    case "no_venue":
+      return <NoVenueSelected />;
+    case "reading":
+      return <p role="status">Reading positions</p>;
+    case "error":
+      return <p role="alert">The positions could not be read</p>;
+    case "ready":
+      return (
+        <div>
+          <p data-testid="held-keys">{holdings.keys.size}</p>
+          <TotalsPanel rows={state.rows} />
+          {state.ok.map((outcome) => (
+            <VenueSection key={`${outcome.venue}:${outcome.bindingId}`} outcome={outcome} />
+          ))}
+          {state.others.map((outcome) => (
+            <OutcomeTile key={`${outcome.kind}:${outcome.venue}:${outcome.bindingId}`} outcome={outcome} onRetry={holdings.refresh} />
+          ))}
+        </div>
+      );
+  }
+}
+
+describe("the Holdings view's library", () => {
+  it("no watched address: says so and points to the Connect modal, with a button only when one is registered", async () => {
     const h = harness({ net: network(), mode: "standalone" });
-    const view = render(h.wrap(<PortfolioView />));
-    await eventually(() => expect(allText(view.container)).toContain("No addresses saved yet"), act);
-    expect(must(view.container, "a").getAttribute("href")).toBe("/wallet");
+    const alone = render(h.wrap(<HoldingsHost />));
+    await eventually(() => expect(allText(alone.container)).toContain("No address watched"), act);
+    expect(allText(alone.container)).toContain("wallet chip in the top bar");
+    // No Connect modal on this page: no link to a retired page, no dead button.
+    expect(alone.container.querySelector("a")).toBeNull();
+    expect([...alone.container.querySelectorAll("button")].map((button) => button.textContent)).not.toContain("Watch an address");
+    alone.unmount();
+    let opened = 0;
+    function Chip() {
+      useRegisterConnectAction(() => {
+        opened += 1;
+      });
+      return null;
+    }
+    const view = render(
+      h.wrap(
+        <ConnectActionProvider>
+          <Chip />
+          <HoldingsHost />
+        </ConnectActionProvider>,
+      ),
+    );
+    await eventually(() => expect(allText(view.container)).toContain("No address watched"), act);
+    const button = [...view.container.querySelectorAll("button")].find((candidate) => candidate.textContent === "Watch an address");
+    if (button === undefined) throw new Error("no Watch an address button");
+    click(button);
+    expect(opened).toBe(1);
   });
 
   it("an address with no venue selected reads nothing", async () => {
     const net = network();
     const h = harness({ net, mode: "standalone" });
     await seed(h, []);
-    const view = render(h.wrap(<PortfolioView />));
+    const view = render(h.wrap(<HoldingsHost />));
     await eventually(() => expect(allText(view.container)).toContain("No venue selected for any address"), act);
     expect(net.calls).toHaveLength(0);
   });
@@ -119,16 +178,23 @@ describe("portfolio screen", () => {
     // Every market cell is inside the marked untrusted slot.
     const cells = [...section.querySelectorAll("tbody th")];
     expect(cells.length).toBe(2);
-    for (const cell of cells) expect(cell.querySelector('[data-trust]')).not.toBeNull();
+    for (const cell of cells) expect(cell.querySelector("[data-trust]")).not.toBeNull();
     expect(document.title).not.toContain("onerror");
+  });
+
+  it("M2-4: the totals print the excluded count and never a zero for a missing price", () => {
+    const h = harness({ net: network(), mode: "standalone" });
+    const { container } = render(h.wrap(<TotalsPanel rows={[row({ id: "1", value: "1" }), row({ id: "2", value: null })]} />));
+    expect(allText(must(container, '[data-testid="totals-excluded"]'))).toBe("1 of 2 open positions have no price and are not in these totals.");
+    expect(allText(container)).not.toMatch(/\$0\.00/);
   });
 
   it("has no structural accessibility violations with a table", async () => {
     const h = harness({ net: network(), mode: "standalone" });
     const { container } = render(
       <main>
-        <h1>Portfolio</h1>
-        <h2>Venues</h2>
+        <h1>Markets</h1>
+        <h2>Positions</h2>
         {h.wrap(<VenueSection outcome={okOutcome([row({ id: "1", value: "1" }), row({ id: "2", value: null })])} />)}
       </main>,
     );
@@ -140,7 +206,7 @@ describe("portfolio screen", () => {
     const net = network();
     const h = harness({ net, mode: "cockpit" });
     await seed(h, ["kalshi"]);
-    const view = render(h.wrap(<PortfolioView />));
+    const view = render(h.wrap(<HoldingsHost />));
     await eventually(() => expect(view.container.querySelector('[data-outcome="off"]')).not.toBeNull(), act);
     expect(must(view.container, '[data-outcome="off"]').textContent).toMatch(/off, restricted terms/);
     expect(net.calls).toHaveLength(0);
@@ -150,11 +216,12 @@ describe("portfolio screen", () => {
     const net = network();
     const h = harness({ net, mode: "standalone" });
     await seed(h, ["limitless", "hyperliquid"]);
-    const view = render(h.wrap(<PortfolioView />));
+    const view = render(h.wrap(<HoldingsHost />));
     await eventually(() => expect(view.container.querySelector('[data-outcome="needs_cockpit"]')).not.toBeNull(), act);
     expect(must(view.container, '[data-outcome="needs_cockpit"]').textContent).toMatch(/needs the Cockpit/);
     expect(must(view.container, '[data-outcome="unsupported"]').textContent).toMatch(/no position reader/);
     expect(view.container.querySelector("table")).toBeNull();
+    expect(must(view.container, '[data-testid="held-keys"]').textContent).toBe("0");
   });
 
   it("a Cockpit page that is not paired says so, in words, instead of a venue error", async () => {
@@ -168,16 +235,19 @@ describe("portfolio screen", () => {
         getBooks: async () => [],
       }),
       trueo: () => ({ positionsByAddress: async () => ({ positions: [], unmarked: 0, claims: [], scanned: 0, skipped: [] }) }),
-      pascal: () => ({ positionsByAddress: async () => { throw new Error("unused"); } }),
+      pascal: () => ({
+        positionsByAddress: async () => {
+          throw new Error("unused");
+        },
+      }),
     };
     const h = harness({ net: network(), mode: "cockpit", adapters });
     await h.bindings.add({ address: OWNER, kind: "venue_proxy", label: "Wallet" }).then(async (added) => {
       if (added.ok) await h.bindings.setVenues(added.binding.id, ["polymarket"]);
     });
-    const view = render(h.wrap(<PortfolioView />));
+    const view = render(h.wrap(<HoldingsHost />));
     await eventually(() => expect(view.container.querySelector('[data-outcome="not_paired"]')).not.toBeNull(), act);
     expect(must(view.container, '[data-outcome="not_paired"]').textContent).toMatch(/not paired with your Cockpit/);
     expect(view.container.querySelector('[data-outcome="failed"]')).toBeNull();
   });
-
 });

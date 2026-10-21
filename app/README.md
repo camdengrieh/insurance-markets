@@ -21,7 +21,7 @@ All paths are under `app/src/`. Counts are from the stream reports for this buil
 
 | Area | Path | What it is |
 |---|---|---|
-| Shell, session | `main.tsx`, `App.tsx`, `session.ts`, `SessionStatus.tsx`, `ui/*` | Layout, hash router, light and dark theme, accessibility primitives, `UntrustedText`, the four status tiles (error, unproven, restricted-terms, needs-Cockpit), route discovery. In the Cockpit build `session.ts` exchanges the pairing code at load and `SessionStatus` says in words whether the page is paired |
+| Shell, session | `main.tsx`, `App.tsx`, `session.ts`, `SessionStatus.tsx`, `ui/*` | The "risograph desk" shell (`docs/design/cockpit-v2/`): hash router, paper/ink light and dark themes (`ui/theme.css`, every colour a token), the vendored Archivo and Martian Mono faces (`ui/fonts.css`, `ui/fonts/`, SIL OFL 1.1), Bayer-dither tone (`ui/dither.tsx`: `DitherDefs`, `DitherBar`, the one live `DitherField`), the top bar (brand, search field that filters loaded rows, "Local Cockpit · n of m venues read", wallet chip slot, theme select), the `HeroBand`, the one caution tile shape behind every status tile (error, empty, unproven, restricted-terms, needs-Cockpit), `Dialog` (narrow, wide, sheet; a sheet on phones), the mono `ProvenanceLine`, `Chip`, `Mark`, `Num`, `UntrustedText`, route discovery and a footer dock slot. There is no navigation bar. In the Cockpit build `session.ts` exchanges the pairing code at load and `SessionStatus` says in words whether the page is paired |
 | Core | `core/*` | Money (exact integers and decimal strings), budgets and the 10-minute pause, cache policy, the two fetch ports, EIP-55 and look-alike address checks, derived Kernel account, address-binding store, venue policy table, capability facts, registry reader |
 | Readers | `venues/{xo,polymarket,trueo,hyperliquid,pascal,manifold,limitless}` | Read-only venue readers behind the `VenueReadAdapter` port (`core/ports.ts`), wired into the Markets screen. Limitless is read through the daemon only |
 | Readers not wired | `venues/{kalshi,sx,udx,novig,gemini,og,defillama}` | Built and tested offline, restricted-terms or daemon-only, off by default, and not reachable from any screen: there is no screen to switch a restricted venue on, and SX Bet, UDX and OG have no host in `headers.config.ts` |
@@ -33,6 +33,10 @@ All paths are under `app/src/`. Counts are from the stream reports for this buil
 | Trade, Signing | `features/{trade,signing}/*`, `routes/{trade,signing}.tsx` | Cockpit only. Prepared items are rebuilt and vetted in the page before they are shown; the Signature Card shows the decoded summary and both tags. The sign path (S2) is off in this build and every write capability reads "unproven" |
 
 Venues with a policy entry but no reader wired into a screen show a tile and nothing else: Kalshi, Gemini, Novig, OG/CDNA, UDX, SX Bet, ProphetX, Polymarket US, Myriad, World, DefiLlama. Kalshi, Gemini, Novig, OG and UDX read as "off: restricted terms" (design 4.6 and fork F5).
+
+### The v2 restyle: one surface, a modal, a dock
+
+The Cockpit v2 design (`docs/design/cockpit-v2/`) keeps three real places and treats everything else as a state or an overlay. The routes that remain are `/` and `/markets` (the surface: a markets table with an inspector aside; Holdings, Linked and Signals are view chips on that table, not screens), and `/market/:venue/:marketId` (the surface with the market modal open for that reference, so deep links keep working; a title click opens the same modal in place). `/wallet`, `/portfolio`, `/signals`, `/trade`, `/terminal` and `/signing` are retired: the wallet panels (saved addresses, account map, balances, funding steps) live in the Connect modal's "Just watch an address" tab, the terminal, the prepare console and the signing inbox live in the footer dock, the Signature Card is a modal over the dock, and the wallet chip in the top bar opens the Connect modal. The shell (this step) ships the tokens, fonts, dither, tile, dialog, hero band and the slots (`topBarEnd`, `dock`, `onConnect`); the surface (`features/explorer`) and the flows (`features/{terminal,signing,wallet}`, `main.tsx`) are the next two steps, and until they land the feature rows above describe the previous screens.
 
 ## What is not built or not proven
 
@@ -88,11 +92,13 @@ A test that needs a DOM starts with `// @vitest-environment jsdom`.
 Routes are found with `import.meta.glob("./routes/*.tsx")`, so adding a screen never edits a shared registry. A route file has two exports (`ui/route-types.ts`):
 
 ```ts
-export const route: RouteMeta = { id, path, title, nav?: { label, order }, availability?: "any" | "cockpit" };
+export const route: RouteMeta = { id, path, title, nav?: { label, order }, availability?: "any" | "cockpit", hero?: boolean };
 export default function Screen({ params }: RouteProps) { /* ... */ }
 ```
 
-The shell renders the only `<h1>` from the fixed `route.title`, so screens start at `<h2>`. A title is app text and must never contain market text; the Market page is titled "Market" and shows the market's own title inside an `UntrustedText`. In the standalone build a `"cockpit"` route shows the "needs the Cockpit" tile and its component is never mounted. A route module that throws or has bad metadata becomes a "screens that could not be loaded" notice; the other screens keep working.
+The shell renders the only `<h1>` from the fixed `route.title`, so screens start at `<h2>`. A screen with `hero: true` renders that `<h1>` itself inside `<HeroBand title={route.title} facts={...}>` (the live dither field beside a flat panel; facts are real values or words such as "none approved", never a sample) and the shell renders none. A title is app text and must never contain market text; the Market page is titled "Market" and shows the market's own title inside an `UntrustedText`. `nav` is still validated but nothing renders it: there is no navigation bar, the brand links to `/`, and the shell lists the fixed-path screens on an Overview only while no route claims `/`. In the standalone build a `"cockpit"` route shows the "needs the Cockpit" tile and its component is never mounted. A route module that throws or has bad metadata becomes a "screens that could not be loaded" notice; the other screens keep working.
+
+Shell slots (`ui/Shell.tsx` `ShellProps`, forwarded by `App`): `topBarEnd` (the wallet chip), `dock` (the footer dock; without it the footer shows the build's words), `onConnect` and `walletLabel` (a default 44 px chip when no `topBarEnd` is given) and `statusBar` (the session strip, kept while the dock takes over its words). A screen reads the top bar's search text with `useSearchQuery()` and filters the rows it has already loaded (typing never requests), and reports `useReportVenueCount({ read, total })` so the top bar can say "n of m venues read". `DitherDefs` is rendered once by the shell, so a `DitherBar` (or any `fill={ditherFill(step)}`) resolves anywhere, inside portaled dialogs too.
 
 ## Rules every change must keep
 

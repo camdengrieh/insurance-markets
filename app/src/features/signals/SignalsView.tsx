@@ -1,7 +1,9 @@
-// The Signals screen (docs/dapp-design.md 4.5 "Signals", 4.7, M3). Quotient's forecasts, shown beside venue
-// prices and never blended into a score of ours.
+// The Quotient settings (docs/dapp-design.md 4.5 "Signals", 4.7, M3): the switch, the spend meter, the calls, their
+// results and the track record. Hosted in the Quotient settings dialog of the Markets surface
+// (QuotientSettingsDialog.tsx); there is no Signals screen. Quotient's forecasts are shown beside venue prices and
+// never blended into a score of ours.
 //
-// Rules this screen holds (each is a test in signals.test.tsx):
+// Rules this component holds (each is a test in signals.test.tsx):
 //   - Quotient is OFF until the user reads the licence clause and switches it on (R8).
 //   - Nothing is requested on load, on a timer or on a refocus. A paid route runs only from the press of the button
 //     that shows its price (M3-5), and the page never pays: a 402 is shown as "payment required" (M3-1).

@@ -29,6 +29,9 @@ export interface RouteMeta {
   // "cockpit": needs the local daemon. In the standalone build the shell shows the "needs the Cockpit" tile
   // and never loads the screen's component. Default "any".
   readonly availability?: "any" | "cockpit";
+  // true: the screen renders its own <h1> inside a <HeroBand title={route.title}> (ui/HeroBand.tsx) and the
+  // shell renders none. The title is still the document title and the announced page name. Default false.
+  readonly hero?: boolean;
 }
 
 export type RouteParams = Readonly<Record<string, string | undefined>>;

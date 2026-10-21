@@ -38,7 +38,8 @@ function orderColumns(onPick: (hash: string) => void, picked: string | null, can
   ];
 }
 
-export function OrdersPanel({ ctx }: { readonly ctx: PanelContext }) {
+export function OrdersPanel({ ctx, heading = "h2" }: { readonly ctx: PanelContext; readonly heading?: "h2" | "h4" }) {
+  const Heading = heading;
   const { state, refresh } = useOrders(ctx.services, ctx.owner, ctx.account !== null);
   const [picked, setPicked] = useState<string | null>(null);
   const cancel = gateForCancel(ctx.gateInput);
@@ -46,13 +47,13 @@ export function OrdersPanel({ ctx }: { readonly ctx: PanelContext }) {
   const owner = ctx.owner;
   return (
     <section className="tr-section" aria-labelledby="tr-orders-h" data-testid="orders">
-      <h2 id="tr-orders-h">Open orders</h2>
+      <Heading id="tr-orders-h">Open orders</Heading>
       {owner === null || ctx.account === null ? (
         <p>Read an account first to list its open orders.</p>
       ) : state.phase !== "done" ? (
         <p role="status">Reading open orders through the Cockpit.</p>
       ) : !state.value.ok ? (
-        <ReadFailureTile failure={state.value} what="Open orders could not be read" />
+        <ReadFailureTile failure={state.value} what="Open orders could not be read" heading={heading === "h2" ? "h3" : "h4"} />
       ) : (
         <div className="ui-stack">
           <DataTable

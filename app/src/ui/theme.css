@@ -1,107 +1,133 @@
 /*
-  Design tokens and the page base. One stylesheet that loads nothing else and ships no font files: the CSP allows
-  style-src 'self' and font-src 'self' only, and the app loads nothing from any other origin.
+  Design tokens and the page base ("risograph desk", docs/design/cockpit-v2). One stylesheet that loads nothing:
+  the CSP allows style-src 'self' and font-src 'self' only. The font faces live in ui/fonts.css (vendored woff2
+  files beside it); this file only names the families and keeps the system stacks as the fallback.
 
-  Themes: light by default, dark through prefers-color-scheme unless the user chose light, and an explicit
-  data-theme="dark" on <html> from the manual toggle (ui/theme.ts). The two dark blocks MUST stay identical;
-  theme-tokens.test.ts compares them and checks every foreground/background pair for WCAG contrast.
+  Themes: light ("paper") by default, dark ("ink") through prefers-color-scheme unless the user chose light, and an
+  explicit data-theme="dark" on <html> from the manual toggle (ui/theme.ts). The two dark blocks MUST stay
+  identical; theme-tokens.test.ts compares them and checks every foreground/background pair for WCAG contrast.
 
   Token vocabulary for route and feature authors (use these, never raw colours):
-    --bg --surface --surface-2        page, cards, wells
-    --text --text-muted               body text, secondary text (both pass 4.5:1 on --bg and --surface)
-    --border --border-strong          decorative rule; control outline (3:1)
-    --accent --accent-fg              primary action fill and its text
+    --bg --surface --surface-2        paper, panel, the darker well
+    --text --text-muted               ink, dim ink (both pass 4.5:1 on --bg, --surface and --surface-2)
+    --border --border-strong          line (decorative rule); strong line (control outline, 3:1)
+    --accent --accent-fg              the primary action fill (ink) and its text (paper); also the dock strip
+    --accent-fg-muted                 secondary text on an --accent fill
     --focus                           focus ring (3:1 against --bg and --surface)
-    --ok-bg/-fg --warn-bg/-fg --danger-bg/-fg --info-bg/-fg --neutral-bg/-fg    tone pairs (4.5:1)
-    --untrusted-bg --untrusted-fg     the fixed slot that holds market text
-  Colour is never the only carrier of meaning: every tone also has a text label and a glyph.
+    --yes --no --caution              the Yes side, the No side, and caution text (always with a dashed border
+                                      and words, never a fill). All three pass 4.5:1 as text on --bg/--surface.
+    --ok-bg/-fg --warn-bg/-fg --danger-bg/-fg --info-bg/-fg --neutral-bg/-fg    tone pairs (4.5:1): panel
+                                      backgrounds with ink-family text; tone is a word and a glyph, never a fill
+    --untrusted-bg --untrusted-fg     the fixed slot that holds market text (a flat panel well)
+    --scrim                           the translucent ground under a dialog (the dither rect sits on it)
+    --line --line-strong              1.5 px rules; 2 px frames (header, dialog)
+  Colour is never the only carrier of meaning: every tone also has a text label and a glyph. Two accents are a
+  shade darker than the design's swatches so they pass 4.5:1 as text on paper: No is #ae3c18 (design #b5401a,
+  4.49:1 on paper) and caution is #845600 (design #8a5a00, 4.48:1 on the well).
 */
 
 :root {
   color-scheme: light dark;
 
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #eceff3;
-  --text: #14171c;
-  --text-muted: #4a5360;
-  --border: #d3d9e1;
-  --border-strong: #6b7686;
-  --accent: #1a46c2;
-  --accent-fg: #ffffff;
-  --focus: #1a46c2;
-  --ok-bg: #dcfce7;
-  --ok-fg: #14532d;
-  --warn-bg: #fef3c7;
-  --warn-fg: #6b3a07;
-  --danger-bg: #fee2e2;
-  --danger-fg: #7f1d1d;
-  --info-bg: #dbeafe;
-  --info-fg: #1e3a8a;
-  --neutral-bg: #e5e8ed;
-  --neutral-fg: #2b323c;
-  --untrusted-bg: #f0f2f5;
-  --untrusted-fg: #14171c;
+  --bg: #e8e5db;
+  --surface: #f3f1ea;
+  --surface-2: #e3e0d5;
+  --text: #1a1b1f;
+  --text-muted: #5b5952;
+  --border: #c7c3b6;
+  --border-strong: #7e7b72;
+  --accent: #1a1b1f;
+  --accent-fg: #e8e5db;
+  --accent-fg-muted: #a9a69b;
+  --focus: #2443c8;
+  --yes: #2443c8;
+  --no: #ae3c18;
+  --caution: #845600;
+  --ok-bg: #f3f1ea;
+  --ok-fg: #1a1b1f;
+  --warn-bg: #f3f1ea;
+  --warn-fg: #845600;
+  --danger-bg: #f3f1ea;
+  --danger-fg: #ae3c18;
+  --info-bg: #f3f1ea;
+  --info-fg: #2443c8;
+  --neutral-bg: #f3f1ea;
+  --neutral-fg: #5b5952;
+  --untrusted-bg: #f3f1ea;
+  --untrusted-fg: #1a1b1f;
+  --scrim: rgb(232 229 219 / 0.55);
 
   --gutter: 16px;
-  --radius: 8px;
+  --radius: 0;
+  --line: 1.5px;
+  --line-strong: 2px;
   --tap: 44px;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --font: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Martian Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e1116;
-    --surface: #161b22;
-    --surface-2: #1f2630;
-    --text: #e8ebf0;
-    --text-muted: #a9b2bf;
-    --border: #2d3643;
-    --border-strong: #8a94a3;
-    --accent: #8fb3ff;
-    --accent-fg: #08101f;
-    --focus: #8fb3ff;
-    --ok-bg: #123320;
-    --ok-fg: #bbf7d0;
-    --warn-bg: #3a2d0a;
-    --warn-fg: #fde68a;
-    --danger-bg: #4a1818;
-    --danger-fg: #fecaca;
-    --info-bg: #14284d;
-    --info-fg: #bfdbfe;
-    --neutral-bg: #262e3a;
-    --neutral-fg: #dde2ea;
-    --untrusted-bg: #1d242e;
-    --untrusted-fg: #e8ebf0;
+    --bg: #1a1b1f;
+    --surface: #24252a;
+    --surface-2: #2c2d33;
+    --text: #e8e5db;
+    --text-muted: #a9a69b;
+    --border: #3a3b40;
+    --border-strong: #7e7b72;
+    --accent: #e8e5db;
+    --accent-fg: #1a1b1f;
+    --accent-fg-muted: #5b5952;
+    --focus: #9bacff;
+    --yes: #9bacff;
+    --no: #ef9a78;
+    --caution: #deae4c;
+    --ok-bg: #24252a;
+    --ok-fg: #e8e5db;
+    --warn-bg: #24252a;
+    --warn-fg: #deae4c;
+    --danger-bg: #24252a;
+    --danger-fg: #ef9a78;
+    --info-bg: #24252a;
+    --info-fg: #9bacff;
+    --neutral-bg: #24252a;
+    --neutral-fg: #a9a69b;
+    --untrusted-bg: #24252a;
+    --untrusted-fg: #e8e5db;
+    --scrim: rgb(26 27 31 / 0.6);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0e1116;
-  --surface: #161b22;
-  --surface-2: #1f2630;
-  --text: #e8ebf0;
-  --text-muted: #a9b2bf;
-  --border: #2d3643;
-  --border-strong: #8a94a3;
-  --accent: #8fb3ff;
-  --accent-fg: #08101f;
-  --focus: #8fb3ff;
-  --ok-bg: #123320;
-  --ok-fg: #bbf7d0;
-  --warn-bg: #3a2d0a;
-  --warn-fg: #fde68a;
-  --danger-bg: #4a1818;
-  --danger-fg: #fecaca;
-  --info-bg: #14284d;
-  --info-fg: #bfdbfe;
-  --neutral-bg: #262e3a;
-  --neutral-fg: #dde2ea;
-  --untrusted-bg: #1d242e;
-  --untrusted-fg: #e8ebf0;
+  --bg: #1a1b1f;
+  --surface: #24252a;
+  --surface-2: #2c2d33;
+  --text: #e8e5db;
+  --text-muted: #a9a69b;
+  --border: #3a3b40;
+  --border-strong: #7e7b72;
+  --accent: #e8e5db;
+  --accent-fg: #1a1b1f;
+  --accent-fg-muted: #5b5952;
+  --focus: #9bacff;
+  --yes: #9bacff;
+  --no: #ef9a78;
+  --caution: #deae4c;
+  --ok-bg: #24252a;
+  --ok-fg: #e8e5db;
+  --warn-bg: #24252a;
+  --warn-fg: #deae4c;
+  --danger-bg: #24252a;
+  --danger-fg: #ef9a78;
+  --info-bg: #24252a;
+  --info-fg: #9bacff;
+  --neutral-bg: #24252a;
+  --neutral-fg: #a9a69b;
+  --untrusted-bg: #24252a;
+  --untrusted-fg: #e8e5db;
+  --scrim: rgb(26 27 31 / 0.6);
 }
 
 :root[data-theme="light"] {
@@ -126,8 +152,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.45;
   /* The page itself never scrolls sideways at 360 px; wide content scrolls inside its own region. */
   overflow-x: hidden;
 }
@@ -136,28 +162,37 @@ body.ui-scroll-lock {
   overflow: hidden;
 }
 
+/* Sentence case throughout: nothing in this system is set in upper case, and a number is never set in Archivo. */
 h1,
 h2,
 h3,
 h4 {
-  line-height: 1.25;
+  line-height: 1.15;
   margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.875rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 h3 {
-  font-size: 1.05rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 h4 {
-  font-size: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 p {
@@ -165,15 +200,22 @@ p {
 }
 
 a {
-  color: var(--accent);
+  color: var(--text);
   text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--yes);
 }
 
 code,
 kbd,
-samp {
+samp,
+time,
+.ui-num {
   font-family: var(--mono);
   font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
 }
 
 :focus-visible {
@@ -184,6 +226,26 @@ samp {
 /* Programmatic focus targets (main, headings, dialogs) do not need a ring when focused by script. */
 [tabindex="-1"]:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Motion in this system is quantised like the dither: a two-step blink, never a fade. The hero canvas is the
+   only thing that moves on its own, and it draws one frame under reduced motion (ui/dither.tsx). */
+@keyframes ui-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ui-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--yes);
+  animation: ui-blink 1.6s steps(2, end) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

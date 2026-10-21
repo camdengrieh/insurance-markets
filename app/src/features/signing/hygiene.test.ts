@@ -15,7 +15,6 @@ import { inboxDecisionRequestSchema } from "@bridge/contract";
 // document or message channel, so no text can reach the card from anywhere but the daemon's inbox record.
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROUTE_FILE = join(HERE, "..", "..", "routes", "signing.tsx");
 // Test-only helpers: they build fixtures and a fake daemon, and never enter a build.
 const TEST_ONLY = new Set(["testkit.ts", "test-support.tsx"]);
 
@@ -25,13 +24,13 @@ const ALLOWED_PATH_LITERALS: ReadonlySet<string> = new Set(["/ui/inbox", "/ui/in
 const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild"]);
 const FORBIDDEN_IMPORTED_NAME = /submit|inboxSign|PREPARE_ROUTES|UI_POST|INBOX_POST|TOOL_POST|SESSION_POST|toolCall|toPayboxSignArgs|POST_ROUTES(?!$)/i;
 const FORBIDDEN_IDENTIFIER = /submit|signature/i;
-// "submitted" is a state the daemon reports (an inbox state), not an action this page takes.
-const ALLOWED_IDENTIFIERS = new Set(["SignatureCard", "SignatureCardProps", "submitted"]);
+// "submitted" is a state the daemon reports (an inbox state), not an action this page takes. The card and its
+// dialog are named after what they show, not after anything they do.
+const ALLOWED_IDENTIFIERS = new Set(["SignatureCard", "SignatureCardProps", "SignatureCardDialog", "SignatureCardDialogProps", "submitted"]);
 // Route-table keys that pick a SCHEMA to read an answer with, per file. None of them is sent anywhere.
 const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = {
   "card.ts": ["/v1/userop/prepare", "/v1/order/prepare"],
   "client.ts": ["/ui/userop/:hash", "/ui/order/:hash"],
-  "routes/signing.tsx": ["/signing"],
 };
 const NETWORK_GLOBALS = new Set(["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "postMessage", "BroadcastChannel", "Worker", "SharedWorker", "importScripts"]);
 const PAGE_INPUT_GLOBALS = new Set(["location", "localStorage", "sessionStorage", "indexedDB", "URLSearchParams", "history", "document", "window"]);
@@ -136,15 +135,17 @@ export function scanClient(text: string): Finding[] {
 
 function pageFiles(): Array<{ readonly name: string; readonly text: string }> {
   const files = readdirSync(HERE).filter((name) => /\.(?:ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) && !TEST_ONLY.has(name));
-  return [...files.map((name) => ({ name, text: readFileSync(join(HERE, name), "utf8") })), { name: "routes/signing.tsx", text: readFileSync(ROUTE_FILE, "utf8") }];
+  // The inbox has no route of its own any more: it lives in the terminal dock (features/terminal/Dock.tsx), so
+  // every file of the feature is here.
+  return files.map((name) => ({ name, text: readFileSync(join(HERE, name), "utf8") }));
 }
 
 describe("M4-4: no code path in the page sends a signature (AST)", () => {
   const files = pageFiles();
 
-  it("scans the whole screen: card, client, store, view and the route file", () => {
+  it("scans the whole feature: card, dialog, client, store and the inbox list", () => {
     const names = files.map((file) => file.name);
-    for (const expected of ["card.ts", "client.ts", "store.ts", "SigningView.tsx", "SignatureCard.tsx", "CardParts.tsx", "useInbox.ts", "services.tsx", "routes/signing.tsx"]) expect(names).toContain(expected);
+    for (const expected of ["card.ts", "client.ts", "store.ts", "SigningView.tsx", "SignatureCard.tsx", "SignatureCardDialog.tsx", "CardParts.tsx", "useInbox.ts", "services.tsx"]) expect(names).toContain(expected);
   });
 
   it("finds nothing in the real source", () => {

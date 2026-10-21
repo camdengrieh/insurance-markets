@@ -210,3 +210,27 @@ export const SPREAD_LABEL: Readonly<Record<SpreadTier, string>> = Object.freeze(
   indicative: "indicative spread, not executable",
   book: "book spread (size and fees not applied)",
 });
+
+// ---- the implied No side ------------------------------------------------------------------------------------------------
+
+// When only the Yes side of a binary market has a book, the No side can be IMPLIED as 1 minus Yes: an implied bid
+// is 1 minus the Yes ask, an implied ask is 1 minus the Yes bid. It is labelled "implied, not a quote" wherever it
+// is shown and is never computed for a venue whose No side has a book of its own. Exact decimals; null when a side
+// is missing or out of range (never 0 or 0.5).
+export interface ImpliedSide {
+  readonly bid: string | null;
+  readonly ask: string | null;
+}
+
+export function impliedComplement(yes: Pick<Book, "bids" | "asks">): ImpliedSide {
+  const one = parseQty("price", "1");
+  const zero = parseQty("price", "0");
+  if (one === null || zero === null) return { bid: null, ask: null };
+  const flip = (level: Level | undefined): string | null => {
+    if (level === undefined) return null;
+    const price = parseQty("price", level.price);
+    if (price === null || cmpQty(price, zero) < 0 || cmpQty(price, one) > 0) return null;
+    return formatPriceCents(subQty(one, price));
+  };
+  return { bid: flip(yes.asks[0]), ask: flip(yes.bids[0]) };
+}

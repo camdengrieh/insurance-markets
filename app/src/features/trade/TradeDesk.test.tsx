@@ -99,12 +99,12 @@ describe("first sight: everything is off and unproven", () => {
     const rig = makeRig();
     const { render } = await import("../../ui/testing/dom");
     const { ModeProvider } = await import("../../ui");
-    const { TradeView } = await import("./TradeView");
+    const { TradeDesk } = await import("./TradeDesk");
     const { TradeServicesProvider } = await import("./services");
     const { container } = render(
       <ModeProvider mode="standalone">
         <TradeServicesProvider services={rig.services}>
-          <TradeView />
+          <TradeDesk />
         </TradeServicesProvider>
       </ModeProvider>,
     );

@@ -12,13 +12,14 @@ import type { Env } from "../../core/env";
 import { FakeRaw, FakeTimers, rawResponse } from "../../core/fakes";
 import type { RawResponse } from "../../core/fetch";
 import { ClockProvider, ModeProvider, createAppQueryClient } from "../../ui";
-import { act, render } from "../../ui/testing/dom";
+import { AnnouncerProvider } from "../../ui/a11y";
+import { act, click, must, render } from "../../ui/testing/dom";
 import marketFixture from "./fixtures/plugin-xo_get_market.json";
 import bookNoFixture from "./fixtures/plugin-xo_orderbook-no.json";
 import bookYesFixture from "./fixtures/plugin-xo_orderbook-yes.json";
 import positionsFixture from "./fixtures/plugin-xo_positions.json";
 import searchFixture from "./fixtures/plugin-xo_search.json";
-import { TerminalView } from "./TerminalView";
+import { Dock } from "./Dock";
 import { createTerminalServices, TerminalServicesProvider, type TerminalServices } from "./services";
 import type { StorageLike } from "./session";
 
@@ -267,23 +268,32 @@ export function fakeServices(options: ServicesOptions): { readonly services: Ter
   return { services, timers };
 }
 
-export function mountTerminal(services: TerminalServices, timers: FakeTimers): { readonly container: HTMLElement; unmount(): void } {
-  const location = memoryLocation({ path: "/terminal" });
+// The terminal is mounted the way the page mounts it: inside the dock (Dock.tsx), which owns pairing and the one
+// event stream. The dock starts collapsed; `expand` (the default) presses its toggle so the transcript, the
+// command line, the observer pane and the inbox are on screen, as a person would have them.
+export function mountDock(services: TerminalServices, timers: FakeTimers, options: { readonly expand?: boolean; readonly mode?: "cockpit" | "standalone" } = {}): { readonly container: HTMLElement; unmount(): void } {
+  const location = memoryLocation({ path: "/" });
   const ui: ReactElement = (
     <QueryClientProvider client={createAppQueryClient()}>
-      <ModeProvider mode="cockpit">
+      <ModeProvider mode={options.mode ?? "cockpit"}>
         <ClockProvider clock={{ now: timers.clock }}>
-          <Router hook={location.hook}>
-            <TerminalServicesProvider services={services}>
-              <TerminalView />
-            </TerminalServicesProvider>
-          </Router>
+          <AnnouncerProvider>
+            <Router hook={location.hook}>
+              <TerminalServicesProvider services={services}>
+                <Dock services={services} />
+              </TerminalServicesProvider>
+            </Router>
+          </AnnouncerProvider>
         </ClockProvider>
       </ModeProvider>
     </QueryClientProvider>
   );
-  return render(ui);
+  const view = render(ui);
+  if (options.expand ?? true) click(must(view.container, "button[aria-expanded]"));
+  return view;
 }
+
+export const mountTerminal = mountDock;
 
 // Let promises and zero-delay timers settle inside act. Fake timers do not advance by themselves.
 export async function flush(rounds = 12): Promise<void> {

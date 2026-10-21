@@ -37,11 +37,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // Why metadata is unacceptable, or null when it is fine.
 export function metaProblem(meta: unknown): string | null {
   if (!isRecord(meta)) return "the route export is missing or not an object";
-  const { id, path, title, nav, availability } = meta;
+  const { id, path, title, nav, availability, hero } = meta;
   if (typeof id !== "string" || !ID.test(id)) return "the route id must be lower-case kebab text";
   if (typeof path !== "string" || !PATH.test(path) || path.split("/").some((part) => part === "." || part === "..")) return "the route path is not a plain wouter path";
   if (typeof title !== "string" || title.trim() === "" || title.length > MAX_TITLE) return "the route title must be short non-empty text";
   if (availability !== undefined && availability !== "any" && availability !== "cockpit") return "availability must be any or cockpit";
+  if (hero !== undefined && typeof hero !== "boolean") return "hero must be true or false";
   if (nav !== undefined) {
     if (!isRecord(nav)) return "nav must be an object";
     if (typeof nav.label !== "string" || nav.label.trim() === "" || nav.label.length > MAX_LABEL) return "nav.label must be short non-empty text";

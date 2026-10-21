@@ -16,7 +16,7 @@ import fundFixture from "./fixtures/fund-answers.json";
 import relayFixture from "./fixtures/relay-answers.json";
 import quoteFixture from "./fixtures/ticket-quotes.json";
 import { createTradeServices, TradeServicesProvider, type TradeServices } from "./services";
-import { TradeView } from "./TradeView";
+import { TradeDesk, type TradeDeskProps } from "./TradeDesk";
 
 export { PAIR_CODE, TOKEN, flush, until, jsonReply, memoryStorage, toolEnvelope };
 export { errorReply as errorReplyOf };
@@ -103,15 +103,15 @@ export function prepareEnvelope(tool: string, structured: unknown): Record<strin
   return { ...toolEnvelope(tool, structured), tool_class: "prepare" };
 }
 
-export function mountTrade(rig: TradeRig): { readonly container: HTMLElement; unmount(): void } {
-  const location = memoryLocation({ path: "/trade" });
+export function mountTrade(rig: TradeRig, props: Omit<TradeDeskProps, "services"> = {}): { readonly container: HTMLElement; unmount(): void } {
+  const location = memoryLocation({ path: "/" });
   const ui: ReactElement = (
     <QueryClientProvider client={createAppQueryClient()}>
       <ModeProvider mode="cockpit">
         <ClockProvider clock={{ now: rig.timers.clock }}>
           <Router hook={location.hook}>
             <TradeServicesProvider services={rig.services}>
-              <TradeView />
+              <TradeDesk {...props} />
             </TradeServicesProvider>
           </Router>
         </ClockProvider>

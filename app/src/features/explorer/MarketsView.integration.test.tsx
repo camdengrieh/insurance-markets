@@ -82,7 +82,7 @@ describe("standalone build with the real readers", () => {
 
     // The other venues answered 404: each is a typed error tile, and XO still rendered (the others do not hide it).
     expect(container.querySelectorAll('section[data-kind="error"]').length).toBeGreaterThanOrEqual(1);
-    expect(container.querySelector('[data-venue="xo"]')).not.toBeNull();
+    expect(container.querySelector('li.explorer-venue[data-venue="xo"]')).not.toBeNull();
   });
 
   it("M0-6: a 100-search burst stays inside the per-host budget", async () => {
@@ -110,7 +110,7 @@ describe("standalone build with the real readers", () => {
     // throttle as a pause, which is its own mapping), never as an empty market list.
     const tile = container.querySelector('section[data-kind="error"][data-code="RATE_LIMITED"], section[data-kind="error"][data-code="VENUE_PAUSED"]');
     expect(tile).not.toBeNull();
-    expect(container.querySelector('[data-venue="xo"]')?.getAttribute("data-state")).toBe("error");
+    expect(container.querySelector('li.explorer-venue[data-venue="xo"]')?.getAttribute("data-state")).toBe("error");
     expect(container.querySelector('section[data-kind="empty"]')).toBeNull();
   });
 });

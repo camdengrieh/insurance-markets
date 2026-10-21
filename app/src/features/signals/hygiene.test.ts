@@ -24,7 +24,10 @@ function files(): Array<{ readonly name: string; readonly text: string }> {
     }
   };
   walk(here);
-  out.push({ name: "routes/signals.tsx", text: readFileSync(join(src, "routes", "signals.tsx"), "utf8") });
+  // There is no route file: the Quotient settings dialog is opened from the Markets surface (features/explorer).
+  // The surface's two components that show Quotient output are scanned under the same rules: the Quotient panel
+  // (the only component that fires the paid lookup) and the "Same question elsewhere" panel (the link candidates).
+  for (const name of ["QuotientPanel.tsx", "SameQuestion.tsx"]) out.push({ name: `features/explorer/${name}`, text: readFileSync(join(src, "features", "explorer", name), "utf8") });
   return out;
 }
 
@@ -39,7 +42,8 @@ const sources = all.filter((file) => !file.name.endsWith(".css") && !file.name.e
 describe("Signals source hygiene", () => {
   it("scans the files it should", () => {
     const names = all.map((file) => file.name);
-    for (const expected of ["features/signals/SignalsView.tsx", "features/signals/RowCard.tsx", "features/signals/session.ts", "features/signals/LinkOverlay.tsx", "features/signals/links/verify.ts", "routes/signals.tsx"]) expect(names).toContain(expected);
+    for (const expected of ["features/signals/SignalsView.tsx", "features/signals/QuotientSettingsDialog.tsx", "features/signals/RowCard.tsx", "features/signals/session.ts", "features/signals/LinkOverlay.tsx", "features/signals/links/verify.ts", "features/explorer/QuotientPanel.tsx", "features/explorer/SameQuestion.tsx"]) expect(names).toContain(expected);
+    expect(names.some((name) => name.startsWith("routes/"))).toBe(false);
   });
 
   it("has no string-to-HTML or string-to-code sink, no inline style, no URL literal", () => {

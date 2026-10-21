@@ -1,23 +1,32 @@
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
 
 import { formatUtc } from "../../core/format";
-import { Badge, Button, ErrorTile, Tile, useAnnounce, useAppMode, useClock } from "../../ui";
+import { Badge, Button, ErrorTile, toIso, useAnnounce, useAppMode, useClock } from "../../ui";
 import { CallLine, OutcomeCard } from "./cards";
 import { describeCommand, MAX_LINE_CHARS, normalizeLine, parseLine, type Command, type ParseRefusal } from "./grammar";
 import { execute, type CallRecord, type ExecContext, type Outcome } from "./execute";
+import type { ObserverState } from "./observer";
 import { ObserverPane } from "./ObserverPane";
-import { PAIR_REASON_TEXT, type PairReason } from "./session";
+import { PairingNotice } from "./PairingNotice";
 import { useTerminalServices, type TerminalServices } from "./services";
 import { useObserver } from "./useObserver";
+import { usePairing, type Pairing } from "./usePairing";
 
 // The read terminal (docs/dapp-design.md 5.2, J1). A line is parsed by a fixed grammar (grammar.ts), run as a fixed
 // plan of read calls (execute.ts) and shown by per-tool renderers (cards.tsx). There is no model, no scripting and
 // no way to name a tool. Pasted line breaks are flattened and a paste never runs anything; only Enter does.
+//
+// Hosted in the dock (Dock.tsx) it receives the dock's pairing and observer state through `feed` and opens no
+// stream of its own; mounted on its own it pairs, subscribes and shows the observer pane itself.
 
 export const MAX_ENTRIES = 60;
 export const MAX_HISTORY = 50;
 
-type Pairing = { readonly phase: "checking" } | { readonly phase: "ready" } | { readonly phase: "unpaired"; readonly reason: PairReason } | { readonly phase: "expired" };
+export interface TerminalFeed {
+  readonly pairing: Pairing;
+  readonly observer: ObserverState;
+  readonly onUnauthorized: () => void;
+}
 
 interface Entry {
   readonly id: number;
@@ -54,20 +63,7 @@ function entriesReducer(entries: readonly Entry[], action: EntryAction): readonl
   }
 }
 
-function PairingNotice({ pairing }: { readonly pairing: Pairing }) {
-  if (pairing.phase === "ready") return null;
-  if (pairing.phase === "checking") {
-    return (
-      <Tile tone="info" title="Connecting to the daemon" heading="h2" dataKind="pairing" dataCode="checking">
-        <p>Checking whether this page already has a session.</p>
-      </Tile>
-    );
-  }
-  const text = pairing.phase === "expired" ? "The daemon no longer accepts this page's session (it expired, or the daemon restarted). Reload the page to have the daemon print a fresh pair link." : PAIR_REASON_TEXT[pairing.reason];
-  return <ErrorTile code="NOT_PAIRED" title="Not paired with the daemon" message={text} heading="h2" />;
-}
-
-export function TerminalView({ services: provided }: { readonly services?: TerminalServices }) {
+export function TerminalView({ services: provided, feed }: { readonly services?: TerminalServices; readonly feed?: TerminalFeed }) {
   const mode = useAppMode();
   const clock = useClock();
   const announce = useAnnounce();
@@ -79,7 +75,6 @@ export function TerminalView({ services: provided }: { readonly services?: Termi
   const idRef = useRef(0);
   const callIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
-  const [pairing, setPairing] = useState<Pairing>({ phase: "checking" });
   const [line, setLine] = useState("");
   const [pasteNotice, setPasteNotice] = useState<string | null>(null);
   const [entries, dispatch] = useReducer(entriesReducer, []);
@@ -87,31 +82,10 @@ export function TerminalView({ services: provided }: { readonly services?: Termi
   const history = useRef<string[]>([]);
   const cursor = useRef<number>(-1);
 
-  const onUnauthorized = useCallback((): void => {
-    services.session.forget();
-    setPairing({ phase: "expired" });
-  }, [services]);
-
-  // Pair once, on arrival: a token already held (this tab or the shell's session client) wins; otherwise the pairing
-  // code the page was opened with is exchanged.
-  useEffect(() => {
-    let cancelled = false;
-    if (mode !== "cockpit") {
-      setPairing({ phase: "unpaired", reason: "no_code" });
-      return;
-    }
-    if (services.session.token() !== null) {
-      setPairing({ phase: "ready" });
-      return;
-    }
-    void services.session.pair().then((outcome) => {
-      if (cancelled) return;
-      setPairing(outcome.ok ? { phase: "ready" } : { phase: "unpaired", reason: outcome.reason });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [services, mode]);
+  // On its own the terminal pairs once, on arrival (usePairing); hosted, the dock's pairing is used as given.
+  const own = usePairing(services, mode, { enabled: feed === undefined });
+  const pairing = feed?.pairing ?? own.pairing;
+  const onUnauthorized = feed?.onUnauthorized ?? own.onUnauthorized;
 
   useEffect(
     () => () => {
@@ -120,7 +94,9 @@ export function TerminalView({ services: provided }: { readonly services?: Termi
     [],
   );
 
-  const observer = useObserver(services, pairing.phase === "ready", onUnauthorized);
+  // One stream per page: hosted, the dock holds it and this subscription stays inactive.
+  const ownObserver = useObserver(services, feed === undefined && pairing.phase === "ready", onUnauthorized);
+  const observer = feed?.observer ?? ownObserver;
   const observerRef = useRef(observer);
   observerRef.current = observer;
 
@@ -240,8 +216,8 @@ export function TerminalView({ services: provided }: { readonly services?: Termi
         A read-only terminal for the local daemon. It looks things up and shows them. It has no model, no scripts and no way to prepare, sign, send, fund, withdraw or cancel, and it
         never changes a flag, a cap or a setting. Type <code>help</code> for the commands.
       </p>
-      <PairingNotice pairing={pairing} />
-      <ObserverPane state={observer} />
+      {feed === undefined ? <PairingNotice pairing={pairing} /> : null}
+      {feed === undefined ? <ObserverPane state={observer} /> : null}
       <section className="terminal-console" aria-labelledby="terminal-console-title">
         <h2 id="terminal-console-title">Terminal</h2>
         <form className="terminal-form" onSubmit={submit} aria-describedby={hintId}>
@@ -280,7 +256,10 @@ export function TerminalView({ services: provided }: { readonly services?: Termi
           {rows.map((entry) => (
             <li key={entry.id} className="terminal-entry" data-running={entry.running ? "true" : undefined}>
               <p className="terminal-entry-head">
-                <span className="terminal-muted">{formatUtc(entry.atMs)}</span> <Badge tone="neutral">you</Badge>{" "}
+                <time className="terminal-muted" dateTime={toIso(entry.atMs)}>
+                  {formatUtc(entry.atMs)}
+                </time>{" "}
+                <Badge tone="neutral">you</Badge>{" "}
                 {entry.command !== null ? <code>{describeCommand(entry.command)}</code> : entry.line === "" ? <span>(the line was too long to show)</span> : <code>{entry.line}</code>}
                 {entry.running ? <span className="terminal-muted"> running</span> : null}
               </p>

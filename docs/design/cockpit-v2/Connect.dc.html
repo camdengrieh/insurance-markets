@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connect PayBox: two routes, neither proven</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e8e5db}
+a{color:#1a1b1f}a:hover{color:#2443c8}
+.ck-focus:focus-visible{outline:3px solid #2443c8;outline-offset:2px}
+.ck-btn:hover{filter:brightness(0.96)}
+</style>
+</helmet>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<pattern id="c4" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0z" fill="currentColor"/></pattern>
+<pattern id="c8" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1z" fill="currentColor"/></pattern>
+<pattern id="c12" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="scale(2)"><path d="M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 2h1v1H3zM3 0h1v1H3zM1 2h1v1H1z" fill="currentColor"/></pattern>
+</defs>
+</svg>
+
+<div style="position:relative;min-height:100vh;background:#e8e5db;color:#1a1b1f;font-family:'Archivo',system-ui,sans-serif;font-size:14px;line-height:1.45">
+
+<div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;opacity:.5">
+<div style="display:flex;align-items:center;gap:20px;min-height:56px;padding:6px 24px;border-bottom:2px solid #1a1b1f"><span style="font-weight:700;font-size:17px">Cockpit</span><span style="flex:1 1 320px;max-width:560px;min-height:44px;border:1.5px solid #7e7b72;background:#f3f1ea"></span><span style="margin-left:auto;min-height:44px;width:200px;border:1.5px solid #1a1b1f;background:#f3f1ea"></span></div>
+<div style="height:232px;border-bottom:1.5px solid #c7c3b6;color:#1a1b1f"><svg width="100%" height="232"><rect width="100%" height="232" fill="url(#c4)"/></svg></div>
+<div style="height:52px;border-bottom:1.5px solid #c7c3b6"></div>
+<div style="height:44px;border-bottom:1px solid #c7c3b6"></div><div style="height:44px;border-bottom:1px solid #c7c3b6"></div><div style="height:44px;border-bottom:1px solid #c7c3b6"></div><div style="height:44px;border-bottom:1px solid #c7c3b6"></div><div style="height:44px;border-bottom:1px solid #c7c3b6"></div><div style="height:44px;border-bottom:1px solid #c7c3b6"></div>
+<div style="position:absolute;inset:0;color:#1a1b1f;opacity:.5"><svg width="100%" height="100%"><rect width="100%" height="100%" fill="url(#c4)"/></svg></div>
+</div>
+
+<div role="dialog" aria-modal="true" aria-labelledby="cn-title" style="position:relative;width:min(820px,calc(100% - 48px));margin:72px auto 48px;background:#e8e5db;border:2px solid #1a1b1f;box-shadow:8px 8px 0 #1a1b1f;display:flex;flex-direction:column">
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 24px 0">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h2 id="cn-title" style="margin:0;font-size:24px;line-height:1.15;font-weight:700;letter-spacing:-0.02em">Use your PayBox wallet here</h2>
+<p style="margin:0;color:#5b5952;max-width:60ch">PayBox keeps the keys. This page only ever asks it to sign, and shows you each request first. Neither route below has completed a signature for this project yet.</p>
+</div>
+<a href="Main.dc.html" class="ck-focus" aria-label="Close" style="width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid #1a1b1f;color:#1a1b1f;background:#f3f1ea;text-decoration:none;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></a>
+</div>
+
+<div role="tablist" aria-label="Route" style="display:flex;gap:0;padding:18px 24px 0;border-bottom:2px solid #1a1b1f">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" class="ck-focus" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+
+<sc-if value="{{showF}}" hint-placeholder-val="{{true}}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:0">
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;border-right:1.5px solid #c7c3b6">
+<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px">
+<li>Copy the pairing link below.</li>
+<li>Open <span style="font-family:'Martian Mono',monospace;font-size:12px">app.paybox.sh/wc</span> in the tab where you are signed in to PayBox and paste it.</li>
+<li>Approve once. Keep that PayBox tab open while you use this page.</li>
+</ol>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:12px;color:#5b5952">Pairing link · valid 5 minutes</span>
+<div style="display:flex;gap:8px">
+<input type="text" readonly value="wc:…  (generated when you press Start)" aria-label="Pairing link" style="flex:1;min-width:0;min-height:44px;border:1.5px solid #7e7b72;background:#f3f1ea;font-family:'Martian Mono',monospace;font-size:12px;padding:0 10px;color:#5b5952">
+<button type="button" class="ck-focus ck-btn" style="min-height:44px;padding:0 14px;border:1.5px solid #1a1b1f;background:#1a1b1f;color:#e8e5db;font:inherit;font-weight:600;cursor:pointer">Start</button>
+</div>
+</div>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px dashed #7e7b72;font-size:12.5px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a5a00" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" style="flex:none"><path d="M12 3l10 18H2zM12 10v5M12 18v1"/></svg>
+<span>PayBox creates this session as an autonomous grant and says it will sign without asking again. While your PayBox tab is open, a compromised page could request typed-data signatures with no prompt. Pair from a dedicated PayBox credential.</span>
+</div>
+</div>
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:#f3f1ea">
+<strong style="font-weight:600">What this route can do</strong>
+<dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px">
+<dt style="color:#5b5952">Signs</dt><dd style="margin:0">text messages and EIP-712 typed data</dd>
+<dt style="color:#5b5952">Chains</dt><dd style="margin:0;font-family:'Martian Mono',monospace;font-size:12px">1 10 56 137 999 4663 5042 8453 42161 43114</dd>
+<dt style="color:#5b5952">Cannot</dt><dd style="margin:0">raw digests, transactions, anything on chain 3223 (XO)</dd>
+<dt style="color:#5b5952">Author runs</dt><dd style="margin:0">nothing; one relay project id registered once</dd>
+<dt style="color:#5b5952">Gives this page</dt><dd style="margin:0">your address, a signed proof you control it, a signing layer for the day a write path exists</dd>
+</dl>
+<span style="font-size:12px;color:#5b5952">Read first-hand in PayBox's web bundle on 2026-10-20; never run.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showB}}" hint-placeholder-val="{{false}}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:0">
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;border-right:1.5px solid #c7c3b6">
+<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px">
+<li>Sign in with PayBox. One small function on this site runs the sign-in and keeps a 60-minute token in a sealed cookie; nothing is stored.</li>
+<li>Each signature request opens PayBox's own approve page in a new tab.</li>
+<li>Approve there; the result comes back here and is checked against the intent tag.</li>
+</ol>
+<button type="button" class="ck-focus ck-btn" style="align-self:flex-start;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1.5px solid #1a1b1f;background:#1a1b1f;color:#e8e5db;font:inherit;font-weight:600;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-3h12l3 3M16 13h2"/></svg>Sign in with PayBox</button>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px dashed #7e7b72;font-size:12.5px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a5a00" stroke-width="2.2" stroke-linecap="square" aria-hidden="true" style="flex:none"><path d="M12 3l10 18H2zM12 10v5M12 18v1"/></svg>
+<span>The function sees your PayBox token in memory for the length of a request. If this deploy were compromised it could raise approval prompts in your PayBox app. It cannot sign alone. A kill switch is public at /status.</span>
+</div>
+</div>
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:#f3f1ea">
+<strong style="font-weight:600">What this route can do</strong>
+<dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px">
+<dt style="color:#5b5952">Signs</dt><dd style="margin:0">whatever PayBox's API accepts, raw digests and chain 3223 included, if PayBox honours our requests</dd>
+<dt style="color:#5b5952">Biggest unknown</dt><dd style="margin:0">whether PayBox's approve page completes a request made by a client that is not PayBox's own app</dd>
+<dt style="color:#5b5952">Author runs</dt><dd style="margin:0">one function, one sealing secret, a kill switch, incident duty</dd>
+<dt style="color:#5b5952">Never</dt><dd style="margin:0">holds a key or a passkey, stores a token, proxies a venue</dd>
+</dl>
+<span style="font-size:12px;color:#5b5952">Decision record dated 2026-10-20; nothing built or run.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showP}}" hint-placeholder-val="{{false}}">
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+<p style="margin:0;max-width:64ch">Paste an address to see its positions and books across venues. Positions are public by address on XO, Polymarket, Limitless, Trueo and Pascal, so this needs no key and no PayBox connection.</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<input type="text" placeholder="0x… or name.eth" aria-label="Address to watch" style="flex:1 1 320px;min-height:44px;border:1.5px solid #7e7b72;background:#f3f1ea;font-family:'Martian Mono',monospace;font-size:13px;padding:0 10px;color:#1a1b1f">
+<button type="button" class="ck-focus ck-btn" style="min-height:44px;padding:0 16px;border:1.5px solid #1a1b1f;background:#f3f1ea;color:#1a1b1f;font:inherit;font-weight:600;cursor:pointer">Watch this address</button>
+</div>
+<span style="font-size:12px;color:#5b5952">Checked for EIP-55 and look-alike characters before any request. Bindings stay on this machine.</span>
+</div>
+</sc-if>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 24px;border-top:1.5px solid #c7c3b6;font-size:12px;color:#5b5952">
+<span>Connecting changes nothing about what this page can send. Every write is still a Signature Card you approve.</span>
+<a href="Main.dc.html" style="margin-left:auto">Not now</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1060}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'f' }; }
+  renderVals() {
+    const tab = this.state.tab;
+    const style = (on) => 'min-height:44px;padding:0 16px;border:1.5px solid #1a1b1f;border-bottom:0;margin-bottom:-2px;background:' + (on ? '#1a1b1f' : '#f3f1ea') + ';color:' + (on ? '#e8e5db' : '#1a1b1f') + ';font:inherit;font-weight:600;cursor:pointer';
+    const tabs = [
+      { id: 'f', label: 'Pair with PayBox (WalletConnect)' },
+      { id: 'b', label: 'Sign in with PayBox (one function on this site)' },
+      { id: 'p', label: 'Just watch an address' }
+    ].map((t) => ({ ...t, on: t.id === tab, style: style(t.id === tab), pick: () => this.setState({ tab: t.id }) }));
+    return { tabs, showF: tab === 'f', showB: tab === 'b', showP: tab === 'p' };
+  }
+}
+</script>
+</body>
+</html>

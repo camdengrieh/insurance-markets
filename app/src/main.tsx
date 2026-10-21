@@ -2,9 +2,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
-import { SessionStatus } from "./SessionStatus";
+import { Dock } from "./features/terminal/Dock";
+import { WalletChip } from "./features/wallet/WalletChip";
 import { startPageSession } from "./session";
-import { appModeFromEnv } from "./ui";
 import { initTheme } from "./ui/theme";
 import { takePairingFragment } from "./ui/pairing-fragment";
 import "./ui/theme.css";
@@ -14,7 +14,8 @@ import "./ui/components.css";
 //   1. remove a #pair= fragment from the address bar before anything reads the location;
 //   2. apply the saved theme before the first paint;
 //   3. start the Cockpit session (exchange the pairing code, if the page was opened with one);
-//   4. render.
+//   4. render: the shell with the wallet chip in its top bar and the terminal dock in its footer. The dock says
+//      whether the page is paired; the chip opens the Connect modal.
 // Nothing else happens at load: apart from that one exchange, no request is made until a screen asks for data.
 takePairingFragment();
 initTheme();
@@ -26,7 +27,7 @@ if (element === null) {
 } else {
   createRoot(element).render(
     <StrictMode>
-      <App statusBar={appModeFromEnv() === "cockpit" ? <SessionStatus session={session} /> : undefined} />
+      <App topBarEnd={<WalletChip />} dock={<Dock session={session} />} />
     </StrictMode>,
   );
 }

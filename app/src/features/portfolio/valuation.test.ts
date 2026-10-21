@@ -6,7 +6,7 @@ import { bidMark, MAX_BOOK_AGE_MS, summarize } from "./valuation";
 import { NOW, book, q, row, seeded } from "./fixtures";
 
 // M2-4: totals never add micro-units to dollars (property test), null is not zero, and the excluded-row count is
-// printed (see PortfolioView.test.tsx for the printed text).
+// printed (see panels.test.tsx for the printed text).
 
 describe("bidMark", () => {
   const qty = q("shares", "10");

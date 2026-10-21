@@ -33,9 +33,10 @@ for (const variant of ["with the CSP", "with no security headers at all"] as con
       expect(daemon.hostile.length).toBe(HOSTILE_CASES.length);
       for (const market of daemon.hostile) {
         await page.goto(`${server.url}#/market/xo/${market.conditionId}`);
-        await expect(page.locator("h1")).toHaveText("Market");
-        // The rules section only exists once the detail read succeeded.
-        await expect(page.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+        // A cold load of a market address shows the Markets surface (its h1 is the hero band's) with the modal open
+        // over it; the rules section only exists once the detail read succeeded.
+        await expect(page.locator("h1")).toHaveText("Markets");
+        await expect(page.getByRole("dialog", { name: "Market" }).getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
         await page.waitForTimeout(150);
         const problems = await domProblems(page);
         expect(problems, `${market.id}: ${JSON.stringify(problems)}`).toMatchObject({ eventHandlerAttributes: [], dangerousElements: [], foreignAnchors: [], dangerousUrls: [], markupOutsideSlots: [], activeForms: [], probeSet: false });
@@ -52,13 +53,16 @@ test("payload markup is visible as literal text inside the untrusted slot, and a
   const market = daemon.hostile.find((item) => item.id === "img-onerror");
   expect(market).toBeDefined();
   await page.goto(`${standalone.url}#/market/xo/${market?.conditionId ?? ""}`);
-  await expect(page.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
-  // The payload is on the page as characters (so a reader sees what the creator wrote) and nowhere as an element.
+  const modal = page.getByRole("dialog", { name: "Market" });
+  await expect(modal.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+  // The payload is on the page as characters (so a reader sees what the creator wrote) and nowhere as an element. The
+  // page's own decorative SVGs (tile glyphs, dither bars, the scrim) are aria-hidden and carry no script or link.
   const slotText = (await page.locator("[data-trust], .ui-untrusted-block").allInnerTexts()).join("\n");
   expect(slotText).toContain("<img src=x onerror=");
-  expect(await page.locator("main img, main script, main iframe, main svg").count()).toBe(0);
+  expect(await page.locator("main img, main script, main iframe, [role='dialog'] img, [role='dialog'] script, [role='dialog'] iframe").count()).toBe(0);
+  expect(await page.locator("main svg:not([aria-hidden='true']), [role='dialog'] svg:not([aria-hidden='true'])").count()).toBe(0);
   // The one legitimate https source is shown as text; the javascript:, data: and http: ones are not links, and neither is it.
-  expect(await page.locator("main a:not([href^='#'])").count()).toBe(0);
+  expect(await page.locator("main a:not([href^='#']), [role='dialog'] a:not([href^='#'])").count()).toBe(0);
   expect(await page.getByText("3 resolution source(s) were not plain https links and were left out").count()).toBe(1);
   expect((await domProblems(page)).probeSet).toBe(false);
 });

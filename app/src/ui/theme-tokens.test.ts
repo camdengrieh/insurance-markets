@@ -71,6 +71,18 @@ const TEXT_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["--neutral-fg", "--neutral-bg"],
   ["--untrusted-fg", "--untrusted-bg"],
   ["--text-muted", "--untrusted-bg"],
+  // The dock strip and the primary button: paper on ink (ink on paper in the dark theme), plus its dim text.
+  ["--accent-fg-muted", "--accent"],
+  // The two sides and caution are text, so they pass as text on the paper, the panel and the well.
+  ["--yes", "--bg"],
+  ["--yes", "--surface"],
+  ["--yes", "--surface-2"],
+  ["--no", "--bg"],
+  ["--no", "--surface"],
+  ["--no", "--surface-2"],
+  ["--caution", "--bg"],
+  ["--caution", "--surface"],
+  ["--caution", "--surface-2"],
 ];
 
 const UI_PAIRS: ReadonlyArray<readonly [string, string]> = [
@@ -78,7 +90,13 @@ const UI_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["--focus", "--surface"],
   ["--border-strong", "--bg"],
   ["--border-strong", "--surface"],
+  ["--border-strong", "--surface-2"],
   ["--border-strong", "--untrusted-bg"],
+  // The 9 px venue marks and the live dot are drawn in these, on paper and on the panel.
+  ["--yes", "--bg"],
+  ["--no", "--bg"],
+  ["--yes", "--surface"],
+  ["--no", "--surface"],
 ];
 
 describe("theme tokens", () => {
@@ -135,8 +153,15 @@ describe("stylesheets obey the CSP", () => {
     expect(components).toMatch(/min-height: var\(--tap\)/);
   });
 
-  it("uses only tokens for colour in component styles", () => {
-    const withoutRgb = components.replace(/rgb\(0 0 0 \/ 0\.55\)/, "");
-    expect(withoutRgb).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  it("uses only tokens for colour in component styles (the dialog scrim is a token too)", () => {
+    expect(components).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(components).not.toMatch(/\brgba?\(/);
+    expect(components).not.toMatch(/\bhsla?\(/);
+  });
+
+  it("keeps square corners and 1.5 px lines as tokens", () => {
+    expect(light["--radius"]).toBe("0");
+    expect(light["--line"]).toBe("1.5px");
+    expect(darkManual["--scrim"]).toMatch(/^rgb\(/);
   });
 });

@@ -53,14 +53,14 @@ function retypeInputs(container: HTMLElement): readonly HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>("fieldset[data-kind=retype] input")];
 }
 
-async function open(options: Parameters<typeof makePrepareRig>[0] = {}, reads: Parameters<typeof installPrepareReads>[1] = {}): Promise<{ rig: PrepareRig; container: HTMLElement; path: () => string }> {
+async function open(options: Parameters<typeof makePrepareRig>[0] = {}, reads: Parameters<typeof installPrepareReads>[1] = {}): Promise<{ rig: PrepareRig; container: HTMLElement; path: () => string; opened: readonly (string | null)[] }> {
   const rig = makePrepareRig(options);
   installPrepareReads(rig, reads);
   serve(rig, "xo_prepare_order", answer("prepare_order_buy"));
-  const { container, path } = mountConsole(rig);
+  const { container, path, opened } = mountConsole(rig);
   await until(() => rig.terminal.session.token() !== null);
   await flush(2);
-  return { rig, container, path };
+  return { rig, container, path, opened };
 }
 
 async function submitLine(container: HTMLElement, line: string): Promise<void> {
@@ -70,8 +70,8 @@ async function submitLine(container: HTMLElement, line: string): Promise<void> {
 }
 
 describe("a typed command", () => {
-  it("runs, shows the checked item and opens the Signature Card on the signing screen", async () => {
-    const { rig, container, path } = await open();
+  it("runs, shows the checked item and asks the dock to open its Signature Card (no navigation)", async () => {
+    const { rig, container, path, opened } = await open();
     typeInto(input(container), ORDER);
     // A line the person typed needs no re-typing.
     expect(container.querySelector("fieldset[data-kind=retype]")).toBeNull();
@@ -84,9 +84,12 @@ describe("a typed command", () => {
     expect(text).toContain("typed by you");
     const card = [...container.querySelectorAll("button")].find((candidate) => /Open the Signature Card/.test(candidate.textContent ?? ""));
     if (card === undefined) throw new Error("no card button");
-    expect(path()).toBe("/terminal");
+    expect(path()).toBe("/");
     click(card);
-    expect(path()).toBe("/signing");
+    // The card is a modal the dock opens for this item; the page does not navigate anywhere.
+    expect(path()).toBe("/");
+    expect(opened).toHaveLength(1);
+    expect(opened[0]).toMatch(/^[0-9a-f]{32}$/);
     expect(input(container).value).toBe("");
   });
 

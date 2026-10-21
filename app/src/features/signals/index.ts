@@ -1,8 +1,13 @@
-// Public surface of the Signals feature (docs/dapp-design.md 7.4 work package G). The screen is
-// app/src/routes/signals.tsx; other features import from here, never from the sibling modules.
+// Public surface of the Signals feature (docs/dapp-design.md 7.4 work package G). There is no Signals screen: the
+// Markets surface opens the Quotient settings dialog from its Quotient line and renders RowCards in its market
+// modal. Other features import from here, never from the sibling modules.
 import "./signals.css";
 
 export { SignalsView, COVERAGE_FILTERS, type CoverageFilter } from "./SignalsView";
+export { QuotientSettingsDialog, QUOTIENT_SETTINGS_TITLE, type QuotientSettingsDialogProps } from "./QuotientSettingsDialog";
+export { ResultNotice, RejectedRows } from "./Notices";
+export { ShapeStatus } from "./GatePanel";
+export { VENUE_OF_QUOTIENT, QUOTIENT_VENUE_NAMES, quotientVenueName } from "./words";
 export { RowCard, type RowCardProps } from "./RowCard";
 export { SignalsServicesProvider, createSignalsServices, legReaderOver, setSignalsTokenSource, useSignalsServices, type LegReader, type SignalsServices, type SignalsServicesOptions } from "./services";
 export { SignalsSession, type AccessChoice, type SessionOptions, type SessionSnapshot } from "./session";

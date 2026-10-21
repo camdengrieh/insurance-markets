@@ -9,7 +9,9 @@ import { App } from "../App";
 import type { Prov, Untrusted } from "../core/ports";
 import { DataTable } from "./DataTable";
 import { Dialog } from "./Dialog";
-import { Badge, Button, Disclosure } from "./primitives";
+import { DitherBar, DitherDefs } from "./dither";
+import { HeroBand } from "./HeroBand";
+import { Badge, Button, Chip, Disclosure, Mark, Num, SearchField, VenueMark } from "./primitives";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import type { Loader } from "./routes";
 import { CapabilityBadge, EmptyTile, ErrorTile, NeedsCockpitTile, RestrictedTermsTile, UnprovenTile } from "./Tiles";
@@ -59,7 +61,20 @@ describe("axe (structure only)", () => {
   it("the primitives and tiles together have no violations", async () => {
     const { container } = render(
       <main>
-        <h1>Gallery</h1>
+        <DitherDefs />
+        <HeroBand title="Gallery" lede="Every primitive once." facts={[{ label: "Held", value: "none", note: "no address watched" }, { label: "Linked groups", value: "0", note: "none approved", tone: "yes" }]} still />
+        <SearchField label="Search loaded rows" shortcut="⌘K" />
+        <div>
+          <Chip pressed count={3}>
+            All
+          </Chip>
+          <Chip pressed={false}>Holdings</Chip>
+        </div>
+        <p>
+          <Mark>held</Mark> <Mark tone="yes">link</Mark> <Mark tone="no">Q</Mark> <VenueMark venue="xo" /> <Num>0.025</Num>
+        </p>
+        <DitherBar value={0.5} tone="yes" />
+        <DitherBar value={0.5} tone="no" label="depth, half of the deepest level shown" />
         <ProvenanceStrip prov={prov} />
         <ErrorTile code="TIMEOUT" venue="polymarket" onRetry={() => undefined} detail={untrusted("<img src=x onerror=alert(1)>")} />
         <EmptyTile />
@@ -99,8 +114,18 @@ describe("axe (structure only)", () => {
   });
 
   for (const mode of ["standalone", "cockpit"] as const) {
-    it(`the full shell (${mode}) on the overview, a table screen and a crashed screen has no violations`, async () => {
+    it(`the full shell (${mode}) on the overview, a hero screen, a table screen and a crashed screen has no violations`, async () => {
       const loaders: Record<string, Loader> = {
+        "./routes/home.tsx": async () => ({
+          route: { id: "home", path: "/home", title: "Home", hero: true },
+          default: () => (
+            <>
+              <HeroBand title="Home" lede="A hero screen renders its own h1." facts={[{ label: "Held", value: "none", note: "no address watched" }]} still />
+              <h2>Below the band</h2>
+              <p>words</p>
+            </>
+          ),
+        }),
         "./routes/markets.tsx": async () => ({
           route: { id: "markets", path: "/markets", title: "Markets", nav: { label: "Markets", order: 1 } },
           default: () => (
@@ -118,10 +143,11 @@ describe("axe (structure only)", () => {
           throw new Error("x");
         },
       };
-      for (const path of ["/", "/markets", "/terminal", "/missing"]) {
+      for (const path of ["/", "/home", "/markets", "/terminal", "/missing"]) {
         const location = memoryLocation({ path });
-        const { container, unmount } = render(<App loaders={loaders} mode={mode} locationHook={location.hook} />);
+        const { container, unmount } = render(<App loaders={loaders} mode={mode} locationHook={location.hook} onConnect={() => undefined} />);
         await settle();
+        expect(container.querySelectorAll("h1").length, `${mode} ${path}: one h1`).toBe(1);
         const violations = await runAxe(container);
         expect(violations, `${mode} ${path}\n${show(violations)}`).toEqual([]);
         unmount();

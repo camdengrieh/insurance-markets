@@ -41,7 +41,9 @@ for (const target of ["standalone", "cockpit"] as const) {
           const seen = await observe(page, { target, mock: daemon.mock });
           const market = await marketHash(daemon.mock);
           const failures: string[] = [];
-          for (const hash of ["#/", "#/markets", market, "#/portfolio", "#/wallet", "#/signals", "#/terminal", "#/trade", "#/signing", "#/nonexistent"]) {
+          // The routes that remain (the surface at "/" and "/markets", a market deep link) and an unknown one; the wallet
+          // panels live in the Connect modal, which the keyboard test below opens.
+          for (const hash of ["#/", "#/markets", market, "#/nonexistent"]) {
             await page.goto(`${server.url}${hash}`);
             await settle(page, hash, target);
             const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
@@ -67,7 +69,7 @@ for (const target of ["standalone", "cockpit"] as const) {
 // fixed it fails and this note and the annotation can be deleted.
 for (const target of ["standalone", "cockpit"] as const) {
   test.describe(`${target}: no sideways scroll at 360 px`, () => {
-    for (const hash of ["#/", "#/markets", "#/market", "#/portfolio", "#/wallet", "#/signals", "#/terminal", "#/nonexistent"]) {
+    for (const hash of ["#/", "#/markets", "#/market", "#/nonexistent"]) {
       test(hash, async ({ page, standalone, cockpitStatic, daemon }) => {
         const server = target === "standalone" ? standalone : cockpitStatic;
         await page.setViewportSize({ width: 360, height: 740 });
@@ -115,13 +117,21 @@ test.describe("keyboard and focus, as painted", () => {
   });
 
   test("navigating to another screen moves focus to its heading and updates the document title", async ({ page, standalone, daemon }) => {
+    // There is no navigation bar and no Wallet page (the wallet panels are in the Connect modal), so the route change
+    // here is the hash itself; an unknown address is the one other screen the shell has.
     await observe(page, { target: "standalone", mock: daemon.mock });
     await page.goto(`${standalone.url}#/markets`);
     await expect(page.locator("h1")).toHaveText("Markets");
-    await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Wallet" }).click();
-    await expect(page.locator("h1")).toHaveText("Wallet");
+    await page.evaluate(() => {
+      window.location.hash = "#/nonexistent";
+    });
+    await expect(page.locator("h1")).toHaveText("Page not found");
     expect(await page.evaluate(() => document.activeElement?.tagName.toLowerCase())).toBe("h1");
-    expect(await page.title()).toMatch(/wallet/i);
+    expect(await page.title()).toMatch(/not found/i);
+    // And the brand link in the top bar goes back to the start.
+    await page.getByRole("banner").getByRole("link", { name: /cockpit/i }).click();
+    await expect(page.locator("h1")).toBeVisible();
+    expect(page.url()).toMatch(/#\/$/);
   });
 
   test("controls are at least 24 by 24 CSS px at 360 px and the primary ones reach 44 by 44", async ({ page, standalone, daemon }) => {

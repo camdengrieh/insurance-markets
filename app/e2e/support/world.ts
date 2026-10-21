@@ -162,3 +162,12 @@ export async function waitForMarkets(page: Page): Promise<number> {
   const text = (await count.textContent()) ?? "";
   return Number(/^(\d+)/.exec(text)?.[1] ?? "0");
 }
+
+// The venue panel (which venues were read, which could not be, and why) is folded under the table in a disclosure that
+// opens on its own only when a venue failed. Opens it when it is closed, so a test can read the tiles.
+export async function openVenuePanel(page: Page): Promise<void> {
+  const summary = page.locator("details.ui-disclosure > summary", { hasText: /^Venues:/ });
+  await summary.waitFor({ state: "visible" });
+  const open = await summary.evaluate((element) => (element.parentElement as HTMLDetailsElement).open);
+  if (!open) await summary.click();
+}

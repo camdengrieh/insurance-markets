@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { PreparedDecoded } from "@shared/relay/contract";
 
 import { sanitizeText } from "../../core/untrusted";
-import { Badge, UntrustedText, type Tone } from "../../ui";
+import { Badge, Num, UntrustedText, type Tone } from "../../ui";
 import type { CardCheck, CardEvaluation, CheckStatus, Mismatch } from "./card";
 import { FRESHNESS_TEXT, TAG_WORDS, groupTag } from "./words";
 
@@ -212,7 +212,7 @@ export function DecodedView({ decoded, covered, unbound }: { readonly decoded: P
 
 const CHECK_TONE: Readonly<Record<CheckStatus, { readonly tone: Tone; readonly word: string }>> = {
   pass: { tone: "ok", word: "passed" },
-  fail: { tone: "danger", word: "FAILED" },
+  fail: { tone: "danger", word: "failed" },
   unavailable: { tone: "warn", word: "could not run" },
   unchecked: { tone: "neutral", word: "unchecked" },
 };
@@ -258,12 +258,23 @@ const FORM_TEXT: Readonly<Record<string, string>> = Object.freeze({
   kernelWrappedClobAuth: "an XO login hash wrapped for the Kernel account",
 });
 
+// The match line under the tags: whether the tags this page computed from the item are the tags the daemon says it
+// prepared. Fixed words per verification outcome; never the relay's.
+const MATCH_TEXT: Readonly<Record<CardEvaluation["verification"], string>> = Object.freeze({
+  verified: "Tags match: this page rebuilt the item from its decoded fields and got the same bytes the daemon prepared.",
+  failed: "Tags do not match: what this page rebuilt differs from what the daemon prepared. Do not sign.",
+  viewer_only: "Not compared: without a decoded block this page cannot rebuild the tags, so it shows the daemon's as sent.",
+});
+
 export function TagsPanel({ evaluation }: { readonly evaluation: CardEvaluation }) {
   const { digestTag, innerTag, innerKind, digestForm, chainId } = evaluation;
   if (digestTag === null) return null;
   return (
     <section className="signing-tags" aria-labelledby="signing-tags-title">
       <h3 id="signing-tags-title">Tags to compare with PayBox</h3>
+      <p className="signing-match" data-tags-match={evaluation.verification}>
+        {MATCH_TEXT[evaluation.verification]}
+      </p>
       <dl>
         <div>
           <dt>Digest tag</dt>
@@ -293,11 +304,14 @@ export function TagsPanel({ evaluation }: { readonly evaluation: CardEvaluation 
   );
 }
 
+// The countdown at the top of the card (Signing.dc.html): the time left in 28 px mono, the words beside it. The
+// tone is carried as data for the stylesheet and the tests; the words carry the meaning.
 export function FreshnessText({ evaluation, remaining }: { readonly evaluation: CardEvaluation; readonly remaining: string }) {
   const state = evaluation.freshness.state;
   return (
-    <Badge tone={state === "fresh" ? "ok" : state === "short" ? "warn" : "danger"}>
-      {FRESHNESS_TEXT[state]}: {remaining}
-    </Badge>
+    <p className="signing-countdown" data-tone={state === "fresh" ? "ok" : state === "short" ? "warn" : "danger"} data-freshness={state}>
+      <Num>{remaining}</Num>
+      <span>{FRESHNESS_TEXT[state]}</span>
+    </p>
   );
 }

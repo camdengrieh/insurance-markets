@@ -92,7 +92,7 @@ export type RunRefusalCode = (typeof RUN_REFUSALS)[number];
 // Fixed wording only. Nothing a service or a market said is in these sentences.
 export const RUN_REFUSAL_TEXT: Readonly<Record<RunRefusalCode, string>> = Object.freeze({
   not_paired: "This page is not paired with the Cockpit, so it can reach nothing. Nothing was prepared.",
-  owner_needed: "No owner address is saved for XO. Save one on the Wallet screen, or add from <owner address> to the command.",
+  owner_needed: "No owner address is saved for XO. Save one from the wallet chip in the top bar (Just watch an address), or add from <owner address> to the command.",
   owner_many: "More than one owner address is saved for XO. Say which one: add from <owner address> to the command.",
   owner_invalid: "The owner address after from was not accepted. Nothing was prepared.",
   owner_lookalike: "The owner address after from looks like one of your saved addresses but is not the same. Compare the full addresses, then type the one you mean. Nothing was prepared.",

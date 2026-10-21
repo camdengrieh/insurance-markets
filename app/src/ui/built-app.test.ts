@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -106,11 +106,24 @@ for (const target of BUILD_TARGETS) {
 
         const doc = win.document;
         expect(doc.querySelectorAll("h1").length).toBe(1);
-        expect(doc.querySelector("h1")?.textContent).toBe("Overview");
-        expect(doc.querySelector("nav[aria-label='Primary']")).not.toBeNull();
+        // "/" is the Overview while no route claims it and the Markets surface once routes/home.tsx does.
+        expect(["Overview", "Markets"]).toContain(doc.querySelector("h1")?.textContent);
+        // There is no navigation bar: the brand links to the start, the chips and modals do the rest.
+        expect(doc.querySelector("nav")).toBeNull();
+        expect(doc.querySelector("header a.ui-brand")).not.toBeNull();
+        expect(doc.querySelector("header input[type='search']")).not.toBeNull();
         expect(doc.querySelector("main#main")).not.toBeNull();
+        expect(doc.querySelector("footer.ui-dock")).not.toBeNull();
+        expect(doc.querySelector("svg.ui-dither-defs pattern#d4")).not.toBeNull();
         expect(doc.querySelector("[style]")).toBeNull();
         expect(doc.querySelector("header")?.textContent).toContain(target === "standalone" ? "Standalone explorer" : "Local Cockpit");
+        // The stylesheet names the vendored faces and the build emitted them as files next to it.
+        const css = await readFile(join(built.outDir, "assets", (await readdir(join(built.outDir, "assets"))).find((name) => name.endsWith(".css")) ?? ""), "utf8");
+        expect(css).toContain('font-family:"Archivo"');
+        expect(css).toContain('font-family:"Martian Mono"');
+        expect(css).not.toMatch(/url\(["']?data:/);
+        const assets = await readdir(join(built.outDir, "assets"));
+        expect(assets.filter((name) => name.endsWith(".woff2")).length).toBe(6);
 
         win.location.hash = "#/nowhere";
         await wait(50);

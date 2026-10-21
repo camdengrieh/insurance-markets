@@ -3,8 +3,9 @@
 .prepare-retype {
   margin-block: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 0.5rem;
+  /* The caution-tile shape: a dashed strong line, square corners. */
+  border: var(--line) dashed var(--border-strong);
+  border-radius: var(--radius);
   min-width: 0;
 }
 

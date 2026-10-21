@@ -44,6 +44,11 @@ export class MarketMemory {
   get size(): number {
     return this.#rows.size;
   }
+
+  // Every row seen in this visit, oldest first. For lookups over ids (link candidates); never for display order.
+  rows(): readonly MarketSummary[] {
+    return [...this.#rows.values()];
+  }
 }
 
 export interface ExplorerServices {

@@ -1,4 +1,4 @@
-import { Badge, Button, Disclosure, Missing, Tile, UntrustedText } from "../../ui";
+import { Badge, Button, Disclosure, Missing, Tile, UntrustedText, type TileHeading } from "../../ui";
 import type { CapabilityFacts } from "../../core/capabilities";
 import type { Untrusted } from "../../core/ports";
 import { untrustedField } from "../../core/untrusted";
@@ -22,11 +22,11 @@ export const STATE_WORDS: Readonly<Record<AccountAnswer["state"], string>> = Obj
 
 const TRI_WORDS: Readonly<Record<"yes" | "no" | "unknown", string>> = Object.freeze({ yes: "yes", no: "no", unknown: "not known" });
 
-export function ReadFailureTile({ failure, what }: { readonly failure: ReadFailure; readonly what: string }) {
+export function ReadFailureTile({ failure, what, heading = "h3" }: { readonly failure: ReadFailure; readonly what: string; readonly heading?: TileHeading }) {
   if (failure.kind === "refused") {
     const words = refusalWords(failure.code);
     return (
-      <Tile tone="warn" title={`${what}: ${words.title}`} role="alert" dataKind="refused" dataCode={failure.code} heading="h3">
+      <Tile tone="warn" title={`${what}: ${words.title}`} role="alert" dataKind="refused" dataCode={failure.code} heading={heading}>
         <p>{words.explain}</p>
         <p>The plugin said:</p>
         <p>
@@ -38,20 +38,20 @@ export function ReadFailureTile({ failure, what }: { readonly failure: ReadFailu
   if (failure.kind === "daemon_error") {
     const words = daemonWords(failure.code, failure.bridgeCode);
     return (
-      <Tile tone="danger" title={`${what}: ${words.title}`} role="alert" dataKind="daemon-error" dataCode={failure.code} heading="h3">
+      <Tile tone="danger" title={`${what}: ${words.title}`} role="alert" dataKind="daemon-error" dataCode={failure.code} heading={heading}>
         <p>{words.explain}</p>
       </Tile>
     );
   }
   if (failure.kind === "wrong_subject") {
     return (
-      <Tile tone="danger" title={`${what}: the answer was about another account`} role="alert" dataKind="wrong-subject" heading="h3">
+      <Tile tone="danger" title={`${what}: the answer was about another account`} role="alert" dataKind="wrong-subject" heading={heading}>
         <p>The page derives the account from the owner itself and the answer named a different one, so it is not shown.</p>
       </Tile>
     );
   }
   return (
-    <Tile tone="danger" title={`${what}: the answer was not in a shape we know`} role="alert" dataKind="schema-violation" heading="h3">
+    <Tile tone="danger" title={`${what}: the answer was not in a shape we know`} role="alert" dataKind="schema-violation" heading={heading}>
       <p>It was refused instead of guessed at.</p>
     </Tile>
   );
@@ -92,9 +92,12 @@ export interface AccountPanelProps {
   readonly state: Loadable<AccountRead>;
   readonly facts: CapabilityFacts;
   readonly onRefresh: () => void;
+  // The section's heading level (the desk's host decides): h2 on a page, h4 inside the market modal.
+  readonly heading?: "h2" | "h4";
 }
 
-export function AccountPanel({ state, facts, onRefresh }: AccountPanelProps) {
+export function AccountPanel({ state, facts, onRefresh, heading = "h2" }: AccountPanelProps) {
+  const Heading = heading;
   const refresh = (
     <Button onClick={onRefresh} busy={state.phase === "loading"} disabled={state.phase === "idle"}>
       Read the account again
@@ -102,7 +105,7 @@ export function AccountPanel({ state, facts, onRefresh }: AccountPanelProps) {
   );
   return (
     <section className="tr-section" aria-labelledby="tr-account-h" data-testid="account">
-      <h2 id="tr-account-h">Account</h2>
+      <Heading id="tr-account-h">Account</Heading>
       {state.phase === "idle" ? (
         <p>Choose an owner address to read its XO account.</p>
       ) : state.phase === "loading" ? (
@@ -110,7 +113,7 @@ export function AccountPanel({ state, facts, onRefresh }: AccountPanelProps) {
       ) : state.value.ok ? (
         <AccountDetail account={state.value.data} facts={facts} />
       ) : (
-        <ReadFailureTile failure={state.value} what="The account could not be read" />
+        <ReadFailureTile failure={state.value} what="The account could not be read" heading={heading === "h2" ? "h3" : "h4"} />
       )}
       <div>{refresh}</div>
     </section>

@@ -9,7 +9,9 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const DIRS = ["wallet", "portfolio"];
-const ROUTES = ["portfolio.tsx", "wallet.tsx"].map((name) => join(ROOT, "..", "routes", name));
+// There is no route file: the wallet panels live in the Connect modal (ConnectDialog.tsx, opened from the chip in
+// the top bar) and the portfolio screen is a view of the markets table (features/explorer); its readers stay here
+// as that view's library.
 
 function sources(): Array<{ readonly file: string; readonly text: string }> {
   const out: Array<{ file: string; text: string }> = [];
@@ -19,7 +21,6 @@ function sources(): Array<{ readonly file: string; readonly text: string }> {
       out.push({ file: `${dir}/${name}`, text: readFileSync(join(ROOT, dir, name), "utf8") });
     }
   }
-  for (const file of ROUTES) out.push({ file: `routes/${file.split("/").pop()}`, text: readFileSync(file, "utf8") });
   return out;
 }
 
@@ -30,7 +31,8 @@ const nonSupport = files.filter((entry) => !/(?:testkit|view-harness|fixtures)\.
 describe("wallet and portfolio sources", () => {
   it("found the files it is supposed to scan", () => {
     expect(files.length).toBeGreaterThan(20);
-    expect(files.map((entry) => entry.file)).toEqual(expect.arrayContaining(["wallet/rpc.ts", "portfolio/readers.ts", "routes/wallet.tsx", "routes/portfolio.tsx"]));
+    expect(files.map((entry) => entry.file)).toEqual(expect.arrayContaining(["wallet/rpc.ts", "wallet/WalletChip.tsx", "wallet/ConnectDialog.tsx", "wallet/WalletView.tsx", "portfolio/readers.ts"]));
+    expect(files.some((entry) => entry.file.startsWith("routes/"))).toBe(false);
   });
 
   it("have no string-to-HTML or string-to-code sink", () => {

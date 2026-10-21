@@ -12,7 +12,6 @@ import { TRADE_TOOLS } from "./tools";
 // literals that name a tool or a path, calls and JSX attributes. The agent sends; this page prepares and reads.
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROUTE_FILE = join(HERE, "..", "..", "routes", "trade.tsx");
 const TEST_ONLY = new Set(["test-support.tsx"]);
 
 // The only file that may NAME a tool that sends. It builds fixed text for a person to give an agent; it calls nothing.
@@ -26,7 +25,7 @@ const NETWORK_GLOBALS = new Set(["fetch", "XMLHttpRequest", "WebSocket", "EventS
 const PAGE_INPUT_GLOBALS = new Set(["location", "localStorage", "sessionStorage", "indexedDB", "history", "document", "window", "navigator", "URLSearchParams"]);
 const FORBIDDEN_JSX_ATTRIBUTES = new Set(["href", "src", "srcDoc", "style", "dangerouslySetInnerHTML", "action", "formAction", "ping", "target"]);
 // Route-table keys that pick a SCHEMA to read an answer with, and the screen's own route. None is sent anywhere.
-const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = { "vet.ts": ["/v1/userop/prepare", "/v1/order/prepare"], "routes/trade.tsx": ["/trade"] };
+const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = { "vet.ts": ["/v1/userop/prepare", "/v1/order/prepare"] };
 const FILES_WITH_RAW_FETCH = new Set(["client.ts", "services.tsx"]);
 
 interface Finding {
@@ -93,11 +92,13 @@ export function scanSource(file: string, text: string): Finding[] {
 const FILES = readdirSync(HERE)
   .filter((name) => /\.(ts|tsx)$/.test(name) && !/\.test\.(ts|tsx)$/.test(name) && !TEST_ONLY.has(name))
   .map((name) => ({ name, text: readFileSync(join(HERE, name), "utf8") }));
-FILES.push({ name: "routes/trade.tsx", text: readFileSync(ROUTE_FILE, "utf8") });
+// There is no route file: the desk is hosted by the market modal's footer (features/explorer/Ticket.tsx), which is
+// scanned under the same rules as the desk itself, since it is the desk's host and renders the Prepare order action.
+FILES.push({ name: "explorer/Ticket.tsx", text: readFileSync(join(HERE, "..", "explorer", "Ticket.tsx"), "utf8") });
 
 describe("what the trade screens' source can reach (M4-4, M4-5)", () => {
   it("scans the files it should", () => {
-    expect(FILES.map((file) => file.name)).toEqual(expect.arrayContaining(["client.ts", "prepare.ts", "reads.ts", "tools.ts", "vet.ts", "templates.ts", "funding.ts", "handoff.ts", "TradeView.tsx", "ActionPanels.tsx", "OrdersPanel.tsx", "routes/trade.tsx"]));
+    expect(FILES.map((file) => file.name)).toEqual(expect.arrayContaining(["client.ts", "prepare.ts", "reads.ts", "tools.ts", "vet.ts", "templates.ts", "funding.ts", "handoff.ts", "TradeDesk.tsx", "ActionPanels.tsx", "OrdersPanel.tsx", "explorer/Ticket.tsx"]));
   });
 
   it("has no finding in any file", () => {

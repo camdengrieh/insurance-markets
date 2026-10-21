@@ -5,6 +5,9 @@ import { createRequire } from "node:module";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { verifiedDeployItem } from "../../../../test/tools-decoded-helpers";
+
+// The read terminal, mounted the way the page mounts it: inside the expanded dock (test-support mountTerminal),
+// which owns pairing and the one event stream and also holds the observer pane and the signing inbox.
 import { act, allText, cleanup, click, must } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";
 import { SESSION_STORAGE_KEY } from "./session";
@@ -216,12 +219,12 @@ describe("commands", () => {
     expect(allText(container)).toContain("Nothing was looked up");
   });
 
-  it("signals points to its screen and never calls a tool", async () => {
+  it("signals points to the Markets screen (where the Quotient panel lives) and never calls a tool", async () => {
     const { container, daemon } = await open();
     await run(container, "signals");
     expect(toolCalls(daemon)).toEqual([]);
     expect(allText(container)).toContain("never makes one");
-    expect(must<HTMLAnchorElement>(container, '[data-kind="signals"] a').getAttribute("href")).toBe("/signals");
+    expect(must<HTMLAnchorElement>(container, '[data-kind="signals"] a').getAttribute("href")).toBe("/");
   });
 
   it("help lists the commands and clear empties the transcript", async () => {
@@ -492,7 +495,9 @@ describe("the observer pane", () => {
     stream.push(frame(6, { id: 6, at: AT, type: "prepared_state", prepared_id: ID, state: "shown", result: null }));
     stream.push(frame(7, { id: 7, at: AT, type: "audit", entry: { seq: 1, at: AT, type: "agent.call", actor: "agent:0a1b2c3d", summary: "agent called xo_search (read)", hash: `0x${"cd".repeat(32)}` } }));
     await until(() => allText(container).includes("shown on a card"));
-    expect(allText(container)).toContain("ARMED");
+    // The posture is said in sentence case, never as the daemon's upper-case enum.
+    expect(allText(container)).toContain("armed");
+    expect(allText(container)).not.toContain("ARMED");
     expect(allText(container)).toContain("agent.call");
     expect(allText(container)).toContain("agent called xo_search (read)");
     // The audit command reads what the pane received.
@@ -504,7 +509,8 @@ describe("the observer pane", () => {
     const { container, stream, daemon } = await open();
     await until(() => daemon.paths().includes("/ui/events"));
     stream.push(frame(1, { id: 1, at: AT, type: "posture", posture: "KILLED", armed_until: null }));
-    await until(() => allText(container).includes("KILLED"));
+    await until(() => allText(container).includes("killed"));
+    expect(allText(container)).not.toContain("KILLED");
     const pane = must(container, ".terminal-observer");
     expect(pane.querySelector("button, input, select")).toBeNull();
   });

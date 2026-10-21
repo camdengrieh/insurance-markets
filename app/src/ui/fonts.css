@@ -1,0 +1,55 @@
+/*
+  The two vendored typefaces, served from the page's own origin (font-src 'self'; the build emits each file as
+  assets/<name>-<hash>.woff2 because assetsInlineLimit is 0). Archivo for UI text, Martian Mono for every number,
+  id, hash, time and command (theme.css --font and --mono name them first and keep the system stacks behind them,
+  so the page is correct even if a file is missing). Both are SIL Open Font License 1.1; the licence texts sit
+  beside the files in ./fonts/. Static instances, no unicode-range: the files are unmodified upstream releases.
+*/
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./fonts/archivo-400.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./fonts/archivo-500.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/archivo-600.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./fonts/archivo-700.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Martian Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./fonts/martian-mono-400.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Martian Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./fonts/martian-mono-500.woff2) format("woff2");
+}

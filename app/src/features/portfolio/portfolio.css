@@ -1,4 +1,8 @@
-/* Portfolio and wallet screens. Tokens only (ui/theme.css): no inline style, no font or image from elsewhere. */
+/*
+  The Holdings view's panels (positions by venue, totals, the tiles for reads that returned no table). Tokens from
+  ui/theme.css only; no inline style, no font or image from elsewhere. Also imported by the wallet page, which shares
+  the pf-* notes and code styles.
+*/
 .pf-root h3,
 .wl-root h3 {
   font-size: 1.1rem;
@@ -6,19 +10,25 @@
 }
 
 .pf-venue {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: var(--line) solid var(--border);
   background: var(--surface);
   padding: 1rem;
+  min-width: 0;
 }
 
 .pf-venue > * + * {
   margin-top: 0.75rem;
 }
 
+.pf-venue > h3,
+.pf-venue > h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .pf-note {
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .pf-flags {
@@ -37,7 +47,9 @@
 }
 
 .pf-root code,
-.wl-root code {
+.wl-root code,
+.pf-venue code {
   font-family: var(--mono);
+  font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }

@@ -12,3 +12,12 @@ The Cockpit page (app/) is built with React, TanStack Query, wouter, idb, viem a
 tested with Vitest, jsdom, Playwright (Apache-2.0) and axe-core through @axe-core/playwright (MPL-2.0). The
 test tools are development dependencies only: none of them is part of a built page. Licences and publish
 dates of every direct dependency are recorded in app/scripts/dependencies.json.
+
+The Cockpit page embeds two typefaces, served from the page's own origin and never fetched from a third party:
+Archivo (copyright as stated in app/src/ui/fonts/OFL-Archivo.txt: Copyright 2020 The Archivo Project Authors)
+and Martian Mono (copyright as stated in app/src/ui/fonts/OFL-MartianMono.txt: Copyright 2021 The Martian Mono
+Project Authors), both under the SIL Open Font License, Version 1.1. The woff2 files under app/src/ui/fonts/ are
+the unmodified static instances the upstream projects publish (Archivo Regular, Medium, SemiBold and Bold from the
+Archivo repository's webfonts; Martian Mono Standard Regular and Medium from the Martian Mono 1.1.0 release), renamed
+only; their embedded name and licence metadata are untouched. The licence texts sit beside them at the paths above;
+the files as published declare no Reserved Font Name.

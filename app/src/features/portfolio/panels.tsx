@@ -1,29 +1,15 @@
-import { Link } from "wouter";
+// The Holdings view's library (docs/dapp-design.md 4.5 Portfolio; acceptance M2-4 to M2-7): the totals panel, one
+// venue's positions table and the tile for every read that returned no table. The Markets surface renders them under
+// the table in the Holdings view; there is no Portfolio screen any more. Every rule the old screen held still holds:
+// no single blended net worth without the exclusion count, a position with no price is counted and left out (never
+// zero), market text only through the untrusted slot, and a venue that could not be read is said in words.
 
 import { venuePolicy } from "../../core/venue-policy";
-import {
-  Badge,
-  Button,
-  DataTable,
-  Disclosure,
-  EmptyTile,
-  ErrorTile,
-  Missing,
-  NeedsCockpitTile,
-  ProvenanceStrip,
-  RestrictedTermsTile,
-  Tile,
-  UntrustedText,
-  venueName,
-  type Column,
-  type Tone,
-} from "../../ui";
+import { Badge, Button, DataTable, Disclosure, EmptyTile, ErrorTile, Missing, NeedsCockpitTile, Num, ProvenanceStrip, RestrictedTermsTile, Tile, UntrustedText, useOpenConnect, venueName, type Column, type TileHeading, type Tone } from "../../ui";
 import { untrusted } from "../../core/untrusted";
-import { useBindingsState } from "../wallet/services";
 import { moneyText, sharesText, signedMoneyText } from "./format";
 import { SHAPE_EXPLANATION, SHAPE_LABEL_TEXT } from "./shape";
 import { summarize, type SymbolTotal } from "./valuation";
-import { usePortfolio } from "./usePortfolio";
 import type { PortfolioRow, RowStatus, VenueReadOk, VenueReadOutcome } from "./types";
 
 const STATUS_TEXT: Readonly<Record<RowStatus, { readonly text: string; readonly tone: Tone }>> = Object.freeze({
@@ -41,23 +27,24 @@ const STATUS_TEXT: Readonly<Record<RowStatus, { readonly text: string; readonly 
 function TotalLine({ total, noun }: { readonly total: SymbolTotal; readonly noun: string }) {
   return (
     <li>
-      <strong>{total.total === null ? <Missing label="no priced position" /> : moneyText(total.total, total.symbol)}</strong>
+      <strong>{total.total === null ? <Missing label="no priced position" /> : <Num>{moneyText(total.total, total.symbol)}</Num>}</strong>
       {total.total === null ? ` ${total.symbol}` : ""} {`from ${total.included} ${noun}`}
       {total.excluded > 0 ? `; ${total.excluded} more ${total.excluded === 1 ? "has" : "have"} no figure and ${total.excluded === 1 ? "is" : "are"} left out` : ""}
     </li>
   );
 }
 
-export function TotalsPanel({ rows }: { readonly rows: readonly PortfolioRow[] }) {
+export function TotalsPanel({ rows, heading = "h2" }: { readonly rows: readonly PortfolioRow[]; readonly heading?: TileHeading }) {
   const totals = summarize(rows);
   if (totals.rows === 0) return null;
+  const Sub = heading === "h4" ? "h5" : heading === "h3" ? "h4" : "h3";
   return (
-    <Tile tone="neutral" title="Totals" role="note" dataKind="totals">
+    <Tile tone="neutral" title="Totals" role="note" dataKind="totals" heading={heading}>
       <p>
         Every figure is counted in the asset the venue uses, and each asset has its own total. There is no single net-worth figure: a pUSD, USDC, USDC.e and TYD amount are different assets, and a
         position with no price is left out and counted, never counted as zero.
       </p>
-      <h3>Open positions at the best bid</h3>
+      <Sub>Open positions at the best bid</Sub>
       {totals.value.length === 0 ? (
         <p>No open positions.</p>
       ) : (
@@ -70,7 +57,7 @@ export function TotalsPanel({ rows }: { readonly rows: readonly PortfolioRow[] }
       <p data-testid="totals-excluded">
         {totals.excludedFromValue === 0 ? "Every open position has a price." : `${totals.excludedFromValue} of ${totals.valueRows} open positions have no price and are not in these totals.`}
       </p>
-      <h3>Settled positions with something to collect</h3>
+      <Sub>Settled positions with something to collect</Sub>
       {totals.claimable.length === 0 ? (
         <p>None.</p>
       ) : (
@@ -162,13 +149,18 @@ function ResolutionLine({ outcome }: { readonly outcome: VenueReadOk }) {
   );
 }
 
-export function VenueSection({ outcome }: { readonly outcome: VenueReadOk }) {
+export function VenueSection({ outcome, heading = "h3" }: { readonly outcome: VenueReadOk; readonly heading?: "h3" | "h4" }) {
   const label = `${venueName(outcome.venue)}: ${outcome.bindingLabel}`;
+  const Heading = heading;
+  const tileHeading: TileHeading = heading === "h3" ? "h4" : "h4";
   return (
     <section className="pf-venue" aria-label={label} data-venue={outcome.venue}>
-      <h3>
-        {venueName(outcome.venue)} <span className="pf-binding">for <UntrustedText value={untrusted(outcome.bindingLabel)} field="generic" /></span>
-      </h3>
+      <Heading>
+        {venueName(outcome.venue)}{" "}
+        <span className="pf-binding">
+          for <UntrustedText value={untrusted(outcome.bindingLabel)} field="generic" />
+        </span>
+      </Heading>
       {outcome.prov === null ? null : <ProvenanceStrip prov={outcome.prov} />}
       <ResolutionLine outcome={outcome} />
       <p>
@@ -181,7 +173,7 @@ export function VenueSection({ outcome }: { readonly outcome: VenueReadOk }) {
         <ul>
           {outcome.facts.map((fact) => (
             <li key={fact.label}>
-              {fact.label}: {fact.value === null ? <Missing label="not read" /> : moneyText(fact.value, fact.symbol)}
+              {fact.label}: {fact.value === null ? <Missing label="not read" /> : <Num>{moneyText(fact.value, fact.symbol)}</Num>}
             </li>
           ))}
         </ul>
@@ -192,7 +184,11 @@ export function VenueSection({ outcome }: { readonly outcome: VenueReadOk }) {
         columns={columnsFor()}
         rows={outcome.rows}
         rowKey={(row) => row.id}
-        empty={<EmptyTile title={`${venueName(outcome.venue)}: no positions found`} heading="h4"><p>The venue answered and lists no positions for this address. That is an answer, not a failure and not a zero balance.</p></EmptyTile>}
+        empty={
+          <EmptyTile title={`${venueName(outcome.venue)}: no positions found`} heading={tileHeading}>
+            <p>The venue answered and lists no positions for this address. That is an answer, not a failure and not a zero balance.</p>
+          </EmptyTile>
+        }
       />
       {outcome.rejected > 0 ? <p>{outcome.rejected} rows from the venue did not match the expected shape and were left out.</p> : null}
       {outcome.partial ? <p>The venue has more rows than were read. The list and the totals may be incomplete.</p> : null}
@@ -215,26 +211,26 @@ const OFF_TEXT = {
   restricted_off: "",
 } as const;
 
-function OutcomeTile({ outcome, onRetry }: { readonly outcome: Exclude<VenueReadOutcome, VenueReadOk>; readonly onRetry: () => void }) {
+export function OutcomeTile({ outcome, onRetry, heading = "h3" }: { readonly outcome: Exclude<VenueReadOutcome, VenueReadOk>; readonly onRetry: () => void; readonly heading?: TileHeading }) {
   const where = <UntrustedText value={untrusted(outcome.bindingLabel)} field="generic" />;
   switch (outcome.kind) {
     case "failed":
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="failed">
-          <ErrorTile code={outcome.code === "UNKNOWN" ? undefined : outcome.code} venue={outcome.venue} heading="h3" onRetry={onRetry} />
+          <ErrorTile code={outcome.code === "UNKNOWN" ? undefined : outcome.code} venue={outcome.venue} heading={heading} onRetry={onRetry} />
           <p className="pf-note">For {where}. The other venues are not affected.</p>
         </div>
       );
     case "needs_cockpit":
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="needs_cockpit">
-          <NeedsCockpitTile venue={outcome.venue} what={outcome.what} heading="h3" />
+          <NeedsCockpitTile venue={outcome.venue} what={outcome.what} heading={heading} />
         </div>
       );
     case "not_paired":
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="not_paired">
-          <Tile tone="warn" title={`${venueName(outcome.venue)}: this page is not paired with your Cockpit`} heading="h3" dataKind="not-paired">
+          <Tile tone="warn" title={`${venueName(outcome.venue)}: this page is not paired with your Cockpit`} heading={heading} dataKind="not-paired">
             <p>
               Nothing was read. In the Cockpit build every read goes through your local Cockpit, which needs this page to be paired with it. Open the pairing link your Cockpit printed when it started, then
               refresh.
@@ -247,9 +243,9 @@ function OutcomeTile({ outcome, onRetry }: { readonly outcome: Exclude<VenueRead
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="off">
           {outcome.reason === "restricted_off" && policy.clause !== null ? (
-            <RestrictedTermsTile venue={outcome.venue} clause={policy.clause} heading="h3" />
+            <RestrictedTermsTile venue={outcome.venue} clause={policy.clause} heading={heading} />
           ) : (
-            <Tile tone="neutral" title={`${venueName(outcome.venue)}: off`} heading="h3" dataKind="off">
+            <Tile tone="neutral" title={`${venueName(outcome.venue)}: off`} heading={heading} dataKind="off">
               <p>{OFF_TEXT[outcome.reason]}</p>
             </Tile>
           )}
@@ -259,7 +255,7 @@ function OutcomeTile({ outcome, onRetry }: { readonly outcome: Exclude<VenueRead
     case "unsupported":
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="unsupported">
-          <Tile tone="info" title={`${venueName(outcome.venue)}: positions not shown`} heading="h3" dataKind="unsupported">
+          <Tile tone="info" title={`${venueName(outcome.venue)}: positions not shown`} heading={heading} dataKind="unsupported">
             <p>{outcome.why}</p>
           </Tile>
         </div>
@@ -267,7 +263,7 @@ function OutcomeTile({ outcome, onRetry }: { readonly outcome: Exclude<VenueRead
     case "unresolved":
       return (
         <div className="pf-tile" data-venue={outcome.venue} data-outcome="unresolved">
-          <Tile tone="warn" title={`${venueName(outcome.venue)}: wallet not found`} heading="h3" dataKind="unresolved">
+          <Tile tone="warn" title={`${venueName(outcome.venue)}: wallet not found`} heading={heading} dataKind="unresolved">
             <p>{outcome.why}</p>
           </Tile>
         </div>
@@ -275,58 +271,23 @@ function OutcomeTile({ outcome, onRetry }: { readonly outcome: Exclude<VenueRead
   }
 }
 
-// ---- the screen ------------------------------------------------------------------------------------------------------------
-
-export function PortfolioView() {
-  const state = useBindingsState();
-  const portfolio = usePortfolio(state.bindings, state.switches, state.status === "ready");
-
-  if (state.status === "loading") return <p role="status">Loading your saved addresses</p>;
-
-  if (state.bindings.length === 0) {
-    return (
-      <EmptyTile title="No addresses saved yet" actions={<Link href="/wallet">Add an address</Link>}>
-        <p>
-          Positions are read by address. Save your PayBox address on the Wallet screen and choose which venues to ask about it. Nothing is asked of any venue until you do.
-        </p>
-      </EmptyTile>
-    );
-  }
-
-  const selected = state.bindings.some((binding) => binding.venues.length > 0);
-  if (!selected) {
-    return (
-      <EmptyTile title="No venue selected for any address" actions={<Link href="/wallet">Choose venues</Link>}>
-        <p>Your saved addresses are not looked up anywhere yet. Choose the venues to ask about each address on the Wallet screen.</p>
-      </EmptyTile>
-    );
-  }
-
-  const ok = portfolio.outcomes.filter((outcome): outcome is VenueReadOk => outcome.kind === "ok");
-  const others = portfolio.outcomes.filter((outcome): outcome is Exclude<VenueReadOutcome, VenueReadOk> => outcome.kind !== "ok");
-  const rows = ok.flatMap((outcome) => outcome.rows);
-
+// The empty states of the Holdings view, in words, with the way to the Connect modal: there is no Wallet page, the
+// modal's "Just watch an address" tab is where an address is watched and its venues chosen. The button is drawn only
+// when a Connect modal is registered on the page (ui/context useOpenConnect); the words name the way regardless.
+export function NoAddressWatched({ heading = "h3" }: { readonly heading?: TileHeading }) {
+  const openConnect = useOpenConnect();
   return (
-    <div className="ui-stack pf-root">
-      <p>
-        Positions are looked up by address at the venues you selected for each address. Each venue is asked on its own: if one does not answer, the others still show.{" "}
-        <Link href="/wallet">Change addresses and venues</Link>
-      </p>
-      <div>
-        <Button onClick={portfolio.refresh} busy={portfolio.fetching}>
-          Refresh
-        </Button>
-      </div>
-      {portfolio.status === "loading" ? <p role="status">Reading positions</p> : null}
-      {portfolio.status === "error" ? <ErrorTile code="UNKNOWN" title="The positions could not be read" message="Nothing was read. Try again." onRetry={portfolio.refresh} /> : null}
-      {portfolio.status === "ready" ? <TotalsPanel rows={rows} /> : null}
-      {portfolio.status === "ready" ? <h2>Positions by venue</h2> : null}
-      {ok.map((outcome) => (
-        <VenueSection key={`${outcome.venue}:${outcome.bindingId}:${outcome.holder}`} outcome={outcome} />
-      ))}
-      {others.map((outcome) => (
-        <OutcomeTile key={`${outcome.kind}:${outcome.venue}:${outcome.bindingId}`} outcome={outcome} onRetry={portfolio.refresh} />
-      ))}
-    </div>
+    <EmptyTile title="No address watched" heading={heading} actions={openConnect === null ? undefined : <Button onClick={openConnect}>Watch an address</Button>}>
+      <p>Positions are read by address. Watch an address from the wallet chip in the top bar (Just watch an address) and choose which venues to ask about it. Nothing is asked of any venue until you do.</p>
+    </EmptyTile>
+  );
+}
+
+export function NoVenueSelected({ heading = "h3" }: { readonly heading?: TileHeading }) {
+  const openConnect = useOpenConnect();
+  return (
+    <EmptyTile title="No venue selected for any address" heading={heading} actions={openConnect === null ? undefined : <Button onClick={openConnect}>Choose venues</Button>}>
+      <p>Your watched addresses are not looked up anywhere yet. Choose the venues to ask about each address from the wallet chip in the top bar (Just watch an address).</p>
+    </EmptyTile>
   );
 }

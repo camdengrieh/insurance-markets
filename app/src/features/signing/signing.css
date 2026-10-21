@@ -271,8 +271,38 @@
   color: inherit;
 }
 
-.signing-s2 p {
-  margin: 0 0 0.25rem;
+/* The countdown at the top of the card (Signing.dc.html): 28 px mono, the words beside it. */
+.signing-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.signing-countdown .ui-num {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.signing-countdown[data-tone="warn"] .ui-num {
+  color: var(--warn-fg);
+}
+
+.signing-countdown[data-tone="danger"] .ui-num {
+  color: var(--danger-fg);
+}
+
+.signing-countdown span:last-child {
+  color: var(--text-muted);
+}
+
+.signing-card[data-verification="failed"] .signing-countdown span:last-child {
+  color: inherit;
+}
+
+.signing-card .ui-tile .signing-reasons {
+  margin-top: 0.25rem;
 }
 
 @media (max-width: 30rem) {
@@ -284,4 +314,25 @@
   .signing-table th[scope="row"] {
     width: 38%;
   }
+}
+
+.signing-arm {
+  margin: 0.25rem 0;
+}
+
+.signing-arm[data-arm="open"] {
+  font-weight: 600;
+}
+
+.signing-match {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.signing-match[data-tags-match="failed"] {
+  color: var(--danger-fg);
+}
+
+.signing-inbox {
+  min-width: 0;
 }

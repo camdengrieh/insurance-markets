@@ -13,15 +13,13 @@ import { observe, waitForMarkets } from "./support/world";
 // zero securitypolicyviolation events and no request to an origin outside the CSP, on every screen.
 
 const CONDITION = `0x${"ab".repeat(32)}`;
+// The routes that remain: the surface at "/" and "/markets", a market deep link and an unknown address. The
+// terminal, the prepare console and the signing inbox live in the dock on every page (the paired-page test below
+// opens it); portfolio, signals and trade are views and panels of the surface; the wallet panels live in the Connect
+// modal, opened from the chip in the top bar.
 const ROUTES: readonly { readonly name: string; readonly hash: string }[] = [
-  { name: "overview", hash: "#/" },
+  { name: "home", hash: "#/" },
   { name: "markets", hash: "#/markets" },
-  { name: "portfolio", hash: "#/portfolio" },
-  { name: "wallet", hash: "#/wallet" },
-  { name: "signals", hash: "#/signals" },
-  { name: "terminal", hash: "#/terminal" },
-  { name: "trade", hash: "#/trade" },
-  { name: "signing", hash: "#/signing" },
   { name: "a market page", hash: `#/market/xo/${CONDITION}` },
   { name: "an unknown route", hash: "#/nonexistent" },
 ];
@@ -127,9 +125,10 @@ test("the daemon serves the cockpit build under the same CSP and the page loads 
   for (const request of seen.requests()) expect(new URL(request.url).origin).toBe(daemon.origin);
 });
 
-// The screens that only exist with the daemon, opened by a paired page: the terminal and its prepare console, the trade screen and the
-// signing inbox. They talk to the daemon over fetch (and an event stream) from the page's own origin, under Trusted Types.
-test("a paired page opens the terminal, trade and signing screens clean, and the daemon's event stream runs under the CSP", async ({ page }) => {
+// The panels that only exist with the daemon, opened by a paired page: the dock's read terminal, its prepare console, the observer
+// pane and the signing inbox. They talk to the daemon over fetch (and an event stream, opened only while the dock is expanded) from the
+// page's own origin, under Trusted Types.
+test("a paired page opens the dock clean, and the daemon's event stream runs under the CSP", async ({ page }) => {
   const owned = await startE2eDaemon({ appDir: DIST.cockpit, hostile: false });
   try {
     const link = await owned.waitForLink(1);
@@ -137,13 +136,18 @@ test("a paired page opens the terminal, trade and signing screens clean, and the
     await page.goto(link.url);
     await expect(page.locator("h1")).toBeVisible();
     await pagePairedToken(page);
-    for (const hash of ["#/terminal", "#/trade", "#/signing"]) {
-      await page.evaluate((next) => {
-        location.hash = next;
-      }, hash);
-      await expect(page.locator("h1")).toHaveText(hash === "#/terminal" ? "Terminal" : hash === "#/trade" ? "Trade" : "Signing");
-      await page.waitForTimeout(800);
-    }
+    const strip = page.getByRole("contentinfo");
+    await expect(strip.getByText(/paired · read and prepare, never submit/)).toBeVisible();
+    // Collapsed, the dock holds no stream: nothing has asked for /ui/events yet.
+    expect(seen.requests().some((request) => new URL(request.url).pathname === "/ui/events")).toBe(false);
+    await strip.getByRole("button", { name: "Open the dock" }).click();
+    await expect(strip.getByRole("heading", { name: "Terminal" })).toBeVisible();
+    await expect(strip.getByRole("heading", { name: "Prepare", exact: true })).toBeVisible();
+    await expect(strip.getByRole("heading", { name: "Observer" })).toBeVisible();
+    await expect(strip.getByRole("heading", { name: "Inbox" })).toBeVisible();
+    await expect(strip.getByText(/agent · live/)).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    expect(seen.requests().some((request) => new URL(request.url).pathname === "/ui/events"), "the event stream opened from the page's origin").toBe(true);
     expect(unknownViolations(await seen.violations()), "securitypolicyviolation events").toEqual([]);
     expect(seen.pageErrors()).toEqual([]);
     expect(seen.external()).toEqual([]);

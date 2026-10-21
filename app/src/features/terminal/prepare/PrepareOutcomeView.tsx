@@ -1,26 +1,23 @@
-import { useLocation } from "wouter";
-
 import { Badge, Button, Tile, UntrustedText } from "../../../ui";
 import { FactList, GateNote, KeyValues, Mono, ResultView, SelectableBlock } from "../../trade/components";
 import { ACTION_NEEDS } from "../../trade/facts";
 import { daemonWords, refusalWords } from "../../trade/words";
+import { useDockActions } from "../dock-context";
 import type { RunOutcome } from "./run";
 
 // How a finished prepare command is shown. Everything here is fixed wording; the plugin's and the relay's own
 // sentences appear only inside the untrusted slot (trade/components.tsx does that for the prepared item). The page
-// never offers a way to sign or send: a prepared item ends in the Signature Card on the Signing screen, and the person
-// hands it to their own agent.
+// never offers a way to sign or send: a prepared item ends in the Signature Card, a modal the dock opens over the
+// page (features/terminal/Dock.tsx), and the person hands it to their own agent.
 
-export const SIGNING_PATH = "/signing";
-
-function OpenCardButton() {
-  const [, navigate] = useLocation();
+function OpenCardButton({ preparedId }: { readonly preparedId: string }) {
+  const dock = useDockActions();
   return (
     <p>
-      <Button variant="primary" onClick={() => navigate(SIGNING_PATH)}>
+      <Button variant="primary" onClick={() => dock.openCard(preparedId)} data-action="open-card">
         Open the Signature Card
       </Button>{" "}
-      <span className="terminal-muted">The Signing screen shows this item as a card, rechecks it from the daemon&apos;s own record and records your decision. It never signs.</span>
+      <span className="terminal-muted">The card shows this item from the daemon&apos;s own record, rechecks it and records your decision. It never signs.</span>
     </p>
   );
 }
@@ -123,7 +120,7 @@ export function PrepareOutcomeView({ outcome }: { readonly outcome: RunOutcome }
             </Tile>
           )}
           <ResultView result={outcome.result} facts={outcome.facts} gate={outcome.gate} />
-          {outcome.openCard === null ? null : <OpenCardButton />}
+          {outcome.openCard === null ? null : <OpenCardButton preparedId={outcome.openCard.preparedId} />}
         </div>
       );
   }

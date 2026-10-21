@@ -9,13 +9,31 @@ import { ANVIL_ACCOUNT_0_ACCOUNT, ANVIL_ACCOUNT_0_OWNER, BASE_USDC, KERNEL_PROXY
 import { BINDING_PRIVACY_NOTICE } from "../../core/bindings";
 import { act, allText, cleanup, click, must, render, settle } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";
-import { WalletView } from "./WalletView";
+import { WalletView as WalletPanelsView, type WalletHeading } from "./WalletView";
 import { FetchError } from "../../core/fetch";
+import { useBindingsState } from "./services";
 import { fakeNetwork, type FakeChain } from "./testkit";
 import { eventually, harness, setValue } from "./view-harness";
 
-// The wallet screen end to end in jsdom: the binding screen (M2-1, M2-9), the account map (M2-2, M2-3, M2-8),
-// balances, decoded funding steps, hostile text, and a structural accessibility audit.
+// The wallet panels end to end in jsdom, as the Connect modal hosts them: the binding screen (M2-1, M2-9), and under
+// the disclosure the account map (M2-2, M2-3, M2-8), balances, decoded funding steps, hostile text, and a structural
+// accessibility audit. The folded panels mount only once the disclosure is opened, so nothing is read on its own.
+
+// The host the Connect modal is: it reads the bindings state and hands it to the view.
+function WalletView({ heading }: { readonly heading?: WalletHeading }) {
+  const state = useBindingsState();
+  return <WalletPanelsView state={state} heading={heading} />;
+}
+
+// Opens the folded panels the way a person does, so the account map, balances and funding steps mount.
+async function unfold(container: HTMLElement): Promise<void> {
+  await eventually(() => expect(container.querySelector('[data-testid="wallet-panels"]')).not.toBeNull(), act);
+  const details = must<HTMLDetailsElement>(container, '[data-testid="wallet-panels"]');
+  act(() => {
+    details.open = true;
+    details.dispatchEvent(new Event("toggle"));
+  });
+}
 
 let axeSource = "";
 beforeAll(() => {
@@ -192,6 +210,11 @@ describe("account map, balances and funding steps", () => {
     const h = harness({ net, mode });
     await h.bindings.add({ address: OWNER, kind: "eoa", label: "Mine" });
     const view = render(h.wrap(<WalletView />));
+    // Folded: nothing has been asked of any chain yet.
+    await eventually(() => expect(view.container.querySelector('[data-testid="wallet-panels"]')).not.toBeNull(), act);
+    expect(view.container.querySelector('[data-testid="account-map"]')).toBeNull();
+    expect(net.calls).toEqual([]);
+    await unfold(view.container);
     await eventually(() => expect(view.container.querySelector('[data-testid="account-map"]')).not.toBeNull(), act);
     return { h, view, net };
   }
@@ -315,6 +338,7 @@ describe("account map, balances and funding steps", () => {
   it("no PayBox address saved: says what to do instead of an empty map", async () => {
     const h = harness({ net: network() });
     const view = render(h.wrap(<WalletView />));
+    await unfold(view.container);
     await eventually(() => expect(allText(view.container)).toContain("No PayBox address saved"), act);
     expect(view.container.querySelector('[data-testid="account-map"]')).toBeNull();
   });
@@ -325,7 +349,16 @@ describe("structure", () => {
     const net = network();
     const h = harness({ net });
     await h.bindings.add({ address: OWNER, kind: "eoa", label: "Mine" });
-    const { container } = render(<main><h1>Wallet</h1>{h.wrap(<WalletView />)}</main>);
+    // As the Connect modal hosts it: under an h2, with the sections at h3.
+    const { container } = render(
+      <main>
+        <h1>Markets</h1>
+        <h2>Use your PayBox wallet here</h2>
+        {h.wrap(<WalletView heading="h3" />)}
+      </main>,
+    );
+    await unfold(container);
+    expect(container.querySelectorAll("h2")).toHaveLength(1);
     await eventually(() => expect(container.querySelector('[data-testid="funding"] input')).not.toBeNull(), act);
     await eventually(() => expect(allText(container)).toContain("9 USDC"), act);
     const empty = await runAxe(container, ["region"]);

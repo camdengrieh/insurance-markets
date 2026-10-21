@@ -80,3 +80,56 @@
   font-family: var(--mono);
   resize: vertical;
 }
+
+/* ---- the Connect modal: three tabs, one of which acts ------------------------------------------------------ */
+
+.wl-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: var(--line) solid var(--border);
+}
+
+.wl-tab {
+  min-height: var(--tap);
+  padding: 0 0.75rem;
+  border: var(--line) solid transparent;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wl-tab[aria-selected="true"] {
+  border-color: var(--text);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.wl-tab-panel {
+  min-width: 0;
+}
+
+.wl-steps-list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.wl-steps-list li + li {
+  margin-top: 0.25rem;
+}
+
+.wl-route-facts h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.wl-connect-footer {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: var(--line) solid var(--border);
+  color: var(--text-muted);
+}

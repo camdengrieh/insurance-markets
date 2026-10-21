@@ -3,7 +3,7 @@ import "../../trade/trade.css";
 import "./prepare.css";
 
 export { PrepareConsole, type PrepareConsoleProps, type ProposalInput } from "./PrepareConsole";
-export { PrepareOutcomeView, SIGNING_PATH } from "./PrepareOutcomeView";
+export { PrepareOutcomeView } from "./PrepareOutcomeView";
 export {
   PREPARE_VERBS,
   PREPARE_HELP,

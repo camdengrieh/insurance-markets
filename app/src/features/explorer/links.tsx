@@ -1,12 +1,18 @@
-// Cross-venue links: a placeholder until a human-approved dataset exists (docs/dapp-design.md 4.5 "Linked groups",
-// M3). `[ML]` and `[AD]` are design only and no link dataset has been reviewed, so every market has "no links".
-// Nothing here guesses a link from similar titles: a link needs proof (P0 to P4) and a reviewer.
+// Cross-venue links on the Markets surface (docs/dapp-design.md 4.5 "Linked groups", M3).
+//
+// No human-approved link dataset is bundled today (`[ML]` and `[AD]` are design only), so APPROVED_LINK_DATASET is
+// null, every market has "no links", and the words say so. When a build bundles `features/signals/data/links.json`
+// (hash-pinned, ids and hashes only: no titles, no prices), the lookups below name the OTHER legs of every approved
+// link that names a market as CANDIDATES: a candidate is never proof, and no spread is drawn between candidates.
+// Nothing here guesses a link from similar titles.
 
-import type { MarketRef } from "../../core/ports";
+import type { MarketRef, VenueId } from "../../core/ports";
 import { Badge, Tile } from "../../ui";
+import { linksForLeg, type LinkLoad } from "../signals/links/dataset";
+import type { Link, LinkLeg } from "../signals/links/schema";
 
-// null: no human-approved dataset is bundled. A loader for `links.json` replaces this later; until then the lookup
-// below answers "none" for every market and the UI says so.
+// null: no human-approved dataset is bundled. The signals feature's loader (loadBundledLinks) answers "absent" for
+// the same reason; both say "no links" until a person approves a set.
 export const APPROVED_LINK_DATASET: null = null;
 
 export interface LinkLookup {
@@ -34,4 +40,46 @@ export function LinkGroupPlaceholder({ market, heading = "h3" }: { readonly mark
       <p>A gap between two venues is not an arbitrage: the rules, the resolver, the close time and the fees can all differ.</p>
     </Tile>
   );
+}
+
+// ---- candidates from a loaded dataset ------------------------------------------------------------------------------------
+
+// One other leg of a link that names this market: the venue and the id the other venue's reader takes, plus the
+// link it came from (its proof level and state are shown beside it). Never a title, never a price.
+export interface LinkCandidate {
+  readonly link: Link;
+  readonly leg: LinkLeg;
+}
+
+export type CandidateLookup =
+  | { readonly state: "no_dataset" }
+  | { readonly state: "rejected" }
+  | { readonly state: "none_for_market" }
+  | { readonly state: "candidates"; readonly candidates: readonly LinkCandidate[]; readonly hidden: number };
+
+const MAX_CANDIDATES = 20;
+
+export function candidatesFor(load: LinkLoad | null, ref: Pick<MarketRef, "venue" | "marketId">): CandidateLookup {
+  if (load === null || load.state === "absent") return { state: "no_dataset" };
+  if (load.state === "rejected") return { state: "rejected" };
+  const { shown, hidden } = linksForLeg(load.dataset, { venue: ref.venue, nativeId: ref.marketId });
+  const candidates: LinkCandidate[] = [];
+  for (const link of shown) {
+    for (const leg of link.legs) {
+      if (leg.venue === ref.venue && leg.nativeId === ref.marketId) continue;
+      if (candidates.length < MAX_CANDIDATES) candidates.push({ link, leg });
+    }
+  }
+  if (candidates.length === 0 && hidden === 0) return { state: "none_for_market" };
+  return { state: "candidates", candidates, hidden };
+}
+
+// The row keys (venue:marketId) of every loaded row that at least one shown link names, for the Linked view.
+export function linkedRowKeys(load: LinkLoad | null, rows: ReadonlyArray<{ readonly venue: VenueId; readonly marketId: string }>): ReadonlySet<string> {
+  const out = new Set<string>();
+  if (load === null || load.state !== "loaded") return out;
+  for (const row of rows) {
+    if (linksForLeg(load.dataset, { venue: row.venue, nativeId: row.marketId }).shown.length > 0) out.add(`${row.venue}:${row.marketId}`);
+  }
+  return out;
 }

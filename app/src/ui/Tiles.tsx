@@ -8,6 +8,11 @@ import { venueName } from "./venue-names";
 // Placeholder tiles for everything a screen cannot show as data. The rule behind all of them: a missing,
 // blocked, off or unproven thing is SAID, in words, in the place the data would be. It is never an empty
 // table, a zero, or a blank that looks like "no liquidity" (dapp-design 4.1 principle 4).
+//
+// All of them are ONE shape, the caution tile (docs/design/cockpit-v2/System.dc.html): a dashed strong line,
+// no fill, a glyph in the margin and words. Unproven, needs-the-Cockpit, restricted terms, refused and empty
+// are told apart by their words (and by data-kind for tests), never by a coloured fill. The tone decides the
+// glyph: the caution triangle for warn, danger and info; a plain square for neutral and ok.
 
 // A tile sits directly under the page's h1 by default (h2); pass h3 or h4 when nesting it deeper, so heading
 // levels only ever go down by one (axe heading-order).
@@ -24,15 +29,35 @@ export interface TileProps {
   readonly dataCode?: string;
 }
 
-export function Tile({ tone = "neutral", title, heading = "h2", role = "status", actions, children, dataKind, dataCode }: TileProps) {
-  const Heading = heading;
+const CAUTION_TONES: ReadonlySet<Tone> = new Set<Tone>(["warn", "danger", "info"]);
+
+// The amber glyph: a triangle with a stroke, square caps, 18 px. Decorative; the title carries the meaning.
+function CautionGlyph({ caution }: { readonly caution: boolean }) {
   return (
-    <section className="ui-tile" data-tone={tone} data-kind={dataKind} data-code={dataCode} role={role === "note" ? undefined : role}>
-      <Heading className="ui-tile-title">{title}</Heading>
-      <div className="ui-tile-body">{children}</div>
-      {actions === undefined ? null : <div className="ui-tile-actions">{actions}</div>}
+    <svg className="ui-tile-glyph" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" aria-hidden="true" focusable="false">
+      {caution ? <path d="M12 3l10 18H2zM12 10v5M12 18v1" /> : <path d="M4 4h16v16H4zM8 12h8" />}
+    </svg>
+  );
+}
+
+export function CautionTile({ tone = "neutral", title, heading = "h2", role = "status", actions, children, dataKind, dataCode }: TileProps) {
+  const Heading = heading;
+  const caution = CAUTION_TONES.has(tone);
+  return (
+    <section className="ui-tile" data-tone={tone} data-caution={caution ? "true" : undefined} data-kind={dataKind} data-code={dataCode} role={role === "note" ? undefined : role}>
+      <CautionGlyph caution={caution} />
+      <div className="ui-tile-text">
+        <Heading className="ui-tile-title">{title}</Heading>
+        <div className="ui-tile-body">{children}</div>
+        {actions === undefined ? null : <div className="ui-tile-actions">{actions}</div>}
+      </div>
     </section>
   );
+}
+
+// The name every screen already uses; the same shape.
+export function Tile(props: TileProps) {
+  return <CautionTile {...props} />;
 }
 
 // ---- errors ---------------------------------------------------------------------------------------------------
@@ -77,14 +102,14 @@ export function ErrorTile({ code, venue, title, message, detail, onRetry, headin
   const text = errorText(code);
   const label = venue === undefined ? (title ?? text.title) : `${venueName(venue)}: ${title ?? text.title}`;
   return (
-    <Tile tone="danger" title={label} role="alert" dataKind="error" dataCode={code ?? "UNKNOWN"} heading={heading} actions={onRetry === undefined ? undefined : <Button onClick={onRetry}>Try again</Button>}>
+    <CautionTile tone="danger" title={label} role="alert" dataKind="error" dataCode={code ?? "UNKNOWN"} heading={heading} actions={onRetry === undefined ? undefined : <Button onClick={onRetry}>Try again</Button>}>
       <p>{message ?? text.explain}</p>
       {detail === undefined ? null : (
         <p>
           Venue message: <UntrustedText value={detail} field="generic" />
         </p>
       )}
-    </Tile>
+    </CautionTile>
   );
 }
 
@@ -92,9 +117,9 @@ export function ErrorTile({ code, venue, title, message, detail, onRetry, headin
 
 export function EmptyTile({ title = "Nothing here yet", children, heading, actions }: { readonly title?: string; readonly children?: ReactNode; readonly heading?: TileHeading; readonly actions?: ReactNode }) {
   return (
-    <Tile tone="neutral" title={title} dataKind="empty" heading={heading} actions={actions}>
+    <CautionTile tone="neutral" title={title} dataKind="empty" heading={heading} actions={actions}>
       {children ?? <p>There is nothing to show. This is an empty result, not an error and not a zero.</p>}
-    </Tile>
+    </CautionTile>
   );
 }
 
@@ -115,12 +140,12 @@ export function CapabilityBadge({ state, label }: { readonly state: unknown; rea
 
 export function UnprovenTile({ capability, state, children, heading }: { readonly capability: string; readonly state?: unknown; readonly children?: ReactNode; readonly heading?: TileHeading }) {
   return (
-    <Tile tone="warn" title={`Unproven: ${capability}`} dataKind="unproven" dataCode={state === "no" ? "no" : "unknown"} heading={heading}>
+    <CautionTile tone="warn" title={`Unproven: ${capability}`} dataKind="unproven" dataCode={state === "no" ? "no" : "unknown"} heading={heading}>
       <p>
         {children ?? "No live test has confirmed this works, so it stays switched off and nothing is attempted."}
         {state === "no" ? " A live test recorded that it does not work." : ""}
       </p>
-    </Tile>
+    </CautionTile>
   );
 }
 
@@ -147,7 +172,7 @@ export interface RestrictedTermsTileProps {
 export function RestrictedTermsTile({ venue, clause, enabled = false, actions, heading }: RestrictedTermsTileProps) {
   const name = venueName(venue);
   return (
-    <Tile
+    <CautionTile
       tone="warn"
       title={enabled ? `${name}: on, memory only` : `${name}: off, restricted terms`}
       dataKind="restricted"
@@ -161,7 +186,7 @@ export function RestrictedTermsTile({ venue, clause, enabled = false, actions, h
           : `${name} is off by default and nothing was requested from it. This is not an empty market list.`}
       </p>
       <p>Why: {clause}</p>
-    </Tile>
+    </CautionTile>
   );
 }
 
@@ -175,10 +200,10 @@ export interface NeedsCockpitTileProps {
 export function NeedsCockpitTile({ venue, what = "this data", actions, heading }: NeedsCockpitTileProps) {
   const subject = venue === undefined ? "This screen" : venueName(venue);
   return (
-    <Tile tone="info" title={`${subject}: needs the Cockpit`} dataKind="needs-cockpit" dataCode={venue ?? "page"} heading={heading} actions={actions}>
+    <CautionTile tone="info" title={`${subject}: needs the Cockpit`} dataKind="needs-cockpit" dataCode={venue ?? "page"} heading={heading} actions={actions}>
       <p>
         A browser cannot read {what} on its own: the venue does not allow requests from web pages. The local Cockpit can. Until then nothing is shown here, which is different from an empty book.
       </p>
-    </Tile>
+    </CautionTile>
   );
 }

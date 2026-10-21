@@ -1,6 +1,9 @@
-// Public surface of the wallet package (docs/dapp-design.md 7.4 WP F). Screens live in app/src/routes/wallet.tsx.
-export { WalletView } from "./WalletView";
+// Public surface of the wallet package (docs/dapp-design.md 7.4 WP F). There is no Wallet screen: the Connect modal
+// (opened from the wallet chip in the top bar) hosts the wallet panels in its "Just watch an address" tab.
+export { WalletView, WalletPanels, WALLET_PANELS_SUMMARY, type WalletViewProps, type WalletHeading } from "./WalletView";
 export { BindingsPanel } from "./BindingsPanel";
+export { WalletChip, shortAddress, watchedAddress, WATCH_LABEL } from "./WalletChip";
+export { ConnectDialog, CONNECT_TABS, NOT_BUILT, DIALOG_TITLE, DIALOG_LEDE, FOOTER_TEXT, type ConnectTab, type ConnectDialogProps } from "./ConnectDialog";
 export { AccountMapPanel, CapabilityList, useAccountMap } from "./AccountMapPanel";
 export { BalancesPanel } from "./BalancesPanel";
 export { FundingPanel } from "./FundingPanel";

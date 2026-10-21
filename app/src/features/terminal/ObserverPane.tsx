@@ -1,14 +1,24 @@
-import type { InboxState } from "@bridge/contract";
+import { ARM_MAX_MINUTES, type InboxState, type Posture } from "@bridge/contract";
 
 import { formatUtc, parseIsoMs } from "../../core/format";
 import { untrusted } from "../../core/untrusted";
-import { Badge, DataTable, EmptyTile, Missing, Tile, UntrustedText, formatCountdown, useNow, type Column, type Tone } from "../../ui";
+import { Badge, DataTable, DitherBar, EmptyTile, Missing, Num, Tile, UntrustedText, formatCountdown, useNow, type Column, type Tone } from "../../ui";
 import type { ObservedItem, ObserverState } from "./observer";
 import type { StreamState } from "./stream";
 
 // The observer pane: a second screen for the user's own agent (dapp-design 5.2). It shows the daemon's posture,
 // every prepared item with its state, whoever asked for it, and the latest audit entries. It only displays what
-// validated events said. It never signs, rejects or sends: those belong to the signing screen.
+// validated events said. It never signs, rejects or sends: those belong to the signing inbox, and arming is done at
+// the Cockpit itself (the pane shows the window it was told about; there is no arm control on the page).
+
+// The ARM bar is drawn against the longest window the daemon can open; the words beside it carry the exact time.
+const ARM_SCALE_MS = ARM_MAX_MINUTES * 60_000;
+
+export const OPEN_ITEM_STATES: readonly InboxState[] = ["prepared", "shown"];
+
+export function openItemCount(items: readonly { readonly state: InboxState }[]): number {
+  return items.filter((item) => OPEN_ITEM_STATES.includes(item.state)).length;
+}
 
 const CONNECTION_TEXT: Readonly<Record<ObserverState["connection"], { readonly text: string; readonly tone: Tone }>> = {
   idle: { text: "not connected", tone: "neutral" },
@@ -33,7 +43,15 @@ const STATE_TEXT: Readonly<Record<InboxState, { readonly text: string; readonly 
 
 const KIND_TEXT: Readonly<Record<string, string>> = { userop: "user operation", order: "order", auth: "login", create: "market creation" };
 
-const POSTURE_TONE: Readonly<Record<string, Tone>> = { OBSERVE: "info", PREPARE: "info", ARMED: "warn", KILLED: "danger" };
+export const POSTURE_TONE: Readonly<Record<string, Tone>> = { OBSERVE: "info", PREPARE: "info", ARMED: "warn", KILLED: "danger" };
+
+// The daemon's posture enum in sentence case: nothing on screen is set in upper case. A value outside the enum (a
+// newer daemon) is said to be one, never printed raw.
+export const POSTURE_WORD: Readonly<Record<Posture, string>> = { OBSERVE: "observe", PREPARE: "read and prepare", ARMED: "armed", KILLED: "killed" };
+
+export function postureWord(posture: string): string {
+  return Object.hasOwn(POSTURE_WORD, posture) ? POSTURE_WORD[posture as Posture] : "a posture this page has no word for";
+}
 
 function requesterText(requestedBy: string): string {
   if (requestedBy === "ui") return "this page";
@@ -51,6 +69,7 @@ export function ObserverPane({ state, connection }: { readonly state: ObserverSt
   const now = useNow(armed ? 1000 : 30_000);
   const link = CONNECTION_TEXT[connection ?? state.connection];
   const armedMs = state.armedUntil === null ? null : parseIsoMs(state.armedUntil);
+  const armLeftMs = armed && armedMs !== null ? Math.max(0, armedMs - now) : null;
 
   const columns: readonly Column<ObservedItem>[] = [
     { key: "id", header: "Item", rowHeader: true, render: (row) => <code>{row.preparedId.slice(0, 8)}</code> },
@@ -66,7 +85,7 @@ export function ObserverPane({ state, connection }: { readonly state: ObserverSt
         </>
       ),
     },
-    { key: "expires", header: "Expires (UTC)", render: (row) => when(row.expiresAt) },
+    { key: "expires", header: "Expires (UTC)", render: (row) => <Num>{when(row.expiresAt)}</Num> },
   ];
 
   return (
@@ -88,9 +107,45 @@ export function ObserverPane({ state, connection }: { readonly state: ObserverSt
             {state.posture === null ? (
               <Missing label="not known yet" />
             ) : (
-              <Badge tone={POSTURE_TONE[state.posture] ?? "neutral"}>{state.posture}</Badge>
+              <Badge tone={POSTURE_TONE[state.posture] ?? "neutral"}>{postureWord(state.posture)}</Badge>
             )}
-            {armed && armedMs !== null ? <span>{` ${formatCountdown(armedMs - now)} left`}</span> : null}
+            {armLeftMs !== null ? (
+              <span>
+                {" "}
+                <Num>{formatCountdown(armLeftMs)}</Num> left
+              </span>
+            ) : null}
+          </dd>
+        </div>
+        <div className="terminal-pair">
+          <dt>ARM window</dt>
+          <dd>
+            {armLeftMs === null ? (
+              <span>none open: arming is done at your Cockpit, never from this page</span>
+            ) : (
+              <span className="terminal-arm">
+                <Num>{formatCountdown(armLeftMs)}</Num>
+                <DitherBar value={armLeftMs / ARM_SCALE_MS} tone="yes" />
+              </span>
+            )}
+          </dd>
+        </div>
+        <div className="terminal-pair">
+          <dt>Inbox</dt>
+          <dd>
+            {state.inboxLoaded ? (
+              <>
+                <Num>{String(openItemCount(state.items))}</Num> open
+              </>
+            ) : (
+              <Missing label="not read yet" />
+            )}
+          </dd>
+        </div>
+        <div className="terminal-pair">
+          <dt>Audit rows received</dt>
+          <dd>
+            <Num>{String(state.audit.length)}</Num> since this page connected
           </dd>
         </div>
         <div className="terminal-pair">
@@ -136,7 +191,9 @@ export function ObserverPane({ state, connection }: { readonly state: ObserverSt
             .reverse()
             .map((row) => (
               <li key={row.seq}>
-                <span className="terminal-muted">{`#${String(row.seq)} ${when(row.at)} `}</span>
+                <span className="terminal-muted">
+                  <Num>{`#${String(row.seq)}`}</Num> <Num>{when(row.at)}</Num>{" "}
+                </span>
                 <code>{row.type}</code> {row.actor === "system" ? "system" : requesterText(row.actor)}: <UntrustedText value={untrusted(row.summary)} />
               </li>
             ))}

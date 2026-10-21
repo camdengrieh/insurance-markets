@@ -3,21 +3,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InboxItem } from "@bridge/contract";
 
 import { parseIsoMs } from "../../core/format";
-import { Badge, Button, DataTable, EmptyTile, ErrorTile, NeedsCockpitTile, Tile, formatCountdown, useAnnounce, useAppMode, useNow, type Column, type Tone } from "../../ui";
-import { PAIR_REASON_TEXT, type PairReason } from "../terminal/session";
+import { Badge, Button, DataTable, EmptyTile, NeedsCockpitTile, Num, formatCountdown, useAnnounce, useAppMode, useNow, type Column, type Tone } from "../../ui";
 import { isDaemonError } from "../terminal/client";
+import { PairingNotice } from "../terminal/PairingNotice";
 import type { StreamState } from "../terminal/stream";
-import { SignatureCard } from "./SignatureCard";
+import { usePairing, type Pairing } from "../terminal/usePairing";
+import { SignatureCardDialog } from "./SignatureCardDialog";
 import { evaluateCard } from "./card";
 import { useSigningServices, type SigningServices } from "./services";
+import type { SigningAction, SigningState } from "./store";
 import { useInbox } from "./useInbox";
 import { KIND_TEXT, REMINDERS, STATE_TEXT, requesterText } from "./words";
 
 // The signing inbox: every prepared item the daemon holds, whoever asked for it (this page, the terminal or an agent
-// token), and the Signature Card for the one you open. The page only reads and records decisions; it holds no submit
-// power and has no code path that sends a signature (acceptance M4-4).
-
-type Pairing = { readonly phase: "checking" } | { readonly phase: "ready" } | { readonly phase: "expired" } | { readonly phase: "unpaired"; readonly reason: PairReason };
+// token), and the Signature Card for the one you open, as a modal (SignatureCardDialog). The page only reads and
+// records decisions; it holds no submit power and has no code path that sends a signature (acceptance M4-4).
+//
+// Hosted in the dock (features/terminal/Dock.tsx) it is the dock's inbox list: the dock owns the one event stream
+// and the pairing, and hands both over through `feed`; the dock also asks for a card to be opened through
+// `openRequest` (the strip's item count, the prepare console's outcome). Mounted on its own it pairs and
+// subscribes itself, as the Signing screen did.
 
 const CONNECTION_TEXT: Readonly<Record<StreamState | "idle", { readonly text: string; readonly tone: Tone }>> = {
   idle: { text: "not connected", tone: "neutral" },
@@ -29,56 +34,66 @@ const CONNECTION_TEXT: Readonly<Record<StreamState | "idle", { readonly text: st
   stopped: { text: "stopped", tone: "neutral" },
 };
 
-function PairingNotice({ pairing }: { readonly pairing: Pairing }) {
-  if (pairing.phase === "ready") return null;
-  if (pairing.phase === "checking") {
-    return (
-      <Tile tone="info" title="Connecting to the daemon" dataKind="pairing" dataCode="checking">
-        <p>Checking whether this page already has a session.</p>
-      </Tile>
-    );
-  }
-  const text = pairing.phase === "expired" ? "The daemon no longer accepts this page's session (it expired, or the daemon restarted). Reload the page to have the daemon print a fresh pair link." : PAIR_REASON_TEXT[pairing.reason];
-  return <ErrorTile code="NOT_PAIRED" title="Not paired with the daemon" message={text} />;
+export interface SigningFeed {
+  readonly state: SigningState;
+  readonly dispatch: (action: SigningAction) => void;
+  readonly pairing: Pairing;
+  readonly onUnauthorized: () => void;
 }
 
-export function SigningView({ services: provided }: { readonly services?: SigningServices }) {
+// A request from the host to open a card. `seq` makes every request distinct, so the same item can be asked for
+// twice; `preparedId` null means the first open item.
+export interface OpenCardRequest {
+  readonly seq: number;
+  readonly preparedId: string | null;
+}
+
+export interface SigningViewProps {
+  readonly services?: SigningServices;
+  readonly feed?: SigningFeed;
+  readonly openRequest?: OpenCardRequest | null;
+}
+
+export function isOpenItem(item: InboxItem): boolean {
+  return item.state === "prepared" || item.state === "shown";
+}
+
+export function SigningView({ services: provided, feed, openRequest = null }: SigningViewProps) {
   const mode = useAppMode();
   const fallback = useSigningServices();
   const services = provided ?? fallback;
   const announce = useAnnounce();
   const now = useNow(1000);
-  const [pairing, setPairing] = useState<Pairing>({ phase: "checking" });
+  const hosted = feed !== undefined;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const onUnauthorized = useCallback((): void => {
-    services.session.forget();
-    setPairing({ phase: "expired" });
-  }, [services]);
+  // On its own the inbox pairs once (a token already held wins); hosted, the dock's pairing is used as given.
+  const own = usePairing(services, mode, { enabled: !hosted });
+  const pairing = feed?.pairing ?? own.pairing;
+  const onUnauthorized = feed?.onUnauthorized ?? own.onUnauthorized;
 
-  // A token already held (this tab, or another screen's pairing) wins; otherwise the page's pairing code is exchanged.
+  // One stream per page: hosted, the dock holds it and this subscription stays inactive.
+  const ownInbox = useInbox(services, !hosted && mode === "cockpit" && pairing.phase === "ready", onUnauthorized);
+  const state = feed?.state ?? ownInbox.state;
+  const dispatch = feed?.dispatch ?? ownInbox.dispatch;
+
+  // The host asked for a card.
+  const handledSeq = useRef(0);
   useEffect(() => {
-    let cancelled = false;
-    if (mode !== "cockpit") return;
-    if (services.session.token() !== null) {
-      setPairing({ phase: "ready" });
-      return;
-    }
-    void services.session.pair().then((outcome) => {
-      if (!cancelled) setPairing(outcome.ok ? { phase: "ready" } : { phase: "unpaired", reason: outcome.reason });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [services, mode]);
-
-  const { state, dispatch } = useInbox(services, mode === "cockpit" && pairing.phase === "ready", onUnauthorized);
+    if (openRequest === null || openRequest.seq === handledSeq.current) return;
+    handledSeq.current = openRequest.seq;
+    setSelectedId(openRequest.preparedId);
+    setNotice(null);
+    setCardOpen(true);
+  }, [openRequest]);
 
   const selected: InboxItem | undefined = useMemo(() => {
-    const byId = selectedId === null ? undefined : state.items.find((item) => item.prepared_id === selectedId);
-    return byId ?? state.items.find((item) => item.state === "prepared" || item.state === "shown") ?? state.items[0];
-  }, [state.items, selectedId]);
+    if (!cardOpen) return undefined;
+    if (selectedId !== null) return state.items.find((item) => item.prepared_id === selectedId);
+    return state.items.find(isOpenItem) ?? state.items[0];
+  }, [state.items, selectedId, cardOpen]);
 
   const nowSecond = Math.floor(now / 1000);
   // Rebuilt once a second at most (the clock is the only thing that changes between renders).
@@ -150,6 +165,21 @@ export function SigningView({ services: provided }: { readonly services?: Signin
     [services, onUnauthorized],
   );
 
+  const openCard = useCallback(
+    (preparedId: string): void => {
+      setSelectedId(preparedId);
+      setNotice(null);
+      setCardOpen(true);
+      announce("Opened a signature card.");
+    },
+    [announce],
+  );
+
+  const closeCard = useCallback((): void => {
+    setCardOpen(false);
+    announce("Closed the signature card. Nothing was recorded.");
+  }, [announce]);
+
   const columns: readonly Column<InboxItem>[] = [
     { key: "id", header: "Item", rowHeader: true, render: (row) => <code>{row.prepared_id.slice(0, 8)}</code> },
     { key: "kind", header: "Kind", render: (row) => KIND_TEXT[row.prepared.kind] ?? "Other" },
@@ -161,22 +191,14 @@ export function SigningView({ services: provided }: { readonly services?: Signin
       render: (row) => {
         if (row.state === "expired") return "expired";
         const ms = parseIsoMs(row.expires_at);
-        return ms === null ? "unknown" : formatCountdown(ms - now);
+        return ms === null ? "unknown" : <Num>{formatCountdown(ms - now)}</Num>;
       },
     },
     {
       key: "open",
       header: "Open",
       render: (row) => (
-        <Button
-          aria-pressed={selected?.prepared_id === row.prepared_id}
-          aria-label={`Open item ${row.prepared_id.slice(0, 8)}`}
-          onClick={() => {
-            setSelectedId(row.prepared_id);
-            setNotice(null);
-            announce("Opened a signature card.");
-          }}
-        >
+        <Button aria-label={`Open item ${row.prepared_id.slice(0, 8)}`} onClick={() => openCard(row.prepared_id)}>
           Open
         </Button>
       ),
@@ -184,7 +206,7 @@ export function SigningView({ services: provided }: { readonly services?: Signin
   ];
 
   if (mode !== "cockpit") {
-    return <NeedsCockpitTile what="the signing inbox" />;
+    return <NeedsCockpitTile what="the signing inbox" heading={hosted ? "h3" : "h2"} />;
   }
 
   const link = CONNECTION_TEXT[state.connection];
@@ -197,28 +219,34 @@ export function SigningView({ services: provided }: { readonly services?: Signin
         : (state.posture ?? "not known yet");
 
   return (
-    <div className="signing">
-      <p className="signing-lead">
-        This is every item your agent, the terminal or this page asked the relay to prepare for signing. Open one to read it as a card. This page checks the item and records your decision; it never signs and never submits. Your own agent asks PayBox to sign and then submits.
-      </p>
-      <PairingNotice pairing={pairing} />
+    <div className="signing" data-hosted={hosted ? "true" : undefined}>
+      {hosted ? null : (
+        <p className="signing-lead">
+          This is every item your agent, the terminal or this page asked the relay to prepare for signing. Open one to read it as a card. This page checks the item and records your decision; it never signs and never submits. Your own agent asks PayBox to sign and then submits.
+        </p>
+      )}
+      {hosted ? null : <PairingNotice pairing={pairing} />}
       {pairing.phase !== "ready" ? null : (
         <>
-          <p className="signing-strip" aria-label="Session">
-            Feed: <Badge tone={link.tone}>{link.text}</Badge> Posture: <strong>{postureText}</strong>
-            {state.instance === "read_only" ? " This daemon instance serves reads only." : ""}
-          </p>
-          <ul className="signing-reminders-top" aria-label="Reminders">
-            <li>{REMINDERS.dedicated}</li>
-            <li>{REMINDERS.advisoryCaps}</li>
-          </ul>
+          {hosted ? null : (
+            <>
+              <p className="signing-strip" aria-label="Session">
+                Feed: <Badge tone={link.tone}>{link.text}</Badge> Posture: <strong>{postureText}</strong>
+                {state.instance === "read_only" ? " This daemon instance serves reads only." : ""}
+              </p>
+              <ul className="signing-reminders-top" aria-label="Reminders">
+                <li>{REMINDERS.dedicated}</li>
+                <li>{REMINDERS.advisoryCaps}</li>
+              </ul>
+            </>
+          )}
           {state.invalid > 0 || state.violations > 0 ? (
             <p className="signing-warning" role="status">
               {state.invalid > 0 ? `${state.invalid} inbox item${state.invalid === 1 ? "" : "s"} did not match the relay's contract and ${state.invalid === 1 ? "is" : "are"} not listed. ` : ""}
               {state.violations > 0 ? `${state.violations} event${state.violations === 1 ? "" : "s"} from the daemon did not match its contract and ${state.violations === 1 ? "was" : "were"} ignored.` : ""}
             </p>
           ) : null}
-          <section aria-labelledby="signing-inbox-title">
+          <section aria-labelledby="signing-inbox-title" className="signing-inbox">
             <h2 id="signing-inbox-title">Inbox</h2>
             {!state.loaded ? (
               <p>Reading the inbox.</p>
@@ -229,30 +257,38 @@ export function SigningView({ services: provided }: { readonly services?: Signin
                 columns={columns}
                 rows={state.items}
                 rowKey={(row) => row.prepared_id}
-                empty={<EmptyTile title="No prepared items">The inbox is empty. When your agent prepares something to sign, it appears here with a card. This is an empty list, not an error.</EmptyTile>}
+                empty={
+                  <EmptyTile title="No prepared items" heading="h3">
+                    The inbox is empty. When your agent prepares something to sign, it appears here with a card. This is an empty list, not an error.
+                  </EmptyTile>
+                }
               />
             )}
+            {cardOpen && selected === undefined && selectedId !== null ? (
+              <p role="status" className="signing-muted" data-kind="card-pending">
+                Waiting for the daemon&apos;s record of that item before its card can be shown.
+              </p>
+            ) : null}
           </section>
           {selected === undefined || evaluation === null ? null : (
-            <section aria-labelledby="signing-card-title" className="signing-card-wrap">
-              <h2 id="signing-card-title">Signature card</h2>
-              <SignatureCard
-                key={selected.prepared_id}
-                record={selected}
-                evaluation={evaluation}
-                nowMs={nowSecond * 1000}
-                posture={state.posture}
-                armedUntilMs={armedMs}
-                kill={state.kill}
-                instance={state.instance}
-                approvalMode={services.approvalMode}
-                facts={services.facts}
-                onReject={reject}
-                onCopy={copy}
-                onReconcile={reconcile}
-                notice={notice}
-              />
-            </section>
+            <SignatureCardDialog
+              key={selected.prepared_id}
+              open={cardOpen}
+              onClose={closeCard}
+              record={selected}
+              evaluation={evaluation}
+              nowMs={nowSecond * 1000}
+              posture={state.posture}
+              armedUntilMs={armedMs}
+              kill={state.kill}
+              instance={state.instance}
+              approvalMode={services.approvalMode}
+              facts={services.facts}
+              onReject={reject}
+              onCopy={copy}
+              onReconcile={reconcile}
+              notice={notice}
+            />
           )}
         </>
       )}

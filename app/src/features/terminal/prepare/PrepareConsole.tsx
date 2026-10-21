@@ -47,6 +47,8 @@ export interface PrepareConsoleProps {
   readonly trade?: TradeServices;
   // A model's proposal. It is checked deterministically and, if it passes, put in the box UNSENT with a banner.
   readonly proposal?: ProposalInput | null;
+  // False when the host (the dock) already shows the one "not paired" tile for every panel it holds.
+  readonly showPairingNotice?: boolean;
 }
 
 const ORIGIN_TEXT: Readonly<Record<LineOrigin, string>> = Object.freeze({
@@ -57,7 +59,7 @@ const ORIGIN_TEXT: Readonly<Record<LineOrigin, string>> = Object.freeze({
   proposal: "proposed",
 });
 
-export function PrepareConsole({ terminal: terminalProvided, trade: tradeProvided, proposal = null }: PrepareConsoleProps) {
+export function PrepareConsole({ terminal: terminalProvided, trade: tradeProvided, proposal = null, showPairingNotice = true }: PrepareConsoleProps) {
   const mode = useAppMode();
   const clock = useClock();
   const announce = useAnnounce();
@@ -256,7 +258,7 @@ export function PrepareConsole({ terminal: terminalProvided, trade: tradeProvide
         Commands that ask the relay to prepare something for you to sign: {PREPARE_VERBS.join(", ")}. This console prepares only. It never signs, sends, arms, kills or changes a flag, a cap or a setting, and it has no model. All write paths are off until the operator
         switches them on; a command that the server would refuse says so before anything is asked.
       </p>
-      {paired ? null : <ErrorTile code="NOT_PAIRED" title="Not paired with the daemon" message="Open the pair link the daemon printed, or reload this page. Until then nothing can be prepared." heading="h3" />}
+      {paired || !showPairingNotice ? null : <ErrorTile code="NOT_PAIRED" title="Not paired with the daemon" message="Open the pair link the daemon printed, or reload this page. Until then nothing can be prepared." heading="h3" />}
       <form className="terminal-form" onSubmit={submit} aria-describedby={hintId}>
         <div className="ui-field">
           <label htmlFor={inputId}>Prepare command</label>

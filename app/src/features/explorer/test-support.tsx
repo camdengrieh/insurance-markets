@@ -10,8 +10,14 @@ import { memoryLocation } from "wouter/memory-location";
 import type { AdapterCaps, AdapterError, Book, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Result, Status, VenueId, VenueReadAdapter } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
 import { DEFAULT_SWITCHES, type VenueSwitches } from "../../core/venue-policy";
-import { ClockProvider, ModeProvider, createAppQueryClient, type AppMode } from "../../ui";
+import { AnnouncerProvider, ClockProvider, ModeProvider, SearchProvider, ShellStatusProvider, createAppQueryClient, useSearchQuery, type AppMode } from "../../ui";
 import { act, render } from "../../ui/testing/dom";
+import { SignalsServicesProvider } from "../signals/services";
+import { makeRig as makeSignalsRig, type Rig as SignalsRig, type RigOptions as SignalsRigOptions } from "../signals/test-support";
+import { TerminalServicesProvider } from "../terminal/services";
+import { fakeServices as fakeTerminalServices, scriptedDaemon, type Daemon } from "../terminal/test-support";
+import { TradeServicesProvider } from "../trade/services";
+import { createTradeServices } from "../trade/services";
 import type { BookAvailability, DetailOutcome, ExplorerAdapter, ListOutcome } from "./adapters";
 import { MarketMemory, ExplorerServicesProvider, type ExplorerServices } from "./services";
 
@@ -190,21 +196,64 @@ export async function until(predicate: () => boolean, limitMs = 15_000): Promise
   await flush(2);
 }
 
-// Mounts a screen under the providers the shell supplies, with a pinned clock and a memory router.
-export async function mount(ui: ReactElement, services: ExplorerServices, path = "/") {
-  const location = memoryLocation({ path });
+// The top bar's search field, as the shell renders it: the surface reads the shared text and filters loaded rows.
+// A test types here exactly as a person types in the shell's field.
+export function TestSearchField() {
+  const { query, setQuery } = useSearchQuery();
+  return (
+    <label>
+      Search titles
+      <input type="search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
+    </label>
+  );
+}
+
+export interface MountOptions {
+  readonly path?: string;
+  // The Signals rig (Quotient session, scripted fetch, spy store). A fresh one with Quotient off by default.
+  readonly signals?: SignalsRigOptions | SignalsRig;
+  // The pairing code the fake daemon accepts. Undefined (the default): not paired, and nothing is asked of it.
+  readonly pairCode?: string;
+  readonly daemon?: Daemon;
+}
+
+// Mounts a screen under the providers the shell supplies, with a pinned clock and a memory router, plus the other
+// features' injected services (Quotient session, the fake daemon the trade desk would pair with) so no test reaches a
+// browser global.
+export async function mount(ui: ReactElement, services: ExplorerServices, pathOrOptions: string | MountOptions = "/") {
+  const options: MountOptions = typeof pathOrOptions === "string" ? { path: pathOrOptions } : pathOrOptions;
+  const location = memoryLocation({ path: options.path ?? "/" });
   const client = createAppQueryClient();
+  const signals: SignalsRig = options.signals !== undefined && "session" in options.signals ? options.signals : makeSignalsRig({ mode: services.mode, ...(options.signals ?? {}) });
+  const daemon = options.daemon ?? scriptedDaemon();
+  const { services: terminal } = fakeTerminalServices({ daemon, code: options.pairCode, bindings: [] });
+  const trade = createTradeServices(terminal);
   const rendered = render(
     <ModeProvider mode={services.mode}>
       <ClockProvider clock={{ now: services.nowMs }}>
         <QueryClientProvider client={client}>
-          <ExplorerServicesProvider services={services}>
-            <Router hook={location.hook}>{ui}</Router>
-          </ExplorerServicesProvider>
+          <AnnouncerProvider>
+            <SearchProvider>
+              <ShellStatusProvider>
+                <ExplorerServicesProvider services={services}>
+                  <SignalsServicesProvider services={signals.services}>
+                    <TerminalServicesProvider services={terminal}>
+                      <TradeServicesProvider services={trade}>
+                        <Router hook={location.hook}>
+                          <TestSearchField />
+                          {ui}
+                        </Router>
+                      </TradeServicesProvider>
+                    </TerminalServicesProvider>
+                  </SignalsServicesProvider>
+                </ExplorerServicesProvider>
+              </ShellStatusProvider>
+            </SearchProvider>
+          </AnnouncerProvider>
         </QueryClientProvider>
       </ClockProvider>
     </ModeProvider>,
   );
   await flush();
-  return { ...rendered, navigate: (to: string) => act(() => location.navigate(to)), client, location };
+  return { ...rendered, navigate: (to: string) => act(() => location.navigate(to)), client, location, signals, daemon };
 }

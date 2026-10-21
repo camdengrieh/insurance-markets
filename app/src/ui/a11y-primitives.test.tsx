@@ -113,7 +113,7 @@ describe("Dialog", () => {
     );
   }
 
-  it("is labelled, modal, focuses inside, inerts the page and restores focus on close", () => {
+  it("is labelled, modal, focuses the first control of its body (not the close button), inerts the page and restores focus on close", () => {
     const { container } = render(<Harness />);
     const opener = must<HTMLButtonElement>(container, "#opener");
     opener.focus();
@@ -125,6 +125,7 @@ describe("Dialog", () => {
     expect(document.activeElement?.id).toBe("first");
     expect(container.parentElement?.hasAttribute("inert") || container.hasAttribute("inert")).toBe(true);
     expect(document.body.classList.contains("ui-scroll-lock")).toBe(true);
+    expect(dialog.querySelector("[style]")).toBeNull();
     press(dialog, "Escape");
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(container.hasAttribute("inert")).toBe(false);
@@ -132,10 +133,37 @@ describe("Dialog", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("keeps Tab and Shift+Tab inside", () => {
+  it("has a 44 px close button that is labelled and closes, and draws its scrim as a dither rect", () => {
+    const { container } = render(<Harness />);
+    click(must(container, "#opener"));
+    const close = must<HTMLButtonElement>(document, ".ui-dialog-close");
+    expect(close.getAttribute("aria-label")).toBe("Close");
+    expect(must(document, ".ui-dialog-scrim rect").getAttribute("fill")).toBe("url(#d4)");
+    click(close);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("keeps Tab and Shift+Tab inside: the close button in the head is the first stop, the last body control the last", () => {
     const { container } = render(<Harness />);
     click(must(container, "#opener"));
     const dialog = must<HTMLElement>(document, '[role="dialog"]');
+    must<HTMLElement>(dialog, "#last").focus();
+    press(dialog, "Tab");
+    expect(document.activeElement?.className).toBe("ui-dialog-close");
+    press(dialog, "Tab", { shiftKey: true });
+    expect(document.activeElement?.id).toBe("last");
+  });
+
+  it("does not close on Escape when dismissOnEscape is false, shows no close button, and never closes on a backdrop click", () => {
+    const { container } = render(<Harness dismissOnEscape={false} />);
+    click(must(container, "#opener"));
+    const dialog = must<HTMLElement>(document, '[role="dialog"]');
+    expect(document.querySelector(".ui-dialog-close")).toBeNull();
+    press(dialog, "Escape");
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    click(must(document, ".ui-dialog-backdrop"));
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    // With no close button the body's controls are the whole ring.
     must<HTMLElement>(dialog, "#last").focus();
     press(dialog, "Tab");
     expect(document.activeElement?.id).toBe("first");
@@ -143,14 +171,52 @@ describe("Dialog", () => {
     expect(document.activeElement?.id).toBe("last");
   });
 
-  it("does not close on Escape when dismissOnEscape is false, and never on a backdrop click", () => {
-    const { container } = render(<Harness dismissOnEscape={false} />);
+  it("closes on Escape after a backdrop click has moved focus to the body", () => {
+    const { container } = render(<Harness />);
     click(must(container, "#opener"));
-    const dialog = must<HTMLElement>(document, '[role="dialog"]');
-    press(dialog, "Escape");
+    const backdrop = must<HTMLElement>(document, ".ui-dialog-backdrop");
+    // A click on the scrim: nothing closes, and focus is no longer inside the panel.
+    click(backdrop);
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
-    click(must(document, ".ui-dialog-backdrop"));
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.activeElement).toBe(document.body);
+    press(document.body, "Escape");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("keeps the page scroll locked while an inner dialog closes over an outer one", () => {
+    function Nested() {
+      const [inner, setInner] = useState(true);
+      return (
+        <Dialog open title="Outer" onClose={() => undefined}>
+          <Button id="open-inner" onClick={() => setInner(true)}>
+            Inner
+          </Button>
+          <Dialog open={inner} title="Inner" onClose={() => setInner(false)}>
+            <Button id="close-inner" onClick={() => setInner(false)}>
+              Close inner
+            </Button>
+          </Dialog>
+        </Dialog>
+      );
+    }
+    render(<Nested />);
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
+    expect(document.body.classList.contains("ui-scroll-lock")).toBe(true);
+    click(must(document, "#close-inner"));
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(document.body.classList.contains("ui-scroll-lock")).toBe(true);
+  });
+
+  it("takes a size and marks the backdrop with it", () => {
+    render(
+      <Dialog open title="Wide" size="wide" onClose={() => undefined}>
+        <p>x</p>
+      </Dialog>,
+    );
+    expect(must(document, ".ui-dialog-backdrop").getAttribute("data-size")).toBe("wide");
   });
 
   it("survives StrictMode double effects without leaving the page inert", () => {

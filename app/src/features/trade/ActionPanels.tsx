@@ -15,10 +15,14 @@ import { TICKET_SIDES, TICKET_TIFS, buildTicket, expectedQuote, overOrderCap, us
 // (switches, kill switch, recorded facts), calls one prepare tool through prepare.ts, and shows the vetted result.
 // A panel never signs, never sends and never holds a signature. What comes back is an item to hand to an agent.
 
-function Section({ id, title, children }: { readonly id: string; readonly title: string; readonly children: ReactNode }) {
+// The heading level of a panel's section, decided by the desk's host: h2 on a page, h4 inside the market modal.
+export type PanelHeading = "h2" | "h4";
+
+function Section({ id, title, children, heading = "h2" }: { readonly id: string; readonly title: string; readonly children: ReactNode; readonly heading?: PanelHeading }) {
+  const Heading = heading;
   return (
     <section className="tr-section" aria-labelledby={`tr-${id}-h`} data-testid={id}>
-      <h2 id={`tr-${id}-h`}>{title}</h2>
+      <Heading id={`tr-${id}-h`}>{title}</Heading>
       {children}
     </section>
   );
@@ -69,7 +73,7 @@ const ADDRESS_NEEDED = "Choose the owner address first.";
 
 // ---- deploy and enable trading ------------------------------------------------------------------------------------------
 
-export function DeployPanel({ ctx }: { readonly ctx: PanelContext }) {
+export function DeployPanel({ ctx, heading }: { readonly ctx: PanelContext; readonly heading?: PanelHeading }) {
   const [mode, setMode] = useState<"unlimited" | "capped">("unlimited");
   const [capped, setCapped] = useState("");
   const deployed = ctx.account !== null && ctx.account.state !== "undeployed" && ctx.account.state !== "unknown";
@@ -83,7 +87,7 @@ export function DeployPanel({ ctx }: { readonly ctx: PanelContext }) {
   const title = deployed ? "Enable trading" : "Deploy the account and enable trading";
   const owner = ctx.owner;
   return (
-    <Section id="deploy" title={title}>
+    <Section id="deploy" title={title} heading={heading}>
       <p>
         One operation the owner signs once: {deployed ? "" : "deploy the XO account if it is not deployed, then "}allow XO's exchange to spend USDC.e from the account and to move its position tokens. Which of the two it is comes from the account&apos;s
         state, read just now.
@@ -116,10 +120,10 @@ export function DeployPanel({ ctx }: { readonly ctx: PanelContext }) {
 
 // ---- revoke ---------------------------------------------------------------------------------------------------------------
 
-export function RevokePanel({ ctx }: { readonly ctx: PanelContext }) {
+export function RevokePanel({ ctx, heading }: { readonly ctx: PanelContext; readonly heading?: PanelHeading }) {
   const owner = ctx.owner;
   return (
-    <Section id="revoke" title="Revoke trading">
+    <Section id="revoke" title="Revoke trading" heading={heading}>
       <p>One operation the owner signs: set the exchange&apos;s USDC.e allowance to 0 and remove it as operator of the position tokens. It is the on-chain stop. Orders already signed stay valid until they expire, so keep them short.</p>
       <PrepareBody
         ctx={ctx}
@@ -137,7 +141,7 @@ export function RevokePanel({ ctx }: { readonly ctx: PanelContext }) {
 const CONDITION_ID = /^0x[0-9a-fA-F]{64}$/;
 const MAX_REDEEM = 50;
 
-export function RedeemPanel({ ctx }: { readonly ctx: PanelContext }) {
+export function RedeemPanel({ ctx, heading }: { readonly ctx: PanelContext; readonly heading?: PanelHeading }) {
   const [picked, setPicked] = useState<readonly string[]>([]);
   const [typed, setTyped] = useState("");
   const entries = ctx.account?.claimable.entries ?? [];
@@ -161,7 +165,7 @@ export function RedeemPanel({ ctx }: { readonly ctx: PanelContext }) {
   const owner = ctx.owner;
   const blocked = owner === null ? ADDRESS_NEEDED : picked.length === 0 ? "Pick at least one market to redeem." : picked.length > MAX_REDEEM ? `A redeem covers at most ${MAX_REDEEM} markets.` : null;
   return (
-    <Section id="redeem" title="Redeem resolved positions">
+    <Section id="redeem" title="Redeem resolved positions" heading={heading}>
       <p>One operation the owner signs: redeem the chosen markets for USDC.e. XO refuses a market whose payout is not final, and the plugin says so. The list below is a hint, not the on-chain rule.</p>
       {conditions.length === 0 ? (
         <p>{ctx.account === null ? "Read the account to see claimable positions." : ctx.account.claimable.available ? "No claimable positions were found." : "The claimable read failed, so nothing can be listed. You can still add a market id by hand."}</p>
@@ -201,11 +205,11 @@ export function RedeemPanel({ ctx }: { readonly ctx: PanelContext }) {
 
 // ---- funding --------------------------------------------------------------------------------------------------------------
 
-export function FundPanel({ ctx }: { readonly ctx: PanelContext }) {
+export function FundPanel({ ctx, heading }: { readonly ctx: PanelContext; readonly heading?: PanelHeading }) {
   const [amount, setAmount] = useState("");
   const owner = ctx.owner;
   return (
-    <Section id="fund" title="Fund the XO account from Base">
+    <Section id="fund" title="Fund the XO account from Base" heading={heading}>
       <p>
         Two Base transactions, one at a time: an exact-amount approval to the Hyperlane router, then the transfer to your XO account. The destination is the account derived from your owner address; it is not an input here and cannot be edited. This
         page shows each step as an intent for your agent to put to PayBox. It sends nothing.
@@ -225,8 +229,15 @@ export function FundPanel({ ctx }: { readonly ctx: PanelContext }) {
 
 // ---- the order ticket -----------------------------------------------------------------------------------------------------
 
-export function OrderPanel({ ctx }: { readonly ctx: PanelContext }) {
-  const [form, setForm] = useState({ tokenId: "", side: "BUY", price: "", shares: "", tif: "GTD", ttlS: "", postOnly: false });
+// An outcome token the host already knows (the market modal passes the market's own outcomes). The label is fixed
+// app text ("Outcome 1: Yes"), never the creator's label.
+export interface TokenChoice {
+  readonly label: string;
+  readonly tokenId: string;
+}
+
+export function OrderPanel({ ctx, tokenChoices, heading }: { readonly ctx: PanelContext; readonly tokenChoices?: readonly TokenChoice[]; readonly heading?: PanelHeading }) {
+  const [form, setForm] = useState({ tokenId: tokenChoices?.[0]?.tokenId ?? "", side: "BUY", price: "", shares: "", tif: "GTD", ttlS: "", postOnly: false });
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]): void => setForm((current) => ({ ...current, [key]: value }));
   const built = useMemo(() => buildTicket(form), [form]);
   const touched = form.tokenId !== "" || form.price !== "" || form.shares !== "";
@@ -236,15 +247,29 @@ export function OrderPanel({ ctx }: { readonly ctx: PanelContext }) {
   const want = ticket === null ? null : expectedQuote(ticket);
   const blocked = owner === null ? ADDRESS_NEEDED : ticket === null ? "Complete the ticket first." : over === true ? "This order counts more than the per-order cap allows. Lower the size or price." : null;
   return (
-    <Section id="order" title="Order ticket">
+    <Section id="order" title="Order ticket" heading={heading}>
       <p>
         An order is prepared here and signed in PayBox; this page does neither. The numbers below are worked out here with the plugin&apos;s own rules and are compared, digit for digit, with what the relay quotes. If they differ, the item is not
         shown.
       </p>
       <div className="tr-grid">
-        <Field label="Outcome token id">
-          {(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" spellCheck={false} value={form.tokenId} onChange={(event) => set("tokenId", event.target.value.trim())} />}
-        </Field>
+        {tokenChoices === undefined || tokenChoices.length === 0 ? (
+          <Field label="Outcome token id">
+            {(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" spellCheck={false} value={form.tokenId} onChange={(event) => set("tokenId", event.target.value.trim())} />}
+          </Field>
+        ) : (
+          <Field label="Outcome">
+            {(id) => (
+              <select id={id} className="ui-select" value={form.tokenId} onChange={(event) => set("tokenId", event.target.value)}>
+                {tokenChoices.map((choice) => (
+                  <option key={choice.tokenId} value={choice.tokenId}>
+                    {choice.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        )}
         <Field label="Side">
           {(id) => (
             <select id={id} className="ui-select" value={form.side} onChange={(event) => set("side", event.target.value)}>
@@ -286,7 +311,7 @@ export function OrderPanel({ ctx }: { readonly ctx: PanelContext }) {
         </ul>
       ) : null}
       {ticket === null || want === null ? null : (
-        <Tile tone="info" title="What this ticket would cost, at most" heading="h3" dataKind="ticket" role="status">
+        <Tile tone="info" title="What this ticket would cost, at most" heading={heading === "h4" ? "h4" : "h3"} dataKind="ticket" role="status">
           <KeyValues
             rows={[
               { label: "Order", value: `${ticket.side} ${ticket.shares} shares at ${ticket.price}` },

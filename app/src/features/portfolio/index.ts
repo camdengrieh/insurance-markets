@@ -1,5 +1,7 @@
-// Public surface of the portfolio package (docs/dapp-design.md 7.4 WP F). The screen is app/src/routes/portfolio.tsx.
-export { PortfolioView, TotalsPanel, VenueSection } from "./PortfolioView";
+// Public surface of the portfolio package (docs/dapp-design.md 7.4 WP F). There is no Portfolio screen any more:
+// the Markets surface's Holdings view renders these panels under its table (features/explorer/MarketsView.tsx).
+export { TotalsPanel, VenueSection, OutcomeTile, NoAddressWatched, NoVenueSelected } from "./panels";
+export { useHoldings, type Holdings, type HoldingsState } from "./holdings";
 export { PortfolioAdaptersProvider, usePortfolio, type PortfolioQuery } from "./usePortfolio";
 export { createPortfolioAdapters, markWithBids, readAll, okOutcomes, type PortfolioAdapters, type ReadContext } from "./readers";
 export { planReads, POSITION_READERS, type PlannedRead, type Resolution } from "./targets";

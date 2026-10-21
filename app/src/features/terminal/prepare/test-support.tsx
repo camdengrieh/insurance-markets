@@ -13,6 +13,7 @@ import { FakeTimers } from "../../../core/fakes";
 import { ClockProvider, ModeProvider, createAppQueryClient } from "../../../ui";
 import { act, render } from "../../../ui/testing/dom";
 import { createTradeServices, TradeServicesProvider, type TradeServices } from "../../trade/services";
+import { DockActionsProvider } from "../dock-context";
 import { FIXTURES, PAIR_CODE, binding, fakeServices, scriptedDaemon, toolEnvelope, type Daemon } from "../test-support";
 import { TerminalServicesProvider, type TerminalServices } from "../services";
 import { OWNER, TOKENS, accountWith, factsWith, installReads, prepareEnvelope, recordedAt } from "../../trade/test-support";
@@ -86,8 +87,11 @@ export function serve(rig: PrepareRig, tool: string, structured: unknown): void 
   rig.daemon.tools.set(tool, () => prepareEnvelope(tool, structured));
 }
 
-export function mountConsole(rig: PrepareRig, proposal: ProposalInput | null = null): { readonly container: HTMLElement; unmount(): void; rerender(ui: ReactElement): void; readonly path: () => string } {
-  const location = memoryLocation({ path: "/terminal", record: true });
+// The console is mounted the way the dock mounts it: inside a DockActionsProvider. The provider here records
+// every card the console asks the dock to open (`opened`), and the router records that nothing navigates.
+export function mountConsole(rig: PrepareRig, proposal: ProposalInput | null = null): { readonly container: HTMLElement; unmount(): void; rerender(ui: ReactElement): void; readonly path: () => string; readonly opened: readonly (string | null)[] } {
+  const location = memoryLocation({ path: "/", record: true });
+  const opened: (string | null)[] = [];
   const ui: ReactElement = (
     <QueryClientProvider client={createAppQueryClient()}>
       <ModeProvider mode="cockpit">
@@ -95,7 +99,9 @@ export function mountConsole(rig: PrepareRig, proposal: ProposalInput | null = n
           <Router hook={location.hook}>
             <TerminalServicesProvider services={rig.terminal}>
               <TradeServicesProvider services={rig.trade}>
-                <PrepareConsole terminal={rig.terminal} trade={rig.trade} proposal={proposal} />
+                <DockActionsProvider actions={{ openCard: (preparedId) => void opened.push(preparedId) }}>
+                  <PrepareConsole terminal={rig.terminal} trade={rig.trade} proposal={proposal} />
+                </DockActionsProvider>
               </TradeServicesProvider>
             </TerminalServicesProvider>
           </Router>
@@ -103,7 +109,7 @@ export function mountConsole(rig: PrepareRig, proposal: ProposalInput | null = n
       </ModeProvider>
     </QueryClientProvider>
   );
-  return { ...render(ui), path: () => location.history?.at(-1) ?? "/terminal" };
+  return { ...render(ui), path: () => location.history?.at(-1) ?? "/", opened };
 }
 
 // Fires a paste into an input the way a browser does: a clipboard event carrying text/plain.

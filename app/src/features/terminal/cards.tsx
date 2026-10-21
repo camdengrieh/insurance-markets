@@ -11,6 +11,7 @@ import { failureWords, type Failure } from "./failure";
 import { COMMAND_HELP, COMMAND_NAMES, type CommandName } from "./grammar";
 import { spreadOf, type BookResult, type BookView, type CallRecord, type LevelView, type Outcome, type SpreadTier, type WalletRow } from "./execute";
 import type { AuditRow } from "./observer";
+import { POSTURE_TONE, postureWord } from "./ObserverPane";
 import type { MarketOutput, PositionsOutput, SearchOutput, WireText } from "./tools";
 
 // Result cards. One renderer per tool answer, generated from the validated schema output: a field the schema does
@@ -130,7 +131,6 @@ export function HelpCard({ topic }: { readonly topic: CommandName | null }) {
 
 // ---- status ------------------------------------------------------------------------------------------------------------------
 
-const POSTURE_TONE: Readonly<Record<string, Tone>> = { OBSERVE: "info", PREPARE: "info", ARMED: "warn", KILLED: "danger" };
 
 export function StatusCard({ status }: { readonly status: StatusResponse }) {
   const flagEntries = Object.entries(status.flags);
@@ -142,7 +142,7 @@ export function StatusCard({ status }: { readonly status: StatusResponse }) {
     <Tile tone="neutral" title="Daemon status" heading="h3" dataKind="status">
       <dl className="terminal-facts">
         <Pair term="Posture">
-          <Badge tone={POSTURE_TONE[status.posture] ?? "neutral"}>{status.posture}</Badge>
+          <Badge tone={POSTURE_TONE[status.posture] ?? "neutral"}>{postureWord(status.posture)}</Badge>
           {status.armed_until === null ? null : <> until {when(status.armed_until)}</>}
         </Pair>
         <Pair term="Kill switch">{status.kill ? <Badge tone="danger">on: every write is refused</Badge> : <Badge tone="neutral">off</Badge>}</Pair>
@@ -561,8 +561,7 @@ export function PositionsTargetCard({ problem, candidates }: { readonly problem:
     <Tile tone="info" title="Which account?" heading="h3" dataKind="positions-target" dataCode={problem}>
       {problem === "none" ? (
         <p>
-          No saved address has XO selected, so nothing was looked up. Type <code>positions &lt;XO account address&gt;</code>, or save an address with XO ticked on the{" "}
-          <Link href="/wallet">Wallet screen</Link>.
+          No saved address has XO selected, so nothing was looked up. Type <code>positions &lt;XO account address&gt;</code>, or save an address with XO ticked from the wallet chip in the top bar (Just watch an address).
         </p>
       ) : problem === "unusable" ? (
         <p>A saved address with XO selected could not be turned into an XO account. Type the address yourself: positions &lt;XO account address&gt;.</p>
@@ -607,14 +606,14 @@ export function WalletCard({ rows, persistence }: { readonly rows: readonly Wall
         rowKey={(row) => row.id}
         empty={
           <EmptyTile title="No saved addresses" heading="h3">
-            Nothing is saved in this browser. Add addresses on the <Link href="/wallet">Wallet screen</Link>.
+            Nothing is saved in this browser. Add addresses from the wallet chip in the top bar (Just watch an address).
           </EmptyTile>
         }
       />
       <p className="terminal-muted">
         {persistence === "memory" ? "Saved addresses are kept in memory only on this page (the browser blocked storage). " : ""}
         Nothing was looked up: no venue and no chain was asked about these addresses. A derived account is an address calculated from the owner, not proof that anything is deployed
-        there, and it is not a deposit target until the Wallet screen has checked it.
+        there, and it is not a deposit target until the account map (under the wallet chip) has checked it.
       </p>
     </div>
   );
@@ -622,10 +621,10 @@ export function WalletCard({ rows, persistence }: { readonly rows: readonly Wall
 
 export function SignalsCard() {
   return (
-    <Tile tone="info" title="Signals live on their own screen" heading="h3" dataKind="signals">
+    <Tile tone="info" title="Signals live on the Markets screen" heading="h3" dataKind="signals">
       <p>
-        Quotient signals cost money per call, so this terminal never makes one: a paid call runs only from its own button, with its price shown, on the{" "}
-        <Link href="/signals">Signals screen</Link>. There is no auto-pay and no loop here.
+        Quotient signals cost money per call, so this terminal never makes one: a paid call runs only from its own button, with its price shown, in the Quotient panel of a market on the{" "}
+        <Link href="/">Markets screen</Link> (the Signals view of its table). There is no auto-pay and no loop here.
       </p>
       <p>The agent-side comparison tools this command would use (the pm_ family) do not exist yet.</p>
     </Tile>

@@ -51,24 +51,30 @@ async function mountApp(options: { loaders?: Record<string, Loader>; mode?: AppM
 const h1s = (root: ParentNode) => [...root.querySelectorAll("h1")].map((h) => h.textContent);
 
 describe("shell structure", () => {
-  it("has the landmarks, a skip link, a labelled nav and exactly one h1", async () => {
+  // The v2 shell has no navigation bar: the header carries the brand link to "/", the search field and the
+  // mode words; the Overview at "/" (shown only while no route claims that path) lists the fixed-path screens.
+  it("has the landmarks, a skip link, the brand link, the search field, no nav and exactly one h1", async () => {
     const { container } = await mountApp();
     expect(container.querySelector("header")).not.toBeNull();
     expect(container.querySelector("main#main")).not.toBeNull();
     expect(container.querySelector("footer")).not.toBeNull();
-    expect(must(container, "nav").getAttribute("aria-label")).toBe("Primary");
+    expect(container.querySelector("nav")).toBeNull();
+    expect(must(container, 'header a[href="/"]').textContent).toContain("Cockpit");
+    const search = must<HTMLInputElement>(container, 'header input[type="search"]');
+    expect(must(container, `label[for="${search.id}"]`).textContent).toContain("Search loaded rows");
     expect(must(container, ".ui-skip-link").textContent).toBe("Skip to content");
     expect(h1s(container)).toEqual(["Overview"]);
     expect(document.title).toBe("Overview · XO Cockpit");
   });
 
-  it("lists the screens in nav order and marks the current one", async () => {
+  it("the overview lists the fixed-path screens in nav order as links and a screen keeps its own title", async () => {
     const { container, navigate } = await mountApp();
-    const labels = [...container.querySelectorAll("nav a")].map((a) => a.textContent);
-    expect(labels).toEqual(["Overview", "Markets", "Portfolio", "Terminal"]);
-    expect(container.querySelector('nav a[aria-current="page"]')?.textContent).toBe("Overview");
+    const links = [...must(container, "main").querySelectorAll("ul a")];
+    expect(links.map((a) => a.textContent)).toEqual(["Markets", "Portfolio", "Terminal"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/markets", "/portfolio", "/terminal"]);
     navigate("/portfolio");
-    expect(container.querySelector('nav a[aria-current="page"]')?.textContent).toBe("Portfolio");
+    expect(h1s(container)).toEqual(["Portfolio"]);
+    expect(container.querySelector("main ul a")).toBeNull();
   });
 
   it("shows a build with no screens as an empty overview, not an error", async () => {
@@ -106,7 +112,7 @@ describe("navigation", () => {
 
   it("moves focus to the new h1, sets the title and announces politely", async () => {
     const { container, navigate } = await mountApp();
-    click(must(container, 'nav a[href="/markets"]'));
+    click(must(container, 'main a[href="/markets"]'));
     expect(h1s(container)).toEqual(["Markets"]);
     expect(document.activeElement?.tagName).toBe("H1");
     expect(document.activeElement?.textContent).toBe("Markets");
@@ -141,11 +147,14 @@ describe("availability", () => {
   it("standalone: a Cockpit-only screen shows the tile and never mounts the screen", async () => {
     const mounted = vi.fn();
     const only = { "./routes/terminal.tsx": async () => ({ route: { id: "terminal", path: "/terminal", title: "Terminal", nav: { label: "Terminal", order: 1 }, availability: "cockpit" }, default: () => { mounted(); return <p>console</p>; } }) };
-    const { container } = await mountApp({ loaders: only, mode: "standalone", path: "/terminal" });
+    const { container, navigate } = await mountApp({ loaders: only, mode: "standalone", path: "/terminal" });
     expect(h1s(container)).toEqual(["Terminal"]);
     expect(allText(container)).toContain("needs the Cockpit");
     expect(mounted).not.toHaveBeenCalled();
-    expect(allText(must(container, "nav"))).toContain("(needs the Cockpit)");
+    navigate("/");
+    expect(h1s(container)).toEqual(["Overview"]);
+    expect(allText(must(container, "main ul"))).toContain("Terminal (needs the Cockpit)");
+    expect(mounted).not.toHaveBeenCalled();
   });
 
   it("cockpit: the same screen renders", async () => {
@@ -174,7 +183,8 @@ describe("failure isolation", () => {
     expect(allText(main)).toContain("TypeError");
     expect(allText(main)).not.toContain("upstream said");
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("nav")).not.toBeNull();
+    expect(container.querySelector('header a[href="/"]')).not.toBeNull();
+    expect(container.querySelector("footer")).not.toBeNull();
     navigate("/markets");
     expect(h1s(container)).toEqual(["Markets"]);
     expect(main.querySelector('[data-code="ROUTE_CRASHED"]')).toBeNull();

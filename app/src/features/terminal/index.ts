@@ -1,8 +1,12 @@
 // Public surface of the read terminal, for the route file and for tests.
 import "./terminal.css";
 
-export { TerminalView } from "./TerminalView";
-export { ObserverPane } from "./ObserverPane";
+export { TerminalView, type TerminalFeed } from "./TerminalView";
+export { ObserverPane, openItemCount, OPEN_ITEM_STATES } from "./ObserverPane";
+export { Dock, pairingWords, STANDALONE_STRIP_TEXT, NOT_WATCHING_TEXT, type DockProps } from "./Dock";
+export { DockActionsProvider, useDockActions, type DockActions } from "./dock-context";
+export { PairingNotice, EXPIRED_TEXT } from "./PairingNotice";
+export { usePairing, CHECKING, type Pairing, type PairingOptions, type PairingServices } from "./usePairing";
 export { TerminalServicesProvider, createTerminalServices, useTerminalServices, type TerminalServices, type TerminalServicesOptions } from "./services";
 export { PageSession, setTerminalTokenSource, SESSION_STORAGE_KEY, type PairOutcome, type PairReason, type StorageLike } from "./session";
 export { parseLine, normalizeLine, describeCommand, COMMAND_NAMES, COMMAND_HELP, MAX_LINE_CHARS, type Command, type CommandName, type ParseResult, type ParseRefusal } from "./grammar";

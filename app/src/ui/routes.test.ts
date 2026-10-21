@@ -12,6 +12,12 @@ describe("metaProblem", () => {
     expect(metaProblem(good)).toBeNull();
     expect(metaProblem({ ...good, nav: undefined, path: "/market/:venue/:marketId", availability: "cockpit" })).toBeNull();
     expect(metaProblem({ ...good, path: "/" })).toBeNull();
+    expect(metaProblem({ ...good, hero: true })).toBeNull();
+    expect(metaProblem({ ...good, hero: false })).toBeNull();
+  });
+
+  it("rejects a hero flag that is not a boolean", () => {
+    for (const hero of ["true", 1, null, {}]) expect(metaProblem({ ...good, hero })).not.toBeNull();
   });
 
   it("rejects every malformed field", () => {

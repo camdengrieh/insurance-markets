@@ -1,76 +1,71 @@
-// One market: rules as inert text, the venue's display price and its order book kept apart and labelled, fee model,
-// times, and the placeholder for linked groups (docs/dapp-design.md 4.5, 7.2 M0-3, M0-8). Read-only.
+// The market modal (docs/design/cockpit-v2 Market.dc.html; docs/dapp-design.md 4.5, 7.2 M0-3, M0-8), over the
+// Markets table: rules as inert text, the venue's display price and its order book kept apart and labelled, both
+// sides of the book (the No side implied as 1 minus Yes only when the venue gives no No book, and labelled so), fee
+// model, times and terms, the linked legs as candidates with the permanent "why this is never arbitrage" line, the
+// Quotient panel with every disclosure, and the footer ticket (XO in the Cockpit) or worksheet. Read-only apart from
+// what the trade desk prepares through the daemon; nothing here signs or sends.
+//
+// It is the existing ui/Dialog (role=dialog, focus trapped, Escape closes, the rest of the page inert) and absorbs the
+// sections of the former market page; a deep link /market/:venue/:id opens it over the table.
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
 import { Link } from "wouter";
 
 import { pollIntervalFor, ttlFor } from "../../core/cache";
-import { formatAge, parseIsoMs } from "../../core/format";
-import type { AdapterError, Book, Level, Market, MarketRef, MarketSummary, Outcome, Prov, Result, VenueId } from "../../core/ports";
+import { parseIsoMs } from "../../core/format";
+import type { AdapterError, Book, Market, MarketRef, MarketSummary, Outcome, Prov, Result, VenueId } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
-import { DEFAULT_SWITCHES, makeProv, type VenueSwitches } from "../../core/venue-policy";
-import {
-  Badge,
-  Button,
-  DataTable,
-  ErrorTile,
-  Missing,
-  NeedsCockpitTile,
-  ProvenanceStrip,
-  Tile,
-  UntrustedText,
-  useNow,
-  venueName,
-} from "../../ui";
+import { makeProv, type VenueSwitches } from "../../core/venue-policy";
+import { Badge, Button, DataTable, Dialog, ErrorTile, Missing, NeedsCockpitTile, Num, ProvenanceLine, Tile, UntrustedText, VenueMark, useNow, venueName } from "../../ui";
+import { BookProvenance } from "./BookPanel";
+import { LevelRows } from "./levels";
+import type { LinkLoad } from "../signals/links/dataset";
+import type { LegReader } from "../signals/services";
 import type { DetailOutcome, ExplorerAdapter } from "./adapters";
 import { venueStatusOf } from "./catalog";
-import {
-  CUSTODY_TEXT,
-  MECHANISM_TEXT,
-  VOID_TEXT,
-  feeView,
-  safeDecimal,
-  safeReasons,
-  tickLines,
-} from "./describe";
-import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, priceText, sizeText, statusInfo, utcText, viewBook, type BookView } from "./display";
+import { CUSTODY_TEXT, MECHANISM_TEXT, VOID_TEXT, feeView, safeDecimal, safeReasons, tickLines } from "./describe";
+import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, impliedComplement, priceText, statusInfo, utcText, viewBook, type BookView, type ImpliedSide } from "./display";
 import { FeedError, classifyError, type ClassifiedError } from "./feed";
 import { BOOK_BUDGET_MS } from "./books";
-import { parseMarketParams } from "./ids";
-import { LinkGroupPlaceholder } from "./links";
-import { useExplorerServices, type ExplorerServices } from "./services";
+import type { MarketParams } from "./ids";
 import { OutcomeName } from "./MarketTable";
+import { QuotientPanel } from "./QuotientPanel";
+import { SameQuestion } from "./SameQuestion";
+import { useExplorerServices, type ExplorerServices } from "./services";
+import { Ticket } from "./Ticket";
 import { VenueTile, provForMode } from "./VenuePanel";
 
 const TOP_LEVELS = 5;
 const SHA256 = /^[0-9a-f]{64}$/;
 
+export const MARKET_DIALOG_TITLE = "Market";
+export const IMPLIED_NO_TEXT = "No side implied as 1 minus the Yes side: implied, not a quote";
+
 // ---- books -------------------------------------------------------------------------------------------------------------
 
-function LevelsTable({ caption, levels }: { readonly caption: string; readonly levels: readonly Level[] }) {
-  const shown = levels.slice(0, TOP_LEVELS);
+function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly venue: VenueId; readonly outcome: Outcome; readonly result: Result<Book, AdapterError> | undefined; readonly view: BookView | null; readonly implied: ImpliedSide | null; readonly nowMs: number }) {
   return (
-    <DataTable
-      caption={caption}
-      rows={shown}
-      rowKey={(level, index) => `${level.price}:${index}`}
-      empty={<p className="explorer-note">{`${caption}: no orders on this side. No price is implied.`}</p>}
-      columns={[
-        { key: "price", header: "Price", render: (level) => priceText(level.price) },
-        { key: "size", header: "Size", align: "end", render: (level) => sizeText(level.size) },
-      ]}
-    />
-  );
-}
-
-function BookBlock({ venue, outcome, result, view }: { readonly venue: VenueId; readonly outcome: Outcome; readonly result: Result<Book, AdapterError> | undefined; readonly view: BookView | null }) {
-  return (
-    <div className="explorer-book" data-venue={venue} data-outcome={outcome.index}>
+    <div className="explorer-book" data-venue={venue} data-outcome={outcome.index} data-implied={implied === null ? undefined : "true"}>
       <h4>
         Outcome {outcome.index + 1}: <OutcomeName outcome={outcome} />
       </h4>
-      {result === undefined ? (
+      {implied !== null ? (
+        <>
+          <dl className="explorer-facts">
+            <div>
+              <dt>Implied bid</dt>
+              <dd>{implied.bid === null ? <Missing label="no Yes ask to imply from" /> : <Num>{implied.bid}</Num>}</dd>
+            </div>
+            <div>
+              <dt>Implied ask</dt>
+              <dd>{implied.ask === null ? <Missing label="no Yes bid to imply from" /> : <Num>{implied.ask}</Num>}</dd>
+            </div>
+          </dl>
+          <p className="explorer-caption">
+            <Badge tone="warn">implied, not a quote</Badge> {IMPLIED_NO_TEXT}. The venue gave no book for this side; nothing can be filled at these numbers.
+          </p>
+        </>
+      ) : result === undefined ? (
         <p role="status">No book was returned for this outcome.</p>
       ) : !result.ok ? (
         <ErrorTile code={result.error} venue={venue} heading="h4" />
@@ -79,16 +74,16 @@ function BookBlock({ venue, outcome, result, view }: { readonly venue: VenueId; 
           <dl className="explorer-facts">
             <div>
               <dt>Best bid</dt>
-              <dd>{view.bid ?? <Missing label="no bids" />}</dd>
+              <dd>{view.bid === null ? <Missing label="no bids" /> : <Num>{view.bid}</Num>}</dd>
             </div>
             <div>
               <dt>Best ask</dt>
-              <dd>{view.ask ?? <Missing label="no asks" />}</dd>
+              <dd>{view.ask === null ? <Missing label="no asks" /> : <Num>{view.ask}</Num>}</dd>
             </div>
             <div>
               <dt>Spread</dt>
               <dd>
-                {view.spread ?? <Missing label="no spread" />}
+                {view.spread === null ? <Missing label="no spread" /> : <Num>{view.spread}</Num>}
                 <span className="explorer-caption">{SPREAD_LABEL[view.tier]}</span>
                 {view.tierReason === null ? null : <span className="explorer-caption">{view.tierReason}</span>}
               </dd>
@@ -96,7 +91,7 @@ function BookBlock({ venue, outcome, result, view }: { readonly venue: VenueId; 
             <div>
               <dt>Depth within 5 cents</dt>
               <dd>
-                bids {view.depthBids ?? "none"}, asks {view.depthAsks ?? "none"}
+                bids <Num>{view.depthBids ?? "none"}</Num>, asks <Num>{view.depthAsks ?? "none"}</Num>
               </dd>
             </div>
             <div>
@@ -108,13 +103,26 @@ function BookBlock({ venue, outcome, result, view }: { readonly venue: VenueId; 
             </div>
           </dl>
           <div className="explorer-book-sides">
-            <LevelsTable caption={`Outcome ${outcome.index + 1}: bids, highest first`} levels={result.value.bids} />
-            <LevelsTable caption={`Outcome ${outcome.index + 1}: asks, lowest first`} levels={result.value.asks} />
+            <LevelRows caption={`Outcome ${outcome.index + 1}: bids, highest first`} levels={result.value.bids} side="bids" top={TOP_LEVELS} />
+            <LevelRows caption={`Outcome ${outcome.index + 1}: asks, lowest first`} levels={result.value.asks} side="asks" top={TOP_LEVELS} />
           </div>
+          <BookProvenance venue={venue} book={result.value} nowMs={nowMs} />
         </>
       )}
     </div>
   );
+}
+
+// The No side is implied only for a binary market whose Yes book has both sides and whose No book the venue did not
+// give (missing, empty or failed). A venue that serves two real books gets no implied figure.
+export function impliedFor(market: Market, outcome: Outcome, results: ReadonlyArray<Result<Book, AdapterError>>): ImpliedSide | null {
+  if (outcome.role !== "no" || market.outcomes.length !== 2) return null;
+  const own = results[market.outcomes.indexOf(outcome)];
+  if (own !== undefined && own.ok && (own.value.bids.length > 0 || own.value.asks.length > 0)) return null;
+  const yesIndex = market.outcomes.findIndex((candidate) => candidate.role === "yes");
+  const yes = yesIndex === -1 ? undefined : results[yesIndex];
+  if (yes === undefined || !yes.ok || yes.value.bids.length === 0 || yes.value.asks.length === 0) return null;
+  return impliedComplement(yes.value);
 }
 
 function Books({ services, entry, market }: { readonly services: ExplorerServices; readonly entry: ExplorerAdapter; readonly market: Market }) {
@@ -136,9 +144,6 @@ function Books({ services, entry, market }: { readonly services: ExplorerService
       }
     },
   });
-  const asOf = (query.data ?? []).flatMap((result) => (result.ok ? [result.value.asOfMs] : []));
-  const newest = asOf.length === 0 ? null : Math.max(...asOf);
-
   let body;
   if (entry.books.state === "needs_cockpit") {
     body = <NeedsCockpitTile venue={market.ref.venue} what={entry.books.what.toLowerCase()} heading="h4" />;
@@ -163,10 +168,10 @@ function Books({ services, entry, market }: { readonly services: ExplorerService
       <>
         {market.outcomes.map((outcome, index) => {
           const result = query.data[index];
-          return <BookBlock key={outcome.index} venue={market.ref.venue} outcome={outcome} result={result} view={result?.ok === true ? viewBook(market.ref.venue, result.value, nowMs) : null} />;
+          const implied = impliedFor(market, outcome, query.data);
+          return <BookBlock key={outcome.index} venue={market.ref.venue} outcome={outcome} result={result} view={result?.ok === true ? viewBook(market.ref.venue, result.value, nowMs) : null} implied={implied} nowMs={nowMs} />;
         })}
         <p className="explorer-note">
-          {newest === null ? "" : `Newest book is from ${formatAge(nowMs, newest)}. `}
           <Button onClick={() => void query.refetch()} busy={query.isFetching}>
             Refresh the book
           </Button>
@@ -182,14 +187,14 @@ function Books({ services, entry, market }: { readonly services: ExplorerService
   );
 }
 
-// ---- the page ----------------------------------------------------------------------------------------------------------
+// ---- the sections -----------------------------------------------------------------------------------------------------
 
 function TimeRow({ label, iso }: { readonly label: string; readonly iso: string | undefined }) {
   const text = utcText(iso);
   return (
     <div>
       <dt>{label}</dt>
-      <dd>{text ?? <Missing label="not stated" />}</dd>
+      <dd>{text === null ? <Missing label="not stated" /> : <Num>{text}</Num>}</dd>
     </div>
   );
 }
@@ -309,7 +314,7 @@ function Fees({ market, entry }: { readonly market: Market; readonly entry: Expl
         </div>
         <div>
           <dt>Parameters read</dt>
-          <dd>{view.verifiedAt ?? <Missing label="no read date" />}</dd>
+          <dd>{view.verifiedAt === null ? <Missing label="no read date" /> : <Num>{view.verifiedAt}</Num>}</dd>
         </div>
       </dl>
       {entry.feeNote === null ? null : <p className="explorer-note">This fee is a ceiling that has not been reconciled with a real fill. No number on this page is net of fee, and no XO spread is shown as executable.</p>}
@@ -338,16 +343,16 @@ function Terms({ market }: { readonly market: Market }) {
         </div>
         <div>
           <dt>Price step</dt>
-          <dd>{ticks.length === 0 ? <Missing label="not stated" /> : ticks.join("; ")}</dd>
+          <dd>{ticks.length === 0 ? <Missing label="not stated" /> : <Num>{ticks.join("; ")}</Num>}</dd>
         </div>
         <div>
           <dt>Smallest order (shares)</dt>
-          <dd>{minSize ?? <Missing label="not stated" />}</dd>
+          <dd>{minSize === null ? <Missing label="not stated" /> : <Num>{minSize}</Num>}</dd>
         </div>
         <div>
           <dt>Money it settles in</dt>
           <dd>
-            <UntrustedText value={untrusted(market.collateral.symbol)} field="tag" /> on {market.collateral.chain}, {market.collateral.decimals} decimals,{" "}
+            <UntrustedText value={untrusted(market.collateral.symbol)} field="tag" /> on <Num>{market.collateral.chain}</Num>, <Num>{String(market.collateral.decimals)}</Num> decimals,{" "}
             {Object.hasOwn(CUSTODY_TEXT, market.collateral.custody) ? CUSTODY_TEXT[market.collateral.custody] : "custody not stated"}
           </dd>
         </div>
@@ -373,14 +378,15 @@ function Header({ market, services, detail }: { readonly market: Market; readonl
   const settlement = detail.settlement;
   const winner = settlement?.winningOutcomeIndex == null ? undefined : market.outcomes.find((outcome) => outcome.index === settlement.winningOutcomeIndex);
   return (
-    <>
-      <h2 className="explorer-title">
-        <UntrustedText value={market.title} field="title" />
-      </h2>
-      <p>
-        <Badge tone="neutral">{venueName(market.ref.venue)}</Badge> <Badge tone={info.tone}>{info.text}</Badge>
+    <header className="explorer-market-head">
+      <p className="explorer-inspector-venue">
+        <VenueMark venue={market.ref.venue} /> <Badge tone={info.tone}>{info.text}</Badge>
       </p>
-      <ProvenanceStrip prov={prov} />
+      <ProvenanceLine prov={prov} />
+      <p className="explorer-title">
+        <UntrustedText value={market.title} field="title" />
+      </p>
+      <p className="explorer-caption">Title and rules are written by the venue's users. They are shown as text only and never treated as instructions.</p>
       {winner === undefined ? null : (
         <p>
           Winning outcome, as the venue reports it: <OutcomeName outcome={winner} />
@@ -394,12 +400,21 @@ function Header({ market, services, detail }: { readonly market: Market; readonl
           ))}
         </ul>
       )}
-    </>
+    </header>
   );
 }
 
-function Loaded({ services, entry, marketRef: ref }: { readonly services: ExplorerServices; readonly entry: ExplorerAdapter; readonly marketRef: MarketRef }) {
-  const summary = services.memory.get(ref.venue, ref.marketId);
+interface LoadedProps {
+  readonly services: ExplorerServices;
+  readonly entry: ExplorerAdapter;
+  readonly marketRef: MarketRef;
+  readonly summary: MarketSummary | undefined;
+  readonly linkLoad: LinkLoad | null;
+  readonly readLeg: LegReader;
+  readonly onOpenQuotientSettings: () => void;
+}
+
+function Loaded({ services, entry, marketRef: ref, summary, linkLoad, readLeg, onOpenQuotientSettings }: LoadedProps) {
   const query = useQuery({
     queryKey: ["explorer", "detail", services.id, ref.venue, ref.marketId] as const,
     staleTime: ttlFor("market_detail"),
@@ -419,7 +434,7 @@ function Loaded({ services, entry, marketRef: ref }: { readonly services: Explor
   if (query.isPending) return <p role="status">Loading the market.</p>;
   if (query.isError) {
     const error: ClassifiedError = query.error instanceof FeedError ? query.error.classified : classifyError(query.error);
-    return error.code === "NEEDS_COCKPIT" ? <NeedsCockpitTile venue={ref.venue} what="this market" /> : <ErrorTile code={error.code} venue={ref.venue} onRetry={() => void query.refetch()} />;
+    return error.code === "NEEDS_COCKPIT" ? <NeedsCockpitTile venue={ref.venue} what="this market" heading="h3" /> : <ErrorTile code={error.code} venue={ref.venue} heading="h3" onRetry={() => void query.refetch()} />;
   }
   const { market } = query.data;
   return (
@@ -434,8 +449,16 @@ function Loaded({ services, entry, marketRef: ref }: { readonly services: Explor
       <Fees market={market} entry={entry} />
       <Terms market={market} />
       <section aria-labelledby="explorer-links-heading" className="explorer-section">
-        <h3 id="explorer-links-heading">Linked groups</h3>
-        <LinkGroupPlaceholder market={market.ref} heading="h4" />
+        <h3 id="explorer-links-heading">Same question elsewhere</h3>
+        <SameQuestion market={market.ref} load={linkLoad} readLeg={readLeg} nowMs={services.nowMs} variant="full" heading="h4" />
+      </section>
+      <section aria-labelledby="explorer-quotient-heading" className="explorer-section">
+        <h3 id="explorer-quotient-heading">Quotient</h3>
+        <QuotientPanel market={summary?.ref ?? market.ref} linkLoad={linkLoad} onOpenSettings={onOpenQuotientSettings} />
+      </section>
+      <section aria-labelledby="explorer-ticket-heading" className="explorer-section explorer-ticket">
+        <h3 id="explorer-ticket-heading">{market.ref.venue === "xo" ? "Order ticket" : "Worksheet"}</h3>
+        <Ticket market={market} />
       </section>
       {entry.shape !== null && entry.shape.status !== "verified" ? (
         <Tile tone="warn" title="Unproven: response shapes" heading="h3" dataKind="unproven" dataCode={ref.venue}>
@@ -451,44 +474,36 @@ function Loaded({ services, entry, marketRef: ref }: { readonly services: Explor
   );
 }
 
-export function MarketDetail({ params }: { readonly params: Readonly<Record<string, string | undefined>> }) {
-  const services = useExplorerServices();
-  const [switches, setSwitches] = useState<VenueSwitches | null>(null);
-  useEffect(() => {
-    let live = true;
-    void services.loadSwitches().then(
-      (loaded) => live && setSwitches(loaded),
-      () => live && setSwitches(DEFAULT_SWITCHES),
-    );
-    return () => {
-      live = false;
-    };
-  }, [services]);
+// ---- the dialog ---------------------------------------------------------------------------------------------------------
 
-  const parsed = parseMarketParams(params);
-  if (parsed === null) {
-    return (
-      <>
-        <ErrorTile code="NOT_FOUND" title="This is not a market address" message="The address does not name a venue and a market id this app can read, so nothing was requested." />
-        <p>
-          <Link href="/markets">Back to the Markets list</Link>
-        </p>
-      </>
-    );
-  }
-  if (switches === null) return <p role="status">Loading your venue settings.</p>;
-  const entry = services.adapters[parsed.venue];
-  const status = venueStatusOf(parsed.venue, switches, services.mode, entry !== undefined);
+export interface MarketDialogProps {
+  readonly market: MarketParams;
+  // The list row, when this visit loaded it (the display price and the full reference live there).
+  readonly summary: MarketSummary | undefined;
+  readonly switches: VenueSwitches;
+  readonly linkLoad: LinkLoad | null;
+  readonly readLeg: LegReader;
+  readonly onClose: () => void;
+  readonly onOpenQuotientSettings: () => void;
+}
+
+export function MarketDialog({ market, summary, switches, linkLoad, readLeg, onClose, onOpenQuotientSettings }: MarketDialogProps) {
+  const services = useExplorerServices();
+  const entry = services.adapters[market.venue];
+  const status = venueStatusOf(market.venue, switches, services.mode, entry !== undefined);
+  const lede = `${venueName(market.venue)} · ${summary === undefined ? "market" : statusInfo(summary.status).text}`;
   return (
-    <div className="explorer">
-      <p>
-        <Link href="/markets">Back to the Markets list</Link>
-      </p>
-      {status.kind !== "active" || entry === undefined ? (
-        <VenueTile row={{ venue: parsed.venue, status, adapter: entry, feed: undefined, selected: true }} mode={services.mode} />
-      ) : (
-        <Loaded services={services} entry={entry} marketRef={{ venue: parsed.venue, marketId: parsed.marketId, native: {} }} />
-      )}
-    </div>
+    <Dialog open title={MARKET_DIALOG_TITLE} lede={lede} size="wide" onClose={onClose}>
+      <div className="explorer explorer-modal">
+        {status.kind !== "active" || entry === undefined ? (
+          <VenueTile row={{ venue: market.venue, status, adapter: entry, feed: undefined, selected: true }} mode={services.mode} />
+        ) : (
+          <Loaded services={services} entry={entry} marketRef={{ venue: market.venue, marketId: market.marketId, native: {} }} summary={summary} linkLoad={linkLoad} readLeg={readLeg} onOpenQuotientSettings={onOpenQuotientSettings} />
+        )}
+        <p className="ui-dialog-actions">
+          <Button onClick={onClose}>Back to the Markets list</Button>
+        </p>
+      </div>
+    </Dialog>
   );
 }

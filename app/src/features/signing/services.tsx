@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 import { NO_FACTS, type CapabilityFacts } from "../../core/capabilities";
 import { useAppMode, type AppMode } from "../../ui";
-import { useTerminalServices, type TerminalServices } from "../terminal";
+import { useTerminalServices, type TerminalServices } from "../terminal/services";
 import type { StreamDeps } from "../terminal/stream";
 import type { PageSession } from "../terminal/session";
 import type { ApprovalMode } from "./card";

@@ -5,7 +5,7 @@ import type { InboxItem, Posture } from "@bridge/contract";
 import { NO_FACTS, isProven, type CapabilityFacts } from "../../core/capabilities";
 import { formatUtc } from "../../core/format";
 import { sanitizeText } from "../../core/untrusted";
-import { Badge, Button, Disclosure, Tile, UntrustedText, formatCountdown, useAnnounce } from "../../ui";
+import { Badge, Button, Disclosure, Num, Tile, UntrustedText, formatCountdown, useAnnounce } from "../../ui";
 import { ChecksList, DecodedView, FreshnessText, MismatchDetail, SummaryLines, TagsPanel } from "./CardParts";
 import { GATE_REASON_TEXT, RELAY_CAPABILITY_FACT, S2_ENABLED_IN_THIS_BUILD, copyGate, signGate, type ApprovalMode, type CardEvaluation, type GateResult } from "./card";
 import type { ReconcileResult } from "./client";
@@ -100,11 +100,12 @@ export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs
   return (
     <article className="signing-card" data-verification={verification} data-state={record.state} aria-labelledby={`card-${record.prepared_id}`}>
       <header className="signing-card-head">
+        <FreshnessText evaluation={evaluation} remaining={remaining} />
         <h3 id={`card-${record.prepared_id}`}>
           {item === null ? "Unreadable item" : KIND_TEXT[item.kind] ?? "Prepared item"} <code>{record.prepared_id.slice(0, 8)}</code>
         </h3>
         <p>
-          Requested by: {requesterText(record.requested_by)}. State: <Badge tone={stateWords.tone}>{stateWords.text}</Badge> <FreshnessText evaluation={evaluation} remaining={remaining} />
+          Requested by: {requesterText(record.requested_by)}. State: <Badge tone={stateWords.tone}>{stateWords.text}</Badge>
         </p>
         <p className="signing-muted">{stateWords.explain}</p>
         {evaluation.freshness.expiresAtMs === null ? null : (
@@ -112,6 +113,16 @@ export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs
             Expires <time dateTime={new Date(evaluation.freshness.expiresAtMs).toISOString()}>{formatUtc(evaluation.freshness.expiresAtMs)}</time>.
           </p>
         )}
+        <p className="signing-arm" data-arm={effectivePosture === "ARMED" ? "open" : "closed"}>
+          ARM window:{" "}
+          {effectivePosture === "ARMED" && armedUntilMs !== null ? (
+            <>
+              <Num>{formatCountdown(armedUntilMs - nowMs)}</Num> left. Submitting needs it; this page never submits.
+            </>
+          ) : (
+            "none open. Arming is done at your Cockpit; this page only shows the window it is told about."
+          )}
+        </p>
       </header>
 
       <div className="signing-verdict" role={verification === "failed" ? "alert" : "status"} data-tone={words.tone}>
@@ -214,21 +225,21 @@ export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs
       </section>
 
       <div className="signing-actions" role="group" aria-label="Actions">
-        <Button onClick={() => void reject()} disabled={!canReject} busy={busy === "reject"}>
+        <Button variant="danger" onClick={() => void reject()} disabled={!canReject} busy={busy === "reject"}>
           Reject
         </Button>
         <Button variant="primary" onClick={() => void copyIntent()} disabled={!copy.enabled} busy={busy === "copy"} aria-describedby={copy.enabled ? undefined : copyReasonsId}>
           Copy intent
         </Button>
         <Button disabled aria-disabled="true" aria-describedby={signReasonsId} data-action="sign-s2">
-          Sign with PayBox (S2)
+          Sign with PayBox: off in this build
         </Button>
       </div>
       <Reasons gate={copy} id={copyReasonsId} />
-      <div className="signing-s2" data-s2="off">
-        <p>Sign with PayBox from this page (path S2) is off in this build.</p>
+      <Tile tone="warn" title="Sign with PayBox is off in this build" heading="h4" role="note" dataKind="s2-off">
+        <p>Signing path S2 is off in this build; XO accepting this item is unproven until the live tests have run.</p>
         <Reasons gate={sign} id={signReasonsId} />
-      </div>
+      </Tile>
       {copied === null ? null : <p role="status">{copied === "ok" ? "Copied. Paste it unchanged as the intent of request_wallet_sign." : "Could not copy. Select the text in the intent box and copy it yourself."}</p>}
       {notice === null ? null : <p role="status" className="signing-muted">{notice}</p>}
 
