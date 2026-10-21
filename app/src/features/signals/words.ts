@@ -131,13 +131,26 @@ export const PROOF_TEXT: Readonly<Record<string, string>> = Object.freeze({
   P0_native: "Native hook (provenance, not verification)",
   P2_template: "Template-approved",
   P4_human: "Human-reviewed",
+  P_unproven: "Unproven: a statistical proposal, not evidence",
 });
 
 export const LINK_STATE_TEXT: Readonly<Record<string, string>> = Object.freeze({
   template_approved: "template approved",
   human_approved: "human approved",
   executable_eligible: "executable eligible",
+  proposed: "proposed, not approved",
 });
+
+// The linker's score band, in words. A band is a similarity of titles and rules, not a probability.
+export const BAND_TEXT: Readonly<Record<string, string>> = Object.freeze({
+  strong: "strong match",
+  good: "good match",
+  weak: "weak match",
+});
+
+export function bandText(band: string | undefined): string {
+  return band !== undefined && Object.hasOwn(BAND_TEXT, band) ? (BAND_TEXT[band] ?? "") : "no score band";
+}
 
 export const LINK_REASON_TEXT: Readonly<Record<LinkReason, string>> = Object.freeze({
   link_expired: "The link is past its valid-until date.",

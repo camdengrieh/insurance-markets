@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { registerAccountTools } from "./tools/account.js";
+import { registerClobTools } from "./tools/clob.js";
 import { registerCreateTools } from "./tools/create.js";
 import { registerDraftTools } from "./tools/draft.js";
 import { registerFundTools } from "./tools/fund.js";
@@ -37,6 +38,9 @@ function createServer() {
     registerTradeTools(server);
     registerFundTools(server);
     registerCreateTools(server);
+    // The CLOB venue tools (clob_order, clob_auth, src/tools/clob.ts) follow the same rule: relay-backed only, and the
+    // local server registers them too so both modes list one tool set (test/local-bundle.test.ts).
+    registerClobTools(server);
   }
 
   return server;

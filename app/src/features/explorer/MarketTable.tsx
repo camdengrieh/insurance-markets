@@ -17,6 +17,7 @@ import type { MarketSummary, OutcomeSummary } from "../../core/ports";
 import { Badge, Button, DitherBar, Mark, Missing, Num, UntrustedText, VenueMark, errorText, renderableUntrusted } from "../../ui";
 import type { ExplorerAdapter } from "./adapters";
 import { rowKey, type BookEntry } from "./books";
+import { categoryLabelOf, categoryOfRow } from "./categories";
 import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, depthWithin, priceText, statusInfo, utcText, viewBook, volumeText } from "./display";
 import { marketHref } from "./ids";
 import { NO_MARKS, type RowMarks } from "./views";
@@ -215,6 +216,16 @@ export function marketColumns(context: TableContext, deepest: Qty | null): reado
           </>
         );
       },
+    },
+    // The fixed taxonomy's label only (categories.ts); the venue's own words are shown in the inspector, as untrusted text.
+    {
+      key: "category",
+      header: "Category",
+      render: (row) => (
+        <span className="explorer-category" data-category={categoryOfRow(row.summary)}>
+          {categoryLabelOf(row.summary)}
+        </span>
+      ),
     },
     { key: "price", header: "Yes bid / ask", align: "end", render: (row) => <PriceCell row={row} book={bookOf(row)} nowMs={context.nowMs} /> },
     {

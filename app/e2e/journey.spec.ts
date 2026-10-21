@@ -55,7 +55,8 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   // The view chips are filter states of the same table: Signals narrows to the venues Quotient covers (XO is not one).
   await page.getByRole("button", { name: /^Signals/ }).click();
   await expect(page.getByTestId("explorer-count")).toContainText("0 markets shown in the Signals view");
-  await page.getByRole("button", { name: /^All/ }).click();
+  // The view chip "All <count>", not the category chip "All categories".
+  await page.getByRole("button", { name: /^All \d/ }).click();
   await expect(table.getByRole("row", { name: /Mock market A \(CLOB, active\)/ })).toHaveCount(1);
 
   // Filtering, from the top bar's field, narrows the rows already loaded and sends nothing.

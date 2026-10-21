@@ -39,6 +39,10 @@ const gammaEventSchema = z.looseObject({
   negRisk: z.boolean().nullish(),
   negRiskMarketID: z.string().nullish(),
   version: z.string().nullish(),
+  // The event's ticker and its series ({slug, ticker, ...} objects in the capture): read loosely, for the
+  // fixed-taxonomy match only, so an odd shape never fails the whole market.
+  ticker: z.unknown().optional(),
+  series: z.unknown().optional(),
 });
 
 export const gammaMarketSchema = z.looseObject({

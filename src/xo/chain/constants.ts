@@ -490,3 +490,14 @@ export const PINNED_CONTRACTS: readonly PinnedContract[] = Object.freeze([
   { name: "HYPERLANE_HOOK", address: HYPERLANE_HOOK, chain: "base", pin: "PIN" },
   { name: "HYPERLANE_ISM", address: HYPERLANE_ISM, chain: "base", pin: "PIN" },
 ] as const satisfies readonly PinnedContract[]);
+
+// ---- the CLOB venues besides XO (not XO contracts) ----------------------------------------------------------------
+//
+// src/clob/venues.ts names these with their sources (docs.polymarket.com/resources/contracts and trading/place-orders,
+// read 2026-10-21; docs/research/37-aa-venue-accounts.md section 4.5 for Limitless). They live here only because this
+// file is the one that may hold an address literal (test/chain-constants.test.ts); they are not pinned contracts of
+// XO's chain and are not on any tripwire. Polygon mainnet (137) for Polymarket, Base mainnet (8453) for Limitless.
+export const POLYMARKET_EXCHANGE_V3 = "0xe3333700cA9d93003F00f0F71f8515005F6c00Aa" as const;
+export const POLYMARKET_CTF_EXCHANGE = "0xE111180000d2663C0091e4f400237545B87B996B" as const;
+export const POLYMARKET_NEG_RISK_EXCHANGE = "0xe2222d279d744050d28e00520010520000310F59" as const;
+export const LIMITLESS_CTF_EXCHANGE = "0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5" as const;

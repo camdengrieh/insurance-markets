@@ -1,0 +1,557 @@
+// Open-market discovery for the linker: every open binary market of each allowlisted venue, as a
+// feature record (hashes only). All requests go through the recorder's PoliteClient, so the host
+// allowlist, per-host budgets, backoff, breaker and the fixed User-Agent apply unchanged. GET only.
+//
+// XO: the list route carries `rules: {}`, so each market needs one detail read (by contract id),
+//   decoded with the strict src/xo decoders. Detail reads are cached in the state file by rules
+//   hash and refreshed after DETAIL_REFRESH_MS, capped per run; markets whose detail is not yet
+//   read are carried by their cached features or skipped until the next run (resumable).
+// Polymarket: Gamma /markets/keyset pages (description, resolutionSource, endDate in each row).
+// Limitless: /markets/active pages (description, expirationTimestamp in each row).
+//
+// Rule fields are assembled exactly as pm/adapters builds them, so the pinned rules-v2 hash is the
+// one pm_verify_link recomputes. Titles and rule text are used in memory only.
+
+import { decodeMarketDetail, decodeMarketPage, lifecycleOf } from "../../src/xo/client.js";
+import { categorise } from "../core/category.js";
+import { sha256Hex } from "../links/canonical.js";
+import { canonicalizeRecord, hashCanonical, type FieldValue } from "../links/hash.js";
+import { marketId as marketIdSchema } from "../links/schema.js";
+import type { Clock } from "../recorder/clock.js";
+import type { PoliteClient } from "../recorder/http.js";
+import type { RequestSpec } from "../recorder/types.js";
+import { urlOf } from "../recorder/types.js";
+import { isRecord } from "../recorder/venues/common.js";
+import type { VoidPolicy } from "../types.js";
+import { LINKER_HOSTS, type LinkerVenue } from "./allowlist.js";
+import {
+  DETAIL_REFRESH_MS,
+  LIMITLESS_PAGES,
+  LIMITLESS_PAGE_SIZE,
+  MAX_DETAIL_REQUESTS_PER_RUN,
+  MIN_TIME_TO_CLOSE_MS,
+  POLY_PAGES,
+  POLY_PAGE_SIZE,
+  XO_LIST_PAGES,
+  XO_LIST_TAKE,
+} from "./constants.js";
+import { buildFeatures, featureKey, toUtcStamp, type MarketFeatures } from "./features.js";
+import type { StoredMarket } from "./state.js";
+
+export interface DiscoverOptions {
+  readonly venues: readonly LinkerVenue[];
+  readonly maxDetailRequests: number;
+  readonly xoPages: number;
+  readonly polyPages: number;
+  readonly limitlessPages: number;
+}
+
+export const DEFAULT_DISCOVER: DiscoverOptions = {
+  venues: ["xo", "polymarket", "limitless"],
+  maxDetailRequests: MAX_DETAIL_REQUESTS_PER_RUN,
+  xoPages: XO_LIST_PAGES,
+  polyPages: POLY_PAGES,
+  limitlessPages: LIMITLESS_PAGES,
+};
+
+export interface VenueCount {
+  listed: number;
+  open: number;
+  featured: number;
+  cached: number;
+  skipped: Record<string, number>;
+}
+
+export interface DiscoverResult {
+  readonly features: readonly StoredMarket[];
+  readonly counts: Readonly<Record<LinkerVenue, VenueCount>>;
+  readonly requests: number;
+  // XO markets still waiting for a detail read (next run continues).
+  readonly pendingDetail: number;
+  readonly notes: readonly string[];
+  // Per venue: whether the listing completed (a failed listing keeps the previous state rows).
+  readonly complete: Readonly<Record<LinkerVenue, boolean>>;
+}
+
+export interface DiscoverDeps {
+  readonly client: PoliteClient;
+  readonly clock: Clock;
+  readonly cache: ReadonlyMap<string, StoredMarket>;
+  readonly options?: Partial<DiscoverOptions>;
+  readonly signal?: AbortSignal;
+}
+
+const CONDITION = /^0x[0-9a-f]{64}$/;
+
+function spec(host: string, path: string, query?: Record<string, string>): RequestSpec {
+  return { host, path, ...(query === undefined ? {} : { query }), purpose: "resolve" };
+}
+
+export function xoListSpec(page: number): RequestSpec {
+  return spec(LINKER_HOSTS.xo, "/api/markets", { marketType: "2", statuses: "ACTIVE", take: String(XO_LIST_TAKE), page: String(page), sortBy: "expiresAt", sortOrder: "ASC" });
+}
+export function xoDetailSpec(conditionId: string): RequestSpec {
+  return spec(LINKER_HOSTS.xo, `/api/markets/contract/${encodeURIComponent(conditionId)}`);
+}
+export function polyKeysetSpec(cursor: string | null): RequestSpec {
+  return spec(LINKER_HOSTS.polymarket, "/markets/keyset", { closed: "false", active: "true", limit: String(POLY_PAGE_SIZE), ...(cursor === null ? {} : { cursor }) });
+}
+export function limitlessListSpec(page: number): RequestSpec {
+  return spec(LINKER_HOSTS.limitless, "/markets/active", { limit: String(LIMITLESS_PAGE_SIZE), page: String(page) });
+}
+
+// The request plan for dry-run: listing requests, plus the bounded detail reads.
+export function dryRunLines(options: DiscoverOptions): string[] {
+  const lines = ["pm-linker dry-run: no network calls; these are the requests a run would make, at most"];
+  let n = 0;
+  if (options.venues.includes("xo")) {
+    for (let p = 1; p <= options.xoPages; p += 1) {
+      lines.push(`  GET ${urlOf(xoListSpec(p))}`);
+      n += 1;
+    }
+    lines.push(`  GET https://${LINKER_HOSTS.xo}/api/markets/contract/<conditionId>   (one per open market without a fresh cached rules hash; at most ${options.maxDetailRequests} per run)`);
+  }
+  if (options.venues.includes("polymarket")) {
+    lines.push(`  GET ${urlOf(polyKeysetSpec(null))}   (then with cursor=<next_cursor>, at most ${options.polyPages} pages)`);
+    n += options.polyPages;
+  }
+  if (options.venues.includes("limitless")) {
+    for (let p = 1; p <= options.limitlessPages; p += 1) {
+      lines.push(`  GET ${urlOf(limitlessListSpec(p))}`);
+      n += 1;
+    }
+  }
+  lines.push(`listing requests: at most ${n}; detail requests: at most ${options.venues.includes("xo") ? options.maxDetailRequests : 0}`);
+  lines.push("user-agent: insurance-markets-research/0.1; GET only; the recorder's per-host budgets apply");
+  lines.push("Kalshi, Quotient and every venue not on the allowlist are never contacted");
+  return lines;
+}
+
+function count(): VenueCount {
+  return { listed: 0, open: 0, featured: 0, cached: 0, skipped: {} };
+}
+
+function skip(c: VenueCount, reason: string): void {
+  c.skipped[reason] = (c.skipped[reason] ?? 0) + 1;
+}
+
+interface Ctx {
+  readonly deps: DiscoverDeps;
+  readonly options: DiscoverOptions;
+  readonly nowMs: number;
+  readonly stamp: string;
+  requests: number;
+  readonly notes: string[];
+}
+
+async function getJson(ctx: Ctx, s: RequestSpec): Promise<{ ok: true; json: unknown } | { ok: false; reason: string; status: number | undefined; fatal: boolean }> {
+  ctx.requests += 1;
+  const r = await ctx.deps.client.get(s);
+  if (r.ok) return { ok: true, json: r.json };
+  return { ok: false, reason: r.reason, status: r.status, fatal: r.reason === "budget" || r.reason === "breaker_open" || r.reason === "refused_host" };
+}
+
+function openEnough(closeUtc: string, nowMs: number): boolean {
+  const ms = Date.parse(closeUtc);
+  return Number.isFinite(ms) && ms - nowMs >= MIN_TIME_TO_CLOSE_MS;
+}
+
+interface Built {
+  readonly venue: LinkerVenue;
+  readonly marketId: string;
+  readonly title: string;
+  readonly ruleFields: Readonly<Record<string, FieldValue>>;
+  readonly closeUtc: string;
+  readonly native: readonly string[];
+  readonly voidPolicy: VoidPolicy;
+  readonly resolverId: string | null;
+  readonly groupKey: string | null;
+  readonly groupKind: MarketFeatures["groupKind"];
+  readonly outcomes: number;
+}
+
+// Hash with the rules-v2 recipe and build the feature record; null with a reason when unhashable.
+function featuresOf(b: Built, stamp: string): { ok: true; value: StoredMarket } | { ok: false; reason: string } {
+  const canon = canonicalizeRecord(b.venue, b.ruleFields);
+  if (!canon.ok) return { ok: false, reason: `rules_${canon.error.toLowerCase()}` };
+  const hashes = hashCanonical(canon.value);
+  const cat = categorise({ venue: b.venue, native: b.native, title: b.title });
+  const f = buildFeatures({
+    venue: b.venue,
+    marketId: b.marketId,
+    title: b.title,
+    rulesCanonical: hashes.canonical,
+    rulesSha256: hashes.rulesSha256,
+    maskedSha256: hashes.maskedSha256,
+    closeUtc: b.closeUtc,
+    category: cat.category,
+    categoryConfidence: cat.confidence,
+    voidPolicy: b.voidPolicy,
+    resolverId: b.resolverId,
+    groupKey: b.groupKey,
+    groupKind: b.groupKind,
+    outcomes: b.outcomes,
+  });
+  return { ok: true, value: { ...f, seenAt: stamp, detailAt: stamp } };
+}
+
+function validId(id: string): boolean {
+  return marketIdSchema.safeParse(id).success;
+}
+
+// ---- XO ----
+
+async function discoverXo(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise<{ complete: boolean; pending: number }> {
+  interface Row {
+    readonly conditionId: string;
+    readonly closeUtc: string;
+  }
+  const rows: Row[] = [];
+  const seen = new Set<string>();
+  let complete = false;
+  for (let page = 1; page <= ctx.options.xoPages; page += 1) {
+    const r = await getJson(ctx, xoListSpec(page));
+    if (!r.ok) {
+      ctx.notes.push(`xo list page ${page} failed (${r.reason})`);
+      break;
+    }
+    let decoded;
+    try {
+      decoded = decodeMarketPage(r.json, XO_LIST_TAKE);
+    } catch {
+      ctx.notes.push(`xo list page ${page} could not be decoded`);
+      break;
+    }
+    c.listed += decoded.markets.length + decoded.skipped.length;
+    for (let i = 0; i < decoded.skipped.length; i += 1) skip(c, "list_row_undecodable");
+    for (const m of decoded.markets) {
+      if (m.kind !== "clob") {
+        skip(c, "not_clob");
+        continue;
+      }
+      if (lifecycleOf(m, ctx.nowMs) !== "open") {
+        skip(c, "not_open");
+        continue;
+      }
+      const id = m.conditionId.toLowerCase();
+      if (!CONDITION.test(id) && !validId(id)) {
+        skip(c, "bad_id");
+        continue;
+      }
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const close = toUtcStamp(m.expiresAt);
+      if (close === null || !openEnough(close, ctx.nowMs)) {
+        skip(c, "closes_too_soon");
+        continue;
+      }
+      rows.push({ conditionId: id, closeUtc: close });
+    }
+    if (!decoded.meta.hasNextPage) {
+      complete = true;
+      break;
+    }
+    if (page === ctx.options.xoPages) complete = true;
+  }
+  c.open = rows.length;
+  let detailReads = 0;
+  let pending = 0;
+  let stop = false;
+  for (const row of rows) {
+    const key = `xo:${row.conditionId}`;
+    const cached = ctx.deps.cache.get(key);
+    const fresh = cached !== undefined && ctx.nowMs - Date.parse(cached.detailAt) < DETAIL_REFRESH_MS && cached.closeUtc === row.closeUtc;
+    if (fresh) {
+      out.push({ ...cached, seenAt: ctx.stamp });
+      c.cached += 1;
+      continue;
+    }
+    if (stop || ctx.deps.signal?.aborted === true || detailReads >= ctx.options.maxDetailRequests) {
+      pending += 1;
+      if (cached !== undefined) {
+        out.push({ ...cached, seenAt: ctx.stamp });
+        c.cached += 1;
+      }
+      continue;
+    }
+    detailReads += 1;
+    const r = await getJson(ctx, xoDetailSpec(row.conditionId));
+    if (!r.ok) {
+      if (r.fatal) stop = true;
+      pending += 1;
+      skip(c, `detail_${r.reason}`);
+      if (cached !== undefined) out.push({ ...cached, seenAt: ctx.stamp });
+      continue;
+    }
+    let detail;
+    try {
+      detail = decodeMarketDetail(r.json);
+    } catch {
+      skip(c, "detail_undecodable");
+      continue;
+    }
+    if (detail.conditionId.toLowerCase() !== row.conditionId) {
+      skip(c, "detail_id_mismatch");
+      continue;
+    }
+    // Rule fields exactly as pm/adapters/xo.ts assembles them for the rules-v2 recipe.
+    if (detail.rules.outcomeRulesTotal > detail.rules.outcomeRules.length || detail.resolutionSourcesTotal > detail.resolutionSources.length || detail.omissions.some((o) => /^(rules[ .]|\d+ outcomeRules |outcomeRules\[|resolutionSources |\d+ resolutionSources )/.test(o))) {
+      skip(c, "rules_lossy_read");
+      continue;
+    }
+    const descriptionText = detail.rules.description === null ? "" : String(detail.rules.description);
+    const parts = descriptionText === "" ? [] : [descriptionText];
+    for (const rule of detail.rules.outcomeRules) parts.push(`Outcome ${rule.outcomeIndex}: ${String(rule.rule)}`);
+    const displayText = parts.join("\n\n");
+    const sources = detail.resolutionSources.slice(0, 20).map(String);
+    const ruleFields: Record<string, FieldValue> = {
+      ...(displayText === "" ? {} : { rules: displayText }),
+      resolutionSources: sources,
+      resolverAddress: detail.resolverAddress,
+      expiresAt: detail.expiresAt,
+    };
+    const root = isRecord(r.json) ? r.json["rootEventSlug"] : undefined;
+    const groupKey = typeof root === "string" && /^[A-Za-z0-9][A-Za-z0-9-]{0,199}$/.test(root) ? `xo-evt-${sha256Hex(`xo-root:${root}`).slice(0, 16)}` : null;
+    const resolver = detail.resolverAddress === null ? null : detail.resolverAddress.toLowerCase();
+    const built = featuresOf(
+      {
+        venue: "xo",
+        marketId: row.conditionId,
+        title: String(detail.title),
+        ruleFields,
+        closeUtc: row.closeUtc,
+        native: detail.categoryPath.map((p) => String(p.name)),
+        voidPolicy: "unknown",
+        resolverId: resolver !== null && validId(resolver) ? resolver : null,
+        groupKey,
+        groupKind: groupKey === null ? null : "event",
+        outcomes: 2,
+      },
+      ctx.stamp,
+    );
+    if (!built.ok) {
+      skip(c, built.reason);
+      continue;
+    }
+    out.push(built.value);
+    c.featured += 1;
+  }
+  return { complete, pending };
+}
+
+// ---- Polymarket ----
+
+function jsonStrings(raw: unknown): string[] | null {
+  let list: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      list = JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  return Array.isArray(list) && list.every((x) => typeof x === "string") ? (list as string[]) : null;
+}
+
+async function discoverPoly(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise<boolean> {
+  let cursor: string | null = null;
+  const seen = new Set<string>();
+  for (let page = 0; page < ctx.options.polyPages; page += 1) {
+    const r = await getJson(ctx, polyKeysetSpec(cursor));
+    if (!r.ok) {
+      ctx.notes.push(`polymarket keyset page ${page + 1} failed (${r.reason})`);
+      return false;
+    }
+    const env = r.json;
+    const markets = isRecord(env) ? env["markets"] : undefined;
+    if (!Array.isArray(markets)) {
+      ctx.notes.push(`polymarket keyset page ${page + 1} is not a keyset envelope`);
+      return false;
+    }
+    for (const m of markets as unknown[]) {
+      c.listed += 1;
+      if (!isRecord(m)) {
+        skip(c, "row_not_object");
+        continue;
+      }
+      const idRaw = m["conditionId"];
+      const id = typeof idRaw === "string" ? idRaw.toLowerCase() : "";
+      if (!CONDITION.test(id) && !validId(id)) {
+        skip(c, "bad_id");
+        continue;
+      }
+      if (seen.has(id)) continue;
+      seen.add(id);
+      if (m["active"] !== true || m["closed"] === true || m["archived"] === true || m["acceptingOrders"] === false || m["enableOrderBook"] === false) {
+        skip(c, "not_open");
+        continue;
+      }
+      const outcomes = jsonStrings(m["outcomes"]);
+      if (outcomes === null || outcomes.length !== 2) {
+        skip(c, "not_binary");
+        continue;
+      }
+      const close = toUtcStamp(m["endDate"]);
+      if (close === null || !openEnough(close, ctx.nowMs)) {
+        skip(c, "closes_too_soon");
+        continue;
+      }
+      c.open += 1;
+      const description = m["description"];
+      const resolutionSource = m["resolutionSource"];
+      const endDate = m["endDate"];
+      if (typeof description !== "string" || typeof endDate !== "string") {
+        skip(c, "rules_missing_field");
+        continue;
+      }
+      const ruleFields: Record<string, FieldValue> = { description, resolutionSource: typeof resolutionSource === "string" ? resolutionSource : null, endDate };
+      const nr = m["negRiskMarketID"];
+      const groupKey = m["negRisk"] === true && typeof nr === "string" && CONDITION.test(nr.toLowerCase()) ? nr.toLowerCase() : null;
+      const resolvedBy = m["resolvedBy"];
+      const native: string[] = [];
+      const events = m["events"];
+      const event0 = Array.isArray(events) && isRecord(events[0]) ? events[0] : null;
+      if (event0 !== null) {
+        if (typeof event0["category"] === "string") native.push(event0["category"]);
+        const tags = event0["tags"];
+        if (Array.isArray(tags)) for (const t of tags as unknown[]) if (isRecord(t) && typeof t["label"] === "string") native.push(t["label"]);
+      }
+      const built = featuresOf(
+        {
+          venue: "polymarket",
+          marketId: id,
+          title: typeof m["question"] === "string" ? m["question"] : "",
+          ruleFields,
+          closeUtc: close,
+          native,
+          voidPolicy: m["umaBond"] !== undefined && m["umaBond"] !== null ? "fifty_fifty" : "unknown",
+          resolverId: typeof resolvedBy === "string" && /^0x[0-9a-fA-F]{40}$/.test(resolvedBy) ? resolvedBy.toLowerCase() : null,
+          groupKey,
+          groupKind: groupKey === null ? null : "neg_risk",
+          outcomes: 2,
+        },
+        ctx.stamp,
+      );
+      if (!built.ok) {
+        skip(c, built.reason);
+        continue;
+      }
+      out.push(built.value);
+      c.featured += 1;
+    }
+    const next = isRecord(env) ? env["next_cursor"] : undefined;
+    if (typeof next !== "string" || next === "" || markets.length === 0) return true;
+    cursor = next;
+  }
+  return true;
+}
+
+// ---- Limitless ----
+
+async function discoverLimitless(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise<boolean> {
+  const seen = new Set<string>();
+  for (let page = 1; page <= ctx.options.limitlessPages; page += 1) {
+    const r = await getJson(ctx, limitlessListSpec(page));
+    if (!r.ok) {
+      ctx.notes.push(`limitless active page ${page} failed (${r.reason})`);
+      return false;
+    }
+    const rows = isRecord(r.json) ? r.json["data"] : undefined;
+    if (!Array.isArray(rows)) {
+      ctx.notes.push(`limitless active page ${page} is not a list envelope`);
+      return false;
+    }
+    for (const m of rows as unknown[]) {
+      c.listed += 1;
+      if (!isRecord(m)) {
+        skip(c, "row_not_object");
+        continue;
+      }
+      const slug = m["slug"];
+      if (typeof slug !== "string" || !validId(slug)) {
+        skip(c, "bad_id");
+        continue;
+      }
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      if (m["marketType"] !== "single") {
+        skip(c, "not_single");
+        continue;
+      }
+      const status = m["status"];
+      if ((status !== "FUNDED" && status !== "ACTIVE") || m["expired"] === true) {
+        skip(c, "not_open");
+        continue;
+      }
+      const close = toUtcStamp(m["expirationTimestamp"]);
+      if (close === null || !openEnough(close, ctx.nowMs)) {
+        skip(c, "closes_too_soon");
+        continue;
+      }
+      c.open += 1;
+      const description = m["description"];
+      const expiry = m["expirationTimestamp"];
+      if (typeof description !== "string" || (typeof expiry !== "string" && typeof expiry !== "number")) {
+        skip(c, "rules_missing_field");
+        continue;
+      }
+      const native: string[] = [];
+      for (const k of ["categories", "tags"]) {
+        const v = m[k];
+        if (Array.isArray(v)) for (const x of v as unknown[]) if (typeof x === "string") native.push(x);
+      }
+      const built = featuresOf(
+        {
+          venue: "limitless",
+          marketId: slug,
+          title: typeof m["title"] === "string" ? m["title"] : "",
+          ruleFields: { description, expirationTimestamp: typeof expiry === "number" && !Number.isSafeInteger(expiry) ? String(expiry) : expiry },
+          closeUtc: close,
+          native,
+          voidPolicy: "unknown",
+          resolverId: null,
+          groupKey: null,
+          groupKind: null,
+          outcomes: 2,
+        },
+        ctx.stamp,
+      );
+      if (!built.ok) {
+        skip(c, built.reason);
+        continue;
+      }
+      out.push(built.value);
+      c.featured += 1;
+    }
+    if (rows.length < LIMITLESS_PAGE_SIZE) return true;
+  }
+  return true;
+}
+
+export async function discover(deps: DiscoverDeps): Promise<DiscoverResult> {
+  const options: DiscoverOptions = { ...DEFAULT_DISCOVER, ...(deps.options ?? {}) };
+  const nowMs = deps.clock.nowMs();
+  const ctx: Ctx = { deps, options, nowMs, stamp: toUtcStamp(nowMs) ?? "1970-01-01T00:00:00Z", requests: 0, notes: [] };
+  const features: StoredMarket[] = [];
+  const counts: Record<LinkerVenue, VenueCount> = { xo: count(), polymarket: count(), limitless: count() };
+  const complete: Record<LinkerVenue, boolean> = { xo: false, polymarket: false, limitless: false };
+  let pendingDetail = 0;
+  if (options.venues.includes("xo")) {
+    const r = await discoverXo(ctx, features, counts.xo);
+    complete.xo = r.complete;
+    pendingDetail = r.pending;
+  }
+  if (options.venues.includes("polymarket")) complete.polymarket = await discoverPoly(ctx, features, counts.polymarket);
+  if (options.venues.includes("limitless")) complete.limitless = await discoverLimitless(ctx, features, counts.limitless);
+  // One record per market; a later duplicate never replaces an earlier one.
+  const byKey = new Map<string, StoredMarket>();
+  for (const f of features) if (!byKey.has(featureKey(f))) byKey.set(featureKey(f), f);
+  return {
+    features: [...byKey.values()].sort((a, b) => (featureKey(a) < featureKey(b) ? -1 : 1)),
+    counts,
+    requests: ctx.requests,
+    pendingDetail,
+    notes: ctx.notes,
+    complete,
+  };
+}

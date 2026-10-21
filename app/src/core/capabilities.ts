@@ -30,6 +30,13 @@ export const CAPABILITY_IDS = [
   "withdraw_exit_proven", // T4
   "redeem_proven", // T5
   "capped_allowance_and_revoke_proven", // T8
+  // The CLOB venues besides XO (relay/clob.ts facts PM1, PM2, LM1, LM2, PB3, PB4). Nothing has observed any of them.
+  "polymarket_login_accepted", // PM1
+  "polymarket_first_order_accepted", // PM2
+  "limitless_token_accepted", // LM1
+  "limitless_first_order_accepted", // LM2
+  "paybox_signs_typed_data_137", // PB3
+  "paybox_signs_typed_data_8453", // PB4
 ] as const;
 export type CapabilityId = (typeof CAPABILITY_IDS)[number];
 

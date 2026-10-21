@@ -12,6 +12,8 @@ export const KIND_TEXT: Readonly<Record<string, string>> = Object.freeze({
   order: "Order",
   auth: "XO login",
   create: "Market creation",
+  clob_order: "Venue order (Polymarket or Limitless)",
+  clob_auth: "Polymarket login",
 });
 
 export const STATE_TEXT: Readonly<Record<InboxState, { readonly text: string; readonly tone: Tone; readonly explain: string }>> = Object.freeze({

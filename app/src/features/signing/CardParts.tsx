@@ -79,6 +79,8 @@ const CALL_TEMPLATE_TEXT: Readonly<Record<string, string>> = Object.freeze({
   withdraw_transfer_remote: "XO route transferRemote (withdraw)",
 });
 
+const VENUE_CHAIN_TEXT: Readonly<Record<string, string>> = Object.freeze({ polymarket: "Polymarket, Polygon", limitless: "Limitless, Base" });
+
 const ACTION_TEXT: Readonly<Record<string, string>> = Object.freeze({
   deploy_enable_trading: "Deploy the account and enable trading",
   enable_trading: "Enable trading",
@@ -117,18 +119,66 @@ export function DecodedView({ decoded, covered, unbound }: { readonly decoded: P
     <>
       <Row label="Action">{ACTION_TEXT[decoded.action] ?? "Unlisted action"}</Row>
       <Row label="Chain">
-        <code>{decoded.chain_id}</code> (XO)
+        <code>{decoded.chain_id}</code> ({decoded.kind === "clob_order" || decoded.kind === "clob_auth" ? VENUE_CHAIN_TEXT[decoded.venue] : "XO"})
       </Row>
       <Row label="Owner">
         <code className="signing-code">{decoded.owner}</code>
       </Row>
-      <Row label="XO account">
+      <Row label={decoded.kind === "clob_order" || decoded.kind === "clob_auth" ? "Maker (the owner wallet itself)" : "XO account"}>
         <code className="signing-code">{decoded.account}</code>
       </Row>
     </>
   );
   let body: ReactNode;
-  if (decoded.kind === "order") {
+  if (decoded.kind === "clob_order") {
+    const { order, terms, params, domain } = decoded;
+    body = (
+      <>
+        <Row label="Venue">{VENUE_CHAIN_TEXT[decoded.venue]}</Row>
+        <Row label="Side" covered>{terms.side}</Row>
+        <Row label="Price (per share)" covered><code>{terms.price}</code></Row>
+        <Row label="Shares" covered><code>{terms.shares}</code></Row>
+        <Row label="Principal (USD)" covered><code>{terms.principal_usd}</code></Row>
+        <Row label="Fee ceiling (bps, policy)"><code>{terms.fee_bound_bps}</code></Row>
+        <Row label="Counts against the caps (USD)"><code>{terms.cap_usd}</code></Row>
+        <Row label="Worst-case cash out (USD)"><Value value={terms.max_outlay_usd} /></Row>
+        <Row label="Worst-case net proceeds (USD)"><Value value={terms.min_proceeds_usd} /></Row>
+        <Row label="Expires" covered={false}><Value value={terms.expires_at} /></Row>
+        <Row label="Outcome token id" covered><code className="signing-code">{order.token_id}</code></Row>
+        <Row label="Exchange (domain)" covered><code className="signing-code">{domain.verifying_contract}</code> ({domain.name} version {domain.version})</Row>
+        <Row label="Maker and signer" covered><code className="signing-code">{order.maker}</code></Row>
+        <Row label="Salt" covered><code className="signing-code">{order.salt}</code> (the wallet signs as an EOA, type 0)</Row>
+        {order.venue === "polymarket" ? (
+          <>
+            <Row label="Timestamp (ms)" covered><code>{order.timestamp_ms}</code></Row>
+            <Row label="Metadata and builder" covered><code className="signing-code">{order.metadata}</code> / <code className="signing-code">{order.builder}</code></Row>
+            <Row label="Wire expiration (not signed)"><code>{order.expiration}</code></Row>
+          </>
+        ) : (
+          <>
+            <Row label="Taker" covered><code className="signing-code">{order.taker}</code></Row>
+            <Row label="Expiration and nonce" covered><code>{order.expiration}</code> / <code>{order.nonce}</code></Row>
+            <Row label="Fee rate (bps)" covered><code>{order.fee_rate_bps}</code></Row>
+          </>
+        )}
+        <Row label="Order type">{params.tif}{params.post_only ? ", post-only" : ""}</Row>
+        <Row label="Market"><Value value={params.market_id} /></Row>
+        <Row label="Tick and minimum size"><code>{params.tick}</code> / <code>{params.min_size}</code></Row>
+      </>
+    );
+  } else if (decoded.kind === "clob_auth") {
+    const { clob_auth: auth } = decoded;
+    body = (
+      <>
+        <Row label="Signed address" covered><code className="signing-code">{auth.address}</code></Row>
+        <Row label="Timestamp (unix s)" covered><code>{auth.timestamp}</code></Row>
+        <Row label="Nonce" covered><code>{auth.nonce}</code></Row>
+        <Row label="Attestation text" covered><UntrustedText value={sanitizeText("generic", auth.message).text} maxChars={120} /></Row>
+        <Row label="Wrapping">plain login hash (the wallet signs it directly)</Row>
+        <Row label="Time to live (s)"><code>{decoded.ttl_s}</code></Row>
+      </>
+    );
+  } else if (decoded.kind === "order") {
     const { order, terms, params } = decoded;
     body = (
       <>

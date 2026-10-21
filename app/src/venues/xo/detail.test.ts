@@ -63,7 +63,8 @@ describe("getMarket: the recorded 400 bps market", () => {
   });
 
   it("pins the schema hash, so a change to the fields the adapter reads is visible in review", () => {
-    expect(XO_SCHEMA_HASH).toBe("ddaa77af73f7d43b417bb92d52a49470c919b3c3314a3f40cb83fc749f0844a2");
+    // Changed when categoryPath[name,slug] joined the list fields the adapter reads (the category verdict).
+    expect(XO_SCHEMA_HASH).toBe("03471fff16e77a7035fdb986972f5e1e9789e8feee5af5758d4aad7e0e5835a7");
   });
 
   it("keeps the rules text as untrusted paragraphs, the creator's sources that are https links, and the exact mechanism", async () => {

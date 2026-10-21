@@ -1,7 +1,8 @@
 import { sha256, toBytes } from "viem";
 
+import { categorise, type CategoryVerdict } from "../../core/category";
 import { addQty, cmpQty, decFromNumber, fromAtomic, fromBaseUnits, parseQty, subQty, toDec, type Qty } from "../../core/money";
-import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Rules, Status } from "../../core/ports";
+import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Rules, Status, Untrusted } from "../../core/ports";
 import { rulesHashOf } from "../../core/rules-hash";
 import { untrustedField } from "../../core/untrusted";
 import { makeProv } from "../../core/venue-policy";
@@ -15,7 +16,7 @@ import {
 } from "./constants";
 import { SLUG, type LimitlessBookBody, type LimitlessRow } from "./schemas";
 
-export const SCHEMA_DESCRIPTOR = "limitless market v1: slug title status tradeType marketType collateralToken tokens description prices winningOutcomeIndex volumeFormatted expirationTimestamp metadata";
+export const SCHEMA_DESCRIPTOR = "limitless market v1: slug title status tradeType marketType collateralToken tokens description prices winningOutcomeIndex volumeFormatted expirationTimestamp metadata categories tags";
 export const LIMITLESS_SCHEMA_HASH = sha256(toBytes(SCHEMA_DESCRIPTOR)).slice(2);
 
 export const COLLATERAL: Collateral = Object.freeze({
@@ -139,6 +140,38 @@ export function provOf(origin: string, nowMs: number, ttlMs: number, path: strin
   return makeProv({ venue: "limitless", source: `${origin}${path}`, fetchedAtMs: nowMs, nowMs, ttlMs, ...(venueTsMs === undefined ? {} : { venueTsMs }) });
 }
 
+// ---- category ---------------------------------------------------------------------------------------------------------
+
+const MAX_CATEGORY_WORDS = 20;
+const MAX_CATEGORY_CHARS = 64;
+
+// The venue sends `categories` and `tags` as lists of strings (the capture); an object with a `name` is read too.
+function wordsOf(list: unknown): string[] {
+  if (!Array.isArray(list)) return [];
+  const out: string[] = [];
+  for (const item of list.slice(0, MAX_CATEGORY_WORDS)) {
+    const text = typeof item === "string" ? item : item !== null && typeof item === "object" && typeof (item as { name?: unknown }).name === "string" ? (item as { name: string }).name : null;
+    if (text !== null && text !== "") out.push(text.slice(0, MAX_CATEGORY_CHARS));
+  }
+  return out;
+}
+
+// Categories first, then tags: the first fixed-table hit decides (core/category.ts), and the title is the last resort.
+export function categoryOf(row: Pick<LimitlessRow, "categories" | "tags" | "title">): CategoryVerdict {
+  return categorise({ venue: "limitless", native: [...wordsOf(row.categories), ...wordsOf(row.tags)], title: row.title });
+}
+
+// The venue's own category words, joined, for the inspector's untrusted slot only (tags are not shown).
+export function categoryNativeOf(row: Pick<LimitlessRow, "categories">): Untrusted<string> | undefined {
+  const words = wordsOf(row.categories);
+  return words.length === 0 ? undefined : untrustedField("category", words.join(", "), "limitless");
+}
+
+function categoryFields(row: Pick<LimitlessRow, "categories" | "tags" | "title">): { readonly category: CategoryVerdict; readonly categoryNative?: Untrusted<string> } {
+  const categoryNative = categoryNativeOf(row);
+  return { category: categoryOf(row), ...(categoryNative === undefined ? {} : { categoryNative }) };
+}
+
 function volumeOf(row: LimitlessRow): MarketSummary["volume"] {
   const volume = typeof row.volumeFormatted === "string" ? parseQty("usd", row.volumeFormatted, { maxScale: 6 }) : null;
   // The figure is the market's cumulative volume, not a window: windowHours stays null.
@@ -155,6 +188,7 @@ export function summaryOf(row: LimitlessRow, origin: string, nowMs: number): Mar
     outcomes: outcomeSummariesOf(row),
     volume: volumeOf(row),
     prov: provOf(origin, nowMs, LIMITLESS_LIST_TTL_MS, "/markets/active"),
+    ...categoryFields(row),
   };
 }
 
@@ -211,6 +245,7 @@ export function marketOf(row: LimitlessRow, origin: string, nowMs: number): Mark
     collateral: COLLATERAL,
     fee: unknownFee(origin, row.slug, nowMs),
     prov: { fetchedAtMs: nowMs, source: `${origin}/markets/${row.slug}`, adapterVersion: LIMITLESS_ADAPTER_VERSION, schemaHash: LIMITLESS_SCHEMA_HASH },
+    ...categoryFields(row),
   };
 }
 

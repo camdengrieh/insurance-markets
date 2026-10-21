@@ -16,6 +16,8 @@ export const GET_PREPARED_TOOL = "xo_get_prepared";
 export const SUBMIT_USEROP_TOOL = "xo_submit_userop";
 export const SUBMIT_ORDER_TOOL = "xo_submit_order";
 export const CANCEL_ORDER_TOOL = "xo_cancel_order";
+// The venue order tool is stepped: its submit step is the same tool with step "submit".
+export const SUBMIT_CLOB_ORDER_CALL = 'clob_order with step "submit"';
 
 function need(pattern: RegExp, value: string, what: string): string {
   if (!pattern.test(value)) throw new Error(`${what} is not in the expected form`);
@@ -27,8 +29,8 @@ export function getPreparedCall(preparedId: string): string {
   return JSON.stringify({ tool: GET_PREPARED_TOOL, arguments: { prepared_id: need(PREPARED_ID, preparedId, "the prepared id") } }, null, 2);
 }
 
-export function submitToolFor(kind: VettedItem["kind"]): typeof SUBMIT_USEROP_TOOL | typeof SUBMIT_ORDER_TOOL {
-  return kind === "order" ? SUBMIT_ORDER_TOOL : SUBMIT_USEROP_TOOL;
+export function submitToolFor(kind: VettedItem["kind"]): typeof SUBMIT_USEROP_TOOL | typeof SUBMIT_ORDER_TOOL | typeof SUBMIT_CLOB_ORDER_CALL {
+  return kind === "order" ? SUBMIT_ORDER_TOOL : kind === "clob_order" ? SUBMIT_CLOB_ORDER_CALL : SUBMIT_USEROP_TOOL;
 }
 
 export interface HandoffText {
@@ -48,7 +50,11 @@ export function handoffFor(item: VettedItem): HandoffText {
       `Approve in PayBox only if it matches. The agent then sends the signature with ${submitToolFor(item.kind)}.`,
       "Sending needs an agent token started with the submit scope and an open ARM window. This page has neither and cannot send.",
     ],
-    notes: ["A signature is a bearer instrument for this one item until it expires. A cancel or a reject on a screen does not invalidate it on chain."],
+    notes: [
+      item.kind === "clob_order"
+        ? "A signature is a bearer instrument for this one item. An order with no signed expiry stays valid until it is cancelled through the venue; a reject on a screen does not invalidate it."
+        : "A signature is a bearer instrument for this one item until it expires. A cancel or a reject on a screen does not invalidate it on chain.",
+    ],
   };
 }
 

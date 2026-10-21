@@ -21,6 +21,7 @@ const NODE_BUILTINS: ReadonlySet<string> = new Set(builtinModules.flatMap((name)
 // Repo-relative prefixes and files the bundled code may reach outside app/.
 const SHARED_ALLOW: readonly RegExp[] = [
   /^src\/xo\//,
+  /^src\/clob\//,
   /^src\/guardrails\//,
   /^src\/create\//,
   /^src\/relay\/(?:contract|errors|flags)\.ts$/,
@@ -34,6 +35,7 @@ const FORBIDDEN: ReadonlyArray<{ readonly pattern: RegExp; readonly reason: stri
   { pattern: /^src\/local\//, reason: "the local runtime is Node-only", bundledOnly: false },
   { pattern: /^src\/tools\//, reason: "plugin tool handlers are Node-only", bundledOnly: false },
   { pattern: /^src\/xo\/signing\/hmac\.ts$/, reason: "the HMAC signer holds a secret; the page never does", bundledOnly: false },
+  { pattern: /^src\/clob\/(?:polymarket\/l2|limitless\/hmac)\.ts$/, reason: "the venue request signers hold a credential; the page never does", bundledOnly: false },
   { pattern: /^src\/guardrails\/audit\.ts$/, reason: "the audit writer uses Node streams and files", bundledOnly: false },
   { pattern: /^src\/(?:plugin|local|paybox|config)\.ts$/, reason: "plugin entry points are Node-only", bundledOnly: false },
   { pattern: /^bridge\/(?!contract\.ts$)/, reason: "the daemon's internals never enter the page; only bridge/contract.ts is shared", bundledOnly: true },

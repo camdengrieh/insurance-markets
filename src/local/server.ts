@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
 import { registerAccountTools } from "../tools/account.js";
+import { registerClobTools } from "../tools/clob.js";
 import { registerCreateTools } from "../tools/create.js";
 import { registerDraftTools } from "../tools/draft.js";
 import { registerFundTools } from "../tools/fund.js";
@@ -27,6 +28,7 @@ export function createLocalMcpServer(): McpServer {
   registerTradeTools(server);
   registerFundTools(server);
   registerCreateTools(server);
+  registerClobTools(server);
   registerPmTools(server);
   return server;
 }

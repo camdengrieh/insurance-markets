@@ -73,20 +73,51 @@ export function showsInDefaultView(link: Link): boolean {
   return DEFAULT_VIEW_PROOFS.includes(link.proof) && DEFAULT_VIEW_STATES.includes(link.state);
 }
 
+// A proposal the linker (or a person) wrote into the registry that no person has approved. Shown only in its
+// own "proposed, not approved" tier, never as a leg, never with a spread.
+export function isProposed(link: Link): boolean {
+  return link.state === "proposed";
+}
+
+// The recipe behind this page's own rules fingerprint (app/src/core/rules-hash.ts). A dataset whose legs were
+// hashed with another recipe (the linker's rules-v2) cannot have its rules compared here: the re-check then
+// compares close time and status only and reports the rules as not comparable, never as changed.
+export const APP_RULES_RECIPE = "app-v1";
+
+export function rulesComparable(dataset: Pick<LinkDataset, "rulesRecipe">): boolean {
+  return dataset.rulesRecipe === undefined || dataset.rulesRecipe === APP_RULES_RECIPE;
+}
+
 export interface LinkIndex {
   readonly shown: readonly Link[];
-  // Links in the dataset that are candidates (or not approved) and so not shown.
+  // Links in the dataset that are candidates (or not approved) and so not shown. Proposals count here too;
+  // proposedForLeg lists them for their own tier.
   readonly hidden: number;
 }
 
-// Links that name a leg on `venue` with `nativeId`, or a Quotient marketKey.
-export function linksForLeg(dataset: LinkDataset, match: { readonly venue?: VenueId; readonly nativeId?: string; readonly quotientKey?: string }): LinkIndex {
+export interface LegMatch {
+  readonly venue?: VenueId;
+  readonly nativeId?: string;
+  readonly quotientKey?: string;
+}
+
+function touching(dataset: LinkDataset, match: LegMatch): Link[] {
   const touches = (leg: LinkLeg): boolean =>
     (match.quotientKey !== undefined && leg.quotientKey === match.quotientKey) ||
     (match.venue !== undefined && match.nativeId !== undefined && leg.venue === match.venue && leg.nativeId === match.nativeId);
-  const all = dataset.links.filter((link) => link.legs.some(touches));
+  return dataset.links.filter((link) => link.legs.some(touches));
+}
+
+// Links that name a leg on `venue` with `nativeId`, or a Quotient marketKey.
+export function linksForLeg(dataset: LinkDataset, match: LegMatch): LinkIndex {
+  const all = touching(dataset, match);
   const shown = all.filter(showsInDefaultView);
   return { shown, hidden: all.length - shown.length };
+}
+
+// Proposed (state "proposed") links that name the leg: candidates for a person to review, never proof.
+export function proposedForLeg(dataset: LinkDataset, match: LegMatch): readonly Link[] {
+  return touching(dataset, match).filter(isProposed);
 }
 
 const DAY_MS = 86_400_000;

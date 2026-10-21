@@ -1,22 +1,24 @@
 // The footer of the market modal (docs/dapp-design.md 4.5: no order-entry control unless the local build is paired
 // with the daemon and the matching flag is on; Market.dc.html "ticket or worksheet").
 //
-//   XO, Cockpit build   the trade desk's order ticket (features/trade), which prepares through the daemon and signs
-//                       and sends nothing; the market's own outcome tokens are the choices;
-//   XO, standalone      the caution tile: preparing needs the Cockpit;
-//   every other venue   a WORKSHEET: it sizes a limit order against the book and the caps with exact arithmetic,
-//                       prepares nothing and links nowhere. The venue's own site is named in words with the market's
-//                       id; this page opens no outside link.
+//   XO, Polymarket, Limitless, Cockpit build   the trade desk's order ticket (features/trade): XO's prepares the Kernel
+//                                              order through the daemon; the other two prepare the venue's own EIP-712
+//                                              order for the wallet itself. All three sign and send nothing;
+//   the same three, standalone                 the caution tile: preparing needs the Cockpit;
+//   every other venue                          a WORKSHEET: it sizes a limit order against the book and the caps with
+//                                              exact arithmetic, prepares nothing and links nowhere. One honest sentence
+//                                              says why this build has no path to that venue; the venue's own site is
+//                                              named in words with the market's id; this page opens no outside link.
 
 import { useState } from "react";
 
 import { notional, parseQty, toDec } from "../../core/money";
-import type { Market, MarketRef } from "../../core/ports";
+import type { Market, MarketRef, VenueId } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
 import { Button, Field, Missing, Num, Tile, UntrustedText, useAppMode, venueName } from "../../ui";
 import { usePairing } from "../terminal/usePairing";
 import { useTradeServices } from "../trade/services";
-import { TradeDesk, type TokenChoice } from "../trade";
+import { TradeDesk, clobMarketFacts, type TokenChoice } from "../trade";
 import { priceText } from "./display";
 import { isSafeMarketId } from "./ids";
 
@@ -26,20 +28,48 @@ export function tokenChoicesOf(market: Market): TokenChoice[] {
     .map((outcome) => ({ label: `Outcome ${outcome.index + 1}: ${outcome.role === "yes" ? "Yes" : outcome.role === "no" ? "No" : "labelled by the creator"}`, tokenId: outcome.tokenId }));
 }
 
-export const PREPARE_XO_ONLY = "Prepare order: XO only in this build";
+// The venues this build can prepare an order for from the modal.
+export const TICKET_VENUES = ["xo", "polymarket", "limitless"] as const satisfies readonly VenueId[];
+export type TicketVenue = (typeof TICKET_VENUES)[number];
+
+export function hasTicket(venue: VenueId): venue is TicketVenue {
+  return (TICKET_VENUES as readonly string[]).includes(venue);
+}
+
+// Why this build has no order path to a venue: one fixed sentence each, no venue text, no link.
+export const NO_PATH_REASON: Readonly<Record<Exclude<VenueId, TicketVenue>, string>> = Object.freeze({
+  polymarket_us: "Polymarket US is a fiat, KYC venue whose API keys come from its developer portal, not from a wallet signature.",
+  kalshi: "Kalshi is a USD account with API-key signing; a wallet cannot trade there, and its developer terms forbid trading for others.",
+  trueo: "Trueo orders are built on chain through contracts this build has not integrated.",
+  world: "World has no public trading API this build has read.",
+  hyperliquid: "Hyperliquid outcomes are HyperCore actions signed with its own scheme, which this build does not implement.",
+  pascal: "Pascal orders use its own request-signing keys, which this build does not implement.",
+  novig: "Novig has no public order API this build has read.",
+  og: "OG has no public order API this build has read.",
+  gemini: "Gemini is an exchange account with its own API keys, not a wallet-signed venue.",
+  sx: "SX Bet orders use its own signing and market-maker flow, which this build does not implement.",
+  udx: "Underdog Exchange has no public order API this build has read.",
+  prophetx: "ProphetX is a KYC sportsbook exchange with its own API keys.",
+  predictfun: "Predict.fun needs a venue-provisioned account and a JWT flow this build does not implement.",
+  opinion: "Opinion needs its own smart-account provisioning this build does not implement.",
+  manifold: "Manifold is play money: a signal, never a trade.",
+  myriad: "Myriad orders are placed through its own API keys, which this build does not implement.",
+});
+
+export const PREPARE_NO_PATH = "Prepare order: no path to this venue in this build";
 export const PREPARE_NEEDS_COCKPIT = "Prepare order: needs the Cockpit";
 export const PREPARE_NOT_PAIRED = "Prepare order: not paired with your Cockpit";
 export const PREPARE_LABEL = "Prepare order";
 
-// The inspector's "Prepare order" action in the Cockpit build: enabled only for an XO row when the page holds a
-// session with the daemon; otherwise disabled with the reason in its label. Rendered only in the Cockpit build, so
-// the standalone page never builds a daemon client.
+// The inspector's "Prepare order" action: enabled only for a row of a venue with a ticket when the page holds a
+// session with the daemon; otherwise disabled with the reason in its label. The standalone page never builds a daemon
+// client.
 export function PrepareOrderAction({ venue, onPrepare }: { readonly venue: MarketRef["venue"]; readonly onPrepare: () => void }) {
   const mode = useAppMode();
-  if (venue !== "xo") {
+  if (!hasTicket(venue)) {
     return (
-      <Button disabled data-prepare="xo-only">
-        {PREPARE_XO_ONLY}
+      <Button disabled data-prepare="no-path">
+        {PREPARE_NO_PATH}
       </Button>
     );
   }
@@ -75,15 +105,17 @@ const SHARES = /^(0|[1-9][0-9]{0,11})(\.[0-9]{1,6})?$/;
 export function Worksheet({ market }: { readonly market: Market }) {
   const [price, setPrice] = useState("");
   const [shares, setShares] = useState("");
-  const name = venueName(market.ref.venue);
+  const venue = market.ref.venue;
+  const name = venueName(venue);
+  const reason = hasTicket(venue) ? "This market's venue has a ticket in the Cockpit build; this worksheet only sizes." : NO_PATH_REASON[venue];
   const priceQty = PRICE.test(price) ? parseQty("price", price) : null;
   const sharesQty = SHARES.test(shares) ? parseQty("shares", shares) : null;
   const cost = priceQty === null || sharesQty === null ? null : notional(sharesQty, priceQty, "usd");
   return (
-    <div className="explorer-worksheet" data-ticket="worksheet">
-      <p>
-        This build prepares orders on XO only. For a {name} market the ticket is a worksheet: it sizes a limit order against the book and prepares nothing. To trade on {name}, open the venue's own site and find this market by its
-        id {isSafeMarketId(market.ref.marketId) ? <code className="explorer-id">{market.ref.marketId}</code> : <Missing label="id not shown: outside the safe alphabet" />}; this page opens no outside link.
+    <div className="explorer-worksheet" data-ticket="worksheet" data-venue={venue}>
+      <p data-no-path="reason">
+        This build has no order path to {name}: {reason} The ticket is a worksheet: it sizes a limit order against the book and prepares nothing. To trade on {name}, open the venue&apos;s own site and find this market by its id{" "}
+        {isSafeMarketId(market.ref.marketId) ? <code className="explorer-id">{market.ref.marketId}</code> : <Missing label="id not shown: outside the safe alphabet" />}; this page opens no outside link.
       </p>
       <div className="explorer-worksheet-grid">
         <Field label="Limit price per share (0.001 to 0.999)">{(id) => <input id={id} className="ui-input" inputMode="decimal" autoComplete="off" spellCheck={false} value={price} onChange={(event) => setPrice(event.currentTarget.value.trim())} />}</Field>
@@ -119,17 +151,37 @@ export function Worksheet({ market }: { readonly market: Market }) {
 
 export function Ticket({ market }: { readonly market: Market }) {
   const mode = useAppMode();
-  if (market.ref.venue !== "xo") return <Worksheet market={market} />;
+  const venue = market.ref.venue;
+  if (!hasTicket(venue)) return <Worksheet market={market} />;
+  const name = venueName(venue);
   if (mode !== "cockpit") {
     return (
       <Tile tone="info" title="Prepare order: needs the Cockpit" heading="h4" dataKind="ticket" dataCode="needs-cockpit">
-        <p>An XO order is prepared through the local Cockpit only, and signed in PayBox. This page prepares nothing on its own and never signs or sends.</p>
+        <p>
+          {venue === "xo" ? "An XO order is prepared through the local Cockpit only, and signed in PayBox." : `A ${name} order is prepared through the local Cockpit only (it reads the market and builds the venue's own order for your wallet), and signed in PayBox.`} This page prepares nothing on its own and
+          never signs or sends.
+        </p>
+      </Tile>
+    );
+  }
+  if (venue === "xo") {
+    return (
+      <div data-ticket="xo">
+        <TradeDesk panels="order" tokenChoices={tokenChoicesOf(market)} heading="h4" />
+      </div>
+    );
+  }
+  const facts = clobMarketFacts(market);
+  if (facts === null) {
+    return (
+      <Tile tone="warn" title={`${name}: the market record does not carry a tick this build can build on`} heading="h4" dataKind="ticket" dataCode="no-tick">
+        <p>The order ticket needs the market&apos;s price step as a plain decimal from the venue&apos;s record. Without it nothing is prepared.</p>
       </Tile>
     );
   }
   return (
-    <div data-ticket="xo">
-      <TradeDesk panels="order" tokenChoices={tokenChoicesOf(market)} heading="h4" />
+    <div data-ticket={venue}>
+      <TradeDesk panels="order" tokenChoices={tokenChoicesOf(market)} clobMarket={facts} heading="h4" />
     </div>
   );
 }

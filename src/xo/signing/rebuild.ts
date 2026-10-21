@@ -35,6 +35,7 @@ import {
   type UserOpAction,
   type VerifyPreparedResult,
 } from "../../relay/contract.js";
+import { rebuildClobAuth, rebuildClobOrder } from "../../clob/decoded.js";
 import { formatAtomic } from "../../guardrails/amount.js";
 import { AccountError, deriveAccount, parseOwner } from "../account/derive.js";
 import { ENTRY_POINT_V07, USDC_E_DECIMALS, type Address, type Hex } from "../chain/constants.js";
@@ -482,6 +483,11 @@ export const rebuildDecoded: RebuildFn = (decoded: PreparedDecoded): RebuildOutc
       return rebuildOrder(decoded);
     case "auth":
       return rebuildAuth(decoded);
+    // The two EOA CLOB venues (src/clob/decoded.ts). XO's own rebuilds above are untouched.
+    case "clob_order":
+      return rebuildClobOrder(decoded);
+    case "clob_auth":
+      return rebuildClobAuth(decoded);
   }
 };
 

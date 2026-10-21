@@ -100,12 +100,32 @@ export const MAX_ORDER_TTL_S = 30 * 24 * 60 * 60;
 export const CAP_BASES = ["buy_principal_plus_fee_bound", "sell_max_of_proceeds_and_face_value"] as const;
 export type CapBasis = (typeof CAP_BASES)[number];
 
+// ---- the CLOB venues besides XO (Polymarket on Polygon, Limitless on Base) ---------------------------------------
+//
+// Both are EIP-712 order books signed by a plain EOA (the PayBox wallet itself): no Kernel wrapper, so the typed data a
+// wallet shows IS the order. The facts (domains, exchanges, ticks) live in src/clob/venues.ts; this file only names
+// the vocabulary the wire needs. The prepare and submit routes are below, next to XO's.
+
+export const CLOB_VENUES = ["polymarket", "limitless"] as const;
+export type ClobVenue = (typeof CLOB_VENUES)[number];
+export const CLOB_CHAIN_IDS_ON_WIRE = [137, 8453] as const;
+export const CLOB_TIFS = ["GTC", "GTD", "FOK", "FAK"] as const;
+// A CLOB price: up to four places (Polymarket's finest tick is 0.0001); the relay checks the market's own tick.
+export const clobPriceSchema = z
+  .string()
+  .regex(/^0\.[0-9]{1,4}$/, "price such as 0.52")
+  .refine((value) => /[1-9]/.test(value), "price is zero");
+// A market id as the venue spells it: a Polymarket condition id (0x hex) or a Limitless slug.
+export const clobMarketIdSchema = z.string().regex(/^(?:0x[0-9a-fA-F]{64}|[a-z0-9][a-z0-9_-]{0,127})$/, "venue market id");
+
 // ---- what the relay asks PayBox to sign (amendment A1) ------------------------------------------
 
-export const DIGEST_FORMS = ["userOpHash", "kernelWrappedOrderHash", "kernelWrappedClobAuth"] as const;
+// eip712OrderHash and eip712ClobAuth: an EOA signs the EIP-712 digest itself (the CLOB venues); the three Kernel and
+// user-operation forms are XO's.
+export const DIGEST_FORMS = ["userOpHash", "kernelWrappedOrderHash", "kernelWrappedClobAuth", "eip712OrderHash", "eip712ClobAuth"] as const;
 export type DigestForm = (typeof DIGEST_FORMS)[number];
 
-export const PREPARED_KINDS = ["userop", "order", "auth", "create"] as const;
+export const PREPARED_KINDS = ["userop", "order", "auth", "create", "clob_order", "clob_auth"] as const;
 export type PreparedKind = (typeof PREPARED_KINDS)[number];
 
 const typedDataFieldSchema = z
@@ -524,7 +544,131 @@ export const decodedAuthSchema = z
   .strict();
 export type DecodedAuth = z.infer<typeof decodedAuthSchema>;
 
-export const preparedDecodedSchema = z.union([decodedUserOpSchema, decodedOrderSchema, decodedAuthSchema]);
+// ---- the decoded block of a CLOB venue order (Polymarket, Limitless) -------------------------------------------------------
+//
+// The signed fields of the venue's own Order struct (eleven on Polymarket, twelve on Limitless, src/clob/*/order.ts),
+// the EIP-712 domain they are hashed under (name, version, chain and the exchange: the rebuild refuses any domain that is
+// not one pinned in src/clob/venues.ts), the terms derived from the amounts, and the wire parameters the digest does not
+// commit to. The maker IS the owner (an EOA, signature type 0); there is no derived account.
+
+const clobTermsSchema = z
+  .object({
+    side: z.enum(ORDER_SIDES),
+    price: clobPriceSchema,
+    shares: sharesSchema,
+    principal_usd: usdSchema,
+    // The policy fee ceiling the caps were computed with (src/clob/venues.ts CLOB_CAP_FEE_BPS), not a venue quote.
+    fee_bound_bps: z.number().int().min(0).max(1000),
+    cap_usd: usdSchema,
+    cap_basis: z.enum(CAP_BASES),
+    max_outlay_usd: usdSchema.nullable(),
+    min_proceeds_usd: usdSchema.nullable(),
+    // null when the signed order carries no expiry (a Limitless order, a Polymarket GTC, FOK or FAK). For a
+    // Polymarket GTD it is the wire `expiration`, which the digest does not cover.
+    expires_at: isoSecondSchema.nullable(),
+  })
+  .strict();
+
+const clobPolymarketOrderFields = z
+  .object({
+    venue: z.literal("polymarket"),
+    salt: uintStringSchema,
+    maker: addressSchema,
+    signer: addressSchema,
+    token_id: tokenIdSchema,
+    maker_amount: uintStringSchema,
+    taker_amount: uintStringSchema,
+    side: z.union([z.literal(0), z.literal(1)]),
+    signature_type: z.literal(0),
+    // Unix milliseconds, signed.
+    timestamp_ms: uintStringSchema,
+    metadata: hex32Schema,
+    builder: hex32Schema,
+    // Wire only (POST /order `expiration`): "0" or Unix seconds. Not covered by the digest.
+    expiration: uintStringSchema,
+  })
+  .strict();
+
+const clobLimitlessOrderFields = z
+  .object({
+    venue: z.literal("limitless"),
+    salt: uintStringSchema,
+    maker: addressSchema,
+    signer: addressSchema,
+    taker: addressSchema,
+    token_id: tokenIdSchema,
+    maker_amount: uintStringSchema,
+    taker_amount: uintStringSchema,
+    expiration: uintStringSchema,
+    nonce: uintStringSchema,
+    fee_rate_bps: uintStringSchema,
+    side: z.union([z.literal(0), z.literal(1)]),
+    signature_type: z.literal(0),
+  })
+  .strict();
+
+export const decodedClobOrderSchema = z
+  .object({
+    v: z.literal(DECODED_VERSION),
+    kind: z.literal("clob_order"),
+    venue: z.enum(CLOB_VENUES),
+    chain_id: z.union([z.literal(137), z.literal(8453)]),
+    action: z.literal("place_order"),
+    owner: ownerSchema,
+    // The maker: the owner itself.
+    account: addressSchema,
+    order: z.discriminatedUnion("venue", [clobPolymarketOrderFields, clobLimitlessOrderFields]),
+    domain: z
+      .object({
+        name: z.string().min(1).max(64),
+        version: z.string().min(1).max(16),
+        chain_id: z.union([z.literal(137), z.literal(8453)]),
+        verifying_contract: addressSchema,
+      })
+      .strict(),
+    terms: clobTermsSchema,
+    params: z
+      .object({
+        tif: z.enum(CLOB_TIFS),
+        post_only: z.boolean(),
+        ttl_s: z.number().int().min(1).max(MAX_ORDER_TTL_S).nullable(),
+        market_id: clobMarketIdSchema,
+        // The market's tick and minimum size as read at prepare (venue facts the order was checked against).
+        tick: z.string().regex(/^0\.[0-9]{1,6}$/, "tick such as 0.01"),
+        min_size: sharesSchema.or(z.literal("0")),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.order.venue !== value.venue) ctx.addIssue({ code: "custom", message: "the order fields are for another venue", path: ["order", "venue"] });
+    if (value.domain.chain_id !== value.chain_id) ctx.addIssue({ code: "custom", message: "the domain names another chain", path: ["domain", "chain_id"] });
+  });
+export type DecodedClobOrder = z.infer<typeof decodedClobOrderSchema>;
+
+export const decodedClobAuthSchema = z
+  .object({
+    v: z.literal(DECODED_VERSION),
+    kind: z.literal("clob_auth"),
+    venue: z.literal("polymarket"),
+    chain_id: z.literal(137),
+    action: z.literal("connect"),
+    owner: ownerSchema,
+    account: addressSchema,
+    clob_auth: z
+      .object({
+        address: addressSchema,
+        timestamp: z.string().regex(/^[1-9][0-9]{0,11}$/, "unix seconds"),
+        nonce: uintStringSchema,
+        message: z.string().min(1).max(120),
+      })
+      .strict(),
+    ttl_s: z.number().int().min(1).max(AUTH_PREPARED_TTL_S),
+  })
+  .strict();
+export type DecodedClobAuth = z.infer<typeof decodedClobAuthSchema>;
+
+export const preparedDecodedSchema = z.union([decodedUserOpSchema, decodedOrderSchema, decodedAuthSchema, decodedClobOrderSchema, decodedClobAuthSchema]);
 export type PreparedDecoded = z.infer<typeof preparedDecodedSchema>;
 
 // What the Prepared item carries on the wire and in a tool's output schema. The strict union above is what the
@@ -581,6 +725,7 @@ function checkPrepared(value: PreparedCore, ctx: z.RefinementCtx): void {
     issue("inner_hash_tag and inner_hash_kind go together", ["summary", "inner_hash_tag"]);
   } else if (innerTag !== undefined && innerKind !== undefined) {
     const wantKind: InnerHashKind = value.kind === "userop" || value.kind === "create" ? "call_data" : "typed_data_hash";
+    // For the CLOB venues the typed data is the order or login itself, so the inner hash is the digest.
     if (innerKind !== wantKind) issue(`kind ${value.kind} uses inner_hash_kind ${wantKind}`, ["summary", "inner_hash_kind"]);
     if (value.sign.intent.op === "typedData") {
       const typed = value.sign.intent.typedData;
@@ -594,6 +739,8 @@ function checkPrepared(value: PreparedCore, ctx: z.RefinementCtx): void {
     create: "userOpHash",
     order: "kernelWrappedOrderHash",
     auth: "kernelWrappedClobAuth",
+    clob_order: "eip712OrderHash",
+    clob_auth: "eip712ClobAuth",
   };
   if (value.sign.digest_form !== expectedForm[value.kind]) {
     issue(`kind ${value.kind} must use digest_form ${expectedForm[value.kind]}`, ["sign", "digest_form"]);
@@ -637,6 +784,29 @@ const preparedOrderSchema = z
     }
   });
 export type PreparedOrder = z.infer<typeof preparedOrderSchema>;
+
+// A CLOB venue order carries the same quote shape with the venue's finer price grid and a nullable signed expiry.
+const clobOrderQuoteSchema = z
+  .object({
+    venue: z.enum(CLOB_VENUES),
+    price: clobPriceSchema,
+    shares: sharesSchema,
+    max_outlay_usd: usdSchema,
+    fee_bound_bps: z.number().int().min(0).max(1000),
+    expires_at: isoSecondSchema.nullable(),
+  })
+  .strict();
+
+const preparedClobOrderSchema = z
+  .object({ ...preparedShape, quote: clobOrderQuoteSchema })
+  .strict()
+  .superRefine((value, ctx) => {
+    checkPrepared(value, ctx);
+    if (value.kind !== "clob_order") {
+      ctx.addIssue({ code: "custom", message: "a venue order is kind clob_order", path: ["kind"] });
+    }
+  });
+export type PreparedClobOrder = z.infer<typeof preparedClobOrderSchema>;
 
 // ---- verifyPrepared: the Signature Card's check (amendment R1) ----------------------------------------------------------
 //
@@ -695,10 +865,10 @@ export type VerifyPreparedResult =
     };
 
 // The item's own route schema, chosen by the field that sets it apart, so a failure reports the right issue.
-function preparedSchemaFor(input: unknown): typeof preparedUserOpSchema | typeof preparedOrderSchema | typeof preparedSchema {
+function preparedSchemaFor(input: unknown): typeof preparedUserOpSchema | typeof preparedOrderSchema | typeof preparedClobOrderSchema | typeof preparedSchema {
   if (typeof input === "object" && input !== null) {
     if ("user_op_hash" in input) return preparedUserOpSchema;
-    if ("quote" in input) return preparedOrderSchema;
+    if ("quote" in input) return (input as { readonly kind?: unknown }).kind === "clob_order" ? preparedClobOrderSchema : preparedOrderSchema;
   }
   return preparedSchema;
 }
@@ -739,7 +909,7 @@ export function verifyPrepared(input: unknown, rebuild: RebuildFn): VerifyPrepar
     const where = issue === undefined ? "" : issue.path.map(String).join(".");
     return mismatch(where === "" ? "item" : where, `the prepared item does not match the contract${issue === undefined ? "" : ` (${issue.message})`}`);
   }
-  const item = parsed.data as Prepared | PreparedUserOp | PreparedOrder;
+  const item = parsed.data as Prepared | PreparedUserOp | PreparedOrder | PreparedClobOrder;
   const decoded = item.decoded;
   if (decoded === undefined) {
     return { ok: false, status: "not_derivable", field: "decoded", reason: "the relay sent no decoded block, so the digest cannot be rebuilt here" };
@@ -797,7 +967,23 @@ export function verifyPrepared(input: unknown, rebuild: RebuildFn): VerifyPrepar
       ["quote.shares", terms.shares, item.quote.shares],
       ["quote.max_outlay_usd", terms.max_outlay_usd ?? "0", item.quote.max_outlay_usd],
       ["quote.fee_bound_bps", String(terms.fee_bound_bps), String(item.quote.fee_bound_bps)],
-      ["quote.expires_at", terms.expires_at, item.quote.expires_at],
+      ["quote.expires_at", terms.expires_at, item.quote.expires_at ?? "none"],
+      ["caps.reserved_usd", terms.cap_usd, item.caps.reserved_usd],
+    ];
+    for (const [field, expected, actual] of checks) {
+      if (expected !== actual) return mismatch(field, "the item disagrees with the decoded order terms", expected, actual);
+    }
+  }
+  if (decoded.kind === "clob_order" && "quote" in item && typeof item.quote === "object" && "venue" in item.quote) {
+    const terms = decoded.terms;
+    const quote = item.quote;
+    const checks: ReadonlyArray<readonly [string, string, string]> = [
+      ["quote.venue", decoded.venue, quote.venue],
+      ["quote.price", terms.price, quote.price],
+      ["quote.shares", terms.shares, quote.shares],
+      ["quote.max_outlay_usd", terms.max_outlay_usd ?? "0", quote.max_outlay_usd],
+      ["quote.fee_bound_bps", String(terms.fee_bound_bps), String(quote.fee_bound_bps)],
+      ["quote.expires_at", terms.expires_at ?? "none", quote.expires_at ?? "none"],
       ["caps.reserved_usd", terms.cap_usd, item.caps.reserved_usd],
     ];
     for (const [field, expected, actual] of checks) {
@@ -1021,6 +1207,46 @@ const orderStatusResponse = z
   })
   .strict();
 
+// ---- POST /v1/clob/order/prepare, POST /v1/clob/order/submit, POST /v1/clob/auth/prepare, POST /v1/clob/auth/submit --------
+//
+// The CLOB venues besides XO. The maker is the owner EOA itself; `account`, when supplied, must equal the owner. The
+// relay reads the market (tick, minimum size, the exchange on Limitless, the book on Polymarket) itself; the caller
+// names the market only by the id the read adapter shows (a condition id or a slug) and the outcome token.
+
+const clobOrderPrepareRequest = z
+  .object({
+    ...ownerFields,
+    venue: z.enum(CLOB_VENUES),
+    market_id: clobMarketIdSchema,
+    token_id: tokenIdSchema,
+    side: z.enum(ORDER_SIDES),
+    price: clobPriceSchema,
+    shares: sharesSchema,
+    tif: z.enum(CLOB_TIFS),
+    // GTD only (Polymarket): how long the wire expiration lies ahead. Other types carry no expiry.
+    ttl_s: z.number().int().min(1).max(MAX_ORDER_TTL_S).optional(),
+    post_only: z.boolean().optional(),
+  })
+  .strict();
+
+const clobOrderSubmitResponse = z
+  .object({
+    venue: z.enum(CLOB_VENUES),
+    state: z.enum(ORDER_SUBMIT_STATES),
+    order_hash: orderHashSchema,
+    detail: z.string().max(300).optional(),
+  })
+  .strict();
+
+const clobAuthPrepareRequest = z.object({ ...ownerFields, venue: z.enum(CLOB_VENUES) }).strict();
+const clobAuthSubmitResponse = z
+  .object({
+    venue: z.enum(CLOB_VENUES),
+    credentials: z.literal("stored"),
+    key_tag: z.string().min(1).max(32),
+  })
+  .strict();
+
 // ---- POST /v1/order/cancel, POST /v1/orders/list ---------------------------------------------------------------
 
 const orderCancelRequest = z.object({ ...ownerFields, order_hash: orderHashSchema }).strict();
@@ -1182,6 +1408,10 @@ export const POST_ROUTES = {
   "/v1/order/submit": { request: submitRequest, response: orderSubmitResponse },
   "/v1/order/cancel": { request: orderCancelRequest, response: orderCancelResponse },
   "/v1/orders/list": { request: ordersListRequest, response: ordersListResponse },
+  "/v1/clob/order/prepare": { request: clobOrderPrepareRequest, response: preparedClobOrderSchema },
+  "/v1/clob/order/submit": { request: submitRequest, response: clobOrderSubmitResponse },
+  "/v1/clob/auth/prepare": { request: clobAuthPrepareRequest, response: preparedSchema },
+  "/v1/clob/auth/submit": { request: submitRequest, response: clobAuthSubmitResponse },
   "/v1/funding/check": { request: fundingCheckRequest, response: fundingCheckResponse },
   "/v1/funding/report": { request: fundingReportRequest, response: fundingReportResponse },
   "/v1/creation/track": { request: creationTrackRequest, response: creationTrackResponse },

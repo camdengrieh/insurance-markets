@@ -4,6 +4,7 @@ import { afterEach, describe, it } from "node:test";
 import { McpServer } from "@modelcontextprotocol/server";
 
 import { registerAccountTools } from "../../../src/tools/account.js";
+import { registerClobTools } from "../../../src/tools/clob.js";
 import { registerCreateTools } from "../../../src/tools/create.js";
 import { registerDraftTools } from "../../../src/tools/draft.js";
 import { registerFundTools } from "../../../src/tools/fund.js";
@@ -39,6 +40,7 @@ function register(server: McpServer): void {
   registerTradeTools(server);
   registerFundTools(server);
   registerCreateTools(server);
+  registerClobTools(server);
 }
 
 describe("the tool-class table against the plugin's tool registry (M1-7)", () => {

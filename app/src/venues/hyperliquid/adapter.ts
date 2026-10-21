@@ -22,6 +22,7 @@ import type {
   VenueHealth,
   VenueReadAdapter,
 } from "../../core/ports";
+import { categorise } from "../../core/category";
 import { canonDec, compareDec, isDec } from "./decimal";
 import { assetIdOf, coinOf, encodingOf, outcomeFromMarketId, parseOutcomeToken, tokenOf, type Side } from "./encoding";
 import { AdapterFailure } from "./errors";
@@ -361,9 +362,13 @@ export function createHyperliquidAdapter(deps: AdapterDeps): HyperliquidAdapter 
   function summaryOf(spec: OutcomeSpec, loaded: Loaded): MarketSummary {
     const pairs = parseSpec(spec.description);
     const { status, closesAtUtc } = statusOf(pairs);
+    const title = titleOf(spec.name, spec.description, pairs);
     return {
       ref: refOf(spec, loaded.groups.get(spec.outcome)),
-      title: untrusted(titleOf(spec.name, spec.description, pairs)),
+      title: untrusted(title),
+      // An outcome spec carries no category field: the title's words are the only source, so the verdict is at
+      // most "keyword" and is "other" for a spec that names nothing in the fixed table.
+      category: categorise({ venue: "hyperliquid", native: [], title }),
       status,
       closesAtUtc,
       outcomes: ([0, 1] as const).map((side) => sideOf(spec, side, loaded.mids?.get(coinOf(encodingOf(spec.outcome, side))) ?? null)),
@@ -409,9 +414,11 @@ export function createHyperliquidAdapter(deps: AdapterDeps): HyperliquidAdapter 
           // (official docs via the census), so the set is exhaustive by rule.
           { key: `hyperliquid:question:${group.question}`, kind: "mutually_exclusive", exhaustive: "by_rule" };
     const ref = refOf(spec, group);
+    const title = titleOf(spec.name, spec.description, pairs);
     return {
       ref: settleFraction === null ? ref : { ...ref, native: { ...ref.native, settleFraction } },
-      title: untrusted(titleOf(spec.name, spec.description, pairs)),
+      title: untrusted(title),
+      category: categorise({ venue: "hyperliquid", native: [], title }),
       outcomes,
       rules: {
         text: untrusted(cleanBlock(fullText, RULES_MAX)),

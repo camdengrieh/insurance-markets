@@ -244,6 +244,8 @@ const FORM_BY_KIND: Record<PreparedKind, DigestForm> = {
   create: "userOpHash",
   order: "kernelWrappedOrderHash",
   auth: "kernelWrappedClobAuth",
+  clob_order: "eip712OrderHash",
+  clob_auth: "eip712ClobAuth",
 };
 
 export interface PreparedOptions {

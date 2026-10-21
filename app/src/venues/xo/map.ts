@@ -10,6 +10,7 @@ import type {
 } from "@shared/xo/types.js";
 import { FIELD_LIMITS, HARD_MAX_CHARS, TRUNCATION_MARKER, sanitizeUntrusted } from "@shared/guardrails/untrusted.js";
 
+import { categorise, type CategoryVerdict } from "../../core/category";
 import type {
   Book,
   Collateral,
@@ -47,7 +48,7 @@ export const FEE_TTL_SEC = 300;
 // The fields this adapter reads, hashed into Market.prov.schemaHash. Adding or dropping a field changes the
 // hash, and a test pins the value, so a decoder change cannot slip through unnoticed.
 const SCHEMA_DESCRIPTOR = [
-  "list:id,conditionId,title,slug,type,status,startsAt,expiresAt,winningOutcomeId,totalVolumeInUSD,outcomes[id,index,outcomeTokenId,title,currentPrice]",
+  "list:id,conditionId,title,slug,type,status,startsAt,expiresAt,winningOutcomeId,totalVolumeInUSD,categoryPath[name,slug],outcomes[id,index,outcomeTokenId,title,currentPrice]",
   "detail:+rules[description,outcomeRules],description,resolutionSources,resolverAddress,resolutionType,reviewStatus,collateralToken.decimals,effectiveFeeConfig[takerFeeBps,makerFeeBps,curveModel]",
   "book:market,asset_id,timestamp,hash,bids,asks,tick_size,neg_risk",
 ].join("|");
@@ -203,6 +204,29 @@ function outcomeSummary(outcome: ListedOutcome): OutcomeSummary {
   };
 }
 
+// ---- category ---------------------------------------------------------------------------------------------------
+
+// XO's categoryPath, root first: the names and slugs go to the fixed table (core/category.ts), never to the screen.
+export function categoryOf(row: Pick<XoRow, "categoryPath" | "title">): CategoryVerdict {
+  const native: string[] = [];
+  for (const entry of row.categoryPath) {
+    native.push(String(entry.name));
+    if (entry.slug !== null) native.push(String(entry.slug));
+  }
+  return categorise({ venue: "xo", native, title: String(row.title) });
+}
+
+// The path as the venue wrote it ("SPORTS > Football > Premier League"), for the inspector's untrusted slot only.
+export function categoryNativeOf(row: Pick<XoRow, "categoryPath">): Untrusted<string> | undefined {
+  if (row.categoryPath.length === 0) return undefined;
+  return untrustedText(row.categoryPath.map((entry) => String(entry.name)).join(" > "), FIELD_LIMITS.category);
+}
+
+function categoryFields(row: Pick<XoRow, "categoryPath" | "title">): { readonly category: CategoryVerdict; readonly categoryNative?: Untrusted<string> } {
+  const categoryNative = categoryNativeOf(row);
+  return { category: categoryOf(row), ...(categoryNative === undefined ? {} : { categoryNative }) };
+}
+
 export function summaryOf(row: XoRow, nowMs: number, fetchedAtMs: number): MarketSummary {
   return {
     ref: refOf(row),
@@ -213,6 +237,7 @@ export function summaryOf(row: XoRow, nowMs: number, fetchedAtMs: number): Marke
     // totalVolumeInUSD is a decimal USD figure with six decimals; the window is lifetime, not a rolling window.
     volume: { amount: row.totalVolumeUsdMicro === null ? null : formatMicro(row.totalVolumeUsdMicro), unit: "usd", windowHours: null },
     prov: listProv(fetchedAtMs),
+    ...categoryFields(row),
   };
 }
 
@@ -353,6 +378,7 @@ export function marketOf(detail: XoDetail, nowMs: number, fetchedAtMs: number): 
     collateral: XO_COLLATERAL,
     fee: feeSpecOf(detail, fetchedAtMs, []),
     prov: { fetchedAtMs, source: XO_SOURCE_DETAIL, adapterVersion: ADAPTER_VERSION, schemaHash: XO_SCHEMA_HASH },
+    ...categoryFields(detail),
   };
   return {
     market,

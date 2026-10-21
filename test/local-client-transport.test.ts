@@ -20,7 +20,7 @@ describe("createEmbeddedRelayClient", () => {
     const seen: EmbeddedRequest[] = [];
     const client = createEmbeddedRelayClient(async (request) => {
       seen.push(request);
-      return request.method === "GET" ? ok({ status: "ok", version: "0.2.0", time: "2026-10-19T12:00:00Z", kill: false, flags: Object.fromEntries(["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE", "ENABLE_SELF_HOSTED_METADATA", "KILL"].map((name) => [name, false])), tripwires: { ok: true, tripped: [] }, upstream: {} }) : ok({ error: { code: "flag_off", message: "off" } }, 403);
+      return request.method === "GET" ? ok({ status: "ok", version: "0.2.0", time: "2026-10-19T12:00:00Z", kill: false, flags: Object.fromEntries(["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE", "ENABLE_SELF_HOSTED_METADATA", "ENABLE_CLOB_POLYMARKET", "ENABLE_CLOB_LIMITLESS", "KILL"].map((name) => [name, false])), tripwires: { ok: true, tripped: [] }, upstream: {} }) : ok({ error: { code: "flag_off", message: "off" } }, 403);
     });
     assert.equal((await client.get("/v1/health")).ok, true);
     assert.equal(code(await client.post("/v1/auth/prepare", { owner: OWNER })), "flag_off");

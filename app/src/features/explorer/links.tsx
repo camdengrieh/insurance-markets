@@ -8,7 +8,7 @@
 
 import type { MarketRef, VenueId } from "../../core/ports";
 import { Badge, Tile } from "../../ui";
-import { linksForLeg, type LinkLoad } from "../signals/links/dataset";
+import { linksForLeg, proposedForLeg, type LinkLoad } from "../signals/links/dataset";
 import type { Link, LinkLeg } from "../signals/links/schema";
 
 // null: no human-approved dataset is bundled. The signals feature's loader (loadBundledLinks) answers "absent" for
@@ -55,31 +55,60 @@ export type CandidateLookup =
   | { readonly state: "no_dataset" }
   | { readonly state: "rejected" }
   | { readonly state: "none_for_market" }
-  | { readonly state: "candidates"; readonly candidates: readonly LinkCandidate[]; readonly hidden: number };
+  // candidates: the other legs of APPROVED links. proposed: the other legs of links the linker (or a person)
+  // proposed and no person approved: a tier of their own, never a leg, never a spread.
+  | { readonly state: "candidates"; readonly candidates: readonly LinkCandidate[]; readonly proposed: readonly LinkCandidate[]; readonly hidden: number };
 
 const MAX_CANDIDATES = 20;
+
+function otherLegs(links: readonly Link[], ref: Pick<MarketRef, "venue" | "marketId">): LinkCandidate[] {
+  const out: LinkCandidate[] = [];
+  for (const link of links) {
+    for (const leg of link.legs) {
+      if (leg.venue === ref.venue && leg.nativeId === ref.marketId) continue;
+      if (out.length < MAX_CANDIDATES) out.push({ link, leg });
+    }
+  }
+  return out;
+}
 
 export function candidatesFor(load: LinkLoad | null, ref: Pick<MarketRef, "venue" | "marketId">): CandidateLookup {
   if (load === null || load.state === "absent") return { state: "no_dataset" };
   if (load.state === "rejected") return { state: "rejected" };
-  const { shown, hidden } = linksForLeg(load.dataset, { venue: ref.venue, nativeId: ref.marketId });
-  const candidates: LinkCandidate[] = [];
-  for (const link of shown) {
-    for (const leg of link.legs) {
-      if (leg.venue === ref.venue && leg.nativeId === ref.marketId) continue;
-      if (candidates.length < MAX_CANDIDATES) candidates.push({ link, leg });
-    }
-  }
-  if (candidates.length === 0 && hidden === 0) return { state: "none_for_market" };
-  return { state: "candidates", candidates, hidden };
+  const match = { venue: ref.venue, nativeId: ref.marketId };
+  const { shown, hidden: hiddenAll } = linksForLeg(load.dataset, match);
+  const proposedLinks = proposedForLeg(load.dataset, match);
+  const candidates = otherLegs(shown, ref);
+  const proposed = otherLegs(proposedLinks, ref);
+  // Proposals have their own tier, so they are not "hidden" here.
+  const hidden = hiddenAll - proposedLinks.length;
+  if (candidates.length === 0 && proposed.length === 0 && hidden === 0) return { state: "none_for_market" };
+  return { state: "candidates", candidates, proposed, hidden };
 }
 
 // The row keys (venue:marketId) of every loaded row that at least one shown link names, for the Linked view.
-export function linkedRowKeys(load: LinkLoad | null, rows: ReadonlyArray<{ readonly venue: VenueId; readonly marketId: string }>): ReadonlySet<string> {
+// With `candidates: true` a row named only by a proposed (not approved) link counts too, so the Linked chip
+// can count candidate groups; the default keeps the approved-only behaviour.
+export function linkedRowKeys(
+  load: LinkLoad | null,
+  rows: ReadonlyArray<{ readonly venue: VenueId; readonly marketId: string }>,
+  options: { readonly candidates?: boolean } = {},
+): ReadonlySet<string> {
   const out = new Set<string>();
   if (load === null || load.state !== "loaded") return out;
   for (const row of rows) {
-    if (linksForLeg(load.dataset, { venue: row.venue, nativeId: row.marketId }).shown.length > 0) out.add(`${row.venue}:${row.marketId}`);
+    const match = { venue: row.venue, nativeId: row.marketId };
+    if (linksForLeg(load.dataset, match).shown.length > 0 || (options.candidates === true && proposedForLeg(load.dataset, match).length > 0)) out.add(`${row.venue}:${row.marketId}`);
+  }
+  return out;
+}
+
+// The row keys named only by proposed links (a pure helper for counts and tests).
+export function candidateRowKeys(load: LinkLoad | null, rows: ReadonlyArray<{ readonly venue: VenueId; readonly marketId: string }>): ReadonlySet<string> {
+  const out = new Set<string>();
+  if (load === null || load.state !== "loaded") return out;
+  for (const row of rows) {
+    if (proposedForLeg(load.dataset, { venue: row.venue, nativeId: row.marketId }).length > 0) out.add(`${row.venue}:${row.marketId}`);
   }
   return out;
 }

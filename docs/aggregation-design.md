@@ -298,6 +298,19 @@ interface Link {
 }
 ```
 
+### 2.6 Categories
+
+One fixed taxonomy for every venue, so the Markets surface can be browsed by category and the linker can block candidate pairs by it (section 4.3, L2 "blocking by category"): `politics`, `crypto`, `sports`, `economics`, `science_tech`, `culture`, `world`, `weather`, `other`. It lives in `pm/core/category.ts` (pure, no imports) and is mirrored byte for byte at `app/src/core/category.ts`, because the bundle may not import `pm/`; a test hashes both files so they cannot drift. `Market.category` is optional; a consumer reads an absent verdict as `other` with confidence `none`.
+
+`categorise({ venue, native, title })` returns `{ category, confidence, matched }`. Matching is deterministic and case- and diacritic-insensitive (NFKD, marks dropped, lower case, every non-alphanumeric run collapsed to one space), in a fixed order with the first hit deciding:
+
+1. each venue-native string (XO `categoryPath` names and slugs, root first; Limitless `categories` then `tags`; Polymarket series slugs and tickers, the event ticker and slug, then the market slug) is looked up exactly in the venue's own table, then in the common table (confidence `native`);
+2. the words of each native string are looked up in the keyword table (still `native`: the evidence is the venue's own taxonomy);
+3. the words of the title are looked up in the keyword table (confidence `keyword`);
+4. otherwise `other`, `none`.
+
+The tables are the documented list in the module: the common names (politics, crypto, sports, finance, tech, culture, …), XO's `PULSE` family and its up/down children (crypto), Limitless's minute-window categories and its "Lumy" tag (its automated crypto price markets), and a conservative keyword list of one-to-four-word phrases per category. The venue strings are untrusted text: they are never rendered raw (the UI shows the fixed label; the inspector shows the venue's own words only through `UntrustedText`), never fed to a model, and never echoed (`matched` names table entries only). No category is ever LLM-assigned, in the plugin or in the app. Hyperliquid outcome specs carry no category field, so their verdict is at most `keyword`; venues without a reader-side source carry no verdict. A market that names nothing in the tables (a person, an office, a company) is `other`; that is a reported gap, not a guess.
+
 ---
 
 ## 3. Per-venue capability matrix

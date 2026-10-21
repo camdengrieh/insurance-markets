@@ -104,7 +104,7 @@ export function statusBody(overrides: Record<string, unknown> = {}): Record<stri
     armed_until: null,
     kill: false,
     instance: "writer",
-    flags: { ENABLE_USEROP_SUBMIT: false, ENABLE_TRADING: false, ENABLE_FUNDING: false, ENABLE_WITHDRAW: false, XO_ENABLE_CREATE: false, ENABLE_SELF_HOSTED_METADATA: false, KILL: false },
+    flags: { ENABLE_USEROP_SUBMIT: false, ENABLE_TRADING: false, ENABLE_FUNDING: false, ENABLE_WITHDRAW: false, XO_ENABLE_CREATE: false, ENABLE_SELF_HOSTED_METADATA: false, ENABLE_CLOB_POLYMARKET: false, ENABLE_CLOB_LIMITLESS: false, KILL: false },
     tripwires: { ok: true, tripped: [] },
     upstream: { "api-mainnet.xo.market": { state: "ok", errors: 0, last_error_at: null } },
     capabilities: { T0: "yes", T1: "unknown", T3a: "no" },

@@ -23,6 +23,7 @@
 // of `GET /markets?condition_ids=` (the slug route is the verified one and is preferred).
 
 import { normalizeSortedBook, type RawSidedBook } from "../core/books.js";
+import { categorise } from "../core/category.js";
 import { unknownFeeSpec, polymarketFeeSpec, type FeeSource } from "../core/fee-specs.js";
 import { cmp, ratFromDec } from "../core/rational.js";
 import type {
@@ -385,6 +386,25 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
     if (negRiskId !== null) native["negRiskMarketID"] = negRiskId;
     native["version"] = g.version;
 
+    // Polymarket publishes no category on /markets: the series and event slugs and tickers, then the market slug,
+    // are matched token by token against the fixed keyword table; the question text is the last resort.
+    const categoryStrings: string[] = [];
+    const seriesRaw = event0 === null ? undefined : get(event0, "series");
+    if (Array.isArray(seriesRaw)) {
+      for (const entry of seriesRaw.slice(0, 10)) {
+        if (!isRec(entry)) continue;
+        const seriesSlug = str(entry, "slug", 120);
+        if (seriesSlug !== null) categoryStrings.push(seriesSlug);
+        const seriesTicker = str(entry, "ticker", 120);
+        if (seriesTicker !== null) categoryStrings.push(seriesTicker);
+      }
+    }
+    const eventTicker = event0 === null ? null : str(event0, "ticker", 200);
+    if (eventTicker !== null) categoryStrings.push(eventTicker);
+    if (eventSlug !== null) categoryStrings.push(eventSlug);
+    if (g.slug !== null) categoryStrings.push(g.slug);
+    const category = categorise({ venue: "polymarket", native: categoryStrings, title: g.question });
+
     const statusRaw = state.status;
     return {
       ref: { venue: "polymarket", marketId: g.conditionId, native },
@@ -407,6 +427,7 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
         adapterVersion: ADAPTER_VERSION,
         schemaHash: shapeHash(gammaJson, clobJson),
       },
+      category,
       extras: {
         ruleFields,
         rulesHashRecipe: built.rulesHashRecipe,

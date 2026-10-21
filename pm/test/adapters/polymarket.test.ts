@@ -475,3 +475,23 @@ suite("polymarket adapter: captured live shapes (docs/research/fixtures)", () =>
     assert.ok(page.items.some((m) => m.status === "determined"));
   });
 });
+
+suite("polymarket adapter: category", () => {
+  it("attaches the fixed-taxonomy verdict from the event's series, ticker and slug tokens (the captured market is a Senate-control question)", async () => {
+    const { adapter } = adapterFor(routes());
+    const m = await adapter.getMarket(ref);
+    assert.ok(m.category !== undefined);
+    assert.equal(m.category.category, "politics");
+    assert.equal(m.category.confidence, "native");
+    assert.equal(m.category.matched.length, 1);
+    assert.match(m.category.matched[0] ?? "", /^keyword:/);
+  });
+
+  it("reads 'other' with no confidence when the slugs and the question name nothing in the table", async () => {
+    // The route still answers for the recorded slug; the body's own slug, event and question name nothing.
+    const quiet = gamma({ slug: "plain-slug", question: "A question naming nothing", events: [{ slug: "plain-event", ticker: "plain-event", series: [] }] });
+    const { adapter } = adapterFor(routes(quiet));
+    const m = await adapter.getMarket(ref);
+    assert.deepEqual(m.category, { category: "other", confidence: "none", matched: [] });
+  });
+});

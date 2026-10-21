@@ -365,6 +365,9 @@ export const inboxPreparedSchema = z.union([
   POST_ROUTES["/v1/userop/prepare"].response,
   POST_ROUTES["/v1/order/prepare"].response,
   POST_ROUTES["/v1/auth/prepare"].response,
+  // The CLOB venues besides XO (Polymarket, Limitless): an EOA order with its quote, and the Polymarket login.
+  POST_ROUTES["/v1/clob/order/prepare"].response,
+  POST_ROUTES["/v1/clob/auth/prepare"].response,
 ]);
 
 export const inboxResultSchema = z

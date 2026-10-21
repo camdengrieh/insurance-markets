@@ -13,20 +13,25 @@ export { SignalsServicesProvider, createSignalsServices, legReaderOver, setSigna
 export { SignalsSession, type AccessChoice, type SessionOptions, type SessionSnapshot } from "./session";
 export { LinkOverlay, keysOfRow, linksOfRow, useLinkVerdict, type LinkOverlayProps } from "./LinkOverlay";
 export {
+  APP_RULES_RECIPE,
   DATASET_STALE_AFTER_DAYS,
   NO_LINK_DATASET,
   canonicalJson,
   contentHash,
   datasetAge,
+  isProposed,
   linksForLeg,
   loadBundledLinks,
   parseLinkDataset,
   pinDataset,
+  proposedForLeg,
+  rulesComparable,
   showsInDefaultView,
   type DatasetRejection,
+  type LegMatch,
   type LinkIndex,
   type LinkLoad,
 } from "./links/dataset";
-export { LINK_PROOFS, LINK_RELATIONS, LINK_STATES, linkDatasetSchema, linkSchema, type Link, type LinkDataset, type LinkLeg } from "./links/schema";
+export { LINK_BANDS, LINK_PROOFS, LINK_RELATIONS, LINK_STATES, linkDatasetSchema, linkSchema, type Link, type LinkBand, type LinkDataset, type LinkLeg } from "./links/schema";
 export { linkLabel, verifyLink, type LegObservation, type LinkLabelReason, type LinkReason, type LinkVerdict } from "./links/verify";
 export { pointsText, probabilityText, usdLabel } from "./figures";

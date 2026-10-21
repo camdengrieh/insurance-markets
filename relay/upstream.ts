@@ -189,8 +189,9 @@ export interface UpstreamOptions {
 // Header names a caller may set. Everything else (Host, Cookie, Referer, From, Origin, Authorization,
 // X-Forwarded-For, a different User-Agent) is refused, so nothing that identifies a person or a
 // machine can ride along.
-const CALLER_HEADER = /^(?:accept|content-type|xo_api_key|xo_timestamp|xo_passphrase|xo_signature|xo_address)$/i;
-const XO_AUTH_HEADER = /^xo_/i;
+// The venue credential headers (relay/clob.ts): Polymarket's POLY_* L1 and L2 names and Limitless's lmts-* names.
+const CALLER_HEADER = /^(?:accept|content-type|xo_api_key|xo_timestamp|xo_passphrase|xo_signature|xo_address|poly_address|poly_signature|poly_timestamp|poly_nonce|poly_api_key|poly_passphrase|lmts-api-key|lmts-timestamp|lmts-signature)$/i;
+const XO_AUTH_HEADER = /^(?:xo_|poly_|lmts-)/i;
 // eslint-disable-next-line no-control-regex
 const HEADER_VALUE = /^[ -~]{0,4096}$/;
 const PURPOSE = /^[a-z][a-z0-9_]{0,47}$/;

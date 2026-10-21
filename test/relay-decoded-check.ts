@@ -5,7 +5,7 @@ import { verifyPreparedLocal } from "../src/xo/signing/rebuild.js";
 // repo's own rebuild. A prepare whose decoded block does not rebuild to the digest, the tags and the summary it came
 // with fails the test that asked for it, so the many existing prepare tests double as R1/R2 tests.
 
-const PREPARE_PATHS: ReadonlySet<string> = new Set(["/v1/userop/prepare", "/v1/order/prepare", "/v1/auth/prepare"]);
+const PREPARE_PATHS: ReadonlySet<string> = new Set(["/v1/userop/prepare", "/v1/order/prepare", "/v1/auth/prepare", "/v1/clob/order/prepare", "/v1/clob/auth/prepare"]);
 
 export function checkDecoded<T>(path: string, result: RelayResult<T>): RelayResult<T> {
   if (!result.ok || !PREPARE_PATHS.has(path)) return result;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { classifyTool } from "../../../../bridge/tool-classes";
 import { DaemonError } from "./client";
-import { TRADE_PREPARE_TOOLS, TRADE_READ_TOOLS, TRADE_TOOLS, accountArgs, deployArgs, fundArgs, isTradeTool, listOrdersArgs, orderArgs, redeemArgs, revokeArgs, toolClassOf, type ToolArgs } from "./tools";
+import { TRADE_PREPARE_TOOLS, TRADE_READ_TOOLS, TRADE_TOOLS, accountArgs, clobOrderArgs, deployArgs, fundArgs, isTradeTool, listOrdersArgs, orderArgs, redeemArgs, revokeArgs, toolClassOf, type ToolArgs } from "./tools";
 import { OWNER, TOKENS, answer, errorReplyOf, jsonReply, makeRig, prepareEnvelope, toolEnvelope } from "./test-support";
 
 async function paired() {
@@ -30,6 +30,7 @@ describe("the trade client's closed tool list agrees with the daemon's class tab
     xo_revoke_trading: revokeArgs(OWNER),
     xo_redeem: redeemArgs(OWNER, ["0x" + "11".repeat(32)]),
     xo_fund_account: fundArgs(OWNER, "3"),
+    clob_order: clobOrderArgs({ owner: OWNER, venue: "polymarket", marketId: "0x" + "99".repeat(32), tokenId: TOKENS.yes, side: "BUY", price: "0.52", shares: "10", tif: "GTC", ttlS: null, postOnly: false }),
   };
 
   it("has a sample for every tool on the list", () => {
@@ -43,7 +44,7 @@ describe("the trade client's closed tool list agrees with the daemon's class tab
   });
 
   it("builds every step-taking call with the prepare step, so none can classify as submit", () => {
-    for (const tool of ["xo_deploy_enable_trading", "xo_revoke_trading", "xo_redeem"]) {
+    for (const tool of ["xo_deploy_enable_trading", "xo_revoke_trading", "xo_redeem", "clob_order"]) {
       expect((SAMPLE[tool] as ToolArgs)["step"]).toBe("prepare");
     }
   });

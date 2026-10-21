@@ -368,3 +368,21 @@ describe("xo adapter: health, caps and transport rules", () => {
     assert.equal(adapter.descriptor.recordable, true);
   });
 });
+
+describe("xo adapter: category", () => {
+  it("attaches the fixed-taxonomy verdict from categoryPath (the captured detail is SPORTS > MMA > UFC)", async () => {
+    const { adapter } = adapterFor(marketRoutes());
+    const m = await adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.deepEqual(m.category, { category: "sports", confidence: "native", matched: ["common:sports"] });
+  });
+
+  it("falls back to the title's words when XO sends no category path, and to 'other' when those say nothing", async () => {
+    const noPath = patch(detail, [["categoryPath"], []], [["category"], undefined]);
+    const { adapter } = adapterFor(marketRoutes(noPath));
+    const m = await adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.deepEqual(m.category, { category: "sports", confidence: "keyword", matched: ["keyword:ufc"] });
+    const blank = patch(noPath, [["title"], "Something with no category words"]);
+    const other = await adapterFor(marketRoutes(blank)).adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.deepEqual(other.category, { category: "other", confidence: "none", matched: [] });
+  });
+});

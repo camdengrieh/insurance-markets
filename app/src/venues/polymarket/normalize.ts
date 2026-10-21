@@ -25,6 +25,7 @@ import {
   CLOB_ORIGIN,
   GAMMA_ORIGIN,
 } from "./constants";
+import { categorise, type CategoryVerdict } from "../../core/category";
 import { rulesHashOf } from "../../core/rules-hash";
 import { safeHttpsUrl, untrustedField } from "../../core/untrusted";
 import { cmpDec, isOpenUnitInterval, numberToDec, numericToDec, parseDec, type Dec } from "./decimal";
@@ -264,6 +265,54 @@ export function refOf(raw: GammaMarket, event: GammaEvent | undefined, ledger: L
   return { venue: VENUE, marketId: raw.conditionId.toLowerCase(), native: nativeOf(raw, event, ledger) };
 }
 
+// ---- category -----------------------------------------------------------------------------------------------------
+
+const MAX_SERIES = 10;
+const MAX_SERIES_CHARS = 120;
+
+// The slugs and tickers of the event's series, in order; anything that is not a string is skipped.
+function seriesWords(event: GammaEvent | undefined): string[] {
+  const out: string[] = [];
+  const series = event?.series;
+  if (!Array.isArray(series)) return out;
+  for (const entry of series.slice(0, MAX_SERIES)) {
+    if (entry === null || typeof entry !== "object") continue;
+    for (const key of ["slug", "ticker"] as const) {
+      const value = (entry as Record<string, unknown>)[key];
+      if (typeof value === "string" && value !== "") out.push(value.slice(0, MAX_SERIES_CHARS));
+    }
+  }
+  return out;
+}
+
+// Gamma publishes no category on a market: the series slugs and tickers, the event ticker and slug, then the market
+// slug are matched token by token against the fixed keyword table (core/category.ts); the question is the last resort.
+export function categoryOf(raw: Pick<GammaMarket, "slug" | "question">, event: GammaEvent | undefined): CategoryVerdict {
+  const native = [...seriesWords(event)];
+  if (typeof event?.ticker === "string" && event.ticker !== "") native.push(event.ticker.slice(0, MAX_SERIES_CHARS));
+  if (typeof event?.slug === "string" && event.slug !== "") native.push(event.slug);
+  native.push(raw.slug);
+  return categorise({ venue: VENUE, native, title: raw.question });
+}
+
+// The series slugs as the venue wrote them, for the inspector's untrusted slot only.
+export function categoryNativeOf(event: GammaEvent | undefined): Untrusted<string> | undefined {
+  const slugs: string[] = [];
+  const series = event?.series;
+  if (Array.isArray(series)) {
+    for (const entry of series.slice(0, MAX_SERIES)) {
+      const slug = entry !== null && typeof entry === "object" ? (entry as Record<string, unknown>)["slug"] : undefined;
+      if (typeof slug === "string" && slug !== "") slugs.push(slug.slice(0, MAX_SERIES_CHARS));
+    }
+  }
+  return slugs.length === 0 ? undefined : untrustedField("category", slugs.join(", "), VENUE);
+}
+
+function categoryFields(raw: Pick<GammaMarket, "slug" | "question">, event: GammaEvent | undefined): { readonly category: CategoryVerdict; readonly categoryNative?: Untrusted<string> } {
+  const categoryNative = categoryNativeOf(event);
+  return { category: categoryOf(raw, event), ...(categoryNative === undefined ? {} : { categoryNative }) };
+}
+
 function displayPrice(prices: readonly string[] | null | undefined, count: number, index: number): Dec | null {
   if (prices === null || prices === undefined || prices.length !== count) return null;
   const dec = parseDec(prices[index]);
@@ -315,6 +364,7 @@ export function normalizeSummary(raw: GammaMarket, ctx: NormalizeContext): Norma
       outcomes,
       volume: { amount: volume, unit: "usd", windowHours: null },
       prov,
+      ...categoryFields(raw, event),
     },
   };
 }
@@ -368,6 +418,7 @@ export function normalizeMarket(raw: GammaMarket, ctx: NormalizeContext): Normal
       ctx.nowMs,
     ),
     prov: { fetchedAtMs: ctx.nowMs, source: ctx.source, adapterVersion: ADAPTER_VERSION, schemaHash: gammaSchemaHash() },
+    ...categoryFields(raw, event),
   };
   return { ok: true, value: market };
 }

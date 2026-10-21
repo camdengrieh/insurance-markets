@@ -22,7 +22,9 @@ export type SigningErrorCode =
   | "invalid_body"
   | "invalid_secret"
   | "invalid_credential"
-  | "invalid_canonical_mode";
+  | "invalid_canonical_mode"
+  // A typed, failing-closed case this build does not implement (a Deposit Wallet order on Polymarket).
+  | "not_implemented";
 
 export class SigningError extends Error {
   readonly code: SigningErrorCode;

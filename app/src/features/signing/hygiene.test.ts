@@ -29,7 +29,7 @@ const FORBIDDEN_IDENTIFIER = /submit|signature/i;
 const ALLOWED_IDENTIFIERS = new Set(["SignatureCard", "SignatureCardProps", "SignatureCardDialog", "SignatureCardDialogProps", "submitted"]);
 // Route-table keys that pick a SCHEMA to read an answer with, per file. None of them is sent anywhere.
 const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = {
-  "card.ts": ["/v1/userop/prepare", "/v1/order/prepare"],
+  "card.ts": ["/v1/userop/prepare", "/v1/order/prepare", "/v1/clob/order/prepare"],
   "client.ts": ["/ui/userop/:hash", "/ui/order/:hash"],
 };
 const NETWORK_GLOBALS = new Set(["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "postMessage", "BroadcastChannel", "Worker", "SharedWorker", "importScripts"]);

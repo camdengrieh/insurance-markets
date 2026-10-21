@@ -1,0 +1,387 @@
+{
+ "clob_order": {
+  "title": "Place a venue order (Polymarket or Limitless, two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "cdcdd71191d6068b17fd3750687f69979caf54eb09ea342071a2a34d8f09f12e",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "market_id": {
+     "description": "Only for step \"prepare\": the market as the venue names it, a Polymarket condition id (0x, 32 bytes) or a Limitless slug.",
+     "pattern": "^(?:0x[0-9a-fA-F]{64}|[a-z0-9][a-z0-9_-]{0,127})$",
+     "type": "string"
+    },
+    "owner": {
+     "description": "Only for step \"prepare\".",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "post_only": {
+     "description": "Only for a GTC or GTD: reject instead of taking liquidity.",
+     "type": "boolean"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "price": {
+     "description": "Only for step \"prepare\": limit price per share on the market's tick, such as \"0.52\".",
+     "pattern": "^0\\.[0-9]{1,4}$",
+     "type": "string"
+    },
+    "shares": {
+     "description": "Only for step \"prepare\": size in shares with at most two decimals, at least the market's minimum.",
+     "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+     "type": "string"
+    },
+    "side": {
+     "description": "Only for step \"prepare\": BUY pays collateral for shares; SELL sells shares you hold.",
+     "enum": [
+      "BUY",
+      "SELL"
+     ],
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    },
+    "tif": {
+     "description": "Only for step \"prepare\": GTC (rests, no expiry), GTD (Polymarket only, expires), FOK or FAK (fill at once). Default GTC.",
+     "enum": [
+      "GTC",
+      "GTD",
+      "FOK",
+      "FAK"
+     ],
+     "type": "string"
+    },
+    "token_id": {
+     "description": "Only for step \"prepare\": the outcome token to trade, a decimal string from the market's outcomes.",
+     "pattern": "^[1-9][0-9]{0,77}$",
+     "type": "string"
+    },
+    "ttl_s": {
+     "description": "Only for a Polymarket GTD: seconds until the wire expiration. The expiration is not part of the signed order.",
+     "maximum": 3600,
+     "minimum": 240,
+     "type": "integer"
+    },
+    "venue": {
+     "description": "Only for step \"prepare\".",
+     "enum": [
+      "polymarket",
+      "limitless"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "b9ba42245f89fd2e9d51454957fd5909583158d88b79f4bf26c6ad39c749f9e3",
+   "properties": [
+    "account",
+    "code",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "order_hash",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "submission",
+    "unproven_capabilities",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ },
+ "clob_auth": {
+  "title": "Log the wallet in to a venue (Polymarket, two steps)",
+  "annotations": {
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true,
+   "readOnlyHint": false
+  },
+  "meta": {
+   "anthropic/requiresUserInteraction": true
+  },
+  "description_sha256": "a5ee8382f9a608d500398a6a9b2f752bbcf646111f964324591581c0c4c9a18e",
+  "input": {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "additionalProperties": false,
+   "properties": {
+    "owner": {
+     "description": "Only for step \"prepare\".",
+     "pattern": "^0x[0-9a-fA-F]{40}$",
+     "type": "string"
+    },
+    "prepared_id": {
+     "description": "Only for step \"submit\": the prepared_id the prepare step returned.",
+     "pattern": "^[0-9a-f]{32}$",
+     "type": "string"
+    },
+    "signature": {
+     "anyOf": [
+      {
+       "pattern": "^0x[0-9a-fA-F]{130}$",
+       "type": "string"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "recovery_id": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "recovery_id"
+       ],
+       "type": "object"
+      },
+      {
+       "additionalProperties": false,
+       "properties": {
+        "r": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "s": {
+         "pattern": "^0x[0-9a-fA-F]{64}$",
+         "type": "string"
+        },
+        "v": {
+         "anyOf": [
+          {
+           "const": 0,
+           "type": "number"
+          },
+          {
+           "const": 1,
+           "type": "number"
+          },
+          {
+           "const": 27,
+           "type": "number"
+          },
+          {
+           "const": 28,
+           "type": "number"
+          }
+         ]
+        }
+       },
+       "required": [
+        "r",
+        "s",
+        "v"
+       ],
+       "type": "object"
+      }
+     ],
+     "description": "Only for step \"submit\": the signature PayBox returned (a 65-byte 0x hex string, or its r and s with recovery_id or v), exactly as PayBox gave it."
+    },
+    "step": {
+     "description": "\"prepare\" builds the item and returns what to sign; \"submit\" sends it once it is signed.",
+     "enum": [
+      "prepare",
+      "submit"
+     ],
+     "type": "string"
+    },
+    "venue": {
+     "description": "Only for step \"prepare\".",
+     "enum": [
+      "polymarket",
+      "limitless"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "step"
+   ],
+   "type": "object"
+  },
+  "output": {
+   "sha256": "1d9296d2ee608d886275ea776c03d8581b0fda7fe11d8fe2611dee67a34716b3",
+   "properties": [
+    "account",
+    "code",
+    "credentials",
+    "digest_tag",
+    "flag",
+    "inner_hash_tag",
+    "message",
+    "next_action",
+    "outcome",
+    "owner",
+    "prepared",
+    "relay_details",
+    "seconds_until_expiry",
+    "sign_instructions",
+    "sign_with_paybox",
+    "step",
+    "unproven_capabilities",
+    "verification",
+    "warnings"
+   ],
+   "required": [
+    "code",
+    "message",
+    "next_action",
+    "outcome",
+    "unproven_capabilities",
+    "warnings"
+   ]
+  }
+ }
+}

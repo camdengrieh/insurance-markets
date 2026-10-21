@@ -1,8 +1,9 @@
 // The only tools the trade screens can ask the daemon to run, and the page-side schema of each answer.
 //
 // THE LIST IS CLOSED AND HAS NO SEND IN IT. TradeTool names two read-class plugin tools (xo_account, xo_list_orders)
-// and five prepare-class ones (xo_prepare_order, xo_deploy_enable_trading, xo_revoke_trading, xo_redeem,
-// xo_fund_account). The client accepts only that type, every prepare-class builder below sets `step: "prepare"`, and
+// and six prepare-class ones (xo_prepare_order, xo_deploy_enable_trading, xo_revoke_trading, xo_redeem,
+// xo_fund_account, and clob_order for the Polymarket and Limitless venues). The client accepts only that type, every
+// prepare-class builder below sets `step: "prepare"` where the tool takes a step, and
 // there is no builder for a submit step, a cancel, a signature or an arm: submitting is the agent's act, through an
 // agent token with the submit scope and an open ARM window, and the daemon refuses a page (ui) token for it. A test
 // compares this list with the daemon's class table (bridge/tool-classes.ts) so a class change is a failing test.
@@ -18,7 +19,7 @@ import { untrustedField } from "../../core/untrusted";
 import type { Untrusted } from "../../core/ports";
 
 export const TRADE_READ_TOOLS = ["xo_account", "xo_list_orders"] as const;
-export const TRADE_PREPARE_TOOLS = ["xo_prepare_order", "xo_deploy_enable_trading", "xo_revoke_trading", "xo_redeem", "xo_fund_account"] as const;
+export const TRADE_PREPARE_TOOLS = ["xo_prepare_order", "xo_deploy_enable_trading", "xo_revoke_trading", "xo_redeem", "xo_fund_account", "clob_order"] as const;
 export const TRADE_TOOLS = [...TRADE_READ_TOOLS, ...TRADE_PREPARE_TOOLS] as const;
 export type TradeTool = (typeof TRADE_TOOLS)[number];
 export type TradePrepareTool = (typeof TRADE_PREPARE_TOOLS)[number];
@@ -82,6 +83,36 @@ export function redeemArgs(owner: string, conditionIds: readonly string[]): Tool
 
 export function fundArgs(owner: string, amountUsd: string): ToolArgs {
   return { owner, amount_usd: amountUsd };
+}
+
+export interface ClobOrderArgsInput {
+  readonly owner: string;
+  readonly venue: "polymarket" | "limitless";
+  readonly marketId: string;
+  readonly tokenId: string;
+  readonly side: "BUY" | "SELL";
+  readonly price: string;
+  readonly shares: string;
+  readonly tif: "GTC" | "GTD" | "FOK" | "FAK";
+  readonly ttlS: number | null;
+  readonly postOnly: boolean;
+}
+
+// The venue order's prepare step. The maker is the owner itself; no account is sent.
+export function clobOrderArgs(input: ClobOrderArgsInput): ToolArgs {
+  return {
+    step: "prepare",
+    venue: input.venue,
+    owner: input.owner,
+    market_id: input.marketId,
+    token_id: input.tokenId,
+    side: input.side,
+    price: input.price,
+    shares: input.shares,
+    tif: input.tif,
+    ...(input.ttlS === null ? {} : { ttl_s: input.ttlS }),
+    ...(input.postOnly ? { post_only: true } : {}),
+  };
 }
 
 // ---- building blocks ---------------------------------------------------------------------------------------------------

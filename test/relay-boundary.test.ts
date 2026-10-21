@@ -30,6 +30,9 @@ const forbidden = (specifier: string): boolean => {
 const ALLOWED_NODE_IMPORTS: Readonly<Record<string, readonly string[]>> = {
   // L2 request signing is HMAC-SHA256; node:crypto is how Node does it and it touches no I/O.
   "src/xo/signing/hmac.ts": ["node:crypto"],
+  // The CLOB venue request signers (relay/clob.ts): the same HMAC-SHA256, no I/O. Never reachable from the page.
+  "src/clob/polymarket/l2.ts": ["node:crypto"],
+  "src/clob/limitless/hmac.ts": ["node:crypto"],
 };
 
 // Portable by contract: no node: import, no Node-only global.

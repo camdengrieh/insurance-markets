@@ -40,6 +40,28 @@
   align-self: center;
 }
 
+/* The category chip row under the view chips: the same chips, one line that scrolls sideways on a phone (the page
+   never scrolls sideways and the table never wraps for it). Reduced motion: nothing here animates. */
+.explorer-category-chips {
+  margin-block: 0 0.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 719px) {
+  .explorer-category-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-block: 2px;
+    scrollbar-width: thin;
+  }
+
+  .explorer-category-chips .ui-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 .explorer-filters {
   display: flex;
   flex-wrap: wrap;
@@ -166,6 +188,20 @@
   min-width: 14rem;
 }
 
+/* The category column is narrow: the label only, never wrapped. */
+.explorer-table [data-col="category"] {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.explorer-category {
+  font-size: 0.8125rem;
+}
+
+.explorer-category-line {
+  overflow-wrap: anywhere;
+}
+
 .explorer-prices {
   list-style: none;
   margin: 0;
@@ -233,36 +269,46 @@
     grid-row: 2;
   }
 
+  .explorer-table .ui-table[data-cards="true"] [data-col="category"] {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: auto;
+    white-space: normal;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
   .explorer-table .ui-table[data-cards="true"] [data-col="price"] {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 4;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="spread"] {
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 4;
     text-align: end;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="depth"] {
     grid-column: 1 / -1;
-    grid-row: 4;
+    grid-row: 5;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="marks"] {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: 6;
     align-self: center;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="inspect"] {
     grid-column: 2;
-    grid-row: 5;
+    grid-row: 6;
     justify-self: end;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="venue"]::before,
   .explorer-table .ui-table[data-cards="true"] [data-col="title"]::before,
+  .explorer-table .ui-table[data-cards="true"] [data-col="category"]::before,
   .explorer-table .ui-table[data-cards="true"] [data-col="closes"]::before,
   .explorer-table .ui-table[data-cards="true"] [data-col="marks"]::before,
   .explorer-table .ui-table[data-cards="true"] [data-col="inspect"]::before {

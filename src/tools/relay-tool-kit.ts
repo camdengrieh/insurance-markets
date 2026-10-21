@@ -886,7 +886,7 @@ export const signWithPayboxSchema = payboxIntentSchema.describe(
 // leaves the signing block, the decoded block and the order quote as objects.
 export const preparedOutputSchema = z.looseObject({
   prepared_id: z.string(),
-  kind: z.enum(["userop", "order", "auth", "create"]),
+  kind: z.enum(["userop", "order", "auth", "create", "clob_order", "clob_auth"]),
   owner: z.string(),
   account: z.string(),
   expires_at: z.string(),

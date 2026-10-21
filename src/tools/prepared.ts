@@ -87,11 +87,14 @@ const SUBMIT_FOR: Readonly<Record<PreparedKind, { readonly call: string; readonl
   create: { call: "xo_submit_create_market", flags: ["XO_ENABLE_CREATE", "ENABLE_USEROP_SUBMIT"] },
   order: { call: "xo_submit_order", flags: ["ENABLE_TRADING"] },
   auth: { call: 'xo_connect with step "submit"', flags: ["ENABLE_TRADING"] },
+  // The CLOB venues (src/tools/clob.ts): the venue's own flag is checked by the tool from the item's venue.
+  clob_order: { call: 'clob_order with step "submit"', flags: ["ENABLE_CLOB_POLYMARKET", "ENABLE_CLOB_LIMITLESS"] },
+  clob_auth: { call: 'clob_auth with step "submit"', flags: ["ENABLE_CLOB_POLYMARKET"] },
 });
 
 function schemaFor(item: unknown) {
   if (typeof item === "object" && item !== null) {
-    if ("quote" in item) return POST_ROUTES["/v1/order/prepare"].response;
+    if ("quote" in item) return (item as { readonly kind?: unknown }).kind === "clob_order" ? POST_ROUTES["/v1/clob/order/prepare"].response : POST_ROUTES["/v1/order/prepare"].response;
     if ("user_op_hash" in item) return POST_ROUTES["/v1/userop/prepare"].response;
   }
   return POST_ROUTES["/v1/auth/prepare"].response;
@@ -137,7 +140,8 @@ export async function handleGetPrepared(input: GetPreparedInput, deps: RelayTool
     // The owner is whatever the item says; the account must be the one derived from it, like everywhere else.
     const parsedIdentity = parseIdentity(item.owner);
     if (!parsedIdentity.ok) return refusalResult(deps, base, parsedIdentity.refusal);
-    const identity = parsedIdentity.value;
+    // A CLOB venue item's maker is the owner itself: no derived account (src/clob/decoded.ts).
+    const identity = item.kind === "clob_order" || item.kind === "clob_auth" ? { ...parsedIdentity.value, account: parsedIdentity.value.owner } : parsedIdentity.value;
     const ctx: ToolContext = { ...base, owner: identity.owner, account: identity.account };
     const vetted = vetPrepared(deps, identity, item, PREPARED_KINDS);
     if (!vetted.ok) return refusalResult(deps, ctx, vetted.refusal);

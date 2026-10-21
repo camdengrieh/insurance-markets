@@ -41,6 +41,9 @@ export function summary(venue: VenueId, marketId: string, options: Partial<Omit<
     outcomes: options.outcomes ?? outcomes,
     volume: options.volume ?? { amount: "1234.5", unit: "usd", windowHours: 24 },
     prov: options.prov ?? prov,
+    // The category verdict and the venue's own words are optional on a row: absent unless a test gives them.
+    ...(options.category === undefined ? {} : { category: options.category }),
+    ...(options.categoryNative === undefined ? {} : { categoryNative: options.categoryNative }),
   };
 }
 

@@ -63,10 +63,12 @@ describe("the market modal", () => {
     expect(allText(root)).toContain("A gap between two venues is not an arbitrage");
     expect(allText(must(root, "[data-why-not-arbitrage='market']"))).toContain("Why this is not arbitrage");
     expect(allText(root)).toContain("open (metadata only, not a quote)");
-    // The provenance line and the worksheet footer for a venue this build does not prepare on.
+    // The provenance line, and the ticket footer: a Polymarket order is prepared through the Cockpit, so the standalone
+    // build shows the caution tile and no worksheet.
     expect(allText(must(root, ".ui-provenance"))).toContain("Polymarket");
-    expect(must(root, "[data-ticket='worksheet']")).toBeTruthy();
-    expect(allText(root)).toContain("This build prepares orders on XO only");
+    expect(root.querySelector("[data-ticket='worksheet']")).toBeNull();
+    expect(allText(root)).toContain("Prepare order: needs the Cockpit");
+    expect(allText(root)).not.toContain("Trade on Polymarket");
     expect(root.querySelectorAll("a[href^='http']")).toHaveLength(0);
   });
 

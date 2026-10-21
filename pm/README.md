@@ -37,6 +37,7 @@ There are no pm-specific dependencies; use Node 24 built-ins plus the root `viem
 | `pm/ops/` | pm-ops | Rate limits, caching (memory-only for restricted data), staleness, health, feature flags |
 | `pm/signals/` | pm-signals | Quotient request/parse helpers and alert/signal layer (no network) |
 | `pm/recorder/` | pm-recorder | Optional local recorder of unrestricted public data (`node:sqlite`); tested against fixtures and a local fake server only |
+| `pm/linker/` | pm-linker | Scheduled link proposer: discovers open markets on the allowlisted venues, scores same-question pairs, writes `candidate` links through `store.proposeLink` (never approves); see `docs/linker-runbook.md` |
 | `pm/tools/` | pm-tools | MCP tool surface; exports `registerPmTools(server)` from `pm/tools/index.ts` (wiring into `src/plugin.ts` is a later step) |
 | `pm/test/` | everyone | Tests for pm-wide code; each subfolder may also keep tests under `pm/<sub>/test/` or in `pm/test/<sub>/` |
 

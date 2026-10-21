@@ -12,20 +12,20 @@ import { TRADE_TOOLS } from "./tools";
 // literals that name a tool or a path, calls and JSX attributes. The agent sends; this page prepares and reads.
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TEST_ONLY = new Set(["test-support.tsx"]);
+const TEST_ONLY = new Set(["test-support.tsx", "clob-test-support.ts"]);
 
 // The only file that may NAME a tool that sends. It builds fixed text for a person to give an agent; it calls nothing.
 const TEXT_ONLY_FILE = "handoff.ts";
 const SENDING_TOOLS = new Set(["xo_submit_userop", "xo_submit_order", "xo_cancel_order", "xo_withdraw", "xo_get_prepared"]);
-const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "xo/signing/amounts", "xo/signing/constants", "xo/signing/errors", "xo/signing/lines", "xo/chain/constants", "xo/funding/calldata", "guardrails/amount", "guardrails/untrusted"]);
+const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "xo/signing/amounts", "xo/signing/constants", "xo/signing/errors", "xo/signing/lines", "xo/chain/constants", "xo/funding/calldata", "guardrails/amount", "guardrails/untrusted", "clob/amounts", "clob/venues"]);
 const FORBIDDEN_IDENTIFIER = /submit|signature|signTyped|signMessage|sendTransaction|sendRawTransaction|writeContract|privateKey|mnemonic|secret/i;
 // Names that are about display or the daemon's own states, not an action.
-const ALLOWED_IDENTIFIERS = new Set(["SUBMIT_USEROP_TOOL", "SUBMIT_ORDER_TOOL", "submitToolFor", "ENABLE_USEROP_SUBMIT", "submitted"]);
+const ALLOWED_IDENTIFIERS = new Set(["SUBMIT_USEROP_TOOL", "SUBMIT_ORDER_TOOL", "SUBMIT_CLOB_ORDER_CALL", "submitToolFor", "ENABLE_USEROP_SUBMIT", "submitted"]);
 const NETWORK_GLOBALS = new Set(["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "postMessage", "BroadcastChannel", "Worker", "SharedWorker", "importScripts", "open"]);
 const PAGE_INPUT_GLOBALS = new Set(["location", "localStorage", "sessionStorage", "indexedDB", "history", "document", "window", "navigator", "URLSearchParams"]);
 const FORBIDDEN_JSX_ATTRIBUTES = new Set(["href", "src", "srcDoc", "style", "dangerouslySetInnerHTML", "action", "formAction", "ping", "target"]);
 // Route-table keys that pick a SCHEMA to read an answer with, and the screen's own route. None is sent anywhere.
-const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = { "vet.ts": ["/v1/userop/prepare", "/v1/order/prepare"] };
+const SCHEMA_KEYS: Readonly<Record<string, readonly string[]>> = { "vet.ts": ["/v1/userop/prepare", "/v1/order/prepare", "/v1/clob/order/prepare"] };
 const FILES_WITH_RAW_FETCH = new Set(["client.ts", "services.tsx"]);
 
 interface Finding {
@@ -41,7 +41,7 @@ export function scanSource(file: string, text: string): Finding[] {
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const specifier = node.moduleSpecifier.text;
-      if (/(?:^|\/)test-support$/.test(specifier)) add("test-helper-import", specifier);
+      if (/(?:^|\/)(?:clob-)?test-support$/.test(specifier)) add("test-helper-import", specifier);
       if (specifier.startsWith("@shared/") && !ALLOWED_SHARED.has(specifier.slice("@shared/".length))) add("shared-import", specifier);
       if (specifier.startsWith("@bridge/") && specifier !== "@bridge/contract") add("bridge-import", specifier);
       if (/^node:|^(?:fs|path|child_process|http|https|net|crypto)$/.test(specifier)) add("node-import", specifier);

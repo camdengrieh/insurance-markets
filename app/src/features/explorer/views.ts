@@ -5,7 +5,7 @@
 //   all       every loaded row;
 //   held      rows whose market one of the watched addresses holds (a position read keyed by the address, joined on
 //             the venue and the outcome token id: never on title text);
-//   linked    rows that an approved link dataset names as a leg (candidates, never proof; none while no dataset is
+//   linked    rows that the link dataset names as a leg, approved or proposed by the linker (candidates, never proof; none while no dataset is
 //             bundled);
 //   signals   rows on a venue Quotient covers (Polymarket, Polymarket US, Kalshi, Hyperliquid outcomes: docs 4.7).
 //             XO and Trueo are not covered and get a Q number only through an approved link.

@@ -15,8 +15,9 @@ import type { Untrusted } from "../../core/ports";
 import { isDaemonError, type TradeClient } from "./client";
 import type { DaemonErrorCode } from "../terminal/client";
 import { vetFundingProposal, PROPOSAL_KEY, type FundingFailure, type FundingIntent } from "./funding";
-import { deployArgs, fundArgs, orderArgs, preparedAnswerSchema, redeemArgs, refusalAnswerSchema, revokeArgs, untrustedText, type TradePrepareTool, type ToolArgs } from "./tools";
+import { clobOrderArgs, deployArgs, fundArgs, orderArgs, preparedAnswerSchema, redeemArgs, refusalAnswerSchema, revokeArgs, untrustedText, type TradePrepareTool, type ToolArgs } from "./tools";
 import { vetPrepared, type Expected, type VetFailure, type VettedItem } from "./vet";
+import type { ClobTicket } from "./clob-ticket";
 import type { Ticket } from "./ticket";
 
 export type PrepareResult =
@@ -107,6 +108,18 @@ export function prepareOrder(deps: PrepareDeps, input: { readonly owner: string;
     "xo_prepare_order",
     orderArgs({ owner: input.owner, tokenId: ticket.tokenId, side: ticket.side, price: ticket.price, shares: ticket.shares, tif: ticket.tif, ttlS: ticket.ttlS, postOnly: ticket.postOnly }),
     { kind: "order", owner: input.owner, ticket },
+    signal,
+  );
+}
+
+// A Polymarket or Limitless order (the clob_order tool, step prepare). The maker is the owner wallet itself.
+export function prepareClobOrder(deps: PrepareDeps, input: { readonly owner: string; readonly ticket: ClobTicket }, signal?: AbortSignal): Promise<PrepareResult> {
+  const { ticket } = input;
+  return prepareItem(
+    deps,
+    "clob_order",
+    clobOrderArgs({ owner: input.owner, venue: ticket.venue, marketId: ticket.marketId, tokenId: ticket.tokenId, side: ticket.side, price: ticket.price, shares: ticket.shares, tif: ticket.tif, ttlS: ticket.ttlS, postOnly: ticket.postOnly }),
+    { kind: "clob_order", owner: input.owner, ticket },
     signal,
   );
 }

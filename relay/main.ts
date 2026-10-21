@@ -29,6 +29,7 @@ import { startRelayServer, type RunningServer } from "./server.js";
 import { openRelayStorage, type FsLike, type RelayStorage } from "./store.js";
 import type { KdfParams } from "./crypto.js";
 import type { AccountDirectory } from "./health.js";
+import { CLOB_UPSTREAM_HOSTS } from "./clob.js";
 import { createUpstream, XO_UPSTREAM_HOSTS, type AllowedHost, type Upstream } from "./upstream.js";
 import type { RelayContext, RelayServices, RouteTable } from "./types.js";
 import { healAtStart, prepareWiring, runUpkeep, type Wiring } from "./wiring.js";
@@ -175,7 +176,8 @@ export async function assembleCore(options: AssembleOptions): Promise<AssembledC
     const prepared = new PreparedStore({ store: storage.state, now, audit });
 
     // The allowlist: the XO hosts, a configured Base RPC and a declared self-host, nothing else.
-    const hosts: AllowedHost[] = [...XO_UPSTREAM_HOSTS, ...(options.extraUpstreamHosts ?? [])];
+    // XO's hosts, the two CLOB venues' (relay/clob.ts) and whatever the caller adds (a Base RPC, a self-host).
+    const hosts: AllowedHost[] = [...XO_UPSTREAM_HOSTS, ...CLOB_UPSTREAM_HOSTS, ...(options.extraUpstreamHosts ?? [])];
     if (config.baseRpcUrl !== undefined) hosts.push({ host: new URL(config.baseRpcUrl.reveal()).hostname.toLowerCase(), methods: ["GET", "POST"] });
     if (config.selfHostUrl !== undefined) {
       const url = new URL(config.selfHostUrl);

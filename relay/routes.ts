@@ -1,4 +1,5 @@
 import { CONTRACT_ROUTE_KEYS, type RouteKey } from "../src/relay/contract.js";
+import { routes as clobRoutes } from "./clob.js";
 import { routes as creationRoutes } from "./creation.js";
 import { routes as credentialsRoutes } from "./credentials.js";
 import { routes as fundingRoutes } from "./funding.js";
@@ -15,6 +16,7 @@ import { routes as useropsRoutes } from "./userops.js";
 //   userops.ts      relay-trading   POST /v1/userop/{prepare,submit}, GET /v1/userop/:hash
 //   funding.ts      funding         POST /v1/funding/{check,report}
 //   creation.ts     creation        POST /v1/creation/track
+//   clob.ts         relay-trading   POST /v1/clob/{order,auth}/{prepare,submit} (Polymarket, Limitless)
 // A route in two tables is a bug, so merging throws.
 
 const KNOWN: ReadonlySet<string> = new Set(CONTRACT_ROUTE_KEYS);
@@ -42,6 +44,7 @@ export const routes: RouteTable = mergeRoutes(
   useropsRoutes,
   fundingRoutes,
   creationRoutes,
+  clobRoutes,
 );
 
 // Contract routes with no handler yet. The server answers these with not_implemented.

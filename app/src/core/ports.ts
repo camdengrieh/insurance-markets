@@ -12,6 +12,8 @@
 //   - every string a market creator or an upstream service can influence is `Untrusted<string>`;
 //   - a capability a venue lacks is NOT_SUPPORTED, never an invented value; an unknown enum fails closed.
 
+import type { CategoryVerdict } from "./category";
+
 export type Dec = string;
 
 // ---- venues and trust ------------------------------------------------------------------------------------------
@@ -206,6 +208,10 @@ export interface Market {
     readonly adapterVersion: string;
     readonly schemaHash: string;
   };
+  // The fixed-taxonomy verdict (core/category.ts). Absent when the adapter did not run it; read as "other", "none".
+  readonly category?: CategoryVerdict;
+  // The venue's own category words, untrusted; shown only through UntrustedText, never matched or echoed elsewhere.
+  readonly categoryNative?: Untrusted<string>;
 }
 
 // What a list row carries: enough to render the Markets table without a detail fetch. aggregation-design
@@ -230,6 +236,9 @@ export interface MarketSummary {
   // Null when the venue reports none; the unit is always stated, never assumed.
   readonly volume: { readonly amount: Dec | null; readonly unit: VolumeUnit; readonly windowHours: number | null };
   readonly prov: Prov;
+  // As on Market: the fixed-taxonomy verdict and the venue's own category words (untrusted, display only).
+  readonly category?: CategoryVerdict;
+  readonly categoryNative?: Untrusted<string>;
 }
 
 // ---- books (aggregation-design 2.1 and 2.2) --------------------------------------------------------------------------------

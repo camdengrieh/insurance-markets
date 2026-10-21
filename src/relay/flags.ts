@@ -20,6 +20,9 @@ export const FLAG_NAMES = [
   "ENABLE_WITHDRAW",
   "XO_ENABLE_CREATE",
   "ENABLE_SELF_HOSTED_METADATA",
+  // The two CLOB venues besides XO (relay/clob.ts): preparing and sending orders, and minting credentials.
+  "ENABLE_CLOB_POLYMARKET",
+  "ENABLE_CLOB_LIMITLESS",
   "KILL",
 ] as const;
 
@@ -40,6 +43,8 @@ export const ALL_FLAGS_OFF: Flags = Object.freeze({
   ENABLE_WITHDRAW: false,
   XO_ENABLE_CREATE: false,
   ENABLE_SELF_HOSTED_METADATA: false,
+  ENABLE_CLOB_POLYMARKET: false,
+  ENABLE_CLOB_LIMITLESS: false,
   KILL: false,
 });
 

@@ -238,7 +238,7 @@ describe("the capability facts CLI", () => {
     assert.match(await flagsOf(), /kill switch/i, "the listing says the kill switch overrides everything");
     assert.deepEqual(
       flagStatus([]).map((status) => status.flag).sort(),
-      ["ENABLE_FUNDING", "ENABLE_SELF_HOSTED_METADATA", "ENABLE_TRADING", "ENABLE_USEROP_SUBMIT", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE"],
+      ["ENABLE_CLOB_LIMITLESS", "ENABLE_CLOB_POLYMARKET", "ENABLE_FUNDING", "ENABLE_SELF_HOSTED_METADATA", "ENABLE_TRADING", "ENABLE_USEROP_SUBMIT", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE"],
     );
   });
 });

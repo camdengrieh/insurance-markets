@@ -215,7 +215,7 @@ export function PreparedPreview({
   const now = useNow(1000);
   const leftMs = item.expiresAtMs - now;
   const expired = leftMs <= 0;
-  const late = !expired && leftMs < (item.kind === "order" ? 90_000 : 30_000);
+  const late = !expired && leftMs < (item.kind === "order" || item.kind === "clob_order" ? 90_000 : 30_000);
   const canHandOff = gate.canHandOff && !dryRun && !expired && !late && item.signWindowOk;
   return (
     <Tile tone={dryRun ? "warn" : "info"} title={dryRun ? "Dry run: do not sign" : "Prepared, not signed"} dataKind="prepared" dataCode={item.preparedId} heading="h3" role="status">
@@ -223,7 +223,7 @@ export function PreparedPreview({
         rows={[
           { label: "Action", value: item.actionTitle },
           { label: "Owner address", value: <Mono>{item.owner}</Mono> },
-          { label: "XO account (derived here from the owner)", value: <Mono>{item.account}</Mono> },
+          { label: item.kind === "clob_order" ? "Maker (the owner wallet itself; no derived account)" : "XO account (derived here from the owner)", value: <Mono>{item.account}</Mono> },
           { label: "Prepared id", value: <Mono>{item.preparedId}</Mono> },
           { label: "Valid until", value: `${formatUtc(item.expiresAtMs)} (${expired ? "expired" : `${formatCountdown(leftMs)} left`})` },
           { label: "Counts against today's cap", value: `${item.reservedUsd} USD (${item.dayRemainingUsd} USD left; the caps are advisory)` },
@@ -310,8 +310,9 @@ export function OrderTerms({ order }: { readonly order: NonNullable<VettedItem["
       rows={[
         { label: "Side and size", value: `${order.side} ${order.shares} shares at ${order.price} per share` },
         { label: "Outcome token", value: <Mono>{order.tokenId}</Mono> },
-        { label: "Type", value: `${order.tif}${order.postOnly ? ", post-only" : ""}, valid ${order.ttlS} s` },
-        { label: "Order expires", value: order.expiresAt },
+        { label: "Type", value: `${order.tif}${order.postOnly ? ", post-only" : ""}${order.ttlS === null ? "" : `, valid ${order.ttlS} s`}` },
+        { label: "Order expires", value: order.expiresAt ?? (order.venue === "xo" ? "unknown" : "no expiry is signed: it rests until cancelled through the venue") },
+        ...(order.venue === "xo" ? [] : [{ label: "Venue and exchange", value: <Mono>{`${order.venue} ${order.exchange}`}</Mono> }]),
         {
           label: order.maxOutlayUsd === null ? "Cash out" : "Worst-case cash out (fee bound included)",
           value: order.maxOutlayUsd === null ? "none: a SELL moves no cash out" : `${order.maxOutlayUsd} USD, principal ${order.principalUsd} USD, a ceiling and not a fee quote`,

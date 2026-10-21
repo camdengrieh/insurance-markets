@@ -44,7 +44,7 @@ describe("the list", () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { title: "Will it rain", prices: ["0.6", "0.4"] }), summary("xo", "m2", { title: "Second" })]], feeNote: "ceiling, unreconciled" });
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one", volume: { amount: "980.25", unit: "unknown", windowHours: 24 } })]] });
     const { container } = await mount(<MarketsView />, fakeServices([xo, pm]));
-    expect(headers(container)).toEqual(["Venue", "Market", "Yes bid / ask", "Spread", "Depth within 5c", "Closes (UTC)", "Marks", "Inspect"]);
+    expect(headers(container)).toEqual(["Venue", "Market", "Category", "Yes bid / ask", "Spread", "Depth within 5c", "Closes (UTC)", "Marks", "Inspect"]);
     const rows = rowsOf(container);
     expect(rows).toHaveLength(3);
     const first = allText(rows[0] as Element);
@@ -617,10 +617,10 @@ describe("the inspector", () => {
     expect(allText(aside)).toContain("No approved link.");
     expect(must(aside, "[data-quotient]").getAttribute("data-quotient")).toBe("off");
     expect(allText(aside)).toContain("licence first");
-    // Actions: open, prepare (XO only in this build), watch.
+    // Actions: open, prepare (a Polymarket row has a ticket, but only the Cockpit build can prepare), watch.
     expect(buttonWith(aside, /^Open market$/).disabled).toBe(false);
     expect(buttonWith(aside, /Prepare order/).disabled).toBe(true);
-    expect(buttonWith(aside, /Prepare order/).textContent).toBe("Prepare order: XO only in this build");
+    expect(buttonWith(aside, /Prepare order/).textContent).toBe("Prepare order: needs the Cockpit");
   });
 
   it("Watch marks the row in memory and sends nothing", async () => {

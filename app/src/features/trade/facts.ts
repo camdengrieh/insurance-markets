@@ -17,10 +17,10 @@
 
 import { CAPABILITY_IDS, isProven, type CapabilityFacts, type CapabilityId, type FactState } from "../../core/capabilities";
 
-export const TRADE_ACTIONS = ["deploy", "revoke", "redeem", "order", "fund", "withdraw"] as const;
+export const TRADE_ACTIONS = ["deploy", "revoke", "redeem", "order", "fund", "withdraw", "polymarket_order", "limitless_order"] as const;
 export type TradeAction = (typeof TRADE_ACTIONS)[number];
 
-export const WRITE_FLAGS = ["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW"] as const;
+export const WRITE_FLAGS = ["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW", "ENABLE_CLOB_POLYMARKET", "ENABLE_CLOB_LIMITLESS"] as const;
 export type WriteFlag = (typeof WRITE_FLAGS)[number];
 
 export interface ActionNeeds {
@@ -83,6 +83,24 @@ export const ACTION_NEEDS: Readonly<Record<TradeAction, ActionNeeds>> = Object.f
     informs: [],
     reservesBudget: false,
   },
+  // The CLOB venues besides XO: an EOA order the wallet itself signs. The venue's login (or token) and a first
+  // accepted order are the live tests; until they are recorded nothing is handed to an agent.
+  polymarket_order: {
+    title: "Place a Polymarket order",
+    flag: "ENABLE_CLOB_POLYMARKET",
+    requires: ["polymarket_login_accepted", "polymarket_first_order_accepted"],
+    requiresAny: ["paybox_signs_typed_data_137", "paybox_signs_raw_digest"],
+    informs: ["paybox_shows_decoded_typed_data"],
+    reservesBudget: true,
+  },
+  limitless_order: {
+    title: "Place a Limitless order",
+    flag: "ENABLE_CLOB_LIMITLESS",
+    requires: ["limitless_token_accepted", "limitless_first_order_accepted"],
+    requiresAny: ["paybox_signs_typed_data_8453", "paybox_signs_raw_digest"],
+    informs: ["paybox_shows_decoded_typed_data"],
+    reservesBudget: true,
+  },
 });
 
 // Plain words for every capability the trade screens name.
@@ -100,6 +118,12 @@ export const FACT_LABELS: Readonly<Record<CapabilityId, string>> = Object.freeze
   withdraw_exit_proven: "A way out of XO was proven (T4)",
   redeem_proven: "A redeem was proven (T5)",
   capped_allowance_and_revoke_proven: "A capped allowance and a revoke were proven (T8)",
+  polymarket_login_accepted: "Polymarket accepted the wallet's login (PM1)",
+  polymarket_first_order_accepted: "A first Polymarket order was accepted and cancelled (PM2)",
+  limitless_token_accepted: "Limitless accepted the stored token on a signed read (LM1)",
+  limitless_first_order_accepted: "A first Limitless order was accepted and cancelled (LM2)",
+  paybox_signs_typed_data_137: "PayBox signs typed data for chain 137 (PB3)",
+  paybox_signs_typed_data_8453: "PayBox signs typed data for chain 8453 (PB4)",
 });
 
 // The relay's capability record uses its own ids (docs/phase1-gap-closing.md); these are the ones that mean the
@@ -114,6 +138,12 @@ export const RELAY_FACT_TO_PAGE: Readonly<Record<string, readonly CapabilityId[]
   T8: ["capped_allowance_and_revoke_proven"],
   PB1: ["paybox_signs_raw_digest"],
   PB2: ["paybox_signs_typed_data_3223"],
+  PB3: ["paybox_signs_typed_data_137"],
+  PB4: ["paybox_signs_typed_data_8453"],
+  PM1: ["polymarket_login_accepted"],
+  PM2: ["polymarket_first_order_accepted"],
+  LM1: ["limitless_token_accepted"],
+  LM2: ["limitless_first_order_accepted"],
 });
 
 // The page's own record and the relay's, as one record. A fact is "yes" only when at least one source says yes and

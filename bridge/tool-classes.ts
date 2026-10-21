@@ -105,6 +105,9 @@ export const TOOL_CLASS_TABLE: Readonly<Record<string, ToolRule>> = Object.freez
   xo_respond_update: stepped,
   xo_cancel_market: stepped,
   xo_place_seed: stepped,
+  // The CLOB venues besides XO (src/tools/clob.ts): prepare builds the venue order or login, submit sends it.
+  clob_order: stepped,
+  clob_auth: stepped,
 });
 
 export const TOOL_NAMES: readonly string[] = Object.freeze(Object.keys(TOOL_CLASS_TABLE));

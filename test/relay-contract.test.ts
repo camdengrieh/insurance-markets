@@ -147,8 +147,8 @@ describe("contract: Prepared", () => {
   });
 
   it("pins the kinds and digest forms", () => {
-    assert.deepEqual([...PREPARED_KINDS], ["userop", "order", "auth", "create"]);
-    assert.deepEqual([...DIGEST_FORMS], ["userOpHash", "kernelWrappedOrderHash", "kernelWrappedClobAuth"]);
+    assert.deepEqual([...PREPARED_KINDS], ["userop", "order", "auth", "create", "clob_order", "clob_auth"]);
+    assert.deepEqual([...DIGEST_FORMS], ["userOpHash", "kernelWrappedOrderHash", "kernelWrappedClobAuth", "eip712OrderHash", "eip712ClobAuth"]);
   });
 
   it("derives digest_tag as the first 16 hex digits, lower case, no 0x", () => {
@@ -299,6 +299,10 @@ describe("contract: routes", () => {
         "/v1/account/status",
         "/v1/auth/prepare",
         "/v1/auth/submit",
+        "/v1/clob/auth/prepare",
+        "/v1/clob/auth/submit",
+        "/v1/clob/order/prepare",
+        "/v1/clob/order/submit",
         "/v1/creation/track",
         "/v1/funding/check",
         "/v1/funding/report",
@@ -341,6 +345,13 @@ describe("contract: routes", () => {
     "/v1/funding/check": [{ owner: OWNER, amount: "1" }, { owner: OWNER, amount: "0.5" }],
     "/v1/funding/report": [{ owner: OWNER, funding_id: ID, tx_hash: h("dd") }],
     "/v1/creation/track": [{ condition_id: h("aa") }],
+    "/v1/clob/order/prepare": [
+      { owner: OWNER, venue: "polymarket", market_id: h("aa"), token_id: "123456789", side: "BUY", price: "0.52", shares: "10", tif: "GTD", ttl_s: 300 },
+      { owner: OWNER, account: OWNER, venue: "limitless", market_id: "btc-100k-1792411200000", token_id: "1", side: "SELL", price: "0.525", shares: "5.5", tif: "GTC", post_only: true },
+    ],
+    "/v1/clob/order/submit": [{ prepared_id: ID, signature: `0x${"33".repeat(65)}` }],
+    "/v1/clob/auth/prepare": [{ owner: OWNER, venue: "polymarket" }, { owner: OWNER, venue: "limitless" }],
+    "/v1/clob/auth/submit": [{ prepared_id: ID, signature: { r: h("11"), s: h("22"), recovery_id: 0 } }],
   };
 
   const responses: Record<PostPath, readonly unknown[]> = {
@@ -378,6 +389,15 @@ describe("contract: routes", () => {
       { permitted: false, account: ACCOUNT, state: "undeployed", reserved_usd: "0", funding_id: null, expires_at: null, funding_remaining_usd: "10", reasons: [{ code: "not_deployed", message: "Deploy first." }] },
     ],
     "/v1/funding/report": [{ funding_id: ID, state: "dispatched", message_id: h("ff") }],
+    "/v1/clob/order/prepare": [
+      {
+        ...orderPrepared({ kind: "clob_order", sign: { intent: { op: "raw", rawSigningPayloadHex: WRAPPED }, expected_digest: WRAPPED, digest_form: "eip712OrderHash" } }),
+        quote: { venue: "polymarket", price: "0.52", shares: "10", max_outlay_usd: "5.72", fee_bound_bps: 1000, expires_at: null },
+      },
+    ],
+    "/v1/clob/order/submit": [{ venue: "polymarket", state: "accepted", order_hash: h("cc") }, { venue: "limitless", state: "ambiguous", order_hash: h("cc"), detail: "upstream_error_502" }],
+    "/v1/clob/auth/prepare": [orderPrepared({ kind: "clob_auth", sign: { intent: { op: "raw", rawSigningPayloadHex: WRAPPED }, expected_digest: WRAPPED, digest_form: "eip712ClobAuth" } })],
+    "/v1/clob/auth/submit": [{ venue: "polymarket", credentials: "stored", key_tag: "po1a2b3c4d" }],
     "/v1/creation/track": [
       {
         condition_id: h("aa"),

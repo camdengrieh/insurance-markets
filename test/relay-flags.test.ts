@@ -31,7 +31,7 @@ describe("flags: names and defaults", () => {
   it("pins the flag names of the plan", () => {
     assert.deepEqual(
       [...FLAG_NAMES],
-      ["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE", "ENABLE_SELF_HOSTED_METADATA", "KILL"],
+      ["ENABLE_USEROP_SUBMIT", "ENABLE_TRADING", "ENABLE_FUNDING", "ENABLE_WITHDRAW", "XO_ENABLE_CREATE", "ENABLE_SELF_HOSTED_METADATA", "ENABLE_CLOB_POLYMARKET", "ENABLE_CLOB_LIMITLESS", "KILL"],
     );
   });
 

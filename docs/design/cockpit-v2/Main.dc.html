@@ -67,7 +67,7 @@ Cockpit
 <p style="margin:0;color:#5b5952;max-width:48ch">Prices come only from order books. A venue this build cannot reach says so in words. Nothing here signs or sends on its own.</p>
 <dl style="margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
 <div style="display:flex;flex-direction:column;gap:2px;border-top:2px solid #1a1b1f;padding-top:8px"><dt style="font-size:12px;color:#5b5952">Held</dt><dd style="margin:0;font-family:'Martian Mono',monospace;font-size:18px">3 <span style="font-family:'Archivo',sans-serif;font-size:12px;color:#5b5952">example rows</span></dd></div>
-<div style="display:flex;flex-direction:column;gap:2px;border-top:2px solid #2443c8;padding-top:8px"><dt style="font-size:12px;color:#5b5952">Linked groups</dt><dd style="margin:0;font-family:'Martian Mono',monospace;font-size:18px">0 <span style="font-family:'Archivo',sans-serif;font-size:12px;color:#5b5952">none approved</span></dd></div>
+<div style="display:flex;flex-direction:column;gap:2px;border-top:2px solid #2443c8;padding-top:8px"><dt style="font-size:12px;color:#5b5952">Linked groups</dt><dd style="margin:0;font-family:'Martian Mono',monospace;font-size:18px">0 <span style="font-family:'Archivo',sans-serif;font-size:12px;color:#5b5952">approved</span> · 1 <span style="font-family:'Archivo',sans-serif;font-size:12px;color:#5b5952">proposed by the linker (example)</span></dd></div>
 <div style="display:flex;flex-direction:column;gap:2px;border-top:2px solid #b5401a;padding-top:8px"><dt style="font-size:12px;color:#5b5952">Quotient</dt><dd style="margin:0;font-family:'Martian Mono',monospace;font-size:18px">off <span style="font-family:'Archivo',sans-serif;font-size:12px;color:#5b5952">licence first</span></dd></div>
 </dl>
 </div>
@@ -89,19 +89,27 @@ Cockpit
 <span style="margin-left:auto;font-size:12px;color:#5b5952">{{statusLine}}</span>
 </div>
 
+<div role="group" aria-label="Category" style="display:flex;align-items:center;gap:6px;overflow-x:auto;padding:8px 24px;border-bottom:1.5px solid #c7c3b6;background:#e8e5db;scrollbar-width:thin">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<button type="button" class="ck-focus" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.label}} <span style="font-family:'Martian Mono',monospace;font-size:11px;opacity:.8">{{c.count}}</span></button>
+</sc-for>
+<span style="margin-left:auto;padding-left:16px;font-size:12px;color:#5b5952;white-space:nowrap">Category comes from the venue's own taxonomy, else from title keywords. Never a model's guess.</span>
+</div>
+
 <div style="display:flex;flex-wrap:wrap;flex:1 1 auto;min-height:0">
 
 <section aria-label="Markets" style="flex:999 1 620px;min-width:0;border-right:1.5px solid #c7c3b6">
 <div style="overflow-x:auto">
-<div style="min-width:760px">
-<div style="display:grid;grid-template-columns:72px minmax(0,1fr) 128px 76px 96px 112px 88px;gap:12px;align-items:center;padding:8px 20px;border-bottom:1.5px solid #1a1b1f;font-size:12px;font-weight:600;color:#5b5952">
-<span>Venue</span><span>Market</span><span>Yes bid / ask</span><span>Spread</span><span>Depth ±5¢</span><span>Closes</span><span>Marks</span>
+<div style="min-width:850px">
+<div style="display:grid;grid-template-columns:72px minmax(0,1fr) 96px 128px 76px 96px 112px 88px;gap:12px;align-items:center;padding:8px 20px;border-bottom:1.5px solid #1a1b1f;font-size:12px;font-weight:600;color:#5b5952">
+<span>Venue</span><span>Market</span><span>Category</span><span>Yes bid / ask</span><span>Spread</span><span>Depth ±5¢</span><span>Closes</span><span>Marks</span>
 </div>
 <sc-for list="{{rows}}" as="r" hint-placeholder-count="9">
 <div class="ck-row" style="{{r.rowStyle}}">
 <button type="button" class="ck-focus" onClick="{{r.pick}}" aria-label="{{r.aria}}" style="display:contents;font:inherit;color:inherit;background:none;border:0;text-align:left;cursor:pointer">
 <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="{{r.markStyle}}"></span>{{r.venue}}</span>
 <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#f3f1ea;padding:2px 6px;border-left:2px solid #c7c3b6">{{r.title}}</span>
+<span style="font-size:12px;color:#5b5952">{{r.catLabel}}</span>
 <span style="font-family:'Martian Mono',monospace;font-size:12.5px;color:{{r.priceColor}}">{{r.price}}</span>
 <span style="font-family:'Martian Mono',monospace;font-size:12.5px">{{r.spread}}</span>
 <span style="display:flex;align-items:center;gap:6px;font-family:'Martian Mono',monospace;font-size:12px"><svg width="40" height="10" aria-hidden="true" style="color:#2443c8"><rect width="{{r.depthW}}" height="10" fill="url(#d8)"/></svg>{{r.depth}}</span>
@@ -130,6 +138,7 @@ Cockpit
 </div>
 <h2 style="margin:8px 0 0;font-size:18px;line-height:1.2;font-weight:600;letter-spacing:-0.01em;background:#e8e5db;padding:6px 8px;border-left:2px solid #c7c3b6">{{sel.title}}</h2>
 <p style="margin:8px 0 0;font-size:12px;color:#5b5952">{{sel.sub}}</p>
+<p style="margin:6px 0 0;font-size:12px;color:#5b5952">Category: <strong style="font-weight:600;color:#1a1b1f">{{sel.catLabel}}</strong> · {{sel.catFrom}}</p>
 </div>
 
 <div style="padding:14px 20px;border-bottom:1.5px solid #c7c3b6">
@@ -167,8 +176,11 @@ Cockpit
 <span style="font-family:'Martian Mono',monospace;font-size:12px;color:{{g.color}}">{{g.px}}</span>
 </div>
 </sc-for>
+<sc-if value="{{sel.hasLegs}}" hint-placeholder-val="{{false}}">
+<p style="margin:8px 0 0;font-size:12px;color:#5b5952">Proposed by the linker, not approved. A person reviews it in the registry; no spread is drawn between candidates.</p>
+</sc-if>
 <sc-if value="{{sel.noLegs}}" hint-placeholder-val="{{false}}">
-<p style="margin:8px 0 0;font-size:12.5px;color:#5b5952">No approved link. A link exists only after a person approves it; until then no spread is shown and nothing is called an edge.</p>
+<p style="margin:8px 0 0;font-size:12.5px;color:#5b5952">No approved or proposed link. The linker runs every two hours across the venues and proposes candidates here; only a person can approve one, and until then no spread is shown and nothing is called an edge.</p>
 </sc-if>
 </div>
 
@@ -199,7 +211,7 @@ Cockpit
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { view: 'all', selected: 'pm-559651' };
+    this.state = { view: 'all', cat: 'all', selected: 'pm-559651' };
     this.raf = 0;
   }
   componentDidMount() {
@@ -261,7 +273,7 @@ class Component extends DCLogic {
       { id: 'xo-liv', venue: 'XO', title: 'Liverpool to win the 2026/27 Premier League', price: 'book via Cockpit', priceColor: '#8a5a00', spread: '—', depth: '—', depthW: 0, closes: '2027-05-24', held: true, linked: true, q: false, hasBook: false,
         sub: 'Open · volume $102,186.86 USDC.e · XO excludes US, UK, France, Singapore, Ontario (venue fact, dated 2026-10-20)', prov: 'xo · read proxy · 12 s',
         bids: [], asks: [], bookNote: '', noBookText: 'XO sends no CORS headers for its order book. The Cockpit daemon reads it on your machine; the standalone page cannot, so no price is shown rather than an empty book.',
-        legs: [{ venue: 'Polymarket', title: 'Premier League winner 2026-27 (event, 20 markets)', px: 'candidate', color: '#5b5952', markStyle: mark(accent) }], qNote: 'via link only', qText: 'XO is not covered. A Q number can reach this row only through an approved link to a covered twin, shown as "via link (proof, state)".' },
+        legs: [{ venue: 'Polymarket', title: 'Premier League winner 2026-27 (event, 20 markets)', px: 'proposed', color: '#8a5a00', markStyle: mark(accent) }], qNote: 'via link only', qText: 'XO is not covered. A Q number can reach this row only through an approved link to a covered twin, shown as "via link (proof, state)".' },
       { id: 'xo-atl', venue: 'XO', title: 'Atletico Madrid to win vs VfB Stuttgart', price: 'book via Cockpit', priceColor: '#8a5a00', spread: '—', depth: '—', depthW: 0, closes: '2026-10-21', held: false, linked: false, q: false, hasBook: false,
         sub: 'Open · volume $65.22 USDC.e', prov: 'xo · read proxy · 12 s', bids: [], asks: [], bookNote: '', noBookText: 'Order book needs the Cockpit.', legs: [], qNote: 'not covered', qText: 'XO is not covered by Quotient.' },
       { id: 'xo-taiko', venue: 'XO', title: 'Taiko announces a shutdown of its main network first', price: 'book via Cockpit', priceColor: '#8a5a00', spread: '—', depth: '—', depthW: 0, closes: '2026-12-31', held: true, linked: false, q: false, hasBook: false,
@@ -271,24 +283,29 @@ class Component extends DCLogic {
       { id: 'lm-btc5', venue: 'Limitless', title: 'BTC Up or Down - 5 Min', price: 'no book loaded', priceColor: '#5b5952', spread: '—', depth: '—', depthW: 0, closes: '5 min', held: false, linked: false, q: false, hasBook: false,
         sub: 'Open · displayed prices 0.5 / 0.5 are a default, not a price', prov: 'daemon · 9 s', bids: [], asks: [], bookNote: '', noBookText: 'Press "Load books" to read this row’s book. Books load only for visible rows.', legs: [], qNote: 'not covered', qText: 'Quotient does not cover Limitless.' }
     ];
-    const view = this.state.view;
-    const shown = data.filter((r) => view === 'all' || (view === 'held' && r.held) || (view === 'linked' && r.linked) || (view === 'q' && r.q));
+    const CATS = { politics: 'Politics', crypto: 'Crypto', sports: 'Sports', economics: 'Economics', science_tech: 'Science and tech', culture: 'Culture', world: 'World', weather: 'Weather', other: 'Other' };
+    const catOf = { 'pm-559651': ['politics', 'from the event series'], 'pm-559652': ['politics', 'from the event series'], 'hl-143480': ['other', 'unassigned: outcome meta carries no taxonomy'], 'lm-eth15': ['crypto', 'from the venue categories'], 'xo-liv': ['sports', 'from the venue category path'], 'xo-atl': ['sports', 'from the venue category path'], 'xo-taiko': ['crypto', 'from the venue category path'], 'xo-zk': ['crypto', 'from the venue category path'], 'lm-btc5': ['crypto', 'from the venue categories'] };
+    const view = this.state.view, cat = this.state.cat;
+    const inView = data.filter((r) => view === 'all' || (view === 'held' && r.held) || (view === 'linked' && r.linked) || (view === 'q' && r.q));
+    const shown = inView.filter((r) => cat === 'all' || catOf[r.id][0] === cat);
+    const cats = [{ id: 'all', label: 'All categories', count: inView.length }].concat(Object.keys(CATS).map((id) => ({ id, label: CATS[id], count: inView.filter((r) => catOf[r.id][0] === id).length })).filter((c) => c.count > 0));
     const selId = shown.some((r) => r.id === this.state.selected) ? this.state.selected : (shown[0] ? shown[0].id : data[0].id);
     const s = data.find((r) => r.id === selId) || data[0];
-    const chip = (on) => 'min-height:36px;padding:0 12px;border:1.5px solid ' + (on ? '#1a1b1f' : '#c7c3b6') + ';background:' + (on ? '#1a1b1f' : 'transparent') + ';color:' + (on ? '#e8e5db' : '#1a1b1f') + ';font:inherit;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px';
+    const chip = (on) => 'min-height:44px;padding:0 12px;border:1.5px solid ' + (on ? '#1a1b1f' : '#c7c3b6') + ';background:' + (on ? '#1a1b1f' : 'transparent') + ';color:' + (on ? '#e8e5db' : '#1a1b1f') + ';font:inherit;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px';
     const views = [
       { id: 'all', label: 'All', count: data.length }, { id: 'held', label: 'Holdings', count: data.filter((r) => r.held).length },
       { id: 'linked', label: 'Linked', count: data.filter((r) => r.linked).length }, { id: 'q', label: 'Signals', count: data.filter((r) => r.q).length }
     ].map((v) => ({ ...v, on: v.id === view, style: chip(v.id === view), pick: () => this.setState({ view: v.id }) }));
     return {
       views,
-      statusLine: shown.length + ' of ' + data.length + ' loaded rows · 6 venues · each venue at most 3 pages',
+      cats: cats.map((c) => ({ ...c, on: c.id === cat, style: chip(c.id === cat), pick: () => this.setState({ cat: c.id }) })),
+      statusLine: shown.length + ' of ' + data.length + ' loaded rows' + (cat === 'all' ? '' : ' in ' + CATS[cat]) + ' · 6 venues · each venue at most 3 pages',
       rows: shown.map((r) => ({
-        ...r, markStyle: mark(venues[r.venue]), aria: 'Inspect ' + r.title + ' on ' + r.venue,
-        rowStyle: 'display:grid;grid-template-columns:72px minmax(0,1fr) 128px 76px 96px 112px 88px;gap:12px;align-items:center;min-height:44px;padding:4px 20px;border-bottom:1px solid #c7c3b6;' + (r.id === selId ? 'background:#f3f1ea;box-shadow:inset 3px 0 0 ' + accent : ''),
+        ...r, markStyle: mark(venues[r.venue]), catLabel: CATS[catOf[r.id][0]], aria: 'Inspect ' + r.title + ' on ' + r.venue,
+        rowStyle: 'display:grid;grid-template-columns:72px minmax(0,1fr) 96px 128px 76px 96px 112px 88px;gap:12px;align-items:center;min-height:44px;padding:4px 20px;border-bottom:1px solid #c7c3b6;' + (r.id === selId ? 'background:#f3f1ea;box-shadow:inset 3px 0 0 ' + accent : ''),
         pick: () => this.setState({ selected: r.id })
       })),
-      sel: { ...s, markStyle: mark(venues[s.venue]), noBook: !s.hasBook, noLegs: s.legs.length === 0 }
+      sel: { ...s, markStyle: mark(venues[s.venue]), catLabel: CATS[catOf[s.id][0]], catFrom: catOf[s.id][1], noBook: !s.hasBook, noLegs: s.legs.length === 0, hasLegs: s.legs.length > 0 }
     };
   }
 }

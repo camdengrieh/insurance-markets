@@ -115,7 +115,9 @@ export function validateBundle(input: string | unknown, options: LoadOptions = {
       errors.push(`record hash mismatch for ${link.linkId}`);
     }
     for (const e of linkErrors(link)) errors.push(`${link.linkId}: ${e}`);
-    for (const e of pairConflicts(accepted, link)) errors.push(`${link.linkId}: ${e}`);
+    // Only a live record can conflict: a suspended or revoked link on the same markets is exactly
+    // what a re-proposal after a veto leaves behind, and the store already allows that.
+    if (link.state === "candidate" || link.state === "approved") for (const e of pairConflicts(accepted, link)) errors.push(`${link.linkId}: ${e}`);
     accepted.push(link);
   });
   for (const state of LINK_STATES) {

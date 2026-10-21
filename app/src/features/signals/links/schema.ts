@@ -10,7 +10,8 @@ import * as z from "zod/v4";
 import { VENUE_IDS } from "../../../core/venue-policy";
 import type { VenueId } from "../../../core/ports";
 
-export const LINK_PROOFS = ["P0_native", "P1_slot_equal", "P2_template", "P3_llm_assisted", "P4_human"] as const;
+// P_unproven: a candidate proposed by statistics or retrieval with no deterministic proof (pm/links/schema.ts).
+export const LINK_PROOFS = ["P0_native", "P1_slot_equal", "P2_template", "P3_llm_assisted", "P4_human", "P_unproven"] as const;
 export type LinkProof = (typeof LINK_PROOFS)[number];
 
 export const LINK_STATES = ["proposed", "template_approved", "human_approved", "executable_eligible", "quarantined", "suspended", "rejected", "expired"] as const;
@@ -18,6 +19,9 @@ export type LinkState = (typeof LINK_STATES)[number];
 
 export const LINK_RELATIONS = [
   "identity",
+  // Same question with a recorded rule difference (a timing axis, say): never identity (pm/links/schema.ts).
+  "near_identity",
+  "related",
   "complement",
   "subset",
   "superset",
@@ -32,7 +36,7 @@ export const LINK_RELATIONS = [
 ] as const;
 export type LinkRelation = (typeof LINK_RELATIONS)[number];
 
-export const BASIS_CLASSES = ["identical", "settlement_window", "settlement_source"] as const;
+export const BASIS_CLASSES = ["identical", "settlement_window", "settlement_source", "different"] as const;
 export const BASIS_AXES = ["timing", "source", "condition_scope"] as const;
 
 // A hash of 32 bytes, lowercase hex without a prefix.
@@ -55,9 +59,15 @@ export const linkLegSchema = z
     // Which of this venue's outcomes plays "yes" of the link, by index.
     outcomeMap: z.array(z.number().int().min(0).max(9)).min(1).max(10),
     resolverId: z.string().regex(/^[A-Za-z0-9_.:-]{1,80}$/).optional(),
+    // The linker's category word for this market (pm/core/category.ts), never venue text.
+    category: z.string().regex(/^[a-z_]{1,32}$/).optional(),
   })
   .strict();
 export type LinkLeg = z.infer<typeof linkLegSchema>;
+
+// Score band of a statistical proposal, in words. Never a number: a similarity is not a probability.
+export const LINK_BANDS = ["strong", "good", "weak"] as const;
+export type LinkBand = (typeof LINK_BANDS)[number];
 
 export const linkSchema = z
   .object({
@@ -70,6 +80,7 @@ export const linkSchema = z
     // "passed" only when the link's class has cleared its settlement bound (aggregation-design D2). Absent is unproven.
     bound: z.enum(["passed", "unproven"]).optional(),
     validUntil: isoInstant,
+    band: z.enum(LINK_BANDS).optional(),
   })
   .strict();
 export type Link = z.infer<typeof linkSchema>;
@@ -84,6 +95,9 @@ export const linkDatasetSchema = z
     links: z.array(linkSchema).max(MAX_LINKS),
     // sha256 over the canonical JSON of {schemaVersion, release, links}. Required: see dataset.ts.
     contentSha256: sha256Hex,
+    // The recipe behind every leg's rulesSha256 (pm/links/hash.ts "rules-v2" for a linker export). Absent means
+    // the page's own recipe. When it differs, a re-check cannot compare rules and says so (dataset.ts).
+    rulesRecipe: z.string().regex(/^[a-z0-9-]{1,20}$/).optional(),
   })
   .strict();
 export type LinkDataset = z.infer<typeof linkDatasetSchema>;

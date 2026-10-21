@@ -43,6 +43,9 @@ export const singleRowSchema = z.looseObject({
   volumeFormatted: z.unknown().optional(),
   expirationTimestamp: z.unknown().optional(),
   metadata: z.unknown().optional(),
+  // The venue's category and tag words (strings in the capture); read for the fixed-taxonomy match only.
+  categories: z.unknown().optional(),
+  tags: z.unknown().optional(),
 });
 export type LimitlessRow = z.infer<typeof singleRowSchema>;
 

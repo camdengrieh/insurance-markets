@@ -3,6 +3,7 @@ import { connect } from "node:net";
 import { after, describe, it } from "node:test";
 
 import { CONTRACT_ROUTE_KEYS, errorResponseSchema } from "../src/relay/contract.js";
+import { FLAG_NAMES } from "../src/relay/flags.js";
 import { RelayError } from "../src/relay/errors.js";
 import { ALL_FLAGS_OFF, type Flags } from "../src/relay/flags.js";
 import { createMemoryAudit } from "../relay/audit.js";
@@ -729,7 +730,7 @@ describe("POST /v1/account/status", () => {
     assert.equal(body.capabilities["AD5"], "yes");
     assert.equal(body.capabilities["UO7"], "unknown");
     assert.ok("orderbooks.xo.market" in body.upstream);
-    assert.equal(Object.keys(body.flags).length, 7);
+    assert.equal(Object.keys(body.flags).length, FLAG_NAMES.length);
     assert.deepEqual(body["tripwires"], { ok: true, tripped: [] });
   });
 

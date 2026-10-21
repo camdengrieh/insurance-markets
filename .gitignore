@@ -9,6 +9,10 @@ docs/research/fixtures/**/*kalshi*.json
 docs/research/fixtures/**/*quotient*
 docs/research/fixtures/linking/native_grouping_coverage_*.json
 
+# The linker's working files (state, candidates bundle, lock) live here when run locally; the
+# reviewed outputs are pm/links/data/* and app/src/features/signals/data/links.json, not this folder.
+pm/linker/out/
+
 # Per-machine agent settings can hold local paths; never commit them.
 .claude/settings.local.json
 

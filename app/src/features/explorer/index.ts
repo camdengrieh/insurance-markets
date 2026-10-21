@@ -8,10 +8,12 @@ export { MarketDialog, MARKET_DIALOG_TITLE, IMPLIED_NO_TEXT, impliedFor, type Ma
 export { Inspector, INSPECTOR_EMPTY, type InspectorProps } from "./Inspector";
 export { ExplorerHero, heroFacts, HERO_LEDE, type HeroCounts } from "./HeroBand";
 export { ViewChips } from "./ViewChips";
+export { CategoryChips, type CategoryChipsProps } from "./CategoryChips";
+export { ALL_CATEGORIES, ALL_CATEGORIES_LABEL, CATEGORY_SOURCE_TEXT, categoryEmptyWords, categoryLabelOf, categoryOfRow, categorySourceText, countsByCategory, filterByCategory, inCategory, isCategoryFilter, verdictOf, type CategoryFilter } from "./categories";
 export { BookPanel, type BookPanelProps } from "./BookPanel";
 export { SameQuestion, NO_APPROVED_LINK, CANDIDATES_NOTE, type SameQuestionProps } from "./SameQuestion";
 export { QuotientPanel, QuotientLine, quotientKeyFor, quotientStateOf, useQuotientSnapshot, QUOTIENT_OFF_TEXT, QUOTIENT_NOT_COVERED_TEXT, type QuotientState } from "./QuotientPanel";
-export { Ticket, Worksheet, PrepareOrderAction, tokenChoicesOf, PREPARE_LABEL, PREPARE_NEEDS_COCKPIT, PREPARE_NOT_PAIRED, PREPARE_XO_ONLY } from "./Ticket";
+export { Ticket, Worksheet, PrepareOrderAction, tokenChoicesOf, hasTicket, NO_PATH_REASON, TICKET_VENUES, PREPARE_LABEL, PREPARE_NEEDS_COCKPIT, PREPARE_NOT_PAIRED, PREPARE_NO_PATH } from "./Ticket";
 export { VIEW_IDS, VIEW_LABELS, DEFAULT_VIEW, QUOTIENT_COVERED_VENUES, countsByView, filterByView, holdingKey, inView, isViewId, marksOf, quotientCovers, rowKeyOf, NO_MARKS, type MarkContext, type RowMarks, type ViewId } from "./views";
 export { ExplorerServicesProvider, MarketMemory, createExplorerServices, setExplorerTokenSource, useExplorerServices, type ExplorerServices, type ExplorerServicesOptions } from "./services";
 export { createExplorerAdapters, type BookAvailability, type DetailOutcome, type ExplorerAdapter, type ListOutcome, type ShapeStatusView } from "./adapters";

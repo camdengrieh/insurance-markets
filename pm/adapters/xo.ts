@@ -27,6 +27,7 @@ import {
 import type { HttpOptions } from "../../src/xo/http.js";
 import type { Lifecycle, MarketDetail, MarketSummary as XoSummary } from "../../src/xo/types.js";
 import { normalizeSortedBook, type RawSidedBook } from "../core/books.js";
+import { categorise } from "../core/category.js";
 import { unknownFeeSpec, xoFeeSpec, type FeeSource } from "../core/fee-specs.js";
 import type {
   AdapterError,
@@ -258,6 +259,12 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
         adapterVersion: ADAPTER_VERSION,
         schemaHash: sha256Text(XO_SCHEMA_ID),
       },
+      // XO's categoryPath (root first), names and slugs, matched against the fixed table; the title is the last resort.
+      category: categorise({
+        venue: "xo",
+        native: detail.categoryPath.flatMap((c) => (c.slug === null ? [String(c.name)] : [String(c.name), String(c.slug)])),
+        title: String(detail.title),
+      }),
       extras: {
         ruleFields,
         rulesHashRecipe: built.rulesHashRecipe,

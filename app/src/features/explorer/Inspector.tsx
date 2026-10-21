@@ -1,6 +1,6 @@
 // The inspector aside (docs/design/cockpit-v2 Main.dc.html): the selected row's provenance line, title slot, order
 // book (best levels, or the caution tile), "Same question elsewhere", the Quotient line by coverage state, and the
-// actions: Open market, Prepare order (XO, Cockpit, paired only) and Watch. On a phone it is a non-modal bottom
+// actions: Open market, Prepare order (venues with a ticket, Cockpit, paired only) and Watch. On a phone it is a non-modal bottom
 // sheet (components.css .ui-sheet-aside). Keyboard reachable: it is a landmark with its own heading, and every
 // action is a button.
 
@@ -9,11 +9,12 @@ import type { LinkLoad } from "../signals/links/dataset";
 import type { LegReader } from "../signals/services";
 import { BookPanel } from "./BookPanel";
 import type { BookEntry } from "./books";
+import { categoryLabelOf, categorySourceText, verdictOf } from "./categories";
 import { statusInfo, utcText, volumeText } from "./display";
 import type { ExplorerRow } from "./MarketTable";
 import { QuotientLine, type QuotientState } from "./QuotientPanel";
 import { SameQuestion } from "./SameQuestion";
-import { PREPARE_NEEDS_COCKPIT, PREPARE_XO_ONLY, PrepareOrderAction } from "./Ticket";
+import { hasTicket, PREPARE_NEEDS_COCKPIT, PREPARE_NO_PATH, PrepareOrderAction } from "./Ticket";
 import { provForMode } from "./VenuePanel";
 
 export interface InspectorProps {
@@ -57,6 +58,17 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
             closes {utcText(row.summary.closesAtUtc) === null ? <Missing label="not stated" /> : <Num>{utcText(row.summary.closesAtUtc)}</Num>} · volume{" "}
             {volumeText(row.summary.volume) === null ? <Missing label="not stated" /> : <Num>{volumeText(row.summary.volume)}</Num>}
           </p>
+          <p className="explorer-sub explorer-category-line" data-category={verdictOf(row.summary).category} data-category-source={verdictOf(row.summary).confidence}>
+            <span>
+              Category: {categoryLabelOf(row.summary)} · {categorySourceText(verdictOf(row.summary))}
+            </span>
+            {row.summary.categoryNative === undefined ? null : (
+              <span className="explorer-category-native">
+                {" · venue says "}
+                <UntrustedText value={row.summary.categoryNative} field="category" clamp={1} />
+              </span>
+            )}
+          </p>
           <section className="explorer-inspector-section" aria-labelledby="explorer-inspector-book">
             <h3 id="explorer-inspector-book">Order book</h3>
             <BookPanel venue={row.summary.ref.venue} availability={row.adapter.books} entry={book} nowMs={nowMs} onLoad={row.adapter.books.state === "available" ? () => onLoadBook(row) : undefined} loading={book?.state === "loading"} />
@@ -76,8 +88,8 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
             {mode === "cockpit" ? (
               <PrepareOrderAction venue={row.summary.ref.venue} onPrepare={() => onPrepare(row)} />
             ) : (
-              <Button disabled data-prepare={row.summary.ref.venue === "xo" ? "needs-cockpit" : "xo-only"}>
-                {row.summary.ref.venue === "xo" ? PREPARE_NEEDS_COCKPIT : PREPARE_XO_ONLY}
+              <Button disabled data-prepare={hasTicket(row.summary.ref.venue) ? "needs-cockpit" : "no-path"}>
+                {hasTicket(row.summary.ref.venue) ? PREPARE_NEEDS_COCKPIT : PREPARE_NO_PATH}
               </Button>
             )}
             <Button aria-pressed={row.marks.watched} onClick={() => onWatch(row)}>

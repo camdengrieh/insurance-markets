@@ -24,7 +24,8 @@ import type { RelayContext } from "./types.js";
 // The gate can be switched off with RELAY_ENFORCE_FLAG_FACTS=0 (the banner then says so).
 // KILL is never gated: it comes from the environment, or from a signal while the relay runs.
 
-export const CAPABILITY_ID = /^(?:(?:AD|UO|OR|AU|FU|CR|PB|XS)[0-9]{1,2}|T[0-9][a-c]?)$/;
+// PM and LM: the Polymarket and Limitless facts (relay/clob.ts).
+export const CAPABILITY_ID = /^(?:(?:AD|UO|OR|AU|FU|CR|PB|XS|PM|LM)[0-9]{1,2}|T[0-9][a-c]?)$/;
 export const CAPABILITY_SOURCES = ["probe", "operator"] as const;
 export type CapabilitySource = (typeof CAPABILITY_SOURCES)[number];
 export type CapabilityStateValue = "unknown" | "yes" | "no";
@@ -158,6 +159,9 @@ export const FLAG_PREREQUISITES: Readonly<Record<WriteFlagName, readonly string[
   ENABLE_WITHDRAW: Object.freeze(["T4"]),
   XO_ENABLE_CREATE: Object.freeze(["T6"]),
   ENABLE_SELF_HOSTED_METADATA: Object.freeze(["T6"]),
+  // The CLOB venues: a login accepted (PM1) and a first order accepted and cancelled (PM2 / LM2) at the venue.
+  ENABLE_CLOB_POLYMARKET: Object.freeze(["PM1", "PM2"]),
+  ENABLE_CLOB_LIMITLESS: Object.freeze(["LM2"]),
 });
 
 export interface FlagExplanation {

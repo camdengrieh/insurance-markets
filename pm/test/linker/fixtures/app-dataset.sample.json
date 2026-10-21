@@ -1,0 +1,201 @@
+{
+  "contentSha256": "4378df11a8d01276b76a252effb07c043906b81b0ca79027264830278e7cbeb5",
+  "links": [
+    {
+      "band": "strong",
+      "basis": {
+        "axes": [],
+        "class": "different"
+      },
+      "legs": [
+        {
+          "category": "sports",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "f0fbc5fd7d361f96b82f4767b8d673346868b364f3384bb1dbdcac4634c7ed77",
+          "nativeId": "0xef99f60cd5b9144b9eee844d7aae2d8a94f2b706f1de5796070abfc6ffa1c7a8",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "c6184398b478acf97229bd19b0e549afd22d94a6a7784a85aaf6f0f5a8e1b53f",
+          "venue": "xo"
+        },
+        {
+          "category": "sports",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "bda9b0af1c5ad015c64d7490a1324e4e2abbad78d5536f6aca2f0849d9fd7851",
+          "nativeId": "synthetic-sample-a",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "d79c63d6cf7a993645d80fa2e56516656ec225a38a8c5bff8434c9d6b3ac79ad",
+          "venue": "limitless"
+        }
+      ],
+      "linkId": "lnk_330de3ed1f32a9cbac0bd19e232ee5eb",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-12-31T00:00:00Z"
+    },
+    {
+      "band": "weak",
+      "basis": {
+        "axes": [],
+        "class": "different"
+      },
+      "legs": [
+        {
+          "category": "politics",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "56af5faa969b46f04dd26351713c2421f33b77c98a77e36404778beb166dd9a2",
+          "nativeId": "0x982f7222fd1c52328caa4025034a83f3bdf36f8d2de0403aa69933e81a6e2964",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "81bacef67f4d8a1c676d19ef8a6cb33a64bb5dd796da9fcd8fe3d06e3f260758",
+          "venue": "polymarket"
+        },
+        {
+          "category": "politics",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "f6943646cdb1ac3f41ae1cacd9e3b04a446d66c856cb12ebbb807769f354a432",
+          "nativeId": "0x32e7fe80e26b3ecaf3227392e5f8b91f748e1923c89f4e916898a65db9f9eba2",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "b98eeb8cd32c78fe5a3caaeac9b72c51340cfcc4a5de17c44b8326faf7cd50cf",
+          "venue": "polymarket"
+        }
+      ],
+      "linkId": "lnk_45fbc5ec3cecf1fab358e3e003e52d1b",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-12-31T00:00:00Z"
+    },
+    {
+      "basis": {
+        "axes": [],
+        "class": "identical"
+      },
+      "legs": [
+        {
+          "category": "politics",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "f6943646cdb1ac3f41ae1cacd9e3b04a446d66c856cb12ebbb807769f354a432",
+          "nativeId": "0x32e7fe80e26b3ecaf3227392e5f8b91f748e1923c89f4e916898a65db9f9eba2",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "b98eeb8cd32c78fe5a3caaeac9b72c51340cfcc4a5de17c44b8326faf7cd50cf",
+          "venue": "polymarket"
+        },
+        {
+          "category": "politics",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "56af5faa969b46f04dd26351713c2421f33b77c98a77e36404778beb166dd9a2",
+          "nativeId": "0x982f7222fd1c52328caa4025034a83f3bdf36f8d2de0403aa69933e81a6e2964",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "81bacef67f4d8a1c676d19ef8a6cb33a64bb5dd796da9fcd8fe3d06e3f260758",
+          "venue": "polymarket"
+        }
+      ],
+      "linkId": "lnk_7df57944eb5a7fe8a6ba8e963c222c1e",
+      "proof": "P0_native",
+      "relation": "partition",
+      "state": "proposed",
+      "validUntil": "2026-12-31T00:00:00Z"
+    },
+    {
+      "band": "strong",
+      "basis": {
+        "axes": [
+          "timing"
+        ],
+        "class": "settlement_window"
+      },
+      "legs": [
+        {
+          "category": "other",
+          "closeUtc": "2026-12-31T05:00:00Z",
+          "maskedSha256": "051aa5c461279ec53bf9a40ba39d43f3792f83c6c548fc692a00a53ad4308f70",
+          "nativeId": "0x9d23a67f763b686b64b2a1cf5cdb4d1df70466a9b3dfabda53c186e758e3a3f7",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "2f313ec314ba8a7801cf4da901d9c88a9ef8bfa23807430aa4b0d8ef2cbdc20b",
+          "venue": "polymarket"
+        },
+        {
+          "category": "sports",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "bda9b0af1c5ad015c64d7490a1324e4e2abbad78d5536f6aca2f0849d9fd7851",
+          "nativeId": "synthetic-sample-a",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "d79c63d6cf7a993645d80fa2e56516656ec225a38a8c5bff8434c9d6b3ac79ad",
+          "venue": "limitless"
+        }
+      ],
+      "linkId": "lnk_8d6944bf7be2f7f465bca9cc4272d583",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-12-31T00:00:00Z"
+    },
+    {
+      "band": "strong",
+      "basis": {
+        "axes": [
+          "timing"
+        ],
+        "class": "settlement_window"
+      },
+      "legs": [
+        {
+          "category": "sports",
+          "closeUtc": "2026-12-31T00:00:00Z",
+          "maskedSha256": "f0fbc5fd7d361f96b82f4767b8d673346868b364f3384bb1dbdcac4634c7ed77",
+          "nativeId": "0xef99f60cd5b9144b9eee844d7aae2d8a94f2b706f1de5796070abfc6ffa1c7a8",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "c6184398b478acf97229bd19b0e549afd22d94a6a7784a85aaf6f0f5a8e1b53f",
+          "venue": "xo"
+        },
+        {
+          "category": "other",
+          "closeUtc": "2026-12-31T05:00:00Z",
+          "maskedSha256": "051aa5c461279ec53bf9a40ba39d43f3792f83c6c548fc692a00a53ad4308f70",
+          "nativeId": "0x9d23a67f763b686b64b2a1cf5cdb4d1df70466a9b3dfabda53c186e758e3a3f7",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "2f313ec314ba8a7801cf4da901d9c88a9ef8bfa23807430aa4b0d8ef2cbdc20b",
+          "venue": "polymarket"
+        }
+      ],
+      "linkId": "lnk_fd1e64fad883a646835598da32f2ce9d",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-12-31T00:00:00Z"
+    }
+  ],
+  "release": "2026-10-20",
+  "rulesRecipe": "rules-v2",
+  "schemaVersion": 1
+}

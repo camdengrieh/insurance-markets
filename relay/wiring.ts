@@ -6,6 +6,7 @@ import { credentialReadiness, ensureCredentialsReady, healCredentialStates, sign
 import { followOpenFundings, sweepFundings } from "./funding.js";
 import type { AccountDirectory } from "./health.js";
 import type { CoreServices } from "./main.js";
+import { defaultClob } from "./clob.js";
 import { defaultOrders, type L2Auth } from "./orders.js";
 import type { RelayContext, RelayServices } from "./types.js";
 import { confirmOperationAbsent, createAccountDirectory, loadUserOpOptions, type UserOpExtensions, type UserOpOptions } from "./userops.js";
@@ -127,6 +128,7 @@ export async function runUpkeep(context: RelayContext, checkers: readonly Tripwi
   };
   await step(() => core.prepared.sweep());
   await step(() => defaultOrders.sweep(context));
+  await step(() => defaultClob.sweep(context));
   await step(() => sweepFundings(context));
   // Reservations held by operations (creation fee) come back only when the operation is provably gone.
   // Funding and order reservations are the other sweeps' business and read as unknown here.

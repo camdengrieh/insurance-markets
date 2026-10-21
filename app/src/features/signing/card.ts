@@ -53,14 +53,14 @@ export interface CardCheck {
 export type Verification = "verified" | "viewer_only" | "failed";
 
 // A prepared item as the card renders it. `quote` and `user_op_hash` exist on some routes only.
-export type CardPrepared = Prepared & { readonly quote?: { readonly price: string; readonly shares: string; readonly max_outlay_usd: string; readonly fee_bound_bps: number; readonly expires_at: string }; readonly user_op_hash?: string };
+export type CardPrepared = Prepared & { readonly quote?: { readonly venue?: string; readonly price: string; readonly shares: string; readonly max_outlay_usd: string; readonly fee_bound_bps: number; readonly expires_at: string | null }; readonly user_op_hash?: string };
 
 export type FreshnessState = "fresh" | "short" | "expired";
 
 // Seconds that must be left before Sign and Copy are enabled. The order and login figures are the design's
 // (dapp-design 5.3 step 4). A user operation lives 300 s; 60 s is a design default (D) so an approval in the
 // PayBox app, which needs a human, can still finish.
-export const MIN_SECONDS_LEFT: Readonly<Record<string, number>> = Object.freeze({ order: 90, auth: 30, userop: 60, create: 60 });
+export const MIN_SECONDS_LEFT: Readonly<Record<string, number>> = Object.freeze({ order: 90, auth: 30, userop: 60, create: 60, clob_order: 90, clob_auth: 30 });
 
 export interface Freshness {
   readonly state: FreshnessState;
@@ -102,7 +102,7 @@ export interface CardEvaluation {
 function schemaFor(input: unknown) {
   if (typeof input === "object" && input !== null) {
     if ("user_op_hash" in input) return POST_ROUTES["/v1/userop/prepare"].response;
-    if ("quote" in input) return POST_ROUTES["/v1/order/prepare"].response;
+    if ("quote" in input) return (input as { readonly kind?: unknown }).kind === "clob_order" ? POST_ROUTES["/v1/clob/order/prepare"].response : POST_ROUTES["/v1/order/prepare"].response;
   }
   return inboxPreparedSchema;
 }
@@ -125,7 +125,9 @@ function freshnessOf(item: CardPrepared | null, kindHint: string | null, nowMs: 
     // An unreadable time cannot be shown as fresh.
     if (own === null) return { state: "expired", msLeft: 0, minMs, expiresAtMs: null };
     candidates.push(own);
-    if (item.quote !== undefined) {
+    // A venue order's quote carries no expiry when nothing is signed to expire (expires_at null): the item's own
+    // life bounds it then.
+    if (item.quote !== undefined && item.quote.expires_at !== null) {
       const quote = parseIsoMs(item.quote.expires_at);
       if (quote === null) return { state: "expired", msLeft: 0, minMs, expiresAtMs: null };
       candidates.push(quote);
@@ -135,6 +137,11 @@ function freshnessOf(item: CardPrepared | null, kindHint: string | null, nowMs: 
       const signed = parseIsoMs(item.decoded.terms.expires_at);
       if (signed === null) return { state: "expired", msLeft: 0, minMs, expiresAtMs: null };
       candidates.push(signed);
+    }
+    if (item.decoded?.kind === "clob_order" && item.decoded.terms.expires_at !== null) {
+      const wire = parseIsoMs(item.decoded.terms.expires_at);
+      if (wire === null) return { state: "expired", msLeft: 0, minMs, expiresAtMs: null };
+      candidates.push(wire);
     }
   }
   if (candidates.length === 0) return { state: "expired", msLeft: 0, minMs, expiresAtMs: null };
@@ -150,10 +157,10 @@ function freshnessOf(item: CardPrepared | null, kindHint: string | null, nowMs: 
 export function routeShapeProblem(item: CardPrepared): string | null {
   const hasQuote = item.quote !== undefined;
   const hasOpHash = item.user_op_hash !== undefined;
-  if (item.kind === "order" && !hasQuote) return "An order must carry its quote; this one does not.";
-  if (item.kind !== "order" && hasQuote) return "Only an order carries a quote; this item has one.";
+  if ((item.kind === "order" || item.kind === "clob_order") && !hasQuote) return "An order must carry its quote; this one does not.";
+  if (item.kind !== "order" && item.kind !== "clob_order" && hasQuote) return "Only an order carries a quote; this item has one.";
   if ((item.kind === "userop" || item.kind === "create") && !hasOpHash) return "A user operation must carry its user-operation hash; this one does not.";
-  if ((item.kind === "order" || item.kind === "auth") && hasOpHash) return "Only a user operation carries a user-operation hash; this item has one.";
+  if ((item.kind === "order" || item.kind === "auth" || item.kind === "clob_order" || item.kind === "clob_auth") && hasOpHash) return "Only a user operation carries a user-operation hash; this item has one.";
   const action = item.decoded !== undefined && "action" in item.decoded ? item.decoded.action : null;
   if (item.kind === "create" && action !== null && NOT_CREATE_ACTIONS.includes(action)) return "The item is labelled a market creation but its decoded action is another one.";
   if (item.kind === "userop" && action === "create_market") return "The item is labelled a plain operation but its decoded action creates a market.";
@@ -181,10 +188,19 @@ export function lifetimeProblem(item: CardPrepared, nowMs: number): string | nul
     if (left > decoded.params.ttl_s * 1000 + SKEW_MS) return "The order's signed expiration is later than the lifetime the item states.";
     return null;
   }
-  if (decoded.kind === "auth") {
+  if (decoded.kind === "auth" || decoded.kind === "clob_auth") {
     const stamp = Number(decoded.clob_auth.timestamp) * 1000;
     if (stamp > nowMs + SKEW_MS) return "The login is dated in the future.";
-    if (own > stamp + decoded.ttl_s * 1000 + SKEW_MS) return "The login stays open longer than its own timestamp allows. XO accepts a login for about two minutes.";
+    if (own > stamp + decoded.ttl_s * 1000 + SKEW_MS) return "The login stays open longer than its own timestamp allows. The venue accepts a login for about two minutes.";
+    return null;
+  }
+  if (decoded.kind === "clob_order") {
+    // No signed expiry on Limitless, and none on a Polymarket GTC, FOK or FAK: the item's own life bounds it. A
+    // Polymarket GTD expiry is a wire field; it still must not outrun the stated lifetime.
+    const signedMs = decoded.terms.expires_at === null ? null : parseIsoMs(decoded.terms.expires_at);
+    if (decoded.terms.expires_at !== null && signedMs === null) return "The order's expiry cannot be read.";
+    if (signedMs !== null && decoded.params.ttl_s !== null && signedMs - nowMs > decoded.params.ttl_s * 1000 + SKEW_MS) return "The order's expiry is later than the lifetime the item states.";
+    if (own - nowMs > PREPARED_TTL_S * 1000 + SKEW_MS) return "The item says it stays valid longer than a prepared item does here.";
     return null;
   }
   if (own - nowMs > PREPARED_TTL_S * 1000 + SKEW_MS) return "The item says it stays valid longer than a user operation does here.";
@@ -254,8 +270,15 @@ export function evaluateCard(prepared: unknown, context: EvaluateContext): CardE
     add({ id: "tag", label: "The digest tag is the start of the digest", status: "fail", detail: "There is no readable tag or digest to compare." }, "tag: unreadable");
   }
 
-  // 3. the account
-  if (item !== null) {
+  // 3. the account. On XO it is the Kernel account derived from the owner; on a CLOB venue (Polymarket, Limitless) the
+  // maker is the owner wallet itself, so the item's account must BE the owner.
+  if (item !== null && (item.kind === "clob_order" || item.kind === "clob_auth")) {
+    if (item.account.toLowerCase() === item.owner.toLowerCase()) {
+      add({ id: "account", label: "The maker is the owner wallet itself", status: "pass", detail: "On this venue there is no derived account: the item's account equals its owner, the wallet that signs." });
+    } else {
+      add({ id: "account", label: "The maker is the owner wallet itself", status: "fail", detail: "The account in the item is not the owner wallet. Do not sign." }, "account: not the owner");
+    }
+  } else if (item !== null) {
     if (derivedAccountMatches(item.owner, item.account)) {
       add({ id: "account", label: "The account is derived from the owner", status: "pass", detail: "Derived here from the owner address with the repo's own code; it equals the item's account." });
     } else {
@@ -351,7 +374,8 @@ export function evaluateCard(prepared: unknown, context: EvaluateContext): CardE
     innerTag: item?.summary.inner_hash_tag ?? null,
     innerKind: item?.summary.inner_hash_kind ?? null,
     digestForm: item?.sign.digest_form ?? null,
-    chainId: DECODED_CHAIN_ID,
+    // The chain the signature is bound to: XO's unless the decoded block names a venue chain (137, 8453).
+    chainId: decoded !== null && (decoded.kind === "clob_order" || decoded.kind === "clob_auth") ? decoded.chain_id : DECODED_CHAIN_ID,
     freshness,
     intent,
     intentJson: intent === null ? null : JSON.stringify(intent, null, 2),

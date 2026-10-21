@@ -55,7 +55,7 @@ function draftHash(): Hex {
     nowMs: NOW,
     config: DEFAULTS,
     declaredUrl: URL_,
-    flags: { KILL: false, ENABLE_USEROP_SUBMIT: false, ENABLE_TRADING: false, ENABLE_FUNDING: false, ENABLE_WITHDRAW: false, XO_ENABLE_CREATE: true, ENABLE_SELF_HOSTED_METADATA: true },
+    flags: { KILL: false, ENABLE_USEROP_SUBMIT: false, ENABLE_TRADING: false, ENABLE_FUNDING: false, ENABLE_WITHDRAW: false, XO_ENABLE_CREATE: true, ENABLE_SELF_HOSTED_METADATA: true, ENABLE_CLOB_POLYMARKET: false, ENABLE_CLOB_LIMITLESS: false },
   });
   if (!built.ok) throw new Error(`the test draft must build: ${built.message}`);
   return built.contentHash;

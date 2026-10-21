@@ -2,7 +2,7 @@
 // Markets table: rules as inert text, the venue's display price and its order book kept apart and labelled, both
 // sides of the book (the No side implied as 1 minus Yes only when the venue gives no No book, and labelled so), fee
 // model, times and terms, the linked legs as candidates with the permanent "why this is never arbitrage" line, the
-// Quotient panel with every disclosure, and the footer ticket (XO in the Cockpit) or worksheet. Read-only apart from
+// Quotient panel with every disclosure, and the footer ticket (XO, Polymarket and Limitless in the Cockpit) or worksheet. Read-only apart from
 // what the trade desk prepares through the daemon; nothing here signs or sends.
 //
 // It is the existing ui/Dialog (role=dialog, focus trapped, Escape closes, the rest of the page inert) and absorbs the
@@ -32,7 +32,7 @@ import { OutcomeName } from "./MarketTable";
 import { QuotientPanel } from "./QuotientPanel";
 import { SameQuestion } from "./SameQuestion";
 import { useExplorerServices, type ExplorerServices } from "./services";
-import { Ticket } from "./Ticket";
+import { Ticket, hasTicket } from "./Ticket";
 import { VenueTile, provForMode } from "./VenuePanel";
 
 const TOP_LEVELS = 5;
@@ -457,7 +457,7 @@ function Loaded({ services, entry, marketRef: ref, summary, linkLoad, readLeg, o
         <QuotientPanel market={summary?.ref ?? market.ref} linkLoad={linkLoad} onOpenSettings={onOpenQuotientSettings} />
       </section>
       <section aria-labelledby="explorer-ticket-heading" className="explorer-section explorer-ticket">
-        <h3 id="explorer-ticket-heading">{market.ref.venue === "xo" ? "Order ticket" : "Worksheet"}</h3>
+        <h3 id="explorer-ticket-heading">{hasTicket(market.ref.venue) ? "Order ticket" : "Worksheet"}</h3>
         <Ticket market={market} />
       </section>
       {entry.shape !== null && entry.shape.status !== "verified" ? (

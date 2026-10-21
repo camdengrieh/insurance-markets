@@ -88,7 +88,7 @@ a{color:#1a1b1f}a:hover{color:#2443c8}
 </section>
 
 <section aria-labelledby="lg" style="padding:18px 24px;border-right:1.5px solid #c7c3b6;border-bottom:1.5px solid #c7c3b6;display:flex;flex-direction:column;gap:12px">
-<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><h3 id="lg" style="margin:0;font-size:14px;font-weight:600">Same question elsewhere</h3><span style="font-size:11px;color:#5b5952">approved links: 0</span></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><h3 id="lg" style="margin:0;font-size:14px;font-weight:600">Same question elsewhere</h3><span style="font-size:11px;color:#5b5952">approved 0 · proposed 1 (linker, example)</span></div>
 <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 72px 56px 56px;gap:8px;padding:6px 0;border-bottom:1.5px solid #1a1b1f;font-size:11px;font-weight:600;color:#5b5952"><span>Venue</span><span>Listing</span><span>Yes bid/ask</span><span>Proof</span><span>State</span></div>
 <sc-for list="{{legs}}" as="g" hint-placeholder-count="2">
 <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 72px 56px 56px;gap:8px;align-items:center;min-height:40px;border-bottom:1px solid #c7c3b6;font-size:12px">
@@ -99,7 +99,7 @@ a{color:#1a1b1f}a:hover{color:#2443c8}
 <span style="color:#8a5a00;font-weight:600">{{g.state}}</span>
 </div>
 </sc-for>
-<p style="margin:0;font-size:12.5px;color:#5b5952">Candidates come from question text and Quotient's cross-venue listings. A candidate becomes a leg only after a person approves the link and the rules hashes match. Until then no spread block is drawn.</p>
+<p style="margin:0;font-size:12.5px;color:#5b5952">Candidates come from the linker: a job that runs every two hours over every venue this build may read, blocks markets by category and close window, scores canonical titles and rules hashes, and proposes. When Quotient is on, its agreement is checked in memory for the same run and never stored. A candidate becomes a leg only after a person approves the link and the rules hashes match. Until then no spread block is drawn.</p>
 <div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:#f3f1ea;font-size:12.5px">
 <strong style="font-weight:600">Why this is never "arbitrage"</strong>
 <span style="color:#5b5952">Legs resolve by different rules, at different times, with different fees and exits. A spread between two books is a hedged discrepancy at best, and a resolution risk always.</span>
@@ -144,9 +144,15 @@ a{color:#1a1b1f}a:hover{color:#2443c8}
 <label style="display:flex;flex-direction:column;gap:2px;font-size:12px;color:#5b5952">Size · USD
 <input type="text" value="10.00" style="min-height:44px;width:110px;border:1.5px solid #7e7b72;background:#f3f1ea;font-family:'Martian Mono',monospace;font-size:13px;padding:0 10px;color:#1a1b1f">
 </label>
-<span style="font-size:12px;color:#5b5952;max-width:36ch">This build prepares orders on XO only. For a Polymarket market the ticket is a worksheet: it sizes against the book and the caps, then hands you to the venue.</span>
-<a href="https://polymarket.com" class="ck-focus ck-btn" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;background:#1a1b1f;color:#e8e5db;text-decoration:none;font-weight:600">Trade on Polymarket <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+<dl style="margin:0;display:grid;grid-template-columns:repeat(4,auto);gap:4px 14px;font-size:11.5px;color:#5b5952;font-family:'Martian Mono',monospace" aria-label="What you sign">
+<div><dt style="font-family:'Archivo',sans-serif">domain</dt><dd style="margin:0;color:#1a1b1f">Polymarket CTF Exchange v3 · 137</dd></div>
+<div><dt style="font-family:'Archivo',sans-serif">side · type</dt><dd style="margin:0;color:#1a1b1f">BUY · signatureType 0</dd></div>
+<div><dt style="font-family:'Archivo',sans-serif">maker → taker</dt><dd style="margin:0;color:#1a1b1f">10.000000 pUSD → 384.61 shares <span style="font-family:'Archivo',sans-serif">(example)</span></dd></div>
+<div><dt style="font-family:'Archivo',sans-serif">fee ceiling</dt><dd style="margin:0;color:#8a5a00">unverified · shown as a ceiling</dd></div>
+</dl>
+<a href="Signing.dc.html" class="ck-focus ck-btn" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;background:#1a1b1f;color:#e8e5db;text-decoration:none;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><rect x="3" y="5" width="18" height="14"/><path d="M3 10h18M7 15h5"/></svg>Prepare order</a>
 </div>
+<p style="margin:0;padding:0 24px 16px;font-size:12px;color:#5b5952;max-width:96ch">Trading stays inside the Cockpit on every venue with a typed-data order: XO, Polymarket and Limitless. The page prepares; the Signature Card shows every field of an EOA order (XO's wrapped hash cannot be shown); you sign in PayBox; the daemon submits only while you hold the arm window open. A venue without a path (Kalshi, Hyperliquid and the rest) says why in one sentence instead of a link. Every path reads "unproven" until a live test records it.</p>
 </div>
 </div>
 </x-dc>
@@ -158,7 +164,7 @@ class Component extends DCLogic {
       accent,
       legs: [
         { venue: 'Kalshi', title: 'listing hidden: venue off (restricted terms)', px: '—', proof: 'P0', state: 'off', color: '#7e7b72' },
-        { venue: 'XO', title: 'no matching title found', px: '—', proof: '—', state: 'none', color: '#1a1b1f' }
+        { venue: 'XO', title: 'example: proposed twin from the 2 h linker run, politics block, rules hash differs', px: 'via Cockpit', proof: 'P2', state: 'proposed', color: '#1a1b1f' }
       ]
     };
   }

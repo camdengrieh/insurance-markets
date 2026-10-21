@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
+import { CATEGORY_LABEL, type Category } from "../../core/category";
 import { parseIsoMs } from "../../core/format";
 import type { VenueId } from "../../core/ports";
 import { DEFAULT_SWITCHES, type VenueSwitches } from "../../core/venue-policy";
@@ -18,6 +19,8 @@ import { NoAddressWatched, NoVenueSelected, OutcomeTile, TotalsPanel, VenueSecti
 import { QuotientSettingsDialog, useSignalsServices, type LinkLoad } from "../signals";
 import { bookTargets, loadBooks, type BookEntry, type BookTarget } from "./books";
 import { EXPLORER_VENUES, venueStatusOf } from "./catalog";
+import { ALL_CATEGORIES, categoryEmptyWords, countsByCategory, filterByCategory, inCategory, type CategoryFilter } from "./categories";
+import { CategoryChips } from "./CategoryChips";
 import { MAX_PAGES_PER_VENUE, STATUS_FILTERS, useMarketFeed, type FeedSelection, type StatusFilter } from "./feed";
 import { ExplorerHero, type HeroCounts } from "./HeroBand";
 import type { MarketParams } from "./ids";
@@ -124,7 +127,7 @@ function emptyWords(view: ViewId, holdings: Holdings): { readonly title: string;
             : "None of the loaded rows is a market a watched address holds. This is a join on exact ids, not a zero balance.",
       };
     case "linked":
-      return { title: "No linked market among the loaded rows", body: "No approved link names a loaded row. A link exists only after a person approves it." };
+      return { title: "No linked market among the loaded rows", body: "No approved or proposed link names a loaded row. The linker proposes candidates every two hours; a link exists only after a person approves it." };
     case "signals":
       return { title: "No row on a venue Quotient covers", body: "None of the loaded rows is on Polymarket, Polymarket US, Kalshi or Hyperliquid outcomes. XO and Trueo are not covered." };
   }
@@ -139,6 +142,7 @@ interface FeedProps {
   readonly filterText: string;
   readonly sort: SortKey;
   readonly view: ViewId;
+  readonly category: CategoryFilter;
   readonly markContext: MarkContext;
   readonly holdings: Holdings;
   readonly linkLoad: LinkLoad | null;
@@ -149,12 +153,19 @@ interface FeedProps {
   readonly onWatch: (key: string) => void;
   readonly onOpenMarket: (row: ExplorerRow) => void;
   readonly onCounts: (counts: HeroCounts & Readonly<Record<ViewId, number>>) => void;
+  // The category counts of the rows in the current view, for the chip row the parent renders under the view chips.
+  readonly onCategoryCounts: (counts: CategoryCounts) => void;
   readonly onOpenQuotientSettings: () => void;
+}
+
+export interface CategoryCounts {
+  readonly byCategory: ReadonlyMap<Category, number>;
+  readonly total: number;
 }
 
 // Owns the queries for one selection. The parent re-mounts it (by key) when the selection changes, so extra pages and
 // loaded books never leak from one selection into another.
-function Feed({ services, selection, venueStates, filterText, sort, view, markContext, holdings, linkLoad, quotient, selectedKey, onSelect, onToggle, onWatch, onOpenMarket, onCounts, onOpenQuotientSettings }: FeedProps) {
+function Feed({ services, selection, venueStates, filterText, sort, view, category, markContext, holdings, linkLoad, quotient, selectedKey, onSelect, onToggle, onWatch, onOpenMarket, onCounts, onCategoryCounts, onOpenQuotientSettings }: FeedProps) {
   const { feeds, loadMore, retry } = useMarketFeed(services, selection);
   const signals = useSignalsServices();
   const nowMs = useNow(10_000);
@@ -174,8 +185,11 @@ function Feed({ services, selection, venueStates, filterText, sort, view, markCo
     return out;
   }, [feeds, services.adapters, markContext]);
 
-  const rows = useMemo(() => sortRows(filterRows(filterByView(all, view), filterText), sort), [all, view, filterText, sort]);
+  // The view narrows first, then the category chip, then the search text; the sort comes last.
+  const viewRows = useMemo(() => filterByView(all, view), [all, view]);
+  const rows = useMemo(() => sortRows(filterRows(filterByCategory(viewRows, category), filterText), sort), [viewRows, category, filterText, sort]);
   const counts = useMemo(() => countsByView(all), [all]);
+  const categoryCounts = useMemo(() => countsByCategory(viewRows), [viewRows]);
 
   const loading = feeds.some((feed) => feed.state === "loading");
   const okCount = feeds.filter((feed) => feed.state === "ok").length;
@@ -200,6 +214,14 @@ function Feed({ services, selection, venueStates, filterText, sort, view, markCo
     reported.current = key;
     onCounts(counts);
   }, [counts, onCounts]);
+
+  const reportedCategories = useRef("");
+  useEffect(() => {
+    const key = `${viewRows.length}:${[...categoryCounts].map(([id, count]) => `${id}=${count}`).join(",")}`;
+    if (reportedCategories.current === key) return;
+    reportedCategories.current = key;
+    onCategoryCounts({ byCategory: categoryCounts, total: viewRows.length });
+  }, [categoryCounts, viewRows.length, onCategoryCounts]);
 
   const targets = useMemo(() => bookTargets(rows.map((row) => row.summary), services.adapters), [rows, services.adapters]);
 
@@ -228,7 +250,8 @@ function Feed({ services, selection, venueStates, filterText, sort, view, markCo
   const venuesLabel = `${feeds.length} ${feeds.length === 1 ? "venue" : "venues"}`;
   const filtered = rows.length !== all.length;
   const selected = selectedKey === null ? null : (rows.find((row) => row.key === selectedKey) ?? all.find((row) => row.key === selectedKey) ?? null);
-  const empty = rows.length === 0 ? emptyWords(view, holdings) : null;
+  // A category that empties a view with rows gets the category's words; an empty view keeps its own.
+  const empty = rows.length === 0 ? (category !== "all" && viewRows.length > 0 ? categoryEmptyWords(category) : emptyWords(view, holdings)) : null;
   const venuesSummary = `Venues: ${okCount} of ${feeds.length} selected read${failed > 0 ? `, ${failed} could not be read` : ""}, ${panelRows.length - feeds.length} not read in this build or switched off`;
 
   return (
@@ -239,7 +262,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, markCo
         <p role="status" className="explorer-count" data-testid="explorer-count">
           {loading && all.length === 0
             ? `Loading markets from ${venuesLabel}.`
-            : `${rows.length} ${rows.length === 1 ? "market" : "markets"} shown${view === "all" ? "" : ` in the ${VIEW_LABELS[view]} view`}${filtered ? ` of ${all.length} loaded` : ""} from ${venuesLabel}. Each venue shows at most ${MAX_PAGES_PER_VENUE} pages.`}
+            : `${rows.length} ${rows.length === 1 ? "market" : "markets"} shown${view === "all" ? "" : ` in the ${VIEW_LABELS[view]} view`}${category === "all" ? "" : ` in ${CATEGORY_LABEL[category]}`}${filtered ? ` of ${all.length} loaded` : ""} from ${venuesLabel}. Each venue shows at most ${MAX_PAGES_PER_VENUE} pages.`}
         </p>
         <div className="explorer-actions">
           <Button busy={booksBusy} disabled={targets.length === 0} onClick={onLoadBooks}>
@@ -339,6 +362,8 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const [sort, setSort] = useState<SortKey>("closing");
   const [venueQuery, setVenueQuery] = useState("");
   const [view, setView] = useState<ViewId>(DEFAULT_VIEW);
+  const [category, setCategory] = useState<CategoryFilter>(ALL_CATEGORIES);
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCounts | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [watched, setWatched] = useState<ReadonlySet<string>>(new Set());
   const [opened, setOpened] = useState<MarketParams | null>(null);
@@ -413,6 +438,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
 
   const onOpenMarket = useCallback((row: ExplorerRow) => setOpened({ venue: row.summary.ref.venue, marketId: row.summary.ref.marketId }), []);
   const onCounts = useCallback((next: HeroCounts & Readonly<Record<ViewId, number>>) => setCounts(next), []);
+  const onCategoryCounts = useCallback((next: CategoryCounts) => setCategoryCounts(next), []);
   const openQuotientSettings = useCallback(() => setSettingsOpen(true), []);
 
   // Which rows are linked, from the loaded dataset and the rows this visit has seen (memory holds every list row).
@@ -421,7 +447,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
     if (linkLoad !== null && linkLoad.state === "loaded") {
       for (const row of services.memory.rows()) seen.push({ venue: row.ref.venue, marketId: row.ref.marketId });
     }
-    return { holdings: holdings.keys, linkedRows: linkedRowKeys(linkLoad, seen), watched };
+    return { holdings: holdings.keys, linkedRows: linkedRowKeys(linkLoad, seen, { candidates: true }), watched };
     // counts changes when the feed loads new rows, which is when memory has more rows to look at.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdings.keys, linkLoad, watched, services.memory, counts?.all]);
@@ -448,6 +474,19 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
     [services.memory, markContext],
   );
 
+  // Likewise for a category chip: a selection the new category does not show is dropped from the inspector.
+  const onCategory = useCallback(
+    (next: CategoryFilter) => {
+      setCategory(next);
+      setSelectedKey((key) => {
+        if (key === null) return null;
+        const row = services.memory.rows().find((candidate) => rowKeyOf(candidate.ref.venue, candidate.ref.marketId) === key);
+        return row !== undefined && inCategory(row, next) ? key : null;
+      });
+    },
+    [services.memory],
+  );
+
   const band = <ExplorerHero title="Markets" counts={counts} holdings={holdings.state.kind} links={linkLoad} quotient={quotient} />;
 
   if (switches === null) {
@@ -467,7 +506,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const chipCounts = counts === null ? null : { all: counts.all, held: counts.held, linked: counts.linked, signals: counts.signals };
 
   return (
-    <div className="explorer" data-view={view}>
+    <div className="explorer" data-view={view} data-category={category}>
       {band}
       {invalidAddress ? (
         <ErrorTile code="NOT_FOUND" title="This is not a market address" message="The address does not name a venue and a market id this app can read, so nothing was requested. The Markets list is below." />
@@ -522,6 +561,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
           </div>
         </form>
       </div>
+      <CategoryChips category={category} counts={categoryCounts === null ? null : categoryCounts.byCategory} total={categoryCounts === null ? null : categoryCounts.total} onCategory={onCategory} />
       <p className="explorer-note">Typing in the search field narrows the markets already loaded and sends nothing. "Ask the venues" sends the text to the venues that can search by it.</p>
       <Feed
         key={signature}
@@ -531,6 +571,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
         filterText={filterText}
         sort={sort}
         view={view}
+        category={category}
         markContext={markContext}
         holdings={holdings}
         linkLoad={linkLoad}
@@ -541,6 +582,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
         onWatch={onWatch}
         onOpenMarket={onOpenMarket}
         onCounts={onCounts}
+        onCategoryCounts={onCategoryCounts}
         onOpenQuotientSettings={openQuotientSettings}
       />
       {open === null ? null : (

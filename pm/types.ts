@@ -6,6 +6,7 @@
 // point is never used for money, prices or share counts. `null` means unknown and is never zero.
 
 import { formatAtomic, parseDecimalAtomic } from "../src/guardrails/amount.js";
+import type { CategoryVerdict } from "./core/category.js";
 
 // ---------------------------------------------------------------------------------------------
 // Decimals
@@ -217,6 +218,9 @@ export interface Market {
   readonly group?: MarketGroup;
   readonly fee: FeeSpec;
   readonly prov: Provenance;
+  // The fixed-taxonomy verdict (pm/core/category.ts). Optional: an adapter without a native source leaves it out,
+  // and a consumer reads an absent verdict as "other" with confidence "none".
+  readonly category?: CategoryVerdict;
 }
 
 // Listing row: enough to find and link a market without the full rules.

@@ -9,6 +9,9 @@ import { usePairing, type Pairing } from "../terminal/usePairing";
 import { AccountPanel, flagViewOf } from "./AccountPanel";
 import { OrderPanel, type TokenChoice } from "./ActionPanels";
 import { ActionPanelsInOrder } from "./ActionPanelsInOrder";
+import { ClobOrderPanel } from "./ClobOrderPanel";
+import type { ClobMarketFacts } from "./clob-ticket";
+import { KeyValues, Mono } from "./components";
 import type { PanelContext } from "./context";
 import { mergeFacts, type GateInput } from "./facts";
 import { useAccount } from "./hooks";
@@ -20,7 +23,8 @@ import { useTradeServices, type OwnerChoice, type TradeServices } from "./servic
 // switches it on, and every capability it depends on reads "unproven" until a live test has recorded it as "yes".
 //
 // There is no Trade screen any more: the market modal of the Markets surface hosts the desk for an XO market in the
-// Cockpit build (`panels: "order"` with the market's own outcome tokens as the choices), and the full set of panels
+// Cockpit build (`panels: "order"` with the market's own outcome tokens as the choices), or for a Polymarket or
+// Limitless market (`clobMarket`: the venue ticket, signed by the wallet itself), and the full set of panels
 // is still available to any host that asks for `panels: "all"`. The host says which heading level the desk's
 // sections sit at (`heading`): h2 on a page of its own, h4 inside the market modal's "Order ticket" section.
 //
@@ -118,13 +122,34 @@ export interface TradeDeskProps {
   readonly services?: TradeServices;
   // "all": every prepare panel in order. "order": the order ticket only (the market modal).
   readonly panels?: "all" | "order";
+  // A Polymarket or Limitless market: the venue ticket (ClobOrderPanel) instead of the XO one, built against these
+  // market facts. Absent for XO.
+  readonly clobMarket?: ClobMarketFacts;
   // The outcome tokens of the market the desk is opened for; the ticket offers them as a choice instead of a typed id.
   readonly tokenChoices?: readonly TokenChoice[];
   // The heading level of the desk's sections: h2 on a page of its own (the default), h4 inside the market modal.
   readonly heading?: DeskHeading;
 }
 
-export function TradeDesk({ services: provided, panels = "all", tokenChoices, heading = "h2" }: TradeDeskProps) {
+// The maker on a CLOB venue is the owner wallet itself: a small panel in place of the XO account one.
+function MakerPanel({ owner, venue, flagOn, heading }: { readonly owner: string | null; readonly venue: ClobMarketFacts["venue"]; readonly flagOn: boolean | null; readonly heading: DeskHeading }) {
+  const Heading = heading;
+  const flag = venue === "polymarket" ? "ENABLE_CLOB_POLYMARKET" : "ENABLE_CLOB_LIMITLESS";
+  return (
+    <section className="tr-section" aria-labelledby="tr-maker-h" data-testid="maker">
+      <Heading id="tr-maker-h">Maker wallet</Heading>
+      <p>On this venue the wallet itself is the maker and the signer: no account is derived, and the typed data PayBox shows is the order.</p>
+      <KeyValues
+        rows={[
+          { label: "Maker", value: owner === null ? "choose an owner address" : <Mono>{owner}</Mono> },
+          { label: `Venue switch ${flag}`, value: flagOn === null ? "not read yet" : flagOn ? "on (plugin and relay)" : "off" },
+        ]}
+      />
+    </section>
+  );
+}
+
+export function TradeDesk({ services: provided, panels = "all", tokenChoices, clobMarket, heading = "h2" }: TradeDeskProps) {
   const mode = useAppMode();
   const fallback = useTradeServices();
   const services = provided ?? fallback;
@@ -156,6 +181,9 @@ export function TradeDesk({ services: provided, panels = "all", tokenChoices, he
   if (mode !== "cockpit") {
     return <NeedsCockpitTile what="the trade desk, which prepares items through the local daemon" heading={below(heading)} />;
   }
+  const clobFlag = clobMarket === undefined ? null : clobMarket.venue === "polymarket" ? "ENABLE_CLOB_POLYMARKET" : "ENABLE_CLOB_LIMITLESS";
+  const flagView = flagViewOf(account);
+  const clobFlagOn = clobFlag === null || flagView === null ? null : flagView.plugin?.[clobFlag] === true && flagView.relay?.[clobFlag] === true;
   return (
     <div className="tr-root ui-stack">
       <Tile tone="info" title="This page prepares. It never signs and never sends." role="note" dataKind="trade-intro" heading={below(heading)}>
@@ -170,8 +198,16 @@ export function TradeDesk({ services: provided, panels = "all", tokenChoices, he
       ) : (
         <>
           <OwnerChooser owners={owners} onOwner={setOwner} heading={heading} />
-          <AccountPanel state={state} facts={facts} onRefresh={refresh} heading={heading} />
-          {owner === null ? <p>Choose an owner address to see what can be prepared.</p> : panels === "order" ? <OrderPanel ctx={ctx} tokenChoices={tokenChoices} heading={heading} /> : <ActionPanelsInOrder ctx={ctx} heading={heading} />}
+          {clobMarket === undefined ? <AccountPanel state={state} facts={facts} onRefresh={refresh} heading={heading} /> : <MakerPanel owner={owner} venue={clobMarket.venue} flagOn={clobFlagOn} heading={heading} />}
+          {owner === null ? (
+            <p>Choose an owner address to see what can be prepared.</p>
+          ) : clobMarket !== undefined ? (
+            <ClobOrderPanel ctx={ctx} facts={clobMarket} tokenChoices={tokenChoices} heading={heading} />
+          ) : panels === "order" ? (
+            <OrderPanel ctx={ctx} tokenChoices={tokenChoices} heading={heading} />
+          ) : (
+            <ActionPanelsInOrder ctx={ctx} heading={heading} />
+          )}
         </>
       )}
     </div>

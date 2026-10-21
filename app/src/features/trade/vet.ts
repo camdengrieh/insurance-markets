@@ -16,13 +16,15 @@
 // Nothing a failure prints comes from the item: the sentences are fixed here, and the one field path that is shown
 // is checked against a small alphabet first. A failed item renders nothing and offers nothing (M4-7).
 
-import { POST_ROUTES, SUMMARY_LINE_MAX_CHARS, type DecodedOrder, type DecodedUserOp, type InnerHashKind } from "@shared/relay/contract";
+import { POST_ROUTES, SUMMARY_LINE_MAX_CHARS, type DecodedClobOrder, type DecodedOrder, type DecodedUserOp, type InnerHashKind } from "@shared/relay/contract";
+import { isPinnedLimitlessExchange, polymarketBookOf } from "@shared/clob/venues";
 import { deriveAccount } from "@shared/xo/account/derive";
 import { CTF_EXCHANGE } from "@shared/xo/chain/constants";
 import { ACTION_TITLES } from "@shared/xo/signing/lines";
 import { verifyPreparedLocal } from "@shared/xo/signing/rebuild";
 import { ORDER_CAP_FEE_BPS } from "@shared/xo/signing/amounts";
 
+import { expectedClobQuote, type ClobTicket } from "./clob-ticket";
 import { expectedQuote, type Ticket } from "./ticket";
 import { isRenderableAction, renderCalls, type CallExpectations, type RenderedCall } from "./templates";
 
@@ -31,7 +33,9 @@ export type Expected =
   | { readonly kind: "revoke"; readonly owner: string }
   | { readonly kind: "redeem"; readonly owner: string; readonly conditionIds: readonly string[] }
   | { readonly kind: "withdraw"; readonly owner: string; readonly amountAtomic?: bigint }
-  | { readonly kind: "order"; readonly owner: string; readonly ticket: Ticket };
+  | { readonly kind: "order"; readonly owner: string; readonly ticket: Ticket }
+  // A Polymarket or Limitless order: the maker is the owner itself (no derived account), the domain must be a pinned one.
+  | { readonly kind: "clob_order"; readonly owner: string; readonly ticket: ClobTicket };
 
 export const VET_CODES = [
   "schema",
@@ -60,14 +64,17 @@ export interface VetFailure {
 }
 
 export interface OrderView {
+  // "xo" for an XO order; the venue for a CLOB venue order.
+  readonly venue: "xo" | "polymarket" | "limitless";
   readonly side: "BUY" | "SELL";
   readonly shares: string;
   readonly price: string;
   readonly tokenId: string;
   readonly tif: string;
   readonly postOnly: boolean;
-  readonly ttlS: number;
-  readonly expiresAt: string;
+  readonly ttlS: number | null;
+  // null when the signed order carries no expiry (a Limitless order, a Polymarket GTC, FOK or FAK).
+  readonly expiresAt: string | null;
   readonly principalUsd: string;
   readonly maxOutlayUsd: string | null;
   readonly minProceedsUsd: string | null;
@@ -79,7 +86,7 @@ export interface OrderView {
 
 export interface VettedItem {
   readonly ok: true;
-  readonly kind: "userop" | "order";
+  readonly kind: "userop" | "order" | "clob_order";
   readonly preparedId: string;
   readonly owner: string;
   readonly account: string;
@@ -132,6 +139,7 @@ function expectedAction(expected: Expected): readonly string[] {
     case "withdraw":
       return ["withdraw"];
     case "order":
+    case "clob_order":
       return ["place_order"];
   }
 }
@@ -175,6 +183,31 @@ function checkOrder(decoded: DecodedOrder, quote: { readonly price: string; read
   return null;
 }
 
+// A venue order's terms against the ticket the user saw, and its domain against the pinned exchanges.
+function checkClobOrder(decoded: DecodedClobOrder, quote: { readonly venue: string; readonly price: string; readonly shares: string; readonly max_outlay_usd: string; readonly fee_bound_bps: number; readonly expires_at: string | null }, reservedUsd: string, ticket: ClobTicket): VetFailure | null {
+  const want = expectedClobQuote(ticket);
+  const order = decoded.order;
+  const terms = decoded.terms;
+  if (decoded.venue !== ticket.venue || order.venue !== ticket.venue || quote.venue !== ticket.venue) return failure("ticket", "The order is for a different venue than the ticket.", "decoded.venue");
+  if (order.token_id !== ticket.tokenId) return failure("ticket", "The order is for a different outcome token than the ticket.", "decoded.order.token_id");
+  if (terms.side !== ticket.side || order.side !== (ticket.side === "BUY" ? 0 : 1)) return failure("ticket", "The order is on the other side from the ticket.", "decoded.terms.side");
+  if (terms.price !== want.price) return failure("ticket", "The order's price differs from the ticket.", "decoded.terms.price");
+  if (terms.shares !== want.shares) return failure("ticket", "The order's size differs from the ticket.", "decoded.terms.shares");
+  if (decoded.params.market_id.toLowerCase() !== ticket.marketId.toLowerCase()) return failure("ticket", "The order names a different market than the ticket.", "decoded.params.market_id");
+  if (decoded.params.tif !== ticket.tif) return failure("ticket", "The order's type differs from the ticket.", "decoded.params.tif");
+  if (decoded.params.post_only !== ticket.postOnly) return failure("ticket", "The order's post-only setting differs from the ticket.", "decoded.params.post_only");
+  if (ticket.ttlS !== null && decoded.params.ttl_s !== ticket.ttlS) return failure("ticket", "The order's life differs from the ticket.", "decoded.params.ttl_s");
+  if (decoded.params.tick !== ticket.tick) return failure("ticket", "The order was checked against a different tick than the ticket shows.", "decoded.params.tick");
+  if (quote.price !== want.price || quote.shares !== want.shares) return failure("quote", "The quote's price or size differs from the ticket.", "quote");
+  if (quote.max_outlay_usd !== want.maxOutlayUsd) return failure("quote", "The quote's worst-case outlay differs from the ticket's.", "quote.max_outlay_usd");
+  if (terms.cap_usd !== want.reservedUsd || reservedUsd !== want.reservedUsd) return failure("quote", "The amount counted against the caps differs from the ticket's.", "caps.reserved_usd");
+  if (quote.fee_bound_bps !== ticket.feeBps || terms.fee_bound_bps !== ticket.feeBps) return failure("quote", "The fee ceiling is not the policy ceiling the ticket used.", "quote.fee_bound_bps");
+  if ((terms.max_outlay_usd ?? "0") !== want.maxOutlayUsd) return failure("quote", "The decoded outlay differs from the ticket's.", "decoded.terms.max_outlay_usd");
+  if (decoded.venue === "polymarket" && polymarketBookOf(decoded.domain.version, decoded.domain.verifying_contract) === undefined) return failure("template", "The order is bound to a contract other than Polymarket's pinned exchanges.", "decoded.domain");
+  if (decoded.venue === "limitless" && !isPinnedLimitlessExchange(decoded.domain.verifying_contract)) return failure("template", "The order is bound to a contract other than Limitless's pinned exchange.", "decoded.domain");
+  return null;
+}
+
 type LocalVerdict = ReturnType<typeof verifyPreparedLocal>;
 
 // The plugin trims the white space at the two ends of each summary line before it hands the item on (its text
@@ -204,7 +237,8 @@ function verifyIgnoringLineEdges(raw: unknown): { readonly verdict: LocalVerdict
 export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): VetResult {
   // 1. schema, by the route the item came from.
   const isOrder = expected.kind === "order";
-  const parsed = isOrder ? POST_ROUTES["/v1/order/prepare"].response.safeParse(raw) : POST_ROUTES["/v1/userop/prepare"].response.safeParse(raw);
+  const isClob = expected.kind === "clob_order";
+  const parsed = isClob ? POST_ROUTES["/v1/clob/order/prepare"].response.safeParse(raw) : isOrder ? POST_ROUTES["/v1/order/prepare"].response.safeParse(raw) : POST_ROUTES["/v1/userop/prepare"].response.safeParse(raw);
   if (!parsed.success) {
     const path = parsed.error.issues[0]?.path.map(String).join(".") ?? "";
     return failure("schema", "The item does not match the relay's contract for this kind of item.", path);
@@ -213,18 +247,24 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
 
   // 2. kind and action.
   if (item.kind === "create") return failure("kind", "A market creation item is never shown here.", "kind");
-  if (isOrder ? item.kind !== "order" : item.kind !== "userop") return failure("kind", "The item is a different kind from the one asked for.", "kind");
+  if (isClob ? item.kind !== "clob_order" : isOrder ? item.kind !== "order" : item.kind !== "userop") return failure("kind", "The item is a different kind from the one asked for.", "kind");
   const decoded = item.decoded;
 
-  // 3. owner and account.
+  // 3. owner and account. On a CLOB venue the maker is the owner itself; on XO it is the account derived from it.
   if (lower(item.owner) !== lower(expected.owner)) return failure("owner", "The item is for a different owner address than the one chosen.", "owner");
   let derived: string;
-  try {
-    derived = deriveAccount(expected.owner);
-  } catch {
-    return failure("owner", "The owner address cannot own an account.", "owner");
+  if (isClob) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(expected.owner)) return failure("owner", "The owner address cannot own an account.", "owner");
+    derived = expected.owner;
+    if (lower(item.account) !== lower(expected.owner)) return failure("account", "The item's account is not the owner wallet itself, which is the maker on this venue.", "account");
+  } else {
+    try {
+      derived = deriveAccount(expected.owner);
+    } catch {
+      return failure("owner", "The owner address cannot own an account.", "owner");
+    }
+    if (lower(item.account) !== lower(derived)) return failure("account", "The item's account is not the account derived from the owner.", "account");
   }
-  if (lower(item.account) !== lower(derived)) return failure("account", "The item's account is not the account derived from the owner.", "account");
 
   // 4. time.
   const expiresAtMs = Date.parse(item.expires_at);
@@ -249,13 +289,14 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
     calls = rendered.calls;
   } else if (decoded.kind === "order" && isOrder) {
     action = decoded.action;
-    if (!("quote" in item)) return failure("schema", "The order carries no quote.", "quote");
+    if (!("quote" in item) || "venue" in item.quote) return failure("schema", "The order carries no quote.", "quote");
     const ticketIssue = checkOrder(decoded, item.quote, item.caps.reserved_usd, expected.ticket);
     if (ticketIssue !== null) return ticketIssue;
     if (lower(decoded.order.maker) !== lower(derived) || lower(decoded.order.signer) !== lower(derived)) return failure("account", "The order's maker or signer is not the derived account.", "decoded.order.maker");
     if (decoded.order.beneficiary !== "0x0000000000000000000000000000000000000000") return failure("account", "The order redirects its proceeds.", "decoded.order.beneficiary");
     if (lower(decoded.exchange) !== lower(CTF_EXCHANGE)) return failure("template", "The order is bound to a contract other than the exchange.", "decoded.exchange");
     order = {
+      venue: "xo",
       side: decoded.terms.side,
       shares: decoded.terms.shares,
       price: decoded.terms.price,
@@ -272,7 +313,32 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
       maker: decoded.order.maker,
       exchange: decoded.exchange,
     };
-    if (Date.parse(order.expiresAt) <= nowMs) return failure("expired", "The order's own expiry has passed. Prepare it again.", "decoded.terms.expires_at");
+    if (order.expiresAt === null || Date.parse(order.expiresAt) <= nowMs) return failure("expired", "The order's own expiry has passed. Prepare it again.", "decoded.terms.expires_at");
+  } else if (decoded.kind === "clob_order" && isClob) {
+    action = decoded.action;
+    if (!("quote" in item) || !("venue" in item.quote)) return failure("schema", "The order carries no quote.", "quote");
+    const ticketIssue = checkClobOrder(decoded, item.quote, item.caps.reserved_usd, expected.ticket);
+    if (ticketIssue !== null) return ticketIssue;
+    if (lower(decoded.order.maker) !== lower(expected.owner) || lower(decoded.order.signer) !== lower(expected.owner)) return failure("account", "The order's maker or signer is not the owner wallet.", "decoded.order.maker");
+    order = {
+      venue: decoded.venue,
+      side: decoded.terms.side,
+      shares: decoded.terms.shares,
+      price: decoded.terms.price,
+      tokenId: decoded.order.token_id,
+      tif: decoded.params.tif,
+      postOnly: decoded.params.post_only,
+      ttlS: decoded.params.ttl_s,
+      expiresAt: decoded.terms.expires_at,
+      principalUsd: decoded.terms.principal_usd,
+      maxOutlayUsd: decoded.terms.max_outlay_usd,
+      minProceedsUsd: decoded.terms.min_proceeds_usd,
+      capUsd: decoded.terms.cap_usd,
+      feeBoundBps: decoded.terms.fee_bound_bps,
+      maker: decoded.order.maker,
+      exchange: decoded.domain.verifying_contract,
+    };
+    if (order.expiresAt !== null && Date.parse(order.expiresAt) <= nowMs) return failure("expired", "The order's own expiry has passed. Prepare it again.", "decoded.terms.expires_at");
   } else {
     return failure("kind", "The decoded block is for a different kind of item.", "decoded.kind");
   }
@@ -291,7 +357,7 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
   const secondsLeft = Math.max(0, Math.floor((expiresAtMs - nowMs) / 1000));
   return {
     ok: true,
-    kind: isOrder ? "order" : "userop",
+    kind: isClob ? "clob_order" : isOrder ? "order" : "userop",
     preparedId: item.prepared_id,
     owner: item.owner,
     account: item.account,
@@ -300,10 +366,10 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
     expiresAt: item.expires_at,
     expiresAtMs,
     secondsLeft,
-    signWindowOk: secondsLeft >= (isOrder ? ORDER_MIN_SIGN_S : USEROP_MIN_SIGN_S),
+    signWindowOk: secondsLeft >= (isOrder || isClob ? ORDER_MIN_SIGN_S : USEROP_MIN_SIGN_S),
     digestTag: verdict.digest_tag,
     innerTag: verdict.inner_hash_tag,
-    innerKind: isOrder ? "typed_data_hash" : "call_data",
+    innerKind: isOrder || isClob ? "typed_data_hash" : "call_data",
     covered: verdict.covered,
     unbound: verdict.unbound,
     calls,
