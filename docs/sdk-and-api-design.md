@@ -1,6 +1,7 @@
 # Shared SDK and markets API
 
-Status: proposal, 2026-10-21. Nothing here is built yet.
+Status: steps 1 and 2 done on 2026-10-21; the rest is proposal. What step 2 moved is in section 9 and in
+`sdk/README.md`.
 
 ## 1. The decision
 
@@ -227,6 +228,16 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    it. The app and pm re-export from it. Delete the category mirror and its hash test. Add `sdk/` to the
    boundary allowlist and a check that forbids `node:` imports in it. Done when the dApp's rules comparison
    works for linker candidates.
+   *Done 2026-10-21.* Moved: `Dec`, `Untrusted`, `Result` and the full `VenueId` list (pm declares its subset with
+   `satisfies`), isomorphic SHA-256 and canonical JSON, the decimal grammar, fixed-point and rational maths, the
+   app's unit-tagged quantities, the category taxonomy, and rules-v2 with one rule-field builder per venue.
+   Five rules recipes became one: the dApp's readers (XO, Polymarket, Limitless, Kalshi, UDX, Gemini, Trueo,
+   Hyperliquid, Manifold) and pm all hash through `sdk/rules.ts`, and the dApp now re-checks a proposed leg's
+   rules. Not yet merged: the two money APIs (`qty.ts` for the page, `rational.ts` for the engine) sit side by
+   side in `sdk/money/`, and the rest of the read model (`Market`, `Book`, `Prov`) still lives in
+   `app/src/core/ports.ts` and `pm/types.ts`; both move with step 3. Behaviour change: rules-v2 keeps markup as
+   text and does not fold compatibility forms, so a Polymarket market with no description of its own (the
+   event's is shown) has no fingerprint, exactly as the linker already treated it.
 3. **Move the venue readers.** `app/src/venues` becomes `sdk/venues` (they already take an injected fetch).
    `pm/adapters` and `pm/recorder/venues` become thin wrappers or go away. Done when each venue has one parser
    and one fixture set.

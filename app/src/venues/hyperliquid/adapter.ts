@@ -1,3 +1,4 @@
+import { rulesFingerprintOfFields } from "@sdk/rules";
 import type {
   AdapterCaps,
   AdapterDeps,
@@ -402,7 +403,6 @@ export function createHyperliquidAdapter(deps: AdapterDeps): HyperliquidAdapter 
   function marketOf(spec: OutcomeSpec, group: GroupInfo | undefined, status: Status, closesAtUtc: string | null, settleFraction: string | null): Market {
     const pairs = parseSpec(spec.description);
     const fullText = `${spec.name}\n${spec.description}`;
-    const normalized = normalizeForHash(fullText);
     const outcomes: Outcome[] = ([0, 1] as const).map((side) => {
       const summary = sideOf(spec, side, null);
       return { index: summary.index, role: summary.role, label: summary.label, tokenId: summary.tokenId };
@@ -422,7 +422,8 @@ export function createHyperliquidAdapter(deps: AdapterDeps): HyperliquidAdapter 
       outcomes,
       rules: {
         text: untrusted(cleanBlock(fullText, RULES_MAX)),
-        sha256: sha256Hex(normalized),
+        // The shared rules-v2 canonicalisation (sdk/rules.ts) over the name and the description.
+        sha256: rulesFingerprintOfFields([spec.name, spec.description]),
         sources: [],
         mechanism: isProtocolMarkClass(pairs) ? "protocol_mark" : "unknown",
         ...(closesAtUtc === null ? {} : { cutoffUtc: closesAtUtc }),

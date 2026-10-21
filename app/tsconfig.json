@@ -18,6 +18,7 @@
     "paths": {
       "@shared/*": ["../src/*"],
       "@bridge/*": ["../bridge/*"],
+      "@sdk/*": ["../sdk/*"],
       "viem": ["./node_modules/viem"],
       "viem/*": ["./node_modules/viem/*"],
       "zod": ["./node_modules/zod"],

@@ -408,3 +408,75 @@ describe("accessibility", () => {
     expect(violations.map((violation) => `${violation.id}: ${violation.targets.join(",")}`)).toEqual([]);
   });
 });
+
+describe("the market modal's one-line ticket (panels: order)", () => {
+  const CHOICES = [
+    { label: "Outcome 1: Yes", tokenId: TOKENS.yes, short: "Yes", outcome: "yes" as const },
+    { label: "Outcome 2: No", tokenId: TOKENS.no, short: "No", outcome: "no" as const },
+  ];
+
+  async function openCompact(options: RigOptions & { readonly account?: Record<string, unknown> } = {}): Promise<Opened> {
+    const rig = makeRig({ startMs: recordedAt("prepare_order_buy") + 2_000, ...options });
+    installReads(rig.daemon, options.account ?? accountWith("account_trading"));
+    const { container } = mountTrade(rig, { panels: "order", tokenChoices: CHOICES, heading: "h4" });
+    await until(() => container.querySelector("[data-testid=order]") !== null);
+    return { rig, container };
+  }
+
+  it("puts the bar first and every secondary block, with its safety words, in one disclosure", async () => {
+    const { container } = await openCompact({ account: accountWith("account_flags_off") });
+    const order = section(container, "order");
+    expect(order.getAttribute("data-layout")).toBe("compact");
+    expect(must(order, "[role=group][aria-label='Side and outcome']")).toBeTruthy();
+    const notes = [...container.querySelectorAll("details")].find((details) => (details.querySelector("summary")?.textContent ?? "") === "Account and safety notes");
+    expect(notes).toBeDefined();
+    const text = allText(notes as HTMLElement);
+    expect(text).toContain("This page prepares. It never signs and never sends.");
+    expect(notes?.querySelector("[data-testid=owner]")).not.toBeNull();
+    expect(notes?.querySelector("[data-testid=account]")).not.toBeNull();
+    // The bar comes before the disclosure in the page.
+    expect(order.compareDocumentPosition(notes as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Why Prepare is closed stays in view, next to the bar.
+    expect(button(container, /Prepare this order/).disabled).toBe(true);
+    expect(allText(order)).toContain("ENABLE_TRADING");
+  });
+
+  it("the segmented toggle builds exactly the request the side and outcome selects did", async () => {
+    const { rig, container } = await openCompact({ ...OPEN, account: accountOpen() });
+    const seen: Record<string, unknown>[] = [];
+    serve(rig, "xo_prepare_order", answer("prepare_order_buy"), seen);
+    const toggle = must(section(container, "order"), "[role=group][aria-label='Side and outcome']");
+    expect([...toggle.querySelectorAll("button")].map((entry) => entry.textContent)).toEqual(["Buy Yes", "Buy No"]);
+    click([...toggle.querySelectorAll("button")][0] as HTMLButtonElement);
+    typeInto(field(container, /^Limit price/) as HTMLInputElement, "0.4");
+    typeInto(field(container, /^Size/) as HTMLInputElement, "10");
+    const strip = allText(must(section(container, "order"), "[role=group][aria-label='What you sign']"));
+    expect(strip).toContain("XO Market CLOB v1 · 3223");
+    expect(strip).toContain("the wrapped hash cannot be shown");
+    expect(strip).toContain("BUY · GTD");
+    expect(strip).toContain("4 USDC.e → 10 shares");
+    expect(strip).toContain("1,000 bps");
+    click(button(container, /Prepare this order/));
+    await until(() => allText(section(container, "order")).includes("Prepared, not signed"));
+    expect(seen).toEqual([{ owner: OWNER, token_id: TOKENS.yes, side: "BUY", price: "0.4", shares: "10", tif: "GTD" }]);
+  });
+
+  it("shows readable side and type words over unchanged wire values", async () => {
+    const { container } = await openCompact({ ...OPEN, account: accountOpen() });
+    const options = [...section(container, "order").querySelectorAll("option")].map((option) => `${option.value}=${option.textContent}`);
+    expect(options).toEqual(expect.arrayContaining(["BUY=Buy", "SELL=Sell", "GTD=Good till its expiry (GTD)", "FOK=Fill or kill (FOK)", "FAK=Fill and kill the rest (FAK)"]));
+    const select = field(container, /^Side/) as HTMLSelectElement;
+    act(() => {
+      select.value = "SELL";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const toggle = must(section(container, "order"), "[role=group][aria-label='Side and outcome']");
+    expect([...toggle.querySelectorAll("button")].map((entry) => entry.textContent)).toEqual(["Sell Yes", "Sell No"]);
+  });
+
+  it("has no structural violations", async () => {
+    const { container } = await openCompact({ ...OPEN, account: accountOpen() });
+    const violations = await runAxe(container);
+    expect(violations.map((violation) => `${violation.id}: ${violation.targets.join(",")}`)).toEqual([]);
+  });
+});

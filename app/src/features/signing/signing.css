@@ -23,12 +23,13 @@
   max-width: 70ch;
 }
 
+/* A caution: a dashed strong line and words, never a fill. */
 .signing-warning {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-strong);
+  border: var(--line) dashed var(--border-strong);
   border-radius: var(--radius);
-  background: var(--warn-bg);
-  color: var(--warn-fg);
+  background: transparent;
+  color: var(--text);
 }
 
 .signing-muted {
@@ -40,28 +41,27 @@
   min-width: 0;
 }
 
+/* ---- the Signature Card (Signing.dc.html): two-cell head, two-column body, disclosures, one action row ---------- */
+
+/* Inside its dialog the card IS the dialog body, so it draws no frame of its own; the dialog's 2 px ink frame is
+   the card's. The dialog's fixed title becomes the small line over the headline. */
+.ui-dialog:has(.signing-card) .ui-dialog-head {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ui-dialog:has(.signing-card) .ui-dialog-head h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
 .signing-card {
   display: grid;
   gap: 1rem;
   min-width: 0;
-  padding: 0.75rem;
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.signing-card[data-verification="failed"] {
-  border-color: var(--danger-fg);
-  background: var(--danger-bg);
-  color: var(--danger-fg);
-}
-
-.signing-card[data-verification="viewer_only"] {
-  border-color: var(--warn-fg);
-}
-
-.signing-card[data-verification="verified"] {
-  border-color: var(--ok-fg);
 }
 
 .signing-card h3,
@@ -70,14 +70,107 @@
   overflow-wrap: anywhere;
 }
 
+.signing-card h4 {
+  font-size: 0.875rem;
+}
+
+.signing-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem 1.5rem;
+  padding-bottom: 14px;
+  border-bottom: var(--line-strong) solid var(--text);
+}
+
+.signing-card[data-verification="failed"] .signing-card-head {
+  border-bottom-color: var(--danger-fg);
+}
+
+.signing-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .signing-card-head p {
-  margin: 0.25rem 0;
+  margin: 0;
+}
+
+.signing-eyebrow {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.signing-eyebrow .ui-num {
+  font-size: inherit;
+}
+
+.signing-card .signing-headline {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.signing-headline .ui-num {
+  font-size: 0.9em;
+  letter-spacing: 0;
+}
+
+/* The market title, when the item carries one: a well with a rule on the left, never a heading. */
+.signing-title-well {
+  padding: 4px 8px;
+  border-left: 3px solid var(--border);
+  background: var(--untrusted-bg);
+  color: var(--untrusted-fg);
+  font-size: 0.78125rem;
+  overflow-wrap: anywhere;
+}
+
+.signing-state {
+  font-size: 0.8125rem;
+}
+
+.signing-card-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 15rem;
+  text-align: end;
+  font-size: 0.6875rem;
+}
+
+.signing-card-clock .signing-arm,
+.signing-card-clock .signing-muted {
+  color: var(--text-muted);
+}
+
+.signing-card-clock .signing-arm[data-arm="open"] {
+  color: var(--text);
+}
+
+@media (max-width: 30rem) {
+  .signing-card-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .signing-card-clock {
+    align-items: flex-start;
+    text-align: start;
+    max-width: none;
+  }
 }
 
 .signing-verdict {
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
+  border: var(--line) solid var(--border);
+  font-size: 0.8125rem;
 }
 
 .signing-verdict[data-tone="ok"] {
@@ -85,15 +178,23 @@
   color: var(--ok-fg);
 }
 
+/* Viewer only: a caution, so the dashed line and the words. */
 .signing-verdict[data-tone="warn"] {
-  background: var(--warn-bg);
-  color: var(--warn-fg);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.signing-verdict[data-tone="warn"] h4 {
+  color: var(--caution);
 }
 
 .signing-verdict[data-tone="danger"] {
   background: var(--danger-bg);
   color: var(--danger-fg);
-  border-width: 2px;
+  border-width: var(--line-strong);
+  border-color: var(--danger-fg);
 }
 
 .signing-verdict p,
@@ -103,11 +204,103 @@
 
 .signing-banner {
   padding: 0.5rem 0.75rem;
-  border: 2px solid var(--danger-fg);
+  border: var(--line-strong) dashed var(--danger-fg);
   border-radius: var(--radius);
   background: var(--danger-bg);
   color: var(--danger-fg);
   font-weight: 600;
+}
+
+/* The body: the facts list beside the tags and the S2 caution, one column below 640 px. */
+.signing-card-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18.75rem, 100%), 1fr));
+  border-top: var(--line) solid var(--border);
+  border-bottom: var(--line) solid var(--border);
+}
+
+.signing-card-main,
+.signing-card-side {
+  min-width: 0;
+  padding-block: 16px;
+}
+
+.signing-card-main {
+  padding-inline-end: 24px;
+  border-inline-end: var(--line) solid var(--border);
+}
+
+.signing-card-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-inline-start: 24px;
+  font-size: 0.8125rem;
+}
+
+.signing-card-side .ui-tile {
+  margin: 0;
+}
+
+@media (max-width: 39.99rem) {
+  .signing-card-main {
+    padding-inline-end: 0;
+    border-inline-end: 0;
+    border-bottom: var(--line) solid var(--border);
+  }
+
+  .signing-card-side {
+    padding-inline-start: 0;
+  }
+}
+
+.signing-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.signing-facts dt {
+  color: var(--text-muted);
+}
+
+.signing-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.signing-facts .signing-code,
+.signing-facts .ui-num {
+  font-size: 0.75rem;
+}
+
+.signing-card-main p {
+  font-size: 0.8125rem;
+}
+
+.signing-section {
+  margin: 0;
+}
+
+.signing-warnings ul {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.signing-disclosures {
+  display: grid;
+  gap: 0;
+}
+
+.signing-disclosures > .ui-disclosure {
+  margin: 0;
+}
+
+.signing-disclosures > .ui-disclosure + .ui-disclosure {
+  border-top: 0;
 }
 
 .signing-mismatch {
@@ -139,7 +332,7 @@
 }
 
 .signing-lines li[data-mismatch="true"] {
-  outline: 2px solid var(--danger-fg);
+  outline: var(--line-strong) solid var(--danger-fg);
   background: var(--danger-bg);
   color: var(--danger-fg);
 }
@@ -168,7 +361,7 @@
   text-align: start;
   vertical-align: top;
   padding: 0.25rem 0.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--line) solid var(--border);
   overflow-wrap: anywhere;
 }
 
@@ -218,8 +411,12 @@
 
 .signing-tags dl > div {
   display: grid;
-  grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr);
-  gap: 0.25rem 1rem;
+  gap: 2px;
+}
+
+.signing-tags dt {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .signing-tags dd {
@@ -243,13 +440,13 @@
   font-size: 0.8125rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  border: 1px solid var(--border-strong);
+  border: var(--line) solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-2);
   color: var(--text);
 }
 
-.signing-reminders ul {
+.signing-reminders {
   margin: 0;
   padding-inline-start: 1.25rem;
 }
@@ -257,7 +454,13 @@
 .signing-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
+}
+
+/* Sign with PayBox sits at the right end of the row, as on the board; it is off in this build. */
+.signing-actions-end {
+  margin-left: auto;
 }
 
 .signing-reasons {
@@ -266,18 +469,13 @@
   color: var(--text-muted);
 }
 
-.signing-card[data-verification="failed"] .signing-reasons,
-.signing-card[data-verification="failed"] .signing-muted {
-  color: inherit;
-}
-
-/* The countdown at the top of the card (Signing.dc.html): 28 px mono, the words beside it. */
+/* The countdown at the top right of the card (Signing.dc.html): 28 px mono, the words under it. */
 .signing-countdown {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.75rem;
-  margin: 0 0 0.5rem;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 4px;
+  margin: 0;
 }
 
 .signing-countdown .ui-num {
@@ -297,16 +495,11 @@
   color: var(--text-muted);
 }
 
-.signing-card[data-verification="failed"] .signing-countdown span:last-child {
-  color: inherit;
-}
-
 .signing-card .ui-tile .signing-reasons {
   margin-top: 0.25rem;
 }
 
 @media (max-width: 30rem) {
-  .signing-tags dl > div,
   .signing-args > div {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -316,10 +509,6 @@
   }
 }
 
-.signing-arm {
-  margin: 0.25rem 0;
-}
-
 .signing-arm[data-arm="open"] {
   font-weight: 600;
 }
@@ -327,6 +516,14 @@
 .signing-match {
   margin: 0 0 0.5rem;
   font-weight: 600;
+}
+
+.signing-tags > p {
+  margin: 0.5rem 0 0;
+}
+
+.signing-tags .ui-disclosure {
+  margin: 0.5rem 0 0;
 }
 
 .signing-match[data-tags-match="failed"] {

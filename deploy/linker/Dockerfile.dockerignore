@@ -1,5 +1,5 @@
 # Used by BuildKit when the Dockerfile is deploy/linker/Dockerfile and the context is the repo root.
-# The Dockerfile copies only package.json, the lockfile, tsconfig.json, src/, pm/ and the build script;
+# The Dockerfile copies only package.json, the lockfile, tsconfig.json, src/, pm/, sdk/ and the build script;
 # this keeps everything else (toolchain, dependencies, data, docs, other apps) out of the context upload.
 .git
 .tools

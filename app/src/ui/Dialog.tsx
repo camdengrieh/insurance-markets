@@ -19,7 +19,7 @@ import { ditherFill } from "./dither";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
-export type DialogSize = "narrow" | "wide" | "sheet";
+export type DialogSize = "narrow" | "medium" | "wide" | "sheet";
 
 export interface DialogProps {
   readonly open: boolean;

@@ -18,8 +18,8 @@ const NO_TOKEN = "68215442288791572296498952759094916177229244750752613990844701
 const PM: ClobMarketFacts = { venue: "polymarket", marketId: "0x" + "99".repeat(32), tick: "0.01", minSize: "5", polymarketBook: "v2", fetchedAtMs: NOW - 15_000 };
 const LM: ClobMarketFacts = { venue: "limitless", marketId: "will-it-rain-1792411200000", tick: "0.001", minSize: "0", polymarketBook: null, fetchedAtMs: NOW - 15_000 };
 const CHOICES = [
-  { label: "Outcome 1: Yes", tokenId: TOKEN },
-  { label: "Outcome 2: No", tokenId: NO_TOKEN },
+  { label: "Outcome 1: Yes", tokenId: TOKEN, short: "Yes", outcome: "yes" as const },
+  { label: "Outcome 2: No", tokenId: NO_TOKEN, short: "No", outcome: "no" as const },
 ];
 
 async function open(facts: ClobMarketFacts, options: RigOptions & { readonly account?: Record<string, unknown> } = {}) {
@@ -64,11 +64,11 @@ describe("the venue ticket, unproven and switched off", () => {
 
   it("shows the worst case with the policy fee ceiling, the tick and minimum as read, the provenance line and the signed fields", async () => {
     const { container } = await open(PM);
-    typeInto(field(container, /Price per share/), "0.52");
-    typeInto(field(container, /^Shares/), "10");
+    typeInto(field(container, /^Limit price/), "0.52");
+    typeInto(field(container, /^Size/), "10");
     const panel = must(container, "[data-testid=clob-order]");
     const cost = must(panel, "[data-kind=ticket]");
-    expect(allText(cost)).toContain("BUY 10 shares at 0.52");
+    expect(allText(cost)).toContain("Buy 10 shares at 0.52");
     expect(allText(cost)).toContain("5.72 USD");
     expect(allText(cost)).toContain("1,000 bps policy fee ceiling");
     expect(allText(cost)).toContain("0.01; 5 shares");
@@ -78,6 +78,30 @@ describe("the venue ticket, unproven and switched off", () => {
     expect(allText(signed)).toContain("5200000");
     expect(allText(signed)).toContain("Polymarket CTF Exchange, version 3, chain 137");
     expect(allText(signed)).toContain("set by the relay");
+    // The compact strip in the bar: the decoded domain, side and type, the two signed amounts and the fee ceiling,
+    // worked out from the ticket (nothing marked as an example, because nothing is one).
+    const strip = must(panel, "[role=group][aria-label='What you sign']");
+    expect(allText(strip)).toContain("Polymarket CTF Exchange v3 · 137");
+    expect(allText(strip)).toContain("BUY · EOA, type 0");
+    expect(allText(strip)).toContain("5.2 USD → 10 shares");
+    expect(allText(strip)).toContain("1,000 bps");
+    expect(allText(strip)).not.toMatch(/example/i);
+  });
+
+  it("shows the side as words over the wire values, and the segmented toggle picks the outcome token", async () => {
+    const { container } = await open(PM);
+    const panel = must(container, "[data-testid=clob-order]");
+    const toggle = must(panel, "[role=group][aria-label='Side and outcome']");
+    const buttons = [...toggle.querySelectorAll("button")];
+    expect(buttons.map((entry) => entry.textContent)).toEqual(["Buy Yes", "Buy No"]);
+    expect(buttons.map((entry) => entry.getAttribute("aria-pressed"))).toEqual(["true", "false"]);
+    const sides = [...panel.querySelectorAll("option")].filter((option) => option.value === "BUY" || option.value === "SELL");
+    expect(sides.map((option) => `${option.value}=${option.textContent}`)).toEqual(["BUY=Buy", "SELL=Sell"]);
+    expect([...panel.querySelectorAll("option")].map((option) => option.textContent)).toContain("Good till cancelled (GTC)");
+    click(buttons[1] as HTMLButtonElement);
+    expect(buttons.map((entry) => entry.getAttribute("aria-pressed"))).toEqual(["false", "true"]);
+    // Before the ticket is complete the amounts say why they are missing instead of showing a number.
+    expect(allText(must(panel, "[role=group][aria-label='What you sign']"))).toContain("complete the ticket first");
   });
 
   it("offers only the venue's order types: no GTD and no lifetime on Limitless", async () => {
@@ -102,8 +126,8 @@ describe("a prepare through the clob_order tool", () => {
       calls.push(args);
       return prepareEnvelope("clob_order", clobPreparedAnswer(item));
     });
-    typeInto(field(container, /Price per share/), "0.52");
-    typeInto(field(container, /^Shares/), "10");
+    typeInto(field(container, /^Limit price/), "0.52");
+    typeInto(field(container, /^Size/), "10");
     const prepare = button(container, /Prepare this Polymarket order/);
     await until(() => !prepare.disabled);
     await act(async () => {
@@ -128,8 +152,8 @@ describe("a prepare through the clob_order tool", () => {
     if (!built.ok) throw new Error("ticket");
     const item = clobItemFor(built.ticket, OWNER as `0x${string}`, { nowMs: NOW, tokenIdOverride: NO_TOKEN });
     rig.daemon.tools.set("clob_order", () => prepareEnvelope("clob_order", clobPreparedAnswer(item)));
-    typeInto(field(container, /Price per share/), "0.52");
-    typeInto(field(container, /^Shares/), "10");
+    typeInto(field(container, /^Limit price/), "0.52");
+    typeInto(field(container, /^Size/), "10");
     const prepare = button(container, /Prepare this Polymarket order/);
     await until(() => !prepare.disabled);
     await act(async () => {
@@ -144,8 +168,8 @@ describe("a prepare through the clob_order tool", () => {
     const { container, rig } = await open(PM, { facts: PROVEN, account: accountWith("account_trading", ["ENABLE_CLOB_POLYMARKET"]) });
     // The plugin carries a refusal in its structured answer (outcome "refused"); the daemon's envelope stays well formed.
     rig.daemon.tools.set("clob_order", () => prepareEnvelope("clob_order", { outcome: "refused", code: "flag_off", message: "ENABLE_CLOB_POLYMARKET is off.", next_action: "Ask the operator.", flag: "ENABLE_CLOB_POLYMARKET" }));
-    typeInto(field(container, /Price per share/), "0.52");
-    typeInto(field(container, /^Shares/), "10");
+    typeInto(field(container, /^Limit price/), "0.52");
+    typeInto(field(container, /^Size/), "10");
     const prepare = button(container, /Prepare this Polymarket order/);
     await until(() => !prepare.disabled);
     await act(async () => {

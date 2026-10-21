@@ -11,5 +11,4 @@ export * from "./edge.js";
 export * from "./relations.js";
 export * from "./lp.js";
 export * from "./labels.js";
-export * from "./rules-hash.js";
 export * from "./category.js";

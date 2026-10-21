@@ -7,6 +7,11 @@
 //
 // It is the existing ui/Dialog (role=dialog, focus trapped, Escape closes, the rest of the page inert) and absorbs the
 // sections of the former market page; a deep link /market/:venue/:id opens it over the table.
+//
+// Layout (Market.dc.html): the dialog keeps its fixed h2 "Market" (small, for the accessible name); below it one meta
+// row (venue, status, close time, provenance) and the market title in a 26 px well (untrusted text, never a heading);
+// then three columns [Order book | Same question elsewhere | Quotient]; the cautions; the one-line order ticket; and
+// the display price, rules, fees, times and terms under one disclosure. It closes with the 44 px close button only.
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -16,7 +21,7 @@ import { parseIsoMs } from "../../core/format";
 import type { AdapterError, Book, Market, MarketRef, MarketSummary, Outcome, Prov, Result, VenueId } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
 import { makeProv, type VenueSwitches } from "../../core/venue-policy";
-import { Badge, Button, DataTable, Dialog, ErrorTile, Missing, NeedsCockpitTile, Num, ProvenanceLine, Tile, UntrustedText, VenueMark, useNow, venueName } from "../../ui";
+import { Badge, Button, DataTable, Dialog, Disclosure, ErrorTile, Missing, NeedsCockpitTile, Num, ProvenanceLine, Tile, UntrustedText, VenueMark, renderableUntrusted, useNow, venueName } from "../../ui";
 import { BookProvenance } from "./BookPanel";
 import { LevelRows } from "./levels";
 import type { LinkLoad } from "../signals/links/dataset";
@@ -24,34 +29,54 @@ import type { LegReader } from "../signals/services";
 import type { DetailOutcome, ExplorerAdapter } from "./adapters";
 import { venueStatusOf } from "./catalog";
 import { CUSTODY_TEXT, MECHANISM_TEXT, VOID_TEXT, feeView, safeDecimal, safeReasons, tickLines } from "./describe";
-import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, impliedComplement, priceText, statusInfo, utcText, viewBook, type BookView, type ImpliedSide } from "./display";
+import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, impliedComplement, priceText, statusInfo, utcText, viewBook, volumeText, type BookView, type ImpliedSide } from "./display";
 import { FeedError, classifyError, type ClassifiedError } from "./feed";
 import { BOOK_BUDGET_MS } from "./books";
 import type { MarketParams } from "./ids";
 import { OutcomeName } from "./MarketTable";
-import { QuotientPanel } from "./QuotientPanel";
-import { SameQuestion } from "./SameQuestion";
+import { QuotientPanel, quotientStateOf, useQuotientSnapshot } from "./QuotientPanel";
+import { SameQuestion, linkCountsText, type LegTitleOf } from "./SameQuestion";
 import { useExplorerServices, type ExplorerServices } from "./services";
 import { Ticket, hasTicket } from "./Ticket";
 import { VenueTile, provForMode } from "./VenuePanel";
+import { quotientCovers } from "./views";
+import "./dialog.css";
 
 const TOP_LEVELS = 5;
 const SHA256 = /^[0-9a-f]{64}$/;
 
 export const MARKET_DIALOG_TITLE = "Market";
 export const IMPLIED_NO_TEXT = "No side implied as 1 minus the Yes side: implied, not a quote";
+export const FEE_CEILING_TEXT = "This fee is a ceiling that has not been reconciled with a real fill. No number on this page is net of fee, and no XO spread is shown as executable.";
+export const DETAILS_SUMMARY = "Display price, rules, fees, times and terms";
 
 // ---- books -------------------------------------------------------------------------------------------------------------
 
+// The side's name as fixed app text ("Yes", "No", "Outcome 3"): a heading never carries venue text. A creator's own
+// label, when it says something other than the fixed word, sits under it in the untrusted slot.
+function sideName(outcome: Outcome): string {
+  return outcome.role === "yes" ? "Yes" : outcome.role === "no" ? "No" : `Outcome ${outcome.index + 1}`;
+}
+
+function CreatorLabel({ outcome }: { readonly outcome: Outcome }) {
+  if (outcome.role !== "label") {
+    const shown = renderableUntrusted(outcome.label, { field: "outcome" });
+    if (shown === null || shown.trim() === "" || shown.trim().toLowerCase() === sideName(outcome).toLowerCase()) return null;
+  }
+  return (
+    <p className="explorer-caption mk-side-label">
+      Named by the venue: <OutcomeName outcome={outcome} />
+    </p>
+  );
+}
+
 function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly venue: VenueId; readonly outcome: Outcome; readonly result: Result<Book, AdapterError> | undefined; readonly view: BookView | null; readonly implied: ImpliedSide | null; readonly nowMs: number }) {
   return (
-    <div className="explorer-book" data-venue={venue} data-outcome={outcome.index} data-implied={implied === null ? undefined : "true"}>
-      <h4>
-        Outcome {outcome.index + 1}: <OutcomeName outcome={outcome} />
-      </h4>
-      {implied !== null ? (
-        <>
-          <dl className="explorer-facts">
+    <div className="explorer-book" data-venue={venue} data-outcome={outcome.index} data-role={outcome.role} data-implied={implied === null ? undefined : "true"}>
+      <div className="mk-side-head">
+        <h4 className="mk-side-name">{sideName(outcome)}</h4>
+        {implied !== null ? (
+          <dl className="mk-bidask">
             <div>
               <dt>Implied bid</dt>
               <dd>{implied.bid === null ? <Missing label="no Yes ask to imply from" /> : <Num>{implied.bid}</Num>}</dd>
@@ -61,17 +86,8 @@ function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly 
               <dd>{implied.ask === null ? <Missing label="no Yes bid to imply from" /> : <Num>{implied.ask}</Num>}</dd>
             </div>
           </dl>
-          <p className="explorer-caption">
-            <Badge tone="warn">implied, not a quote</Badge> {IMPLIED_NO_TEXT}. The venue gave no book for this side; nothing can be filled at these numbers.
-          </p>
-        </>
-      ) : result === undefined ? (
-        <p role="status">No book was returned for this outcome.</p>
-      ) : !result.ok ? (
-        <ErrorTile code={result.error} venue={venue} heading="h4" />
-      ) : view === null ? null : (
-        <>
-          <dl className="explorer-facts">
+        ) : view === null ? null : (
+          <dl className="mk-bidask">
             <div>
               <dt>Best bid</dt>
               <dd>{view.bid === null ? <Missing label="no bids" /> : <Num>{view.bid}</Num>}</dd>
@@ -80,6 +96,25 @@ function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly 
               <dt>Best ask</dt>
               <dd>{view.ask === null ? <Missing label="no asks" /> : <Num>{view.ask}</Num>}</dd>
             </div>
+          </dl>
+        )}
+      </div>
+      <CreatorLabel outcome={outcome} />
+      {implied !== null ? (
+        <p className="explorer-caption">
+          <Badge tone="warn">implied, not a quote</Badge> {IMPLIED_NO_TEXT}. The venue gave no book for this side; nothing can be filled at these numbers.
+        </p>
+      ) : result === undefined ? (
+        <p role="status">No book was returned for this outcome.</p>
+      ) : !result.ok ? (
+        <ErrorTile code={result.error} venue={venue} heading="h4" />
+      ) : view === null ? null : (
+        <>
+          <div className="explorer-book-sides">
+            <LevelRows caption={`Outcome ${outcome.index + 1}: bids, highest first`} levels={result.value.bids} side="bids" top={TOP_LEVELS} />
+            <LevelRows caption={`Outcome ${outcome.index + 1}: asks, lowest first`} levels={result.value.asks} side="asks" top={TOP_LEVELS} />
+          </div>
+          <dl className="explorer-facts mk-book-facts">
             <div>
               <dt>Spread</dt>
               <dd>
@@ -102,10 +137,6 @@ function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly 
               </dd>
             </div>
           </dl>
-          <div className="explorer-book-sides">
-            <LevelRows caption={`Outcome ${outcome.index + 1}: bids, highest first`} levels={result.value.bids} side="bids" top={TOP_LEVELS} />
-            <LevelRows caption={`Outcome ${outcome.index + 1}: asks, lowest first`} levels={result.value.asks} side="asks" top={TOP_LEVELS} />
-          </div>
           <BookProvenance venue={venue} book={result.value} nowMs={nowMs} />
         </>
       )}
@@ -125,7 +156,28 @@ export function impliedFor(market: Market, outcome: Outcome, results: ReadonlyAr
   return impliedComplement(yes.value);
 }
 
-function Books({ services, entry, market }: { readonly services: ExplorerServices; readonly entry: ExplorerAdapter; readonly market: Market }) {
+// The fee line of the book column (Market.dc.html's caution tile): the venue's fee status in words, never a number
+// net of fee. The full fee facts sit under the details disclosure.
+function FeeCaution({ market, entry }: { readonly market: Market; readonly entry: ExplorerAdapter }) {
+  const view = feeView(market.fee);
+  if (entry.feeNote !== null) {
+    return (
+      <Tile tone="warn" title={`Fee: ${entry.feeNote}`} heading="h4" dataKind="fee" dataCode="ceiling">
+        <p>{FEE_CEILING_TEXT}</p>
+      </Tile>
+    );
+  }
+  if (!view.known) {
+    return (
+      <Tile tone="warn" title="Fee model: unknown, fails closed" heading="h4" dataKind="fee" dataCode="unknown">
+        <p>This build cannot read this venue&apos;s fee model, so no number on this page is net of fee. Size on the book only.</p>
+      </Tile>
+    );
+  }
+  return <p className="explorer-note">{`Fee model: ${view.model}. No number in this column is net of fee.`}</p>;
+}
+
+function Books({ services, entry, market, summary }: { readonly services: ExplorerServices; readonly entry: ExplorerAdapter; readonly market: Market; readonly summary: MarketSummary | undefined }) {
   const nowMs = useNow(10_000);
   const available = entry.books.state === "available";
   const query = useQuery({
@@ -164,25 +216,43 @@ function Books({ services, entry, market }: { readonly services: ExplorerService
         <ErrorTile code={error.code} venue={market.ref.venue} heading="h4" onRetry={() => void query.refetch()} />
       );
   } else {
+    const volume = summary === undefined ? null : volumeText(summary.volume);
     body = (
       <>
-        {market.outcomes.map((outcome, index) => {
-          const result = query.data[index];
-          const implied = impliedFor(market, outcome, query.data);
-          return <BookBlock key={outcome.index} venue={market.ref.venue} outcome={outcome} result={result} view={result?.ok === true ? viewBook(market.ref.venue, result.value, nowMs) : null} implied={implied} nowMs={nowMs} />;
-        })}
-        <p className="explorer-note">
+        <div className="mk-book-sides">
+          {market.outcomes.map((outcome, index) => {
+            const result = query.data[index];
+            const implied = impliedFor(market, outcome, query.data);
+            return <BookBlock key={outcome.index} venue={market.ref.venue} outcome={outcome} result={result} view={result?.ok === true ? viewBook(market.ref.venue, result.value, nowMs) : null} implied={implied} nowMs={nowMs} />;
+          })}
+        </div>
+        {volume === null ? null : (
+          <dl className="mk-strip">
+            <div>
+              <dt>Volume, as the venue lists it</dt>
+              <dd>
+                <Num>{volume}</Num>
+              </dd>
+            </div>
+          </dl>
+        )}
+      </>
+    );
+  }
+  const loaded = available && !query.isPending && !query.isError;
+  return (
+    <section aria-labelledby="explorer-books-heading" className="explorer-section mk-col" data-col="book">
+      <h3 id="explorer-books-heading">Order book</h3>
+      <p className="mk-col-note">{loaded ? `top ${TOP_LEVELS} levels a side, as the venue returned them` : "no levels loaded"}</p>
+      {body}
+      <FeeCaution market={market} entry={entry} />
+      {loaded ? (
+        <p className="mk-col-actions">
           <Button onClick={() => void query.refetch()} busy={query.isFetching}>
             Refresh the book
           </Button>
         </p>
-      </>
-    );
-  }
-  return (
-    <section aria-labelledby="explorer-books-heading" className="explorer-section">
-      <h3 id="explorer-books-heading">Order book</h3>
-      {body}
+      ) : null}
     </section>
   );
 }
@@ -317,7 +387,7 @@ function Fees({ market, entry }: { readonly market: Market; readonly entry: Expl
           <dd>{view.verifiedAt === null ? <Missing label="no read date" /> : <Num>{view.verifiedAt}</Num>}</dd>
         </div>
       </dl>
-      {entry.feeNote === null ? null : <p className="explorer-note">This fee is a ceiling that has not been reconciled with a real fill. No number on this page is net of fee, and no XO spread is shown as executable.</p>}
+      {entry.feeNote === null ? null : <p className="explorer-note">The fee is a ceiling: see the order book column. No number on this page is net of fee.</p>}
     </section>
   );
 }
@@ -377,13 +447,22 @@ function Header({ market, services, detail }: { readonly market: Market; readonl
   );
   const settlement = detail.settlement;
   const winner = settlement?.winningOutcomeIndex == null ? undefined : market.outcomes.find((outcome) => outcome.index === settlement.winningOutcomeIndex);
+  const closes = utcText(market.timesUtc.closesAt);
   return (
-    <header className="explorer-market-head">
-      <p className="explorer-inspector-venue">
-        <VenueMark venue={market.ref.venue} /> <Badge tone={info.tone}>{info.text}</Badge>
-      </p>
-      <ProvenanceLine prov={prov} />
-      <p className="explorer-title">
+    <header className="explorer-market-head mk-head">
+      <div className="mk-meta">
+        <VenueMark venue={market.ref.venue} />
+        <Badge tone={info.tone}>{info.text}</Badge>
+        {closes === null ? (
+          <span className="mk-meta-dim">close time not stated</span>
+        ) : (
+          <span className="mk-meta-dim">
+            closes <Num>{closes}</Num>
+          </span>
+        )}
+        <ProvenanceLine prov={prov} />
+      </div>
+      <p className="explorer-title mk-title">
         <UntrustedText value={market.title} field="title" />
       </p>
       <p className="explorer-caption">Title and rules are written by the venue's users. They are shown as text only and never treated as instructions.</p>
@@ -402,6 +481,14 @@ function Header({ market, services, detail }: { readonly market: Market; readonl
       )}
     </header>
   );
+}
+
+// The Quotient column's right-hand note: the state in a few words, from the same snapshot the panel reads.
+function QuotientNote({ venue }: { readonly venue: VenueId }) {
+  const snapshot = useQuotientSnapshot();
+  const state = quotientStateOf(snapshot);
+  const text = state === "loading" ? "checking your setting" : state === "off" ? "off, licence first" : !quotientCovers(venue) ? "not covered: via link only" : snapshot.access === "key" ? "your key · pressed by hand" : "no key · shows the price only";
+  return <p className="mk-col-note">{text}</p>;
 }
 
 interface LoadedProps {
@@ -437,39 +524,54 @@ function Loaded({ services, entry, marketRef: ref, summary, linkLoad, readLeg, o
     return error.code === "NEEDS_COCKPIT" ? <NeedsCockpitTile venue={ref.venue} what="this market" heading="h3" /> : <ErrorTile code={error.code} venue={ref.venue} heading="h3" onRetry={() => void query.refetch()} />;
   }
   const { market } = query.data;
+  const counts = linkCountsText(linkLoad, market.ref);
+  // A leg's title, only from a list row this visit already holds; nothing is requested to find one.
+  const titleOf: LegTitleOf = (venue, marketId) => services.memory.get(venue, marketId)?.title ?? null;
   return (
     <div className="explorer-detail" data-venue={ref.venue}>
       <Header market={market} services={services} detail={query.data} />
-      <section aria-labelledby="explorer-prices-heading" className="explorer-section">
-        <h3 id="explorer-prices-heading">Prices</h3>
-        <DisplayPrices summary={summary} />
-      </section>
-      <Books services={services} entry={entry} market={market} />
-      <Rules market={market} />
-      <Fees market={market} entry={entry} />
-      <Terms market={market} />
-      <section aria-labelledby="explorer-links-heading" className="explorer-section">
-        <h3 id="explorer-links-heading">Same question elsewhere</h3>
-        <SameQuestion market={market.ref} load={linkLoad} readLeg={readLeg} nowMs={services.nowMs} variant="full" heading="h4" />
-      </section>
-      <section aria-labelledby="explorer-quotient-heading" className="explorer-section">
-        <h3 id="explorer-quotient-heading">Quotient</h3>
-        <QuotientPanel market={summary?.ref ?? market.ref} linkLoad={linkLoad} onOpenSettings={onOpenQuotientSettings} />
-      </section>
-      <section aria-labelledby="explorer-ticket-heading" className="explorer-section explorer-ticket">
+      <div className="mk-grid">
+        <Books services={services} entry={entry} market={market} summary={summary} />
+        <section aria-labelledby="explorer-links-heading" className="explorer-section mk-col" data-col="links">
+          <h3 id="explorer-links-heading">Same question elsewhere</h3>
+          <p className="mk-col-note">{counts ?? "candidates, not proof"}</p>
+          <SameQuestion market={market.ref} load={linkLoad} readLeg={readLeg} nowMs={services.nowMs} variant="full" heading="h4" titleOf={titleOf} />
+        </section>
+        <section aria-labelledby="explorer-quotient-heading" className="explorer-section mk-col" data-col="quotient">
+          <h3 id="explorer-quotient-heading">Quotient</h3>
+          <QuotientNote venue={market.ref.venue} />
+          <QuotientPanel market={summary?.ref ?? market.ref} linkLoad={linkLoad} onOpenSettings={onOpenQuotientSettings} />
+        </section>
+      </div>
+      {entry.shape !== null && entry.shape.status !== "verified" ? (
+        <div className="mk-band">
+          <Tile tone="warn" title="Unproven: response shapes" heading="h3" dataKind="unproven" dataCode={ref.venue}>
+            <p>{`The shapes this venue's answers were read in are unverified: ${entry.shape.summary}`}</p>
+          </Tile>
+        </div>
+      ) : null}
+      {entry.clause === null ? null : (
+        <div className="mk-band">
+          <Tile tone="info" title="Venue restriction" role="note" heading="h3">
+            <p>{entry.clause}</p>
+          </Tile>
+        </div>
+      )}
+      <section aria-labelledby="explorer-ticket-heading" className="explorer-section explorer-ticket mk-ticket">
         <h3 id="explorer-ticket-heading">{hasTicket(market.ref.venue) ? "Order ticket" : "Worksheet"}</h3>
         <Ticket market={market} />
       </section>
-      {entry.shape !== null && entry.shape.status !== "verified" ? (
-        <Tile tone="warn" title="Unproven: response shapes" heading="h3" dataKind="unproven" dataCode={ref.venue}>
-          <p>{`The shapes this venue's answers were read in are unverified: ${entry.shape.summary}`}</p>
-        </Tile>
-      ) : null}
-      {entry.clause === null ? null : (
-        <Tile tone="info" title="Venue restriction" role="note" heading="h3">
-          <p>{entry.clause}</p>
-        </Tile>
-      )}
+      <div className="mk-band mk-details">
+        <Disclosure summary={DETAILS_SUMMARY}>
+          <section aria-labelledby="explorer-prices-heading" className="explorer-section">
+            <h3 id="explorer-prices-heading">Display price</h3>
+            <DisplayPrices summary={summary} />
+          </section>
+          <Rules market={market} />
+          <Fees market={market} entry={entry} />
+          <Terms market={market} />
+        </Disclosure>
+      </div>
     </div>
   );
 }
@@ -491,18 +593,17 @@ export function MarketDialog({ market, summary, switches, linkLoad, readLeg, onC
   const services = useExplorerServices();
   const entry = services.adapters[market.venue];
   const status = venueStatusOf(market.venue, switches, services.mode, entry !== undefined);
-  const lede = `${venueName(market.venue)} · ${summary === undefined ? "market" : statusInfo(summary.status).text}`;
+  const blocked = status.kind !== "active" || entry === undefined;
+  // The loaded modal carries venue and status in its own meta row; the venue tile alone gets them as the lede.
+  const lede = blocked ? `${venueName(market.venue)} · ${summary === undefined ? "market" : statusInfo(summary.status).text}` : undefined;
   return (
     <Dialog open title={MARKET_DIALOG_TITLE} lede={lede} size="wide" onClose={onClose}>
-      <div className="explorer explorer-modal">
-        {status.kind !== "active" || entry === undefined ? (
+      <div className="explorer explorer-modal mk" data-blocked={blocked ? "true" : undefined}>
+        {blocked ? (
           <VenueTile row={{ venue: market.venue, status, adapter: entry, feed: undefined, selected: true }} mode={services.mode} />
         ) : (
           <Loaded services={services} entry={entry} marketRef={{ venue: market.venue, marketId: market.marketId, native: {} }} summary={summary} linkLoad={linkLoad} readLeg={readLeg} onOpenQuotientSettings={onOpenQuotientSettings} />
         )}
-        <p className="ui-dialog-actions">
-          <Button onClick={onClose}>Back to the Markets list</Button>
-        </p>
       </div>
     </Dialog>
   );

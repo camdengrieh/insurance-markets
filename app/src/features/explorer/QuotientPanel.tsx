@@ -16,9 +16,9 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 
 import type { MarketRef, VenueId } from "../../core/ports";
-import { Badge, Button, Tile, useNow, venueName } from "../../ui";
-import { MARKET_KEY, ROUTES, WHY_NOT_ARBITRAGE, approvalFor, type QuotientResult, type RowSet } from "../../venues/quotient";
-import { ResultNotice, RowCard, useSignalsServices, usdLabel, type LinkLoad, type SessionSnapshot } from "../signals";
+import { Badge, Button, Num, Tile, useNow, venueName } from "../../ui";
+import { MARKET_KEY, ROUTES, WHY_NOT_ARBITRAGE, approvalFor, qNumber, type QuotientResult, type QuotientRow, type RowSet } from "../../venues/quotient";
+import { ResultNotice, RowCard, pointsText, probabilityText, useSignalsServices, usdLabel, type LinkLoad, type SessionSnapshot } from "../signals";
 import { quotientCovers } from "./views";
 
 export type QuotientState = "loading" | "off" | "on";
@@ -87,6 +87,35 @@ export function QuotientLine({ venue, state, onOpenSettings, onOpenMarket }: { r
 }
 
 // ---- the modal's panel -------------------------------------------------------------------------------------------------
+
+// The two figure blocks of Market.dc.html, drawn only from a row Quotient really returned about this market and only
+// when the row's orientation is proven (qNumber): no block, no figure and no placeholder otherwise. The second block
+// is the row's own gap to the quote it carries, named as that and never as an executable edge. The row card below
+// carries every disclosure.
+export function QuotientFigures({ row }: { readonly row: QuotientRow }) {
+  const number = qNumber(row);
+  if (!number.shown) return null;
+  return (
+    <div className="mk-q-figures" data-q-figures="true">
+      <div className="mk-q-figure" data-rule="no">
+        <p className="mk-q-label">{number.about.outcome === "yes" ? "Model q · Yes" : "Model q · the linked outcome"}</p>
+        <p className="mk-q-value">
+          <Num>{probabilityText(number.value)}</Num>
+        </p>
+        <p className="mk-q-sub">a model's estimate, not a price</p>
+      </div>
+      {row.spread === null ? null : (
+        <div className="mk-q-figure" data-rule="ink">
+          <p className="mk-q-label">Gap to the quote on the row</p>
+          <p className="mk-q-value">
+            <Num>{pointsText(row.spread)}</Num>
+          </p>
+          <p className="mk-q-sub">{row.spreadDirection === "q_higher" ? "the estimate is above the quote" : row.spreadDirection === "q_lower" ? "the estimate is below the quote" : "direction not given"}; not an executable edge, size and fees not applied</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface QuotientPanelProps {
   readonly market: MarketRef;
@@ -164,7 +193,10 @@ export function QuotientPanel({ market, linkLoad, onOpenSettings }: QuotientPane
           <div className="signals-rows" data-results="lookup">
             {about.length === 0 ? <p>Quotient answered and no row is about this market. That is an answer, not a zero.</p> : null}
             {about.map((row) => (
-              <RowCard key={row.rowId} row={row} route="lookup" nowMs={nowMs} allowExperimental={false} linkLoad={linkLoad} readLeg={services.readLeg} clock={services.nowMs} />
+              <div key={row.rowId} className="mk-q-row">
+                <QuotientFigures row={row} />
+                <RowCard row={row} route="lookup" nowMs={nowMs} allowExperimental={false} linkLoad={linkLoad} readLeg={services.readLeg} clock={services.nowMs} />
+              </div>
             ))}
             {elsewhere > 0 ? <p className="explorer-note">{`${elsewhere} row${elsewhere === 1 ? "" : "s"} about other markets came back and ${elsewhere === 1 ? "is" : "are"} not shown.`}</p> : null}
             {result.charged ? <p className="explorer-note">{`This call was charged, about ${price} by the price table.`}</p> : null}

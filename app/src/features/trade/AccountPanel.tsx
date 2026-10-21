@@ -68,7 +68,7 @@ function SwitchList({ view }: { readonly view: FlagView }) {
         const on = flagIsOn(view, flag);
         return (
           <li key={flag}>
-            <Mono>{flag}</Mono> <Badge tone={on ? "warn" : "neutral"}>{on ? "ON" : "off"}</Badge>
+            <Mono>{flag}</Mono> <Badge tone={on ? "warn" : "neutral"}>{on ? "on" : "off"}</Badge>
           </li>
         );
       })}
@@ -141,7 +141,7 @@ function AccountDetail({ account, facts }: { readonly account: AccountAnswer; re
           { label: "USDC.e credited in the account", value: account.balance === null ? <Missing label="not known" /> : `${account.balance.usdc_e} USDC.e` },
           { label: "Claimable positions", value: <ClaimableList account={account} /> },
           { label: "Per-order cap and daily cap", value: `${account.caps.max_order_usd} USD and ${account.caps.max_daily_usd} USD. Advisory: they bind this plugin and its relay, and a compromised agent is not held by them.` },
-          { label: "Kill switch", value: account.kill_switch ? <Badge tone="danger">ON: every write is disabled</Badge> : "off" },
+          { label: "Kill switch", value: account.kill_switch ? <Badge tone="danger">On: every write is disabled</Badge> : "off" },
         ]}
       />
       <div>

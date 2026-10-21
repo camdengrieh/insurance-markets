@@ -3,7 +3,7 @@ import { DIST } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { startHostilePage } from "./support/servers";
 import { SESSION_KEY, pagePairedToken } from "./support/session";
-import { observe } from "./support/world";
+import { HERO_H1, observe } from "./support/world";
 
 // M1-4, the page half: the pairing code arrives in a URL fragment, the page removes it from the address bar before anything
 // else, and it appears in no request line or header the browser made, in exactly one request body (its own exchange at
@@ -97,7 +97,7 @@ test("a route fragment is left alone", async ({ page }) => {
   await daemon.waitForLink(1);
   await observe(page, { target: "cockpit" });
   await page.goto(`${daemon.origin}/#/markets`);
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   expect(page.url()).toBe(`${daemon.origin}/#/markets`);
 });
 

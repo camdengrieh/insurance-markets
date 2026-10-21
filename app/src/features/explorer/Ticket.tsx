@@ -22,10 +22,16 @@ import { TradeDesk, clobMarketFacts, type TokenChoice } from "../trade";
 import { priceText } from "./display";
 import { isSafeMarketId } from "./ids";
 
+// Fixed app words only: "Yes", "No" or "Outcome 3", never the creator's label. `short` is what the ticket's side
+// toggle shows after the side ("Buy Yes").
 export function tokenChoicesOf(market: Market): TokenChoice[] {
   return market.outcomes
     .filter((outcome) => outcome.tokenId !== "")
-    .map((outcome) => ({ label: `Outcome ${outcome.index + 1}: ${outcome.role === "yes" ? "Yes" : outcome.role === "no" ? "No" : "labelled by the creator"}`, tokenId: outcome.tokenId }));
+    .map((outcome) => {
+      const short = outcome.role === "yes" ? "Yes" : outcome.role === "no" ? "No" : `Outcome ${outcome.index + 1}`;
+      const label = `Outcome ${outcome.index + 1}: ${outcome.role === "yes" ? "Yes" : outcome.role === "no" ? "No" : "labelled by the creator"}`;
+      return outcome.role === "yes" || outcome.role === "no" ? { label, tokenId: outcome.tokenId, short, outcome: outcome.role } : { label, tokenId: outcome.tokenId, short };
+    });
 }
 
 // The venues this build can prepare an order for from the modal.
@@ -140,7 +146,7 @@ export function Worksheet({ market }: { readonly market: Market }) {
         </div>
         <div>
           <dt>Fees</dt>
-          <dd>{`${name}'s fee is not applied here; see the Fees section above.`}</dd>
+          <dd>{`${name}'s fee is not applied here; see the fees under the details below.`}</dd>
         </div>
       </dl>
     </div>

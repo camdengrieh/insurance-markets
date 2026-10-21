@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link, Route, Switch, useLocation } from "wouter";
 
 import { useAnnounce } from "./a11y";
@@ -20,6 +20,8 @@ const MODE_TEXT: Readonly<Record<AppMode, { readonly label: string; readonly det
 
 // The one keyboard shortcut of the page: focus the search field. It is a hint on the field, nothing more.
 const SEARCH_SHORTCUT = "⌘K";
+// The words in the empty search field: what it really searches (the rows already loaded), never a sample value.
+const SEARCH_HINT = "Search loaded markets";
 
 // ---- top bar --------------------------------------------------------------------------------------------------
 
@@ -34,20 +36,49 @@ function BrandMark() {
 }
 
 // The search field filters rows a screen has already loaded (ui/context.tsx useSearchQuery); it never requests.
+// On a phone (components.css, below 720 px) the field folds behind a 44 px search button so the top bar stays one
+// row (Mobile.dc.html); the field stays in the page, and the button, the shortcut or a typed query opens it.
 function TopBarSearch() {
   const { query, setQuery } = useSearchQuery();
   const input = useRef<HTMLInputElement>(null);
+  const fieldId = useId();
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
       event.preventDefault();
+      setOpen(true);
       input.current?.focus();
       input.current?.select();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
-  return <SearchField ref={input} label="Search loaded rows" shortcut={SEARCH_SHORTCUT} value={query} onChange={(event) => setQuery(event.target.value)} />;
+  const shown = open || query !== "";
+  return (
+    <>
+      <button
+        type="button"
+        className="ui-icon-button ui-search-toggle"
+        aria-expanded={shown}
+        aria-controls={fieldId}
+        aria-label="Search loaded rows"
+        onClick={() => {
+          const next = !shown;
+          setOpen(next);
+          if (next) requestAnimationFrame(() => input.current?.focus());
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-4-4" />
+        </svg>
+      </button>
+      <div id={fieldId} className="ui-search-slot" data-open={shown ? "true" : "false"}>
+        <SearchField ref={input} label="Search loaded rows" hint={SEARCH_HINT} shortcut={SEARCH_SHORTCUT} value={query} onChange={(event) => setQuery(event.target.value)} />
+      </div>
+    </>
+  );
 }
 
 // "Local Cockpit · 6 of 11 venues read". The count comes from the screen that reads venues; until one reports,

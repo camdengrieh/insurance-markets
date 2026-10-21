@@ -67,6 +67,7 @@ export function baseConfig(options: BaseConfigOptions): InlineConfig {
       alias: [
         { find: /^@shared\//, replacement: `${resolve(REPO_DIR, "src")}/` },
         { find: /^@bridge\//, replacement: `${resolve(REPO_DIR, "bridge")}/` },
+        { find: /^@sdk\//, replacement: `${resolve(REPO_DIR, "sdk")}/` },
       ],
       // The shared sources live outside app/, so without this a bare `viem` or `zod` import in them would
       // resolve from the root workspace. Dedupe makes Vite resolve these names from the app only; the

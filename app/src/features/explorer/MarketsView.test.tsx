@@ -9,6 +9,7 @@ import { withVenueEnabled } from "../../core/settings";
 import { DEFAULT_SWITCHES } from "../../core/venue-policy";
 import { act, allText, choose, click, cleanup, must } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";
+import { heroTitle } from "./HeroBand";
 import { MarketsView } from "./MarketsView";
 import { FakeError, book, fakeEntry, fakeServices, flush, market, mount, summary } from "./test-support";
 
@@ -38,29 +39,42 @@ function submit(form: HTMLFormElement): void {
 const headers = (root: ParentNode): string[] => [...root.querySelectorAll("thead th")].map((th) => th.textContent ?? "");
 const rowsOf = (root: ParentNode): HTMLTableRowElement[] => [...root.querySelectorAll<HTMLTableRowElement>("tbody tr")];
 const tile = (root: ParentNode, kind: string, code?: string): Element | null => root.querySelector(`section[data-kind="${kind}"]${code === undefined ? "" : `[data-code="${code}"]`}`);
+// A row is selected for the inspector by its venue cell's button (the whole row is the pointer target).
+const inspectRow = (row: ParentNode): void => click(must(row, "button.explorer-row-select"));
+const inspectorOf = (root: ParentNode): HTMLElement => must<HTMLElement>(root, "aside.explorer-inspector");
+const HERO_H1 = /^Every open market this build can read\. [A-Z][a-z]+ venues?, one book at a time\.$/;
 
 describe("the list", () => {
   it("shows one row per market with the fixed columns, units and labels", async () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { title: "Will it rain", prices: ["0.6", "0.4"] }), summary("xo", "m2", { title: "Second" })]], feeNote: "ceiling, unreconciled" });
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one", volume: { amount: "980.25", unit: "unknown", windowHours: 24 } })]] });
     const { container } = await mount(<MarketsView />, fakeServices([xo, pm]));
-    expect(headers(container)).toEqual(["Venue", "Market", "Category", "Yes bid / ask", "Spread", "Depth within 5c", "Closes (UTC)", "Marks", "Inspect"]);
+    expect(headers(container)).toEqual(["Venue", "Market", "Category", "Yes bid / ask", "Spread", "Depth ±5¢", "Closes (UTC)", "Marks"]);
     const rows = rowsOf(container);
     expect(rows).toHaveLength(3);
     const first = allText(rows[0] as Element);
     expect(first).toContain("XO Market");
     expect(first).toContain("Will it rain");
-    expect(first).toContain("active");
-    expect(first).toContain("2026-12-01 00:00 UTC");
-    expect(first).toContain("Yes 60.0c");
-    expect(first).toContain("No 40.0c");
-    expect(first).toContain("display price, not executable");
-    expect(first).toContain("$1,234.50 per 24 h");
+    expect(first).toContain("2026-12-01 00:00");
+    // One value per cell: a row with no loaded book says so in one phrase; display prices are not in the row.
+    expect(first).toContain("no book loaded");
+    expect(first).not.toContain("60.0c");
+    // The first row is inspected on load: status, volume and the labelled display prices are in the inspector.
+    const aside = inspectorOf(container);
+    expect(aside.getAttribute("data-selected")).toBe("xo:m1");
+    const head = allText(must(aside, ".explorer-inspector-head"));
+    expect(head).toContain("active");
+    expect(head).toContain("Yes 60.0c");
+    expect(head).toContain("No 40.0c");
+    expect(head).toContain("display price, not executable");
+    expect(head).toContain("$1,234.50 per 24 h");
     // Every number, id and time is set in mono; the fee note and the link words live in the modal and the inspector.
-    expect([...(rows[0] as Element).querySelectorAll(".ui-num")].map((node) => node.textContent)).toEqual(expect.arrayContaining(["60.0c", "40.0c", "$1,234.50 per 24 h", "2026-12-01 00:00 UTC"]));
-    expect(allText(rows[2] as Element)).toContain("980.25 (unit not stated) per 24 h");
-    expect(allText(rows[2] as Element)).not.toContain("$980");
-    expect(allText(container)).toContain("3 markets shown from 2 venues");
+    expect([...(rows[0] as Element).querySelectorAll(".ui-num")].map((node) => node.textContent)).toEqual(expect.arrayContaining(["2026-12-01 00:00"]));
+    expect([...must(aside, ".explorer-inspector-head").querySelectorAll(".ui-num")].map((node) => node.textContent)).toEqual(expect.arrayContaining(["60.0c", "40.0c", "$1,234.50 per 24 h", "2026-12-01 00:00 UTC"]));
+    inspectRow(rows[2] as Element);
+    expect(allText(must(inspectorOf(container), ".explorer-inspector-head"))).toContain("980.25 (unit not stated) per 24 h");
+    expect(allText(inspectorOf(container))).not.toContain("$980");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toBe("3 of 3 loaded rows · 2 venues · each venue at most 5 pages");
   });
 
   it("shows an unknown price as no data, never as zero", async () => {
@@ -69,7 +83,12 @@ describe("the list", () => {
     const row = must<HTMLTableRowElement>(container, "tbody tr");
     const cells = [...row.querySelectorAll("td")].map((cell) => allText(cell));
     expect(cells.join(" | ")).not.toMatch(/0\.0c|\$0|\b0\b/);
-    expect(row.querySelectorAll(".ui-missing").length).toBeGreaterThanOrEqual(4);
+    // Spread, depth and close time.
+    expect(row.querySelectorAll(".ui-missing").length).toBeGreaterThanOrEqual(3);
+    // The display prices and the volume, in the inspector: no data, never zero.
+    const head = must(inspectorOf(container), ".explorer-inspector-head");
+    expect(allText(head)).not.toMatch(/0\.0c|\$0|\b0\b/);
+    expect(head.querySelectorAll(".ui-missing").length).toBeGreaterThanOrEqual(4);
   });
 
   it("keeps Yes and No as the sides by role and shows a team name beside them, as text", async () => {
@@ -79,10 +98,10 @@ describe("the list", () => {
     ];
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { outcomes })]] });
     const { container } = await mount(<MarketsView />, fakeServices([xo]));
-    const cell = allText(must(container, "tbody tr"));
+    const cell = allText(must(inspectorOf(container), "[data-display-prices]"));
     expect(cell).toContain("Yes (Chiefs) 70.0c");
     expect(cell).toContain("No (<b>Bills</b>) 30.0c");
-    expect(container.querySelector("tbody b")).toBeNull();
+    expect(container.querySelector("aside b")).toBeNull();
   });
 
   it("links each title to its market address and nowhere else, and a plain click opens the modal in place", async () => {
@@ -95,15 +114,15 @@ describe("the list", () => {
     // The modal is over the unchanged surface: the table and its hero are still there, and the venues were not asked again.
     expect(allText(must(must(document.body, "[role='dialog']"), ".explorer-title"))).toBe("Link me");
     expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(pm.listCalls).toHaveLength(1);
   });
 
   it("the inks of the row marks follow the boards: held in the ink, link in the Yes blue, Q in the No rust", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1")]] });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    click(buttonWith(must(container, "tbody tr"), /^Inspect$/));
-    click(buttonWith(inspector(container), /^Watch$/));
+    inspectRow(must(container, "tbody tr"));
+    click(must(inspector(container), "button[aria-label='Watch this market']"));
     const marks = [...container.querySelectorAll("tbody tr .ui-mark")].map((mark) => [mark.textContent, mark.getAttribute("data-tone")]);
     expect(marks).toEqual([
       ["Q", "no"],
@@ -132,9 +151,11 @@ describe("M0-2: venues the build cannot read are said, not emptied", () => {
     expect(allText(kalshi as Element)).toContain("nothing was requested");
     expect(allText(kalshi as Element)).toContain("not an empty market list");
     expect(allText(tile(container, "needs-cockpit", "xo") as Element)).toContain("XO Market: needs the Cockpit");
-    // The XO row itself says so where the spread would be.
+    // The XO row itself says so where the price would be, and has no spread or depth.
     const row = must<HTMLTableRowElement>(container, "tbody tr");
-    expect(allText(row)).toContain("needs the Cockpit");
+    expect(allText(must(row, '[data-col="price"]'))).toBe("book via Cockpit");
+    expect(must(row, '[data-col="price"] [data-book]').getAttribute("data-book")).toBe("needs_cockpit");
+    expect(must(row, '[data-col="spread"] .ui-missing')).not.toBeNull();
     expect(allText(row)).not.toMatch(/bid|ask/);
   });
 
@@ -241,7 +262,7 @@ describe("search and filters (the top bar's field narrows loaded rows; the butto
     const input = must<HTMLInputElement>(container, 'input[type="search"]');
     for (const value of ["r", "ra", "rai", "rain"]) typeInto(input, value);
     expect(rowsOf(container)).toHaveLength(1);
-    expect(allText(container)).toContain("1 market shown of 3 loaded");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("1 of 3 loaded rows");
     expect(xo.listCalls).toHaveLength(1);
     expect(trueo.listCalls).toHaveLength(1);
     expect(xo.listCalls.every((call) => call.text === undefined)).toBe(true);
@@ -377,8 +398,8 @@ describe("order books for the visible rows", () => {
     const mani = fakeEntry("manifold", { pages: [[summary("manifold", "mm")]], books: { state: "none", why: "Manifold is a play-money venue with no order book" } });
     const { container } = await mount(<MarketsView />, fakeServices([pm, mani]));
     expect(pm.bookCalls).toHaveLength(0);
-    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as Element;
-    expect(button.textContent).toBe("Load order books for the first 10 rows");
+    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as Element;
+    expect(button.textContent).toBe("Load books for the first 10 visible rows");
     click(button);
     await flush();
     expect(pm.bookCalls).toHaveLength(1);
@@ -389,10 +410,10 @@ describe("order books for the visible rows", () => {
     expect(allText(first)).toContain("bid 50.0c / ask 54.0c");
     expect(allText(first)).toContain("4.0c");
     expect(allText(first)).toContain("book spread (size and fees not applied)");
-    expect(allText(first)).toContain("bids 10.00");
-    expect(allText(first)).toContain("asks 20.00");
+    // Depth within five cents: one combined figure (10 + 20 shares), its split is in the inspector's book.
+    expect(allText(must(first, '[data-col="depth"]'))).toBe("30.00 shares");
     const eleventh = rowsOf(container).find((row) => allText(row).includes("Row 11")) as Element;
-    expect(allText(eleventh)).toContain("display price, not executable");
+    expect(allText(must(eleventh, '[data-col="price"]'))).toBe("no book loaded");
     const manifold = rowsOf(container).find((row) => allText(row).includes("Manifold")) as Element;
     expect(allText(manifold)).toContain("no order book");
   });
@@ -403,7 +424,7 @@ describe("order books for the visible rows", () => {
       getBooks: (ids) => ids.map((id) => ({ ok: true as const, value: book("xo", id, [["0.50", "10"]], [["0.54", "20"]]) })),
     });
     const { container } = await mount(<MarketsView />, fakeServices([xo], { mode: "cockpit" }));
-    click([...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as Element);
+    click([...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as Element);
     await flush();
     const row = must<HTMLTableRowElement>(container, "tbody tr");
     expect(allText(row)).toContain("indicative spread, not executable");
@@ -415,7 +436,7 @@ describe("order books for the visible rows", () => {
   it("does not offer books where no visible row can have one", async () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1")]], books: { state: "needs_cockpit", what: "XO order books" } });
     const { container } = await mount(<MarketsView />, fakeServices([xo]));
-    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as HTMLButtonElement;
+    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(xo.bookCalls).toHaveLength(0);
   });
@@ -423,7 +444,7 @@ describe("order books for the visible rows", () => {
   it("a book for another token is refused, not shown", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1")]], getBooks: () => [{ ok: true as const, value: book("polymarket", "someone-elses", [["0.1", "1"]], [["0.2", "1"]]) }] });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    click([...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as Element);
+    click([...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as Element);
     await flush();
     const row = must<HTMLTableRowElement>(container, "tbody tr");
     expect(allText(row)).toContain("book: The venue answered in a shape we do not recognise");
@@ -434,7 +455,7 @@ describe("order books for the visible rows", () => {
     const a = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1")]], getBooks: () => [{ ok: false as const, error: "EMPTY_BOOK" as const }] });
     const b = fakeEntry("pascal", { pages: [[summary("pascal", "S1")]], getBooks: () => [{ ok: false as const, error: "TIMEOUT" as const }] });
     const { container } = await mount(<MarketsView />, fakeServices([a, b]));
-    click([...container.querySelectorAll("button")].find((x) => x.textContent?.startsWith("Load order books")) as Element);
+    click([...container.querySelectorAll("button")].find((x) => x.textContent?.startsWith("Load books")) as Element);
     await flush();
     const texts = rowsOf(container).map((row) => allText(row));
     expect(texts.find((t) => t.includes("Polymarket"))).toContain("No orders at the moment");
@@ -449,7 +470,7 @@ describe("order books for the visible rows", () => {
       },
     });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    click([...container.querySelectorAll("button")].find((x) => x.textContent?.startsWith("Load order books")) as Element);
+    click([...container.querySelectorAll("button")].find((x) => x.textContent?.startsWith("Load books")) as Element);
     await flush();
     expect(allText(must(container, "tbody tr"))).toContain("book: The venue asked us to slow down");
   });
@@ -548,7 +569,7 @@ describe("the views are filter states of one table, never screens", () => {
     const { container } = await mount(<MarketsView />, services);
     click(chip(container, "signals"));
     expect(rowsOf(container)).toHaveLength(2);
-    expect(allText(container)).toContain("2 markets shown in the Signals view of 3 loaded");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("2 of 3 loaded rows in Signals");
     expect(allText(must(container, "[data-view-note='signals']"))).toContain("Quotient is off: the licence clause comes first");
     expect(must(container, ".explorer-list h2").textContent).toBe("Signals");
     // A chip never requests anything.
@@ -583,10 +604,18 @@ describe("the views are filter states of one table, never screens", () => {
     const { container } = await mount(<MarketsView />, services);
     const facts = allText(must(container, ".ui-hero-facts"));
     expect(facts).toContain("no address watched");
-    expect(facts).toContain("Linked rows0 none approved");
+    expect(facts).toContain("Linked groups0 no link dataset in this build");
     expect(facts).toContain("Quotientoff licence first");
-    expect(must(container, "h1").textContent).toBe("Markets");
-    // The rules' inks follow the boards: Held in the ink, Linked rows in the Yes blue, Quotient in the No rust.
+    // The h1 names the venues this build reads with the current settings: computed, never a fixed word.
+    const readable = container.querySelectorAll("li.explorer-venue").length;
+    expect(readable).toBeGreaterThan(0);
+    expect(must(container, "h1").textContent).toBe(heroTitle(readable));
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
+    // The phone's label repeats computed figures only, and is hidden from assistive technology.
+    const compact = must(container, ".ui-hero-compact");
+    expect(compact.getAttribute("aria-hidden")).toBe("true");
+    expect(allText(compact)).toBe(`${readable} venues · 3 rows`);
+    // The rules' inks follow the boards: Held in the ink, Linked groups in the Yes blue, Quotient in the No rust.
     expect([...container.querySelectorAll(".ui-hero-fact")].map((fact) => fact.getAttribute("data-tone"))).toEqual(["ink", "yes", "no"]);
   });
 });
@@ -594,14 +623,27 @@ describe("the views are filter states of one table, never screens", () => {
 describe("the inspector", () => {
   const books = (tokenIds: readonly string[]): ReadonlyArray<Result<Book, AdapterError>> => tokenIds.map((id) => ({ ok: true as const, value: book("polymarket", id, [["0.50", "10"]], [["0.54", "20"]]) }));
 
-  it("is empty in words until a row is inspected, then shows provenance, the title slot, the book and the actions", async () => {
-    const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" })]], getBooks: books });
+  it("inspects the first row on load, names itself by aria-label only, and shows provenance, the title slot, the book and the actions", async () => {
+    const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" }), summary("polymarket", "p2", { title: "Poly two" })]], getBooks: books });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    expect(allText(must(inspector(container), "[data-inspector='empty']"))).toContain("Select a row with its Inspect button");
-    click(buttonWith(must(container, "tbody tr"), /^Inspect$/));
     const aside = inspector(container);
+    expect(aside.getAttribute("aria-label")).toBe("Inspector");
+    expect(aside.querySelector("h2")).toBeNull();
+    // The first row shown is inspected on load; nothing was requested for it.
     expect(aside.getAttribute("data-selected")).toBe("polymarket:p1");
     expect(must(container, "tbody tr").getAttribute("data-selected")).toBe("true");
+    expect(must(container, "tbody tr button.explorer-row-select").getAttribute("aria-current")).toBe("true");
+    // A click anywhere on another row selects it, as its venue button does from the keyboard.
+    const second = rowsOf(container)[1] as HTMLTableRowElement;
+    click(must(second, '[data-col="category"]'));
+    expect(aside.getAttribute("data-selected")).toBe("polymarket:p2");
+    expect(must(second, "button.explorer-row-select").getAttribute("aria-current")).toBe("true");
+    inspectRow(must(container, "tbody tr"));
+    expect(aside.getAttribute("data-selected")).toBe("polymarket:p1");
+    // The select button's name is "Inspect", the title slot's text and the venue.
+    const select = must(must(container, "tbody tr"), "button.explorer-row-select");
+    const names = (select.getAttribute("aria-labelledby") ?? "").split(" ").map((id) => allText(document.getElementById(id) as Element));
+    expect(names).toEqual(["Inspect", "Poly one", "on Polymarket"]);
     expect(allText(must(aside, ".explorer-title"))).toBe("Poly one");
     expect(allText(must(aside, ".ui-provenance"))).toContain("browser direct");
     expect(allText(aside)).toContain("has not been loaded in this visit");
@@ -612,8 +654,8 @@ describe("the inspector", () => {
     expect(pm.bookCalls).toEqual([["p1-t0"]]);
     expect(allText(aside)).toContain("bid 50.0c / ask 54.0c");
     expect(allText(aside)).toContain("Yes bids, highest first");
-    // Same question elsewhere and the Quotient line, in words.
-    expect(allText(aside)).toContain("candidates, not proof");
+    // Same question elsewhere and the Quotient line, in words, each heading with its note on the right.
+    expect([...aside.querySelectorAll(".explorer-section-head")].map((head) => allText(head))).toEqual(["Order bookbest levels; the modal has the rest", "Same question elsewherecandidates, not proof", "Quotientcovered · off"]);
     expect(allText(aside)).toContain("No approved link.");
     expect(must(aside, "[data-quotient]").getAttribute("data-quotient")).toBe("off");
     expect(allText(aside)).toContain("licence first");
@@ -626,22 +668,22 @@ describe("the inspector", () => {
   it("Watch marks the row in memory and sends nothing", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" })]] });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    click(buttonWith(must(container, "tbody tr"), /^Inspect$/));
     const before = pm.listCalls.length;
-    click(buttonWith(inspector(container), /^Watch$/));
+    const watch = must<HTMLButtonElement>(inspector(container), "button[aria-label='Watch this market']");
+    expect(watch.getAttribute("aria-pressed")).toBe("false");
+    expect(allText(document.getElementById(watch.getAttribute("aria-describedby") ?? "") as Element)).toContain("memory only");
+    click(watch);
     expect(allText(must(container, "tbody tr [data-label='Marks']"))).toContain("watch");
-    expect(buttonWith(inspector(container), /^Watching$/).getAttribute("aria-pressed")).toBe("true");
+    expect(must(inspector(container), "button[aria-label='Watch this market']").getAttribute("aria-pressed")).toBe("true");
     expect(pm.listCalls.length).toBe(before);
   });
 
   it("XO in the standalone build: Prepare order needs the Cockpit; the Cockpit build unpaired: not paired", async () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1")]], books: { state: "needs_cockpit", what: "XO order books" } });
     const standalone = await mount(<MarketsView />, fakeServices([xo]));
-    click(buttonWith(must(standalone.container, "tbody tr"), /^Inspect$/));
     expect(buttonWith(inspector(standalone.container), /Prepare order/).textContent).toBe("Prepare order: needs the Cockpit");
     cleanup();
     const cockpit = await mount(<MarketsView />, fakeServices([fakeEntry("xo", { pages: [[summary("xo", "m1")]] })], { mode: "cockpit" }));
-    click(buttonWith(must(cockpit.container, "tbody tr"), /^Inspect$/));
     const prepare = buttonWith(inspector(cockpit.container), /Prepare order/);
     expect(prepare.disabled).toBe(true);
     expect(prepare.textContent).toBe("Prepare order: not paired with your Cockpit");
@@ -651,7 +693,6 @@ describe("the inspector", () => {
   it("Open market opens the modal over the table without leaving the page, and closing it comes back", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" })]], detail: { market: market("polymarket", "p1", { title: "Poly one" }), notes: [], settlement: null }, getBooks: books });
     const { container } = await mount(<MarketsView />, fakeServices([pm]));
-    click(buttonWith(must(container, "tbody tr"), /^Inspect$/));
     click(buttonWith(inspector(container), /^Open market$/));
     await flush(10);
     const dialog = must(document.body, "[role='dialog']");
@@ -662,7 +703,7 @@ describe("the inspector", () => {
     // The table is still mounted underneath: nothing navigated and nothing was asked of the venues again.
     expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
     expect(pm.listCalls).toHaveLength(1);
-    click(buttonWith(dialog, /Back to the Markets list/));
+    click(must(dialog, "button.ui-dialog-close"));
     expect(document.body.querySelector("[role='dialog']")).toBeNull();
     expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   });
@@ -670,7 +711,6 @@ describe("the inspector", () => {
   it("the Quotient settings dialog opens from the Quotient line with the switch off and the clause first", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1")]] });
     const { container, signals } = await mount(<MarketsView />, fakeServices([pm]));
-    click(buttonWith(must(container, "tbody tr"), /^Inspect$/));
     click(buttonWith(inspector(container), /^Quotient settings$/));
     const dialog = must(document.body, "[role='dialog']");
     expect(must(dialog, "h2").textContent).toBe("Quotient settings");
@@ -684,35 +724,36 @@ describe("a deep link opens the market modal over the table", () => {
   it("renders the same surface, hero band included, with the modal for the market named; a bad address is a typed not-found", async () => {
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" })]], detail: { market: market("polymarket", "p1", { title: "Poly one" }), notes: [], settlement: null } });
     const { container } = await mount(<MarketsView market={{ venue: "polymarket", marketId: "p1" }} />, fakeServices([pm]));
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(container.querySelector(".ui-hero")).not.toBeNull();
     const dialog = must(document.body, "[role='dialog']");
     expect(allText(must(dialog, ".explorer-title"))).toBe("Poly one");
     cleanup();
     const bad = await mount(<MarketsView invalidAddress />, fakeServices([pm]));
     expect(allText(bad.container)).toContain("This is not a market address");
-    expect(must(bad.container, "h1").textContent).toBe("Markets");
+    expect(must(bad.container, "h1").textContent).toMatch(HERO_H1);
     expect(document.body.querySelector("[role='dialog']")).toBeNull();
   });
 });
 
 describe("switching a view drops a selection the new view does not show", () => {
-  it("clears the inspector when the inspected row is not in the next view, and keeps it when it is", async () => {
-    const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" })]] });
+  it("falls back to the first row of the next view when the inspected row is not in it, and keeps it when it is", async () => {
+    const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one" }), summary("polymarket", "p2", { title: "Poly two" })]] });
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { title: "Xo one" })]], books: { state: "needs_cockpit", what: "XO order books" } });
     const { container } = await mount(<MarketsView />, fakeServices([pm, xo]));
     const xoRow = rowsOf(container).find((row) => allText(row).includes("Xo one")) as Element;
-    click(buttonWith(xoRow, /^Inspect$/));
+    inspectRow(xoRow);
     expect(inspector(container).getAttribute("data-selected")).toBe("xo:m1");
-    // Signals shows Polymarket rows only: the XO selection is gone from the table and from the inspector alike.
+    // Signals shows Polymarket rows only: the XO selection is gone from the table and from the inspector alike, and
+    // the first row the view shows is inspected instead.
     click(chip(container, "signals"));
-    expect(container.querySelector("tbody tr[data-selected='true']")).toBeNull();
-    expect(inspector(container).getAttribute("data-selected")).toBe("none");
+    expect(container.querySelectorAll("tbody tr[data-selected='true']")).toHaveLength(1);
+    expect(inspector(container).getAttribute("data-selected")).toBe(`polymarket:${rowsOf(container)[0]?.textContent?.includes("Poly one") === true ? "p1" : "p2"}`);
     click(chip(container, "all"));
-    const pmRow = rowsOf(container).find((row) => allText(row).includes("Poly one")) as Element;
-    click(buttonWith(pmRow, /^Inspect$/));
+    const pmRow = rowsOf(container).find((row) => allText(row).includes("Poly two")) as Element;
+    inspectRow(pmRow);
     click(chip(container, "signals"));
-    expect(inspector(container).getAttribute("data-selected")).toBe("polymarket:p1");
-    expect(must(container, "tbody tr[data-selected='true']").textContent).toContain("Poly one");
+    expect(inspector(container).getAttribute("data-selected")).toBe("polymarket:p2");
+    expect(must(container, "tbody tr[data-selected='true']").textContent).toContain("Poly two");
   });
 });

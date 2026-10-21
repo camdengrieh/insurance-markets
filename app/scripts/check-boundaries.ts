@@ -20,6 +20,8 @@ const NODE_BUILTINS: ReadonlySet<string> = new Set(builtinModules.flatMap((name)
 
 // Repo-relative prefixes and files the bundled code may reach outside app/.
 const SHARED_ALLOW: readonly RegExp[] = [
+  // The shared SDK (docs/sdk-and-api-design.md): pure and isomorphic. Its Node-only part, sdk/node/, is forbidden below.
+  /^sdk\/(?!node\/)/,
   /^src\/xo\//,
   /^src\/clob\//,
   /^src\/guardrails\//,
@@ -38,6 +40,7 @@ const FORBIDDEN: ReadonlyArray<{ readonly pattern: RegExp; readonly reason: stri
   { pattern: /^src\/clob\/(?:polymarket\/l2|limitless\/hmac)\.ts$/, reason: "the venue request signers hold a credential; the page never does", bundledOnly: false },
   { pattern: /^src\/guardrails\/audit\.ts$/, reason: "the audit writer uses Node streams and files", bundledOnly: false },
   { pattern: /^src\/(?:plugin|local|paybox|config)\.ts$/, reason: "plugin entry points are Node-only", bundledOnly: false },
+  { pattern: /^sdk\/node\//, reason: "sdk/node holds the credentialed signers, the vault and the audit writer; the page never does", bundledOnly: false },
   { pattern: /^bridge\/(?!contract\.ts$)/, reason: "the daemon's internals never enter the page; only bridge/contract.ts is shared", bundledOnly: true },
 ];
 
@@ -61,6 +64,7 @@ async function resolveLocal(specifier: string, from: string, repoRoot: string): 
   let base: string;
   if (specifier.startsWith("@shared/")) base = join(repoRoot, "src", specifier.slice("@shared/".length));
   else if (specifier.startsWith("@bridge/")) base = join(repoRoot, "bridge", specifier.slice("@bridge/".length));
+  else if (specifier.startsWith("@sdk/")) base = join(repoRoot, "sdk", specifier.slice("@sdk/".length));
   else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
   else return undefined;
   const stripped = base.replace(/\.(?:[cm]?js|jsx)$/, "");

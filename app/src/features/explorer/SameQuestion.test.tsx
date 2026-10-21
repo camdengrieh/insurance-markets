@@ -5,7 +5,8 @@ import type { LegObservation } from "../signals/links/verify";
 import { pinDataset, type LinkLoad } from "../signals/links/dataset";
 import type { Link, LinkLeg } from "../signals/links/schema";
 import { allText, cleanup, must, render } from "../../ui/testing/dom";
-import { NO_APPROVED_LINK, PROPOSED_HEADING, PROPOSED_NOTE, RULES_NOT_COMPARABLE, SameQuestion } from "./SameQuestion";
+import { untrusted } from "../../core/untrusted";
+import { NO_APPROVED_LINK, PROPOSED_HEADING, PROPOSED_NOTE, RULES_NOT_COMPARABLE, SameQuestion, categoryWords } from "./SameQuestion";
 import { NOW, flush } from "./test-support";
 
 afterEach(cleanup);
@@ -51,6 +52,30 @@ const loaded = (links: Link[], rulesRecipe?: string): LinkLoad => ({ state: "loa
 const readPinned = async (leg: LinkLeg): Promise<LegObservation> => ({ state: "read", rulesSha256: leg.rulesSha256, closesAtUtc: leg.closeUtc, status: "active" });
 const nowMs = () => NOW;
 
+describe("the legs in the modal", () => {
+  it("names a leg by its title only when that row is loaded in this visit, else by its id, and never with a price", async () => {
+    const titles = new Map([[`polymarket:4329882`, untrusted("Will it rain in Lisbon")]]);
+    const titleOf = (venue: string, marketId: string) => titles.get(`${venue}:${marketId}`) ?? null;
+    const { container } = render(<SameQuestion market={{ venue: "xo", marketId: XO_ID }} load={loaded([approved(), proposed()])} readLeg={readPinned} nowMs={nowMs} variant="full" titleOf={titleOf} />);
+    await flush();
+    const approvedBlock = must(container, "[data-links='candidates']");
+    expect(allText(approvedBlock)).toContain("Will it rain in Lisbon");
+    expect(approvedBlock.querySelector(".ui-untrusted")).not.toBeNull();
+    expect(approvedBlock.querySelector("h1, h2, h3, h4, h5, h6")).toBeNull();
+    // The proposed leg's row is not loaded: its id stands in, and no title is invented.
+    const tier = must(container, "[data-links='proposed']");
+    expect(allText(tier)).toContain("alpha-rovers-win");
+    expect(tier.querySelector(".ui-untrusted")).toBeNull();
+    expect(/\b0\.\d+\b/.test(allText(container).replace(XO_ID, ""))).toBe(false);
+  });
+
+  it("maps every category slug through the taxonomy's words and refuses one outside it", () => {
+    expect(categoryWords("science_tech")).toBe("Science and tech");
+    expect(categoryWords(undefined)).toBe("category not given");
+    expect(categoryWords("not_a_category")).toBe("category outside the taxonomy");
+  });
+});
+
 describe("the proposed (not approved) tier", () => {
   it("shows the proposal below the approved legs with venue, id, category, band words and a re-check, and no spread", async () => {
     const { container } = render(<SameQuestion market={{ venue: "xo", marketId: XO_ID }} load={loaded([approved(), proposed()])} readLeg={readPinned} nowMs={nowMs} variant="full" />);
@@ -63,7 +88,9 @@ describe("the proposed (not approved) tier", () => {
     expect(tierText).toContain(PROPOSED_HEADING);
     expect(tierText).toContain("Limitless");
     expect(tierText).toContain("alpha-rovers-win");
-    expect(tierText).toContain("sports");
+    // The linker's category slug in the taxonomy's words, never the raw slug.
+    expect(tierText).toContain("Sports");
+    expect(tierText).not.toContain("sports");
     expect(tierText).toContain("good match");
     expect(tierText).toContain("proposed, not approved");
     expect(tierText).toContain("near identity");
@@ -92,8 +119,23 @@ describe("the proposed (not approved) tier", () => {
     }
   });
 
-  it("a dataset hashed with another recipe re-checks close time and status only and says so", async () => {
+  it("a linker export (rules-v2, the shared recipe) re-checks the rules too: matching fingerprints verify", async () => {
     const { container } = render(<SameQuestion market={{ venue: "xo", marketId: XO_ID }} load={loaded([proposed()], "rules-v2")} readLeg={readPinned} nowMs={nowMs} variant="compact" />);
+    await flush();
+    const tier = must(container, "[data-links='proposed']");
+    expect(allText(tier)).not.toContain(RULES_NOT_COMPARABLE);
+    expect(allText(tier)).toContain("re-checked now: verified now");
+  });
+
+  it("a linker export whose rules changed on a venue suspends the re-check", async () => {
+    const changed = async (leg: LinkLeg): Promise<LegObservation> => ({ state: "read", rulesSha256: "f".repeat(64), closesAtUtc: leg.closeUtc, status: "active" });
+    const { container } = render(<SameQuestion market={{ venue: "xo", marketId: XO_ID }} load={loaded([proposed()], "rules-v2")} readLeg={changed} nowMs={nowMs} variant="compact" />);
+    await flush();
+    expect(allText(must(container, "[data-links='proposed']"))).toContain("re-checked now: suspended");
+  });
+
+  it("a dataset hashed with another recipe re-checks close time and status only and says so", async () => {
+    const { container } = render(<SameQuestion market={{ venue: "xo", marketId: XO_ID }} load={loaded([proposed()], "app-v1")} readLeg={readPinned} nowMs={nowMs} variant="compact" />);
     await flush();
     const tier = must(container, "[data-links='proposed']");
     expect(allText(tier)).toContain(RULES_NOT_COMPARABLE);

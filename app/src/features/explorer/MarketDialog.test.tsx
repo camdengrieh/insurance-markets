@@ -8,7 +8,7 @@ import type { AdapterError, Book, FeeSpec, Result } from "../../core/ports";
 import { allText, click, cleanup, must } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";
 import { impliedComplement } from "./display";
-import { IMPLIED_NO_TEXT, impliedFor } from "./MarketDialog";
+import { DETAILS_SUMMARY, IMPLIED_NO_TEXT, impliedFor } from "./MarketDialog";
 import { MarketsView } from "./MarketsView";
 import { PAIR_CODE } from "../terminal/test-support";
 import { FakeError, NOW, book, fakeEntry, fakeServices, flush, market, mount, summary } from "./test-support";
@@ -114,6 +114,43 @@ describe("the market modal", () => {
     services.memory.put(summary("polymarket", "m1", { native: { slug: "will-it-rain" } }));
     await mount(show("polymarket"), services);
     expect(pm.detailCalls[0]?.native).toEqual({ slug: "will-it-rain" });
+  });
+});
+
+describe("the layout of Market.dc.html", () => {
+  it("three columns, the title in a well and never a heading, the details under one disclosure, the 44 px close button only", async () => {
+    const m = market("polymarket", "m1", { title: "Will it rain" });
+    const pm = fakeEntry("polymarket", { detail: detailOf(m), getBooks: okBooks });
+    const services = fakeServices([pm]);
+    services.memory.put(summary("polymarket", "m1", { prices: ["0.6", "0.4"] }));
+    await mount(show("polymarket"), services);
+    const root = dialog();
+    // The fixed accessible heading stays; the market's own title is a well in the untrusted slot.
+    expect(must(root, "h2").textContent).toBe("Market");
+    const title = must(root, ".explorer-title");
+    expect(title.closest("h1, h2, h3, h4, h5, h6")).toBeNull();
+    expect(title.querySelector(".ui-untrusted")).not.toBeNull();
+    // One meta row: venue, status, close time and provenance.
+    const meta = must(root, ".mk-meta");
+    expect(allText(meta)).toContain("Polymarket");
+    expect(allText(meta)).toContain("closes 2026-12-01 00:00 UTC");
+    expect(meta.querySelector(".ui-provenance")).not.toBeNull();
+    const columns = [...root.querySelectorAll(".mk-grid > section")].map((section) => section.querySelector("h3")?.textContent);
+    expect(columns).toEqual(["Order book", "Same question elsewhere", "Quotient"]);
+    // The sides are named by fixed words, side by side.
+    const sides = [...root.querySelectorAll(".mk-book-sides .explorer-book")];
+    expect(sides.map((side) => side.querySelector("h4")?.textContent)).toEqual(["Yes", "No"]);
+    // Display price, rules, fees, times and terms: in the page, under one disclosure.
+    const details = [...root.querySelectorAll("details")].find((entry) => entry.querySelector("summary")?.textContent === DETAILS_SUMMARY) as HTMLElement;
+    expect(details).toBeDefined();
+    for (const id of ["explorer-prices-heading", "explorer-rules-heading", "explorer-fees-heading", "explorer-terms-heading"]) expect(details.querySelector(`#${id}`), id).not.toBeNull();
+    // The ticket sits after the columns and before the details.
+    const ticket = must(root, "#explorer-ticket-heading");
+    expect(must(root, ".mk-grid").compareDocumentPosition(ticket) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ticket.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // No second way out: the dialog's close button only.
+    expect([...root.querySelectorAll("button")].some((button) => /Back to the Markets list/.test(button.textContent ?? ""))).toBe(false);
+    expect(root.querySelector("button.ui-dialog-close[aria-label='Close']")).not.toBeNull();
   });
 });
 

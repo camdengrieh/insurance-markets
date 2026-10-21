@@ -168,6 +168,45 @@ describe("the card is a modal over the page", () => {
   });
 });
 
+describe("the card's layout (Signing.dc.html)", () => {
+  it("heads the card with a headline built from the decoded fields and the countdown, and keeps every check in the DOM", async () => {
+    await open([orderItem({ side: "BUY", price: "0.26", shares: "38" })]);
+    const headline = must(card(), ".signing-card-head h3");
+    expect(allText(headline)).toBe("Buy 38 shares at 0.26 on XO");
+    // Numbers in mono.
+    expect([...headline.querySelectorAll(".ui-num")].map((num) => num.textContent)).toEqual(["38", "0.26"]);
+    expect(card().getAttribute("aria-labelledby")).toBe(headline.id);
+    expect(must(card(), ".signing-card-clock .signing-countdown")).not.toBeNull();
+    // The body: the facts list beside the tags and the S2 caution.
+    const facts = allText(must(card(), ".signing-card-main .signing-facts"));
+    expect(facts).toContain("XO Market · chain 3223");
+    expect(facts).toContain("Buy · 0.26 a share");
+    expect(facts).toContain("38 shares");
+    expect(must(card(), '.signing-card-side [data-kind="s2-off"]')).not.toBeNull();
+    expect(must(card(), ".signing-card-side [data-tags-match]")).not.toBeNull();
+    // Checks, the relay's lines, the decoded table, the intent and the reminders are folded but present.
+    const summaries = [...card().querySelectorAll(".signing-disclosures > details > summary")].map((summary) => summary.textContent ?? "");
+    expect(summaries[0]).toMatch(/^Checks run in this page: \d+ passed/);
+    expect(summaries.slice(1)).toEqual(["The relay's summary, line by line", "Decoded fields", "The intent for PayBox request_wallet_sign", "Before you approve in PayBox"]);
+    expect(card().querySelectorAll('[data-check]').length).toBeGreaterThan(3);
+    expect(card().querySelector('pre[data-intent="shown"]')).not.toBeNull();
+    // Copy intent is a secondary button; nothing on the card arms.
+    expect(buttonNamed("Copy intent").getAttribute("data-variant")).toBe("default");
+    expect([...card().querySelectorAll("button")].some((button) => /\barm\b/i.test(button.textContent ?? ""))).toBe(false);
+  });
+
+  it("never puts a decoded headline on an item that failed a check", async () => {
+    const failed = clone(deployItem());
+    const lines = (failed["summary"] as { lines: string[] }).lines;
+    lines[1] = (lines[1] as string).replace(/[0-9]/, (digit) => String((Number(digit) + 1) % 10));
+    await open([failed]);
+    expect(allText(must(card(), ".signing-card-head h3"))).toContain("failed a check: do not sign");
+    // The checks open by themselves when one failed.
+    const checks = must<HTMLDetailsElement>(card(), ".signing-disclosures > details");
+    expect(checks.open).toBe(true);
+  });
+});
+
 describe("the Signature Card of a verified item", () => {
   it("shows the relay's lines, the decoded fields, both tags with the chain and the match line, the intent and the reminders", async () => {
     const item = deployItem();
@@ -326,7 +365,10 @@ describe("a card that cannot be trusted", () => {
     expect(text).not.toMatch(/independently verified/i);
     expect(text).not.toContain("Tags match");
     expect(must(document.body, "[data-tags-match]").getAttribute("data-tags-match")).toBe("viewer_only");
-    expect(card().querySelector("details")).toBeNull();
+    // No decoded block, so no decoded table and no facts list derived from one: the relay's lines are shown as its own.
+    expect([...card().querySelectorAll("summary")].map((summary) => summary.textContent)).not.toContain("Decoded fields");
+    expect(card().querySelector(".signing-facts")).toBeNull();
+    expect(text).toContain("the relay's summary, not verified here");
     // Copying is allowed, and the card says what it is.
     expect(buttonNamed("Copy intent").disabled).toBe(false);
     await until(() => rig.decisions.length > 0);

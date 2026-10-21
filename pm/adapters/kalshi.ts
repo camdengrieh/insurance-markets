@@ -410,7 +410,6 @@ export function createKalshiAdapter(gate: KalshiGate | undefined, options: Kalsh
       extras: {
         ruleFields,
         rulesHashRecipe: built.rulesHashRecipe,
-        coreRulesSha256: built.coreRulesSha256,
         statusRaw: untrusted(m.statusRaw ?? ""),
         geoRestricted: null,
         warnings,

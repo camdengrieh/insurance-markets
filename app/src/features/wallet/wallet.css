@@ -14,7 +14,7 @@
 .wl-binding,
 .wl-step,
 .wl-chain {
-  border: 1px solid var(--border);
+  border: var(--line) solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   padding: 1rem;
@@ -26,7 +26,7 @@
 }
 
 .wl-venues {
-  border: 1px solid var(--border);
+  border: var(--line) solid var(--border);
   border-radius: var(--radius);
   padding: 0.75rem 1rem;
   margin: 0.75rem 0;
@@ -81,36 +81,124 @@
   resize: vertical;
 }
 
-/* ---- the Connect modal: three tabs, one of which acts ------------------------------------------------------ */
+/* ---- the Connect modal (Connect.dc.html): outlined tabs, two columns per route, one footer row --------------- */
+
+/* The tab bar's 2 px ink rule replaces the dialog head's own, so the tabs sit right under the title. */
+.ui-dialog:has(.wl-tabs) .ui-dialog-head {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
 
 .wl-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  margin-bottom: 1rem;
-  border-bottom: var(--line) solid var(--border);
+  gap: 0;
+  margin: 0 0 1.25rem;
+  border-bottom: var(--line-strong) solid var(--text);
 }
 
+/* Every tab is outlined in ink; the selected one is filled with it. Adjacent outlines overlap into one line. */
 .wl-tab {
   min-height: var(--tap);
-  padding: 0 0.75rem;
-  border: var(--line) solid transparent;
+  padding: 0 0.875rem;
+  border: var(--line) solid var(--text);
   border-bottom: 0;
-  background: transparent;
-  color: var(--text-muted);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
 }
 
+.wl-tab + .wl-tab {
+  margin-left: calc(-1 * var(--line));
+}
+
 .wl-tab[aria-selected="true"] {
-  border-color: var(--text);
-  background: var(--surface);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
 }
 
 .wl-tab-panel {
   min-width: 0;
+}
+
+/* A route: steps, button and caution | the panel-filled facts. One column when there is no room for two. */
+.wl-route {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  border: var(--line) solid var(--border);
+}
+
+.wl-route-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px 24px;
+  border-inline-end: var(--line) solid var(--border);
+}
+
+.wl-route-steps > * {
+  margin: 0;
+}
+
+.wl-route-steps .ui-tile {
+  margin: 0;
+}
+
+.wl-route-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px 24px;
+  background: var(--surface);
+}
+
+.wl-route-facts h3 {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.wl-route-facts .wl-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+.wl-route-facts .wl-facts > div {
+  display: contents;
+}
+
+.wl-route-facts .wl-facts dt {
+  font-size: inherit;
+}
+
+.wl-route-facts .wl-facts dd {
+  margin: 0;
+}
+
+.wl-route-facts .pf-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 43.99rem) {
+  .wl-route-steps {
+    border-inline-end: 0;
+    border-bottom: var(--line) solid var(--border);
+  }
+
+  .wl-route-steps,
+  .wl-route-facts {
+    padding: 16px;
+  }
 }
 
 .wl-steps-list {
@@ -119,17 +207,32 @@
 }
 
 .wl-steps-list li + li {
-  margin-top: 0.25rem;
+  margin-top: 0.625rem;
 }
 
-.wl-route-facts h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
+/* The footer: one bordered row, the sentence on the left and Not now on the right. */
 .wl-connect-footer {
-  margin: 1rem 0 0;
-  padding-top: 0.75rem;
-  border-top: var(--line) solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 1.25rem 0 0;
+  padding: 0 0 0 0.75rem;
+  border: var(--line) solid var(--border);
+  font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.wl-connect-footer p {
+  flex: 1 1 18rem;
+  margin: 0;
+  padding-block: 0.5rem;
+}
+
+.wl-connect-footer .ui-button {
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

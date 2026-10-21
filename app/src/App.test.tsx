@@ -4,7 +4,7 @@ import { memoryLocation } from "wouter/memory-location";
 
 import { App } from "./App";
 import type { Untrusted } from "./core/ports";
-import { choose, click, cleanup, act, allText, must, render, settle } from "./ui/testing/dom";
+import { click, cleanup, act, allText, must, render, settle } from "./ui/testing/dom";
 import type { AppMode } from "./ui/context";
 import type { Loader } from "./ui/routes";
 import type { RouteProps } from "./ui/route-types";
@@ -219,14 +219,20 @@ describe("market text", () => {
 });
 
 describe("theme", () => {
+  // The 44 x 44 half-circle button steps system -> light -> dark -> system; its name says the current and next choice.
+  const toggle = (root: ParentNode): HTMLButtonElement => must<HTMLButtonElement>(root, "button.ui-theme-toggle");
+
   it("applies and remembers a manual choice, and a system choice clears it", async () => {
     const { container } = await mountApp();
-    const select = must<HTMLSelectElement>(container, "select");
-    expect(select.value).toBe("system");
-    choose(select, "dark");
+    expect(toggle(container).getAttribute("data-theme-choice")).toBe("system");
+    expect(toggle(container).getAttribute("aria-label")).toBe("Switch theme: now system, next light");
+    click(toggle(container));
+    click(toggle(container));
+    expect(toggle(container).getAttribute("data-theme-choice")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    choose(select, "system");
+    click(toggle(container));
+    expect(toggle(container).getAttribute("data-theme-choice")).toBe("system");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
@@ -234,11 +240,11 @@ describe("theme", () => {
   it("reads a saved choice and ignores a bad one", async () => {
     window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
     const saved = await mountApp();
-    expect(must<HTMLSelectElement>(saved.container, "select").value).toBe("dark");
+    expect(toggle(saved.container).getAttribute("data-theme-choice")).toBe("dark");
     cleanup();
     window.localStorage.setItem(THEME_STORAGE_KEY, "<script>");
     const bad = await mountApp();
-    expect(must<HTMLSelectElement>(bad.container, "select").value).toBe("system");
+    expect(toggle(bad.container).getAttribute("data-theme-choice")).toBe("system");
   });
 
   it("still works when storage throws", async () => {
@@ -249,10 +255,28 @@ describe("theme", () => {
       throw new DOMException("blocked", "SecurityError");
     });
     const { container } = await mountApp();
-    const select = must<HTMLSelectElement>(container, "select");
-    expect(select.value).toBe("system");
-    choose(select, "light");
+    expect(toggle(container).getAttribute("data-theme-choice")).toBe("system");
+    click(toggle(container));
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
+});
+
+describe("the top bar search", () => {
+  it("keeps one search field with a words-only hint, and a 44 px button that unfolds it on a phone", async () => {
+    const { container } = await mountApp();
+    const input = must<HTMLInputElement>(container, "header input[type='search']");
+    expect(input.getAttribute("placeholder")).toBe("Search loaded markets");
+    const toggle = must<HTMLButtonElement>(container, "header button.ui-search-toggle");
+    expect(toggle.getAttribute("aria-label")).toBe("Search loaded rows");
+    const slot = must(container, `#${CSS.escape(toggle.getAttribute("aria-controls") ?? "")}`);
+    expect(slot.contains(input)).toBe(true);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(slot.getAttribute("data-open")).toBe("false");
+    click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(slot.getAttribute("data-open")).toBe("true");
+    click(toggle);
+    expect(slot.getAttribute("data-open")).toBe("false");
   });
 });
 

@@ -14,13 +14,59 @@
 import { formatAtomic } from "@shared/guardrails/amount";
 import { USDC_E_DECIMALS } from "@shared/xo/chain/constants";
 import { ORDER_CAP_FEE_BPS, computeOrderAmounts, exactShareStepMicro, formatMicro, formatTick, orderCapAmount, parsePriceToTick } from "@shared/xo/signing/amounts";
-import { SIDE_BUY, SIDE_SELL } from "@shared/xo/signing/constants";
+import { KERNEL_DOMAIN_NAME, KERNEL_DOMAIN_VERSION, ORDER_DOMAIN_NAME, ORDER_DOMAIN_VERSION, SIDE_BUY, SIDE_SELL, XO_CHAIN_ID } from "@shared/xo/signing/constants";
 import { SigningError } from "@shared/xo/signing/errors";
 
 export const TICKET_SIDES = ["BUY", "SELL"] as const;
 export type TicketSide = (typeof TICKET_SIDES)[number];
 export const TICKET_TIFS = ["GTD", "FOK", "FAK"] as const;
 export type TicketTif = (typeof TICKET_TIFS)[number];
+
+// What a person reads for a wire value. The wire values above stay exactly as the builders and the relay expect them;
+// only the words shown change ("Buy", not "BUY"; "Fill or kill (FOK)", not "FOK").
+export const SIDE_LABEL: Readonly<Record<string, string>> = Object.freeze({ BUY: "Buy", SELL: "Sell" });
+export const TIF_LABEL: Readonly<Record<string, string>> = Object.freeze({
+  GTC: "Good till cancelled (GTC)",
+  GTD: "Good till its expiry (GTD)",
+  FOK: "Fill or kill (FOK)",
+  FAK: "Fill and kill the rest (FAK)",
+});
+
+export function sideLabel(side: string): string {
+  return Object.hasOwn(SIDE_LABEL, side) ? (SIDE_LABEL[side] ?? side) : "Buy";
+}
+
+export function tifLabel(tif: string): string {
+  return Object.hasOwn(TIF_LABEL, tif) ? (TIF_LABEL[tif] ?? tif) : tif;
+}
+
+// One cell of the "What you sign" strip (Market.dc.html): a fixed label and a value worked out from the ticket, or
+// null when the ticket is not complete yet. Nothing here is an example: a value the page cannot know is null and says
+// why, or carries a note.
+export interface SignCell {
+  readonly label: string;
+  readonly value: string | null;
+  // Read aloud and shown in place of a null value.
+  readonly missing?: string;
+  readonly note?: string;
+  readonly caution?: boolean;
+}
+
+// The XO strip: the order's EIP-712 domain, the side and signature type, the two signed amounts and the fee ceiling.
+// XO wraps the order hash in the account's Kernel signature, and that wrapped hash only exists once the relay has
+// prepared the order, so the strip says it cannot be shown here.
+export function xoSignCells(ticket: Ticket | null, side: string, tif: string): SignCell[] {
+  const wire = isSide(side) ? side : null;
+  const kind = isTif(tif) ? tif : null;
+  const amounts =
+    ticket === null ? null : ticket.side === "BUY" ? `${usdText(ticket.principalAtomic)} USDC.e → ${formatMicro(ticket.sharesMicro)} shares` : `${formatMicro(ticket.sharesMicro)} shares → ${usdText(ticket.principalAtomic)} USDC.e`;
+  return [
+    { label: "domain", value: `${ORDER_DOMAIN_NAME} v${ORDER_DOMAIN_VERSION} · ${XO_CHAIN_ID}`, note: `wrapped by ${KERNEL_DOMAIN_NAME} ${KERNEL_DOMAIN_VERSION}: the wrapped hash cannot be shown here` },
+    { label: "side · type", value: wire === null || kind === null ? null : `${wire} · ${kind}`, missing: "choose a side and a type" },
+    { label: "maker → taker", value: amounts, missing: "complete the ticket first" },
+    { label: "fee ceiling", value: `${ORDER_CAP_FEE_BPS.toLocaleString("en-US")} bps`, note: "unreconciled: a ceiling, not a quote", caution: true },
+  ];
+}
 
 // The longest an order may live here. The operator's XO_ORDER_EXPIRY_SECONDS can lower it; the plugin's own
 // ceiling is one hour (src/config.ts CEILINGS.orderExpirySeconds, which the page cannot import).
@@ -87,7 +133,7 @@ function isTif(value: string): value is TicketTif {
 export function buildTicket(input: TicketInput): TicketResult {
   const issues: TicketIssue[] = [];
   if (!TOKEN_ID.test(input.tokenId)) issues.push(issue("token", "bad_token", "The outcome token is a whole number, such as the token id shown with a market's outcomes."));
-  if (!isSide(input.side)) issues.push(issue("side", "bad_side", "Choose BUY or SELL."));
+  if (!isSide(input.side)) issues.push(issue("side", "bad_side", "Choose Buy or Sell."));
   const tif: TicketTif = isTif(input.tif) ? input.tif : "GTD";
   if (!isTif(input.tif)) issues.push(issue("tif", "bad_tif", "Choose GTD, FOK or FAK."));
   let ttlS: number | null = null;

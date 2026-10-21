@@ -1,7 +1,10 @@
 // The category chip row under the view chips: "All categories" plus one chip per category that has at least one
 // loaded row in the current view (categories.ts). Same 44 px chip as the views (ui Chip), aria-pressed, the count
-// in mono; pressing one narrows the table and never requests anything. On a phone the row scrolls sideways
-// (explorer.css .explorer-category-chips) so the table never wraps.
+// in mono; pressing one narrows the table and never requests anything. The row is one line that scrolls sideways
+// inside itself at every width (explorer.css .explorer-category-bar), ending in the note on where a category comes
+// from (Main.dc.html).
+
+export const CATEGORY_NOTE = "Category comes from the venue's own taxonomy, else from title keywords. Never a model's guess.";
 
 import { CATEGORIES, CATEGORY_LABEL, type Category } from "../../core/category";
 import { Chip } from "../../ui";
@@ -20,15 +23,18 @@ export function CategoryChips({ category, counts, total, onCategory }: CategoryC
   // The pressed chip stays even when its count fell to zero, so the filter is never hidden while it is on.
   const shown = CATEGORIES.filter((id) => (counts?.get(id) ?? 0) > 0 || id === category);
   return (
-    <div className="ui-chips explorer-chips explorer-category-chips" role="group" aria-label="Category">
-      <Chip pressed={category === ALL_CATEGORIES} count={total === null ? undefined : total} onClick={() => onCategory(ALL_CATEGORIES)} data-category="all">
-        {ALL_CATEGORIES_LABEL}
-      </Chip>
-      {shown.map((id) => (
-        <Chip key={id} pressed={category === id} count={counts === null ? undefined : (counts.get(id) ?? 0)} onClick={() => onCategory(id)} data-category={id}>
-          {CATEGORY_LABEL[id]}
+    <div className="explorer-category-bar">
+      <div className="ui-chips explorer-chips explorer-category-chips" role="group" aria-label="Category">
+        <Chip pressed={category === ALL_CATEGORIES} count={total === null ? undefined : total} onClick={() => onCategory(ALL_CATEGORIES)} data-category="all">
+          {ALL_CATEGORIES_LABEL}
         </Chip>
-      ))}
+        {shown.map((id) => (
+          <Chip key={id} pressed={category === id} count={counts === null ? undefined : (counts.get(id) ?? 0)} onClick={() => onCategory(id)} data-category={id}>
+            {CATEGORY_LABEL[id]}
+          </Chip>
+        ))}
+      </div>
+      <p className="explorer-category-note">{CATEGORY_NOTE}</p>
     </div>
   );
 }

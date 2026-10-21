@@ -26,7 +26,7 @@ import {
   GAMMA_ORIGIN,
 } from "./constants";
 import { categorise, type CategoryVerdict } from "../../core/category";
-import { rulesHashOf } from "../../core/rules-hash";
+import { polymarketRuleFields, rulesFingerprint } from "@sdk/rules";
 import { safeHttpsUrl, untrustedField } from "../../core/untrusted";
 import { cmpDec, isOpenUnitInterval, numberToDec, numericToDec, parseDec, type Dec } from "./decimal";
 import { selectTokenIds, type Ledger } from "./ids";
@@ -149,9 +149,10 @@ export function buildRules(raw: GammaMarket, event: GammaEvent | undefined): { o
   const resolver = typeof raw.resolvedBy === "string" && ADDRESS.test(raw.resolvedBy) ? raw.resolvedBy : undefined;
   const rules: Rules = {
     text: untrustedField("rules", text, SANITIZE_SOURCE),
-    // The description, the resolution source and the end date, as the linking recipe says (finding A2): a changed
-    // source or end date changes the hash even when the description does not.
-    sha256: rulesHashOf([text, raw.resolutionSource, raw.endDate]),
+    // The shared rules-v2 fingerprint over the market's own description, resolution source and end date (finding
+    // A2, sdk/rules.ts), so a linker-proposed leg can be re-checked here. An event description shown as a
+    // fallback is display only and not fingerprinted.
+    sha256: rulesFingerprint("polymarket", polymarketRuleFields(raw)),
     sources: source === null ? [] : [source],
     mechanism: uma ? "uma_oo" : "unknown",
     ...(resolver === undefined ? {} : { resolver }),

@@ -3,13 +3,14 @@ import { useMemo, useState, type ReactNode } from "react";
 import { formatAtomic, parseDecimalAtomic } from "@shared/guardrails/amount";
 import { USDC_E_DECIMALS } from "@shared/xo/chain/constants";
 
-import { Badge, Button, Field, Tile, useAnnounce } from "../../ui";
+import { Badge, Button, Disclosure, Field, Tile, useAnnounce } from "../../ui";
 import { GateNote, KeyValues, Mono, ResultView, Working } from "./components";
 import type { PanelContext } from "./context";
 import { gateFor, type Gate, type TradeAction } from "./facts";
 import { usePrepare } from "./hooks";
 import { prepareDeploy, prepareFunding, prepareOrder, prepareRedeem, prepareRevoke, type PrepareResult } from "./prepare";
-import { TICKET_SIDES, TICKET_TIFS, buildTicket, expectedQuote, overOrderCap, usdText } from "./ticket";
+import { OrderBar, SideToggle, SignStrip, canToggle } from "./OrderBar";
+import { TICKET_SIDES, TICKET_TIFS, buildTicket, expectedQuote, overOrderCap, sideLabel, tifLabel, usdText, xoSignCells } from "./ticket";
 
 // The five panels that ask the plugin to PREPARE something. Each one: shows what is being asked, applies its gate
 // (switches, kill switch, recorded facts), calls one prepare tool through prepare.ts, and shows the vetted result.
@@ -18,11 +19,17 @@ import { TICKET_SIDES, TICKET_TIFS, buildTicket, expectedQuote, overOrderCap, us
 // The heading level of a panel's section, decided by the desk's host: h2 on a page, h4 inside the market modal.
 export type PanelHeading = "h2" | "h4";
 
-function Section({ id, title, children, heading = "h2" }: { readonly id: string; readonly title: string; readonly children: ReactNode; readonly heading?: PanelHeading }) {
+// The one-line ticket of the market modal ("compact") or the stacked form of a page of its own ("full").
+export type PanelLayout = "full" | "compact";
+
+function Section({ id, title, children, heading = "h2", layout = "full" }: { readonly id: string; readonly title: string; readonly children: ReactNode; readonly heading?: PanelHeading; readonly layout?: PanelLayout }) {
   const Heading = heading;
   return (
-    <section className="tr-section" aria-labelledby={`tr-${id}-h`} data-testid={id}>
-      <Heading id={`tr-${id}-h`}>{title}</Heading>
+    <section className="tr-section" aria-labelledby={`tr-${id}-h`} data-testid={id} data-layout={layout}>
+      {/* In the compact bar the host's own "Order ticket" heading is visible; this one stays for the outline. */}
+      <Heading id={`tr-${id}-h`} className={layout === "compact" ? "ui-visually-hidden" : undefined}>
+        {title}
+      </Heading>
       {children}
     </section>
   );
@@ -65,6 +72,46 @@ function PrepareBody({ ctx, action, label, blockedBy, start, children }: Prepare
         {gate.canPrepare ? null : <Badge tone="neutral">unavailable</Badge>}
       </div>
       {result === null ? null : <ResultView result={result} facts={ctx.facts} gate={gate} />}
+    </div>
+  );
+}
+
+// The compact ticket's frame: the bar (controls, then Prepare on the right), one paragraph and the issues below it,
+// then why Prepare is closed, the result, and the secondary blocks (`more`) in a disclosure. Same gate, same button,
+// same prepare call as PrepareBody.
+export function CompactPrepare({ ctx, action, label, blockedBy, start, bar, below, more }: PreparePanelProps & { readonly bar: ReactNode; readonly below?: ReactNode; readonly more?: ReactNode }) {
+  const announce = useAnnounce();
+  const gate: Gate = gateFor(action, ctx.gateInput);
+  const { result, running, run } = usePrepare(ctx.refreshAccount);
+  const usable = gate.canPrepare && blockedBy === null;
+  return (
+    <div className="tr-compact-ticket">
+      <OrderBar
+        action={
+          <>
+            <Button
+              variant="primary"
+              disabled={!usable || running}
+              busy={running}
+              onClick={() => {
+                announce(`${label}: asking the Cockpit to prepare it`);
+                run(start);
+              }}
+            >
+              {label}
+            </Button>
+            <Working running={running} />
+            {gate.canPrepare ? null : <Badge tone="neutral">unavailable</Badge>}
+          </>
+        }
+      >
+        {bar}
+      </OrderBar>
+      {below}
+      {blockedBy === null ? null : <p role="note">{blockedBy}</p>}
+      <GateNote gate={gate} facts={ctx.facts} />
+      {result === null ? null : <ResultView result={result} facts={ctx.facts} gate={gate} />}
+      {more}
     </div>
   );
 }
@@ -230,13 +277,15 @@ export function FundPanel({ ctx, heading }: { readonly ctx: PanelContext; readon
 // ---- the order ticket -----------------------------------------------------------------------------------------------------
 
 // An outcome token the host already knows (the market modal passes the market's own outcomes). The label is fixed
-// app text ("Outcome 1: Yes"), never the creator's label.
+// app text ("Outcome 1: Yes"), never the creator's label; `short` is the fixed word the side toggle shows ("Yes").
 export interface TokenChoice {
   readonly label: string;
   readonly tokenId: string;
+  readonly short?: string;
+  readonly outcome?: "yes" | "no";
 }
 
-export function OrderPanel({ ctx, tokenChoices, heading }: { readonly ctx: PanelContext; readonly tokenChoices?: readonly TokenChoice[]; readonly heading?: PanelHeading }) {
+export function OrderPanel({ ctx, tokenChoices, heading, layout = "full" }: { readonly ctx: PanelContext; readonly tokenChoices?: readonly TokenChoice[]; readonly heading?: PanelHeading; readonly layout?: PanelLayout }) {
   const [form, setForm] = useState({ tokenId: tokenChoices?.[0]?.tokenId ?? "", side: "BUY", price: "", shares: "", tif: "GTD", ttlS: "", postOnly: false });
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]): void => setForm((current) => ({ ...current, [key]: value }));
   const built = useMemo(() => buildTicket(form), [form]);
@@ -246,94 +295,145 @@ export function OrderPanel({ ctx, tokenChoices, heading }: { readonly ctx: Panel
   const over = ticket === null ? null : overOrderCap(ticket, ctx.account?.caps.max_order_usd ?? null);
   const want = ticket === null ? null : expectedQuote(ticket);
   const blocked = owner === null ? ADDRESS_NEEDED : ticket === null ? "Complete the ticket first." : over === true ? "This order counts more than the per-order cap allows. Lower the size or price." : null;
+  const compact = layout === "compact";
+  const intro = (
+    <p>
+      An order is prepared here and signed in PayBox; this page does neither. The numbers below are worked out here with the plugin&apos;s own rules and are compared, digit for digit, with what the relay quotes. If they differ, the item is not
+      shown.
+    </p>
+  );
+  const tokenField =
+    tokenChoices === undefined || tokenChoices.length === 0 ? (
+      <Field label="Outcome token id">{(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" spellCheck={false} value={form.tokenId} onChange={(event) => set("tokenId", event.target.value.trim())} />}</Field>
+    ) : (
+      <Field label="Outcome">
+        {(id) => (
+          <select id={id} className="ui-select" value={form.tokenId} onChange={(event) => set("tokenId", event.target.value)}>
+            {tokenChoices.map((choice) => (
+              <option key={choice.tokenId} value={choice.tokenId}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+    );
+  const sideField = (
+    <Field label="Side">
+      {(id) => (
+        <select id={id} className="ui-select" value={form.side} onChange={(event) => set("side", event.target.value)}>
+          {TICKET_SIDES.map((side) => (
+            <option key={side} value={side}>
+              {sideLabel(side)}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+  const typeField = (
+    <Field label="Type">
+      {(id) => (
+        <select id={id} className="ui-select" value={form.tif} onChange={(event) => set("tif", event.target.value)}>
+          {TICKET_TIFS.map((tif) => (
+            <option key={tif} value={tif}>
+              {tifLabel(tif)}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+  const lifeField = <Field label="Life in seconds (empty = the relay's default)">{(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" value={form.ttlS} onChange={(event) => set("ttlS", event.target.value.trim())} />}</Field>;
+  const postOnly = (
+    <label className="tr-check">
+      <input type="checkbox" checked={form.postOnly} onChange={(event) => set("postOnly", event.target.checked)} /> Post-only (GTD orders only)
+    </label>
+  );
+  const issues =
+    !built.ok && touched ? (
+      <ul className="tr-issues" aria-label="Problems with the ticket">
+        {built.issues.map((issue) => (
+          <li key={`${issue.field}-${issue.code}`}>{issue.message}</li>
+        ))}
+      </ul>
+    ) : null;
+  const cost =
+    ticket === null || want === null ? null : (
+      <Tile tone="info" title="What this ticket would cost, at most" heading={heading === "h4" ? "h4" : "h3"} dataKind="ticket" role="status">
+        <KeyValues
+          rows={[
+            { label: "Order", value: `${sideLabel(ticket.side)} ${ticket.shares} shares at ${ticket.price}` },
+            { label: "Principal", value: `${usdText(ticket.principalAtomic)} USD` },
+            ticket.maxOutlayAtomic === null ? { label: "Cash out", value: "none: a sell moves no cash out" } : { label: "Worst-case cash out (principal plus the 1,000 bps fee ceiling)", value: `${want.maxOutlayUsd} USD` },
+            ...(ticket.minProceedsAtomic === null ? [] : [{ label: "Worst-case proceeds after the fee ceiling", value: `${usdText(ticket.minProceedsAtomic)} USD` }]),
+            { label: "Counted against the caps", value: `${want.reservedUsd} USD` },
+          ]}
+        />
+        <p className="tr-note">The fee is a ceiling, not a quote: XO&apos;s real fee has not been reconciled with a fill. A signed order cannot be cancelled on chain; it stays valid until it expires.</p>
+        {over === true ? <p role="alert">This is above the per-order cap of {ctx.account?.caps.max_order_usd} USD.</p> : over === null ? <p className="tr-note">The per-order cap is not known until the account has been read.</p> : null}
+      </Tile>
+    );
+  const start = (signal: AbortSignal) => prepareOrder({ client: ctx.services.client, nowMs: ctx.services.nowMs }, { owner: owner as string, ticket: ticket as NonNullable<typeof ticket> }, signal);
+
+  if (compact) {
+    return (
+      <Section id="order" title="Order ticket" heading={heading} layout="compact">
+        <CompactPrepare
+          ctx={ctx}
+          action="order"
+          label="Prepare this order"
+          blockedBy={blocked}
+          start={start}
+          bar={
+            <>
+              {canToggle(tokenChoices) ? <SideToggle choices={tokenChoices} tokenId={form.tokenId} side={form.side} onPick={(tokenId) => set("tokenId", tokenId)} /> : tokenField}
+              <Field label="Limit price">{(id) => <input id={id} className="ui-input tr-bar-input" inputMode="decimal" autoComplete="off" value={form.price} onChange={(event) => set("price", event.target.value.trim())} />}</Field>
+              <Field label="Size · shares">{(id) => <input id={id} className="ui-input tr-bar-input" inputMode="decimal" autoComplete="off" value={form.shares} onChange={(event) => set("shares", event.target.value.trim())} />}</Field>
+              <SignStrip cells={xoSignCells(ticket, form.side, form.tif)} />
+            </>
+          }
+          below={
+            <>
+              <p className="tr-bar-note">
+                An XO order is prepared through the Cockpit and signed in PayBox; this page does neither. XO wraps the order in your account&apos;s Kernel signature, so the wrapped hash cannot be shown before the relay prepares it. Prices
+                run from 0.001 to 0.999 in steps of 0.001; the fee is a ceiling, not a quote.
+              </p>
+              {issues}
+            </>
+          }
+          more={
+            <Disclosure summary="Order options and the worst case">
+              {intro}
+              <div className="tr-grid">
+                {sideField}
+                {typeField}
+                {lifeField}
+              </div>
+              {postOnly}
+              {cost}
+            </Disclosure>
+          }
+        />
+      </Section>
+    );
+  }
+
   return (
     <Section id="order" title="Order ticket" heading={heading}>
-      <p>
-        An order is prepared here and signed in PayBox; this page does neither. The numbers below are worked out here with the plugin&apos;s own rules and are compared, digit for digit, with what the relay quotes. If they differ, the item is not
-        shown.
-      </p>
+      {intro}
       <div className="tr-grid">
-        {tokenChoices === undefined || tokenChoices.length === 0 ? (
-          <Field label="Outcome token id">
-            {(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" spellCheck={false} value={form.tokenId} onChange={(event) => set("tokenId", event.target.value.trim())} />}
-          </Field>
-        ) : (
-          <Field label="Outcome">
-            {(id) => (
-              <select id={id} className="ui-select" value={form.tokenId} onChange={(event) => set("tokenId", event.target.value)}>
-                {tokenChoices.map((choice) => (
-                  <option key={choice.tokenId} value={choice.tokenId}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-        )}
-        <Field label="Side">
-          {(id) => (
-            <select id={id} className="ui-select" value={form.side} onChange={(event) => set("side", event.target.value)}>
-              {TICKET_SIDES.map((side) => (
-                <option key={side} value={side}>
-                  {side}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Price per share (0.001 to 0.999)">
-          {(id) => <input id={id} className="ui-input" inputMode="decimal" autoComplete="off" value={form.price} onChange={(event) => set("price", event.target.value.trim())} />}
-        </Field>
+        {tokenField}
+        {sideField}
+        <Field label="Price per share (0.001 to 0.999)">{(id) => <input id={id} className="ui-input" inputMode="decimal" autoComplete="off" value={form.price} onChange={(event) => set("price", event.target.value.trim())} />}</Field>
         <Field label="Shares">{(id) => <input id={id} className="ui-input" inputMode="decimal" autoComplete="off" value={form.shares} onChange={(event) => set("shares", event.target.value.trim())} />}</Field>
-        <Field label="Type">
-          {(id) => (
-            <select id={id} className="ui-select" value={form.tif} onChange={(event) => set("tif", event.target.value)}>
-              {TICKET_TIFS.map((tif) => (
-                <option key={tif} value={tif}>
-                  {tif}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Life in seconds (empty = the relay's default)">
-          {(id) => <input id={id} className="ui-input" inputMode="numeric" autoComplete="off" value={form.ttlS} onChange={(event) => set("ttlS", event.target.value.trim())} />}
-        </Field>
+        {typeField}
+        {lifeField}
       </div>
-      <label className="tr-check">
-        <input type="checkbox" checked={form.postOnly} onChange={(event) => set("postOnly", event.target.checked)} /> Post-only (GTD orders only)
-      </label>
-      {!built.ok && touched ? (
-        <ul className="tr-issues" aria-label="Problems with the ticket">
-          {built.issues.map((issue) => (
-            <li key={`${issue.field}-${issue.code}`}>{issue.message}</li>
-          ))}
-        </ul>
-      ) : null}
-      {ticket === null || want === null ? null : (
-        <Tile tone="info" title="What this ticket would cost, at most" heading={heading === "h4" ? "h4" : "h3"} dataKind="ticket" role="status">
-          <KeyValues
-            rows={[
-              { label: "Order", value: `${ticket.side} ${ticket.shares} shares at ${ticket.price}` },
-              { label: "Principal", value: `${usdText(ticket.principalAtomic)} USD` },
-              ticket.maxOutlayAtomic === null
-                ? { label: "Cash out", value: "none: a SELL moves no cash out" }
-                : { label: "Worst-case cash out (principal plus the 1,000 bps fee ceiling)", value: `${want.maxOutlayUsd} USD` },
-              ...(ticket.minProceedsAtomic === null ? [] : [{ label: "Worst-case proceeds after the fee ceiling", value: `${usdText(ticket.minProceedsAtomic)} USD` }]),
-              { label: "Counted against the caps", value: `${want.reservedUsd} USD` },
-            ]}
-          />
-          <p className="tr-note">The fee is a ceiling, not a quote: XO&apos;s real fee has not been reconciled with a fill. A signed order cannot be cancelled on chain; it stays valid until it expires.</p>
-          {over === true ? <p role="alert">This is above the per-order cap of {ctx.account?.caps.max_order_usd} USD.</p> : over === null ? <p className="tr-note">The per-order cap is not known until the account has been read.</p> : null}
-        </Tile>
-      )}
-      <PrepareBody
-        ctx={ctx}
-        action="order"
-        label="Prepare this order"
-        blockedBy={blocked}
-        start={(signal) => prepareOrder({ client: ctx.services.client, nowMs: ctx.services.nowMs }, { owner: owner as string, ticket: ticket as NonNullable<typeof ticket> }, signal)}
-      />
+      {postOnly}
+      {issues}
+      {cost}
+      <PrepareBody ctx={ctx} action="order" label="Prepare this order" blockedBy={blocked} start={start} />
     </Section>
   );
 }

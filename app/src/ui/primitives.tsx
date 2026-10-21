@@ -119,15 +119,17 @@ export function Field({ label, children }: { readonly label: string; readonly ch
 }
 
 // The search field of the top bar: a 44 px well with a magnifier and a mono shortcut hint. It filters what is
-// already loaded; typing in it never makes a request. The label is visually hidden and fixed app text.
+// already loaded; typing in it never makes a request. The label is visually hidden and fixed app text; the hint
+// inside the empty field is fixed app text too (words only, never a sample value).
 export interface SearchFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "className" | "style" | "placeholder" | "role"> {
   readonly label: string;
+  readonly hint?: string;
   // The keyboard shortcut to show as a hint, for example "⌘K". Only a hint: the parent wires the key.
   readonly shortcut?: string;
   readonly ref?: Ref<HTMLInputElement>;
 }
 
-export function SearchField({ label, shortcut, ref, ...rest }: SearchFieldProps) {
+export function SearchField({ label, hint, shortcut, ref, ...rest }: SearchFieldProps) {
   const id = useId();
   return (
     <label className="ui-search" htmlFor={id}>
@@ -136,7 +138,7 @@ export function SearchField({ label, shortcut, ref, ...rest }: SearchFieldProps)
         <path d="M20 20l-4-4" />
       </svg>
       <VisuallyHidden>{label}</VisuallyHidden>
-      <input {...rest} ref={ref} id={id} type="search" className="ui-search-input" autoComplete="off" spellCheck={false} />
+      <input {...rest} ref={ref} id={id} type="search" className="ui-search-input" placeholder={hint} autoComplete="off" spellCheck={false} />
       {shortcut === undefined ? null : (
         <kbd className="ui-search-hint" aria-hidden="true">
           {shortcut}

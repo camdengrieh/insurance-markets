@@ -1,32 +1,36 @@
 import { useState } from "react";
 
-import { applyThemeChoice, readThemeChoice, saveThemeChoice, THEME_CHOICES, isThemeChoice, type ThemeChoice } from "./theme";
+import { applyThemeChoice, readThemeChoice, saveThemeChoice, THEME_CHOICES, type ThemeChoice } from "./theme";
 
-const LABELS: Readonly<Record<ThemeChoice, string>> = { system: "System", light: "Light", dark: "Dark" };
+const LABELS: Readonly<Record<ThemeChoice, string>> = { system: "system", light: "light", dark: "dark" };
 
-// A native <select> inside a <label>: keyboard and screen-reader behaviour for free, 44 px tall.
+function nextChoice(choice: ThemeChoice): ThemeChoice {
+  const index = THEME_CHOICES.indexOf(choice);
+  return THEME_CHOICES[(index + 1) % THEME_CHOICES.length] ?? "system";
+}
+
+// The 44 x 44 half-circle button of the top bar (docs/design/cockpit-v2 Main.dc.html): each press steps through
+// system, light and dark. The current choice and the next one are in its accessible name, so the icon is never
+// the only carrier of the state.
 export function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>(() => readThemeChoice());
+  const next = nextChoice(choice);
   return (
-    <label className="ui-field">
-      <span className="ui-visually-hidden">Colour theme</span>
-      <select
-        className="ui-select"
-        value={choice}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (!isThemeChoice(next)) return;
-          setChoice(next);
-          applyThemeChoice(next);
-          saveThemeChoice(next);
-        }}
-      >
-        {THEME_CHOICES.map((value) => (
-          <option key={value} value={value}>
-            {`Theme: ${LABELS[value]}`}
-          </option>
-        ))}
-      </select>
-    </label>
+    <button
+      type="button"
+      className="ui-icon-button ui-theme-toggle"
+      data-theme-choice={choice}
+      aria-label={`Switch theme: now ${LABELS[choice]}, next ${LABELS[next]}`}
+      onClick={() => {
+        setChoice(next);
+        applyThemeChoice(next);
+        saveThemeChoice(next);
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 4v16A8 8 0 0012 4z" fill="currentColor" />
+      </svg>
+    </button>
   );
 }

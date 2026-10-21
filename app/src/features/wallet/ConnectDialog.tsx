@@ -10,13 +10,14 @@ import { WalletView } from "./WalletView";
 // cautions and have their one button disabled with the reason in its label; the only working action is watching
 // an address, through the wallet panels (WalletView: saved addresses, and under a disclosure the account map,
 // balances and funding steps). There is no Wallet page: this tab is where an address is watched. Nothing here
-// names a PayBox host, holds a key or makes a request.
+// names a PayBox host, holds a key or makes a request. Layout per the board: outlined tabs over a 2 px rule, each
+// route in two columns, and one bordered footer row with the sentence on the left and Not now on the right.
 
 export type ConnectTab = "pair" | "signin" | "watch";
 
 export const CONNECT_TABS: ReadonlyArray<{ readonly id: ConnectTab; readonly label: string }> = [
   { id: "pair", label: "Pair with PayBox (WalletConnect)" },
-  { id: "signin", label: "Sign in with PayBox" },
+  { id: "signin", label: "Sign in with PayBox (one function on this site)" },
   { id: "watch", label: "Just watch an address" },
 ];
 
@@ -67,6 +68,17 @@ const SIGNIN_FACTS: ReadonlyArray<{ readonly label: string; readonly value: Reac
   { label: "Never", value: "holds a key or a passkey, stores a token, proxies a venue" },
 ];
 
+// One route as two columns (Connect.dc.html): the steps, the button and the caution on the left, the panel-filled
+// "What this route can do" on the right. One column below 680 px.
+function Route({ children, facts }: { readonly children: ReactNode; readonly facts: ReactNode }) {
+  return (
+    <div className="wl-route">
+      <div className="wl-route-steps">{children}</div>
+      {facts}
+    </div>
+  );
+}
+
 function Facts({ title, rows, source }: { readonly title: string; readonly rows: ReadonlyArray<{ readonly label: string; readonly value: ReactNode }>; readonly source: string }) {
   return (
     <section className="wl-route-facts">
@@ -86,7 +98,7 @@ function Facts({ title, rows, source }: { readonly title: string; readonly rows:
 
 function PairTab() {
   return (
-    <div className="ui-stack">
+    <Route facts={<Facts title="What this route can do" rows={PAIR_FACTS} source="Read first-hand in PayBox's web bundle on 2026-10-20; never run." />}>
       <ol className="wl-steps-list">
         <li>Copy the pairing link below.</li>
         <li>Open PayBox&apos;s WalletConnect page in the tab where you are signed in to PayBox and paste it.</li>
@@ -105,14 +117,13 @@ function PairTab() {
           PayBox creates this session as an autonomous grant and says it will sign without asking again. While your PayBox tab is open, a compromised page could request typed-data signatures with no prompt. Pair from a dedicated PayBox credential.
         </p>
       </Tile>
-      <Facts title="What this route can do" rows={PAIR_FACTS} source="Read first-hand in PayBox's web bundle on 2026-10-20; never run." />
-    </div>
+    </Route>
   );
 }
 
 function SignInTab() {
   return (
-    <div className="ui-stack">
+    <Route facts={<Facts title="What this route can do" rows={SIGNIN_FACTS} source="Decision record dated 2026-10-20; nothing built or run." />}>
       <ol className="wl-steps-list">
         <li>Sign in with PayBox. One small function on this site would run the sign-in and keep a 60-minute token in a sealed cookie; nothing is stored.</li>
         <li>Each signature request would open PayBox&apos;s own approve page in a new tab.</li>
@@ -128,8 +139,7 @@ function SignInTab() {
           The function sees your PayBox token in memory for the length of a request. If this deploy were compromised it could raise approval prompts in your PayBox app. It cannot sign alone. A public kill switch would be part of it.
         </p>
       </Tile>
-      <Facts title="What this route can do" rows={SIGNIN_FACTS} source="Decision record dated 2026-10-20; nothing built or run." />
-    </div>
+    </Route>
   );
 }
 
@@ -172,7 +182,7 @@ export function ConnectDialog({ open, onClose, state }: ConnectDialogProps) {
   }
 
   return (
-    <Dialog open={open} title={DIALOG_TITLE} lede={DIALOG_LEDE} onClose={onClose} size="wide">
+    <Dialog open={open} title={DIALOG_TITLE} lede={DIALOG_LEDE} onClose={onClose} size="medium">
       <div className="wl-tabs" role="tablist" aria-label="Ways to use PayBox here" onKeyDown={onKeyDown}>
         {CONNECT_TABS.map((entry) => (
           <button
@@ -195,8 +205,8 @@ export function ConnectDialog({ open, onClose, state }: ConnectDialogProps) {
           {entry.id === "pair" ? <PairTab /> : entry.id === "signin" ? <SignInTab /> : <WatchTab state={state} />}
         </div>
       ))}
-      <p className="wl-connect-footer">{FOOTER_TEXT}</p>
-      <div className="ui-dialog-actions">
+      <div className="wl-connect-footer">
+        <p>{FOOTER_TEXT}</p>
         <Button onClick={onClose} data-action="not-now">
           Not now
         </Button>

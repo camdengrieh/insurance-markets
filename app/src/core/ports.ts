@@ -1,7 +1,7 @@
 // The venue port: types only, no runtime code. A mirror of docs/aggregation-design.md section 2.1 and 2.4
 // (VenueReadAdapter, Market, Book, FeeSpec) plus the read-model types of docs/dapp-design.md section 4.4
-// (Untrusted, Prov, VenueId). No `pm-*` package exists yet; when `pm-core` ships, this file is replaced by
-// re-exports of its types and the adapters under app/src/venues/ keep compiling.
+// (Untrusted, Prov, VenueId). Dec, Untrusted and VenueId come from the shared SDK (sdk/model.ts); the rest of the
+// read model moves there in later steps of docs/sdk-and-api-design.md, and the adapters keep compiling.
 //
 // Frozen in W0. A change here is a change to every adapter, so it goes through the owner of this file.
 // app/src/core/untrusted.ts and the other core modules re-export these types; they do not redefine them.
@@ -12,36 +12,19 @@
 //   - every string a market creator or an upstream service can influence is `Untrusted<string>`;
 //   - a capability a venue lacks is NOT_SUPPORTED, never an invented value; an unknown enum fails closed.
 
+import type { Dec, Untrusted, VenueId } from "@sdk/model";
+
 import type { CategoryVerdict } from "./category";
 
-export type Dec = string;
+export type { Dec } from "@sdk/model";
 
 // ---- venues and trust ------------------------------------------------------------------------------------------
 
-export type VenueId =
-  | "xo"
-  | "polymarket"
-  | "polymarket_us"
-  | "kalshi"
-  | "limitless"
-  | "trueo"
-  | "world"
-  | "hyperliquid"
-  | "pascal"
-  | "novig"
-  | "og"
-  | "gemini"
-  | "sx"
-  | "udx"
-  | "prophetx"
-  | "predictfun"
-  | "opinion"
-  | "manifold"
-  | "myriad";
+export type { VenueId } from "@sdk/model";
 
 // Market text, theses and anything else written by a stranger: data, never instructions. Rendered only as a
 // text node inside a fixed "untrusted" slot.
-export type Untrusted<T> = { readonly untrusted: true; readonly value: T };
+export type { Untrusted } from "@sdk/model";
 
 // ---- provenance -------------------------------------------------------------------------------------------------
 

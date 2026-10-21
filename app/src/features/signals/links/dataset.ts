@@ -7,6 +7,8 @@
 
 import { sha256, toBytes } from "viem";
 
+import { RULES_HASH_RECIPE } from "@sdk/rules";
+
 import type { VenueId } from "../../../core/ports";
 import { linkDatasetSchema, type Link, type LinkDataset, type LinkLeg, type LinkProof, type LinkState } from "./schema";
 
@@ -79,10 +81,10 @@ export function isProposed(link: Link): boolean {
   return link.state === "proposed";
 }
 
-// The recipe behind this page's own rules fingerprint (app/src/core/rules-hash.ts). A dataset whose legs were
-// hashed with another recipe (the linker's rules-v2) cannot have its rules compared here: the re-check then
-// compares close time and status only and reports the rules as not comparable, never as changed.
-export const APP_RULES_RECIPE = "app-v1";
+// The recipe behind this page's rules fingerprints: the shared rules-v2 (sdk/rules.ts), the same one the linker
+// pins. A dataset whose legs were hashed with any other recipe cannot have its rules compared here: the re-check
+// then compares close time and status only and reports the rules as not comparable, never as changed.
+export const APP_RULES_RECIPE = RULES_HASH_RECIPE;
 
 export function rulesComparable(dataset: Pick<LinkDataset, "rulesRecipe">): boolean {
   return dataset.rulesRecipe === undefined || dataset.rulesRecipe === APP_RULES_RECIPE;

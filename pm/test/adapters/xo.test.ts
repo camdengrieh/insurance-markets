@@ -58,7 +58,6 @@ describe("xo adapter: getMarket", () => {
     if (recomputed.ok) assert.equal(m.rules.sha256, recomputed.value.rulesSha256);
     assert.match(m.rules.sha256, /^[0-9a-f]{64}$/);
     assert.equal(m.extras.rulesHashRecipe, "rules-v2");
-    assert.match(m.extras.coreRulesSha256, /^[0-9a-f]{64}$/);
     assert.equal(m.timesUtc.closesAt, "2026-12-31T23:59:00.000Z");
     assert.equal(m.prov.fetchedAtMs, NOW);
   });

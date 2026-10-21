@@ -55,7 +55,7 @@ describe("the Quotient settings dialog inside the shell", () => {
     for (const mode of ["standalone", "cockpit"] as const) {
       const { container, rig } = await mountApp(mode);
       expect(container.querySelectorAll("h1")).toHaveLength(1);
-      expect(must(container, "h1").textContent).toBe("Markets");
+      expect(must(container, "h1").textContent).toMatch(/^Every open market this build can read\./);
       expect(container.querySelector("nav")).toBeNull();
       click(must(container, ".ui-chip[data-view='signals']"));
       click(buttonWith(must(container, "[data-view-note='signals']"), /Quotient settings/));

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { PreparedDecoded } from "@shared/relay/contract";
 
 import { sanitizeText } from "../../core/untrusted";
-import { Badge, Num, UntrustedText, type Tone } from "../../ui";
+import { Badge, Disclosure, Num, UntrustedText, type Tone } from "../../ui";
 import type { CardCheck, CardEvaluation, CheckStatus, Mismatch } from "./card";
 import { FRESHNESS_TEXT, TAG_WORDS, groupTag } from "./words";
 
@@ -321,7 +321,7 @@ export function TagsPanel({ evaluation }: { readonly evaluation: CardEvaluation 
   if (digestTag === null) return null;
   return (
     <section className="signing-tags" aria-labelledby="signing-tags-title">
-      <h3 id="signing-tags-title">Tags to compare with PayBox</h3>
+      <h4 id="signing-tags-title">Tags to compare with PayBox</h4>
       <p className="signing-match" data-tags-match={evaluation.verification}>
         {MATCH_TEXT[evaluation.verification]}
       </p>
@@ -346,15 +346,17 @@ export function TagsPanel({ evaluation }: { readonly evaluation: CardEvaluation 
           </dd>
         </div>
       </dl>
-      <p>{TAG_WORDS.digest}</p>
-      {innerTag === null ? null : <p>{innerKind === "typed_data_hash" ? TAG_WORDS.innerTyped : TAG_WORDS.innerCallData}</p>}
-      <p>{TAG_WORDS.unknownDisplay}</p>
-      <p>{TAG_WORDS.limits}</p>
+      <p className="signing-muted">{TAG_WORDS.unknownDisplay}</p>
+      <Disclosure summary="What the two tags are">
+        <p>{TAG_WORDS.digest}</p>
+        {innerTag === null ? null : <p>{innerKind === "typed_data_hash" ? TAG_WORDS.innerTyped : TAG_WORDS.innerCallData}</p>}
+        <p>{TAG_WORDS.limits}</p>
+      </Disclosure>
     </section>
   );
 }
 
-// The countdown at the top of the card (Signing.dc.html): the time left in 28 px mono, the words beside it. The
+// The countdown at the top right of the card (Signing.dc.html): the time left in 28 px mono, the words under it. The
 // tone is carried as data for the stylesheet and the tests; the words carry the meaning.
 export function FreshnessText({ evaluation, remaining }: { readonly evaluation: CardEvaluation; readonly remaining: string }) {
   const state = evaluation.freshness.state;

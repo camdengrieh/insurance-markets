@@ -39,12 +39,8 @@ const chipRow = (root: ParentNode): HTMLElement => must<HTMLElement>(root, '[rol
 const chips = (root: ParentNode): HTMLButtonElement[] => [...chipRow(root).querySelectorAll<HTMLButtonElement>(".ui-chip")];
 const chip = (root: ParentNode, category: string): HTMLButtonElement => must<HTMLButtonElement>(chipRow(root), `.ui-chip[data-category="${category}"]`);
 const viewChip = (root: ParentNode, view: string): HTMLButtonElement => must<HTMLButtonElement>(root, `.ui-chip[data-view="${view}"]`);
-const buttonWith = (root: ParentNode, pattern: RegExp): HTMLButtonElement => {
-  const found = [...root.querySelectorAll<HTMLButtonElement>("button")].find((candidate) => pattern.test(candidate.textContent ?? ""));
-  if (found === undefined) throw new Error(`no button ${String(pattern)}`);
-  return found;
-};
 const inspector = (root: ParentNode): HTMLElement => must<HTMLElement>(root, "aside.explorer-inspector");
+const inspectRow = (row: ParentNode): void => click(must(row, "button.explorer-row-select"));
 const HOSTILE = '<img src=x onerror=alert(1)> SPORTS <script>alert(2)</script>';
 
 function build() {
@@ -100,7 +96,7 @@ describe("the category chip row", () => {
     const { container } = await mount(<MarketsView />, services);
     click(chip(container, "politics"));
     expect(rowsOf(container)).toHaveLength(2);
-    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("2 markets shown in Politics of 5 loaded");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("2 of 5 loaded rows in Politics");
     expect(chip(container, "politics").getAttribute("aria-pressed")).toBe("true");
     expect(chip(container, "all").getAttribute("aria-pressed")).toBe("false");
     expect(must(container, ".explorer").getAttribute("data-category")).toBe("politics");
@@ -110,7 +106,7 @@ describe("the category chip row", () => {
     expect(chipRow(container).querySelector("a")).toBeNull();
     click(chip(container, "all"));
     expect(rowsOf(container)).toHaveLength(5);
-    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("5 markets shown from 3 venues");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toBe("5 of 5 loaded rows · 3 venues · each venue at most 5 pages");
   });
 
   it("composes with the view chips and the search text, and the counts follow the view", async () => {
@@ -121,7 +117,7 @@ describe("the category chip row", () => {
     expect(chips(container).map((c) => allText(c))).toEqual(["All categories2", "Politics1", "Economics1"]);
     click(chip(container, "politics"));
     expect(rowsOf(container)).toHaveLength(1);
-    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("1 market shown in the Signals view in Politics of 5 loaded");
+    expect(allText(must(container, '[data-testid="explorer-count"]'))).toContain("1 of 5 loaded rows in Signals, Politics");
     typeInto(must<HTMLInputElement>(container, 'input[type="search"]'), "nothing matches");
     expect(rowsOf(container)).toHaveLength(0);
     expect(allText(container)).toContain("No market in Politics among the loaded rows");
@@ -148,7 +144,7 @@ describe("the category chip row", () => {
     const { services } = build();
     const { container } = await mount(<MarketsView />, services);
     const cup = rowsOf(container).find((row) => allText(row).includes("Cup final")) as Element;
-    click(buttonWith(cup, /^Inspect$/));
+    inspectRow(cup);
     const line = must(inspector(container), ".explorer-category-line");
     expect(line.getAttribute("data-category")).toBe("sports");
     expect(line.getAttribute("data-category-source")).toBe("native");
@@ -159,10 +155,10 @@ describe("the category chip row", () => {
     expect(line.querySelector("script")).toBeNull();
     // A keyword verdict and an unassigned row say so, and show no venue words when there are none.
     const rate = rowsOf(container).find((row) => allText(row).includes("Rate cut")) as Element;
-    click(buttonWith(rate, /^Inspect$/));
+    inspectRow(rate);
     expect(allText(must(inspector(container), ".explorer-category-line"))).toBe("Category: Economics · from title keywords");
     const play = rowsOf(container).find((row) => allText(row).includes("Play money")) as Element;
-    click(buttonWith(play, /^Inspect$/));
+    inspectRow(play);
     expect(allText(must(inspector(container), ".explorer-category-line"))).toBe("Category: Other · unassigned");
   });
 
@@ -170,13 +166,15 @@ describe("the category chip row", () => {
     const { services } = build();
     const { container } = await mount(<MarketsView />, services);
     const cup = rowsOf(container).find((row) => allText(row).includes("Cup final")) as Element;
-    click(buttonWith(cup, /^Inspect$/));
+    inspectRow(cup);
     expect(inspector(container).getAttribute("data-selected")).toBe("xo:m2");
     click(chip(container, "politics"));
-    expect(inspector(container).getAttribute("data-selected")).toBe("none");
-    expect(container.querySelector("tbody tr[data-selected='true']")).toBeNull();
+    // The Sports row is not shown: the inspector moves to the first Politics row, never keeps a hidden one.
+    expect(inspector(container).getAttribute("data-selected")).not.toBe("xo:m2");
+    expect(container.querySelectorAll("tbody tr[data-selected='true']")).toHaveLength(1);
+    expect(allText(must(container, "tbody tr[data-selected='true']"))).not.toContain("Cup final");
     const election = rowsOf(container).find((row) => allText(row).includes("Election night")) as Element;
-    click(buttonWith(election, /^Inspect$/));
+    inspectRow(election);
     click(chip(container, "all"));
     expect(inspector(container).getAttribute("data-selected")).toBe("xo:m1");
   });

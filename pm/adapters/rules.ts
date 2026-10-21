@@ -1,15 +1,9 @@
-// Builds the Rules block of a Market and the matching extras. Two hashes exist in pm/:
-//
-//   rules-v2 (pm/links/hash.ts)   what a link leg pins and pm_verify_link recomputes. It hashes
-//                                  the venue's rule-bearing fields in a fixed order.
-//   pm/core rulesSha256            NFKC + whitespace collapse over one display text.
-//
-// Market.rules.sha256 carries the rules-v2 value, because that is what the registry pins. The
-// pm/core value is kept in extras.coreRulesSha256. When the rules cannot be hashed (a required
+// Builds the Rules block of a Market and the matching extras. There is one rules fingerprint,
+// rules-v2 (sdk/rules.ts): what a link leg pins, what pm_verify_link recomputes and what the dApp's
+// venue readers show. It hashes the venue's rule-bearing fields in a fixed order. When the rules cannot be hashed (a required
 // field is missing, the text is empty) the sha256 slot holds a sentinel that is not hex and
 // embeds the market id, so two markets with unavailable rules can never compare equal.
 
-import { rulesSha256 as coreRulesSha256 } from "../core/rules-hash.js";
 import { canonicalizeRecord, isRuleVenue } from "../links/hash.js";
 import type { ResolutionMechanism, Rules, VoidPolicy } from "../types.js";
 import { untrusted } from "../types.js";
@@ -38,7 +32,6 @@ export interface BuiltRules {
   readonly hashed: boolean;
   readonly hashProblem: string | null;
   readonly rulesHashRecipe: MarketExtras["rulesHashRecipe"];
-  readonly coreRulesSha256: string;
 }
 
 export function buildRules(input: RulesInput): BuiltRules {
@@ -74,6 +67,5 @@ export function buildRules(input: RulesInput): BuiltRules {
     hashed,
     hashProblem,
     rulesHashRecipe: hashed ? "rules-v2" : null,
-    coreRulesSha256: coreRulesSha256(input.displayText),
   };
 }

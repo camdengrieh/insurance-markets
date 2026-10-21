@@ -1,3 +1,4 @@
+import { rulesFingerprintOfFields } from "@sdk/rules";
 import type {
   AdapterCaps,
   AdapterDeps,
@@ -219,7 +220,6 @@ export function createManifoldAdapter(deps: AdapterDeps): ManifoldAdapter {
     const closes = isoOrNull(row.closeTime);
     const opens = isoOrNull(row.createdTime);
     const description = row.textDescription ?? "";
-    const normalized = normalizeForHash(description);
     return {
       ref: summary.ref,
       title: summary.title,
@@ -228,7 +228,7 @@ export function createManifoldAdapter(deps: AdapterDeps): ManifoldAdapter {
         text: untrusted(cleanBlock(description, RULES_MAX)),
         // An empty hash means "no rules text was available" and never equals a real hash. The recorded detail
         // fixture carries no description, so the field name is unverified.
-        sha256: normalized === "" ? "" : sha256Hex(normalized),
+        sha256: rulesFingerprintOfFields([description]),
         sources: [],
         // Resolved by the market's creator; no mechanism in the port fits, and none is guessed.
         mechanism: "unknown",

@@ -2,7 +2,7 @@ import { sha256, toBytes } from "viem";
 
 import { addQty, cmpQty, fromAtomic, parseQty, subQty, toDec, type Qty } from "../../core/money";
 import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Rules, Status } from "../../core/ports";
-import { rulesHashOf } from "../../core/rules-hash";
+import { rulesFingerprint, udxRuleFields } from "@sdk/rules";
 import { untrustedField } from "../../core/untrusted";
 import { makeProv } from "../../core/venue-policy";
 import {
@@ -154,7 +154,7 @@ export function rulesOf(row: UdxRow): Rules {
   return {
     text,
     // Over the full description and the expiry, never the capped display copy (the shared recipe, finding A2).
-    sha256: rulesHashOf([row.description, row.expires_at]),
+    sha256: rulesFingerprint("udx", udxRuleFields(row)),
     sources: [],
     mechanism: "exchange",
     void: "unknown",

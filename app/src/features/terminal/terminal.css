@@ -40,33 +40,42 @@
   color: var(--text-muted);
 }
 
+/* A caution: a dashed strong line and words, never a fill. */
 .terminal-warning {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-strong);
+  border: var(--line) dashed var(--border-strong);
   border-radius: var(--radius);
-  background: var(--warn-bg);
-  color: var(--warn-fg);
+  background: transparent;
+  color: var(--text);
 }
 
+/* The transcript (Signing.dc.html dock): mono lines on the dock's ground, a rule between entries, no boxes. */
 .terminal-log {
   list-style: none;
   margin: 1rem 0 0;
   padding: 0;
   display: grid;
-  gap: 1rem;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
 }
 
 .terminal-entry {
   min-width: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
+  padding: 0 0 0.5rem;
+  border-bottom: var(--line) solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
 }
 
 .terminal-entry-head {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.25rem;
   overflow-wrap: anywhere;
+}
+
+/* The tool a call ran, in the Yes ink (on the dock it is the lighter shade the dock defines below). */
+.terminal-call > code:first-child {
+  color: var(--yes);
 }
 
 .terminal-calls {
@@ -225,12 +234,64 @@
   overflow-wrap: anywhere;
 }
 
-/* The panel: paper again, 300 px tall on a desk, two columns that scroll on their own; one column on a phone. */
+/* The panel: the ink ground of the strip continued (Signing.dc.html), mono transcript on the left, the observer
+   column on the right. Everything inside is drawn with the shared components, so the panel re-points the theme
+   tokens at the dock's ground instead of restyling them one by one: ink becomes the ground, paper the text, and
+   the three accents (Yes, No, caution) are mixed toward the paper so they keep 4.5:1 on the ink in the light theme
+   and on the paper ground the dark theme gives the dock. Only tokens and color-mix() of tokens; no raw colour. */
 .dock-panel {
-  border-top: var(--line-strong) solid var(--text);
-  background: var(--bg);
+  --dock-ground: var(--accent);
+  --dock-ink: var(--accent-fg);
+  --dock-dim: var(--accent-fg-muted);
+  --dock-yes: color-mix(in srgb, var(--yes) 35%, var(--accent-fg));
+  --dock-no: color-mix(in srgb, var(--no) 35%, var(--accent-fg));
+  --dock-caution: color-mix(in srgb, var(--caution) 35%, var(--accent-fg));
+  --dock-focus: color-mix(in srgb, var(--focus) 35%, var(--accent-fg));
+  color-scheme: dark;
+  border-top: var(--line) solid var(--accent-fg-muted);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.8125rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dock-panel {
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="dark"] .dock-panel {
+  color-scheme: light;
+}
+
+.dock-panel-inner {
+  --bg: var(--dock-ground);
+  --surface: color-mix(in srgb, var(--dock-ink) 6%, var(--dock-ground));
+  --surface-2: color-mix(in srgb, var(--dock-ink) 9%, var(--dock-ground));
+  --text: var(--dock-ink);
+  --text-muted: var(--dock-dim);
+  --border: color-mix(in srgb, var(--dock-ink) 22%, var(--dock-ground));
+  --border-strong: var(--dock-dim);
+  --accent: var(--dock-ink);
+  --accent-fg: var(--dock-ground);
+  --accent-fg-muted: color-mix(in srgb, var(--dock-ink) 30%, var(--dock-ground));
+  --focus: var(--dock-focus);
+  --yes: var(--dock-yes);
+  --no: var(--dock-no);
+  --caution: var(--dock-caution);
+  --ok-bg: var(--surface);
+  --ok-fg: var(--dock-ink);
+  --warn-bg: var(--surface);
+  --warn-fg: var(--dock-caution);
+  --danger-bg: var(--surface);
+  --danger-fg: var(--dock-no);
+  --info-bg: var(--surface);
+  --info-fg: var(--dock-yes);
+  --neutral-bg: var(--surface);
+  --neutral-fg: var(--dock-dim);
+  --untrusted-bg: var(--surface-2);
+  --untrusted-fg: var(--dock-ink);
   color: var(--text);
-  font-size: 0.875rem;
 }
 
 .dock-panel-inner {
@@ -239,15 +300,25 @@
 
 .dock-columns {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18.75rem, 24rem);
   height: 300px;
 }
 
 .dock-column {
   min-width: 0;
   overflow: auto;
-  padding-inline-end: 0.5rem;
+  padding-inline-end: 1.5rem;
+}
+
+/* The observer column: a rule on its left, 300 px or a little more for the inbox table. */
+.dock-column[data-column="observer"] {
+  padding-inline: 1rem 0.5rem;
+  border-inline-start: var(--line) solid var(--border);
+}
+
+.dock-column[data-column="observer"] .terminal-pair {
+  grid-template-columns: minmax(6rem, 8rem) minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
 }
 
 .dock-column > * + * {
@@ -276,8 +347,16 @@
     overflow: auto;
   }
 
-  .dock-column {
+  .dock-column,
+  .dock-column[data-column="observer"] {
     overflow: visible;
-    padding-inline-end: 0;
+    padding-inline: 0;
+    border-inline-start: 0;
+  }
+
+  .dock-column[data-column="observer"] {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: var(--line) solid var(--border);
   }
 }

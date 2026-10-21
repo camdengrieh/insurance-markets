@@ -167,8 +167,9 @@ describe("trueo: market detail", () => {
     const m = addMarket(w.chain, variant(SPARE_FIRST, { question: "Is the sky   blue?", source: hostileSource, additionalInfo: "Extra: ＡＢＣ details" }));
     const { adapter } = setup({}, w);
     const market = await adapter.getMarket(refOf(m));
-    const normalized = `Is the sky   blue?\nSource: ${hostileSource}\nAdditional info: Extra: ＡＢＣ details`.normalize("NFKC").replace(/\s+/gu, " ").trim();
-    expect(market.rules.sha256).toBe(createHash("sha256").update(normalized, "utf8").digest("hex"));
+    // The shared rules-v2 canonicalisation over question, source and extra info (sdk/rules.ts).
+    const joined = ["Is the sky   blue?", hostileSource, "Extra: ＡＢＣ details"].join("\u241f").normalize("NFC").replace(/\s+/gu, " ").trim();
+    expect(market.rules.sha256).toBe(createHash("sha256").update(joined, "utf8").digest("hex"));
     expect(market.rules.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(market.rules.text.untrusted).toBe(true);
     expect(market.rules.text.value).toContain("Source: Per the official source <img src=x onerror=alert(1)>");

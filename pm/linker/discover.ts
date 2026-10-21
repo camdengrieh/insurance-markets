@@ -15,7 +15,7 @@
 import { decodeMarketDetail, decodeMarketPage, lifecycleOf } from "../../src/xo/client.js";
 import { categorise } from "../core/category.js";
 import { sha256Hex } from "../links/canonical.js";
-import { canonicalizeRecord, hashCanonical, type FieldValue } from "../links/hash.js";
+import { canonicalizeRecord, hashCanonical, xoLossyRuleRead, xoRulesText, type FieldValue } from "../links/hash.js";
 import { marketId as marketIdSchema } from "../links/schema.js";
 import type { Clock } from "../recorder/clock.js";
 import type { PoliteClient } from "../recorder/http.js";
@@ -294,15 +294,12 @@ async function discoverXo(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise
       skip(c, "detail_id_mismatch");
       continue;
     }
-    // Rule fields exactly as pm/adapters/xo.ts assembles them for the rules-v2 recipe.
-    if (detail.rules.outcomeRulesTotal > detail.rules.outcomeRules.length || detail.resolutionSourcesTotal > detail.resolutionSources.length || detail.omissions.some((o) => /^(rules[ .]|\d+ outcomeRules |outcomeRules\[|resolutionSources |\d+ resolutionSources )/.test(o))) {
+    // Rule fields exactly as every client assembles them for the rules-v2 recipe (sdk/rules.ts).
+    if (xoLossyRuleRead(detail) !== null) {
       skip(c, "rules_lossy_read");
       continue;
     }
-    const descriptionText = detail.rules.description === null ? "" : String(detail.rules.description);
-    const parts = descriptionText === "" ? [] : [descriptionText];
-    for (const rule of detail.rules.outcomeRules) parts.push(`Outcome ${rule.outcomeIndex}: ${String(rule.rule)}`);
-    const displayText = parts.join("\n\n");
+    const displayText = xoRulesText(detail);
     const sources = detail.resolutionSources.slice(0, 20).map(String);
     const ruleFields: Record<string, FieldValue> = {
       ...(displayText === "" ? {} : { rules: displayText }),

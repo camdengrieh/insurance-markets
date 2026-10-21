@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.json ./
 COPY src ./src
 COPY pm ./pm
+COPY sdk ./sdk
 COPY deploy/recorder/build.mjs ./deploy/recorder/build.mjs
 RUN node deploy/recorder/build.mjs
 

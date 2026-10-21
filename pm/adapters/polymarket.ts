@@ -431,7 +431,6 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
       extras: {
         ruleFields,
         rulesHashRecipe: built.rulesHashRecipe,
-        coreRulesSha256: built.coreRulesSha256,
         statusRaw: untrusted(`closed=${String(g.closed)};active=${String(g.active)};uma=${umaState(g.raw)};state=${statusRaw}`),
         geoRestricted: bool(g.raw, "restricted"),
         warnings,

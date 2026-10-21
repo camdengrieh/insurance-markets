@@ -300,7 +300,7 @@ interface Link {
 
 ### 2.6 Categories
 
-One fixed taxonomy for every venue, so the Markets surface can be browsed by category and the linker can block candidate pairs by it (section 4.3, L2 "blocking by category"): `politics`, `crypto`, `sports`, `economics`, `science_tech`, `culture`, `world`, `weather`, `other`. It lives in `pm/core/category.ts` (pure, no imports) and is mirrored byte for byte at `app/src/core/category.ts`, because the bundle may not import `pm/`; a test hashes both files so they cannot drift. `Market.category` is optional; a consumer reads an absent verdict as `other` with confidence `none`.
+One fixed taxonomy for every venue, so the Markets surface can be browsed by category and the linker can block candidate pairs by it (section 4.3, L2 "blocking by category"): `politics`, `crypto`, `sports`, `economics`, `science_tech`, `culture`, `world`, `weather`, `other`. It lives in the shared `sdk/category.ts` (pure, no imports), which `pm/core/category.ts` and `app/src/core/category.ts` re-export, so the linker and the page run the same code. `Market.category` is optional; a consumer reads an absent verdict as `other` with confidence `none`.
 
 `categorise({ venue, native, title })` returns `{ category, confidence, matched }`. Matching is deterministic and case- and diacritic-insensitive (NFKD, marks dropped, lower case, every non-alphanumeric run collapsed to one space), in a fixed order with the first hit deciding:
 

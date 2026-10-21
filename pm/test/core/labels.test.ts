@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DEFAULTS } from "../../core/edge.js";
 import { assignLabel, evaluateGates, haircutForBasis, type BasisInfo, type GateInput } from "../../core/labels.js";
-import { normaliseRulesText, rulesSha256 } from "../../core/rules-hash.js";
 import { dec, ratToDecExact } from "../../core/rational.js";
 
 const good: GateInput = {
@@ -105,15 +104,4 @@ test("haircut by basis follows 5.6; an unresolved condition_scope axis has none"
   assert.equal(h({ class: "identical", axes: ["source"] }), "0.05");
   assert.equal(h({ class: "identical", axes: ["condition_scope"] }), null);
   assert.equal(h({ class: "settlement_source", axes: ["timing", "condition_scope"] }), null);
-});
-
-test("rules hash: NFKC and whitespace-collapsed sha256 hex", () => {
-  assert.equal(rulesSha256("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-  assert.equal(rulesSha256("  abc \n"), rulesSha256("abc"));
-  assert.equal(rulesSha256("a\t\tb\n\nc"), rulesSha256("a b c"));
-  assert.equal(rulesSha256("ＡＢＣ"), rulesSha256("ABC")); // full-width letters fold under NFKC
-  assert.equal(normaliseRulesText("é"), "é"); // composed form
-  assert.notEqual(rulesSha256("resolves YES if A"), rulesSha256("resolves YES if B"));
-  assert.notEqual(rulesSha256("abc"), rulesSha256("abc​")); // invisible edits change the hash
-  assert.match(rulesSha256(""), /^[0-9a-f]{64}$/);
 });

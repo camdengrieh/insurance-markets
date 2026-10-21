@@ -11,11 +11,23 @@
 // Money is bigint micro units and exact decimal strings; there is no floating point here.
 
 import { clobCapAmount, computeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "@shared/clob/amounts";
-import { CLOB_CAP_FEE_BPS, LIMITLESS_ASSUMED_TICK, LIMITLESS_TIFS, POLYMARKET_EXCHANGES, POLYMARKET_TIFS, polymarketTickRule, type ClobTif, type ClobVenue } from "@shared/clob/venues";
+import {
+  CLOB_CAP_FEE_BPS,
+  LIMITLESS_ASSUMED_TICK,
+  LIMITLESS_ORDER_DOMAIN_NAME,
+  LIMITLESS_ORDER_DOMAIN_VERSION,
+  LIMITLESS_TIFS,
+  POLYMARKET_EXCHANGES,
+  POLYMARKET_TIFS,
+  polymarketTickRule,
+  type ClobTif,
+  type ClobVenue,
+} from "@shared/clob/venues";
 import { SIDE_BUY, SIDE_SELL } from "@shared/xo/signing/constants";
 import { SigningError } from "@shared/xo/signing/errors";
 
 import type { Market } from "../../core/ports";
+import type { SignCell } from "./ticket";
 
 export const CLOB_TICKET_SIDES = ["BUY", "SELL"] as const;
 export type ClobTicketSide = (typeof CLOB_TICKET_SIDES)[number];
@@ -118,7 +130,7 @@ export function buildClobTicket(input: ClobTicketInput, facts: ClobMarketFacts):
   const issues: ClobTicketIssue[] = [];
   const tifs = tifsFor(facts.venue);
   if (!TOKEN_ID.test(input.tokenId)) issues.push(issue("token", "bad_token", "The outcome token is a whole number, such as the token id shown with a market's outcomes."));
-  if (!isSide(input.side)) issues.push(issue("side", "bad_side", "Choose BUY or SELL."));
+  if (!isSide(input.side)) issues.push(issue("side", "bad_side", "Choose Buy or Sell."));
   const tif: ClobTif = (tifs as readonly string[]).includes(input.tif) ? (input.tif as ClobTif) : "GTC";
   if (!(tifs as readonly string[]).includes(input.tif)) issues.push(issue("tif", "bad_tif", `Choose one of ${tifs.join(", ")}.`));
   let ttlS: number | null = null;
@@ -251,6 +263,30 @@ export function signedFieldsPreview(ticket: ClobTicket, facts: ClobMarketFacts, 
     { label: "expiration, nonce", value: "0 and 0 (the venue's rule: no signed expiry)" },
     { label: "feeRateBps", value: "0 (COLLATERAL fee module; the relay refuses any other)" },
     { label: "domain", value: "Limitless CTF Exchange, version 1, chain 8453, the market's exchange (must be on the pinned list)" },
+  ];
+}
+
+// The compact "What you sign" strip for a venue order: the domain the relay is expected to sign for (Polymarket's
+// from the market's book, decided again by the relay from its own read), the side and the EOA signature type, the two
+// signed amounts worked out here, and the policy fee ceiling. Every value comes from the ticket or a pinned constant.
+export function clobSignCells(ticket: ClobTicket | null, facts: ClobMarketFacts, side: string): SignCell[] {
+  const wire = isSide(side) ? side : null;
+  const domain =
+    facts.venue === "polymarket"
+      ? `Polymarket CTF Exchange v${POLYMARKET_EXCHANGES[facts.polymarketBook ?? "ctf"].version} · 137`
+      : `${LIMITLESS_ORDER_DOMAIN_NAME} v${LIMITLESS_ORDER_DOMAIN_VERSION} · 8453`;
+  const amounts =
+    ticket === null
+      ? null
+      : ticket.side === "BUY"
+        ? `${formatMicro(ticket.amounts.makerAmount)} USD → ${formatMicro(ticket.amounts.takerAmount)} shares`
+        : `${formatMicro(ticket.amounts.makerAmount)} shares → ${formatMicro(ticket.amounts.takerAmount)} USD`;
+  return [
+    { label: "domain", value: domain, note: facts.venue === "polymarket" ? "the relay confirms the book from its own read" : "the market's exchange, on the pinned list" },
+    // Both venues: an EOA order, type 0 (the same value the full preview below lists).
+    { label: "side · type", value: wire === null ? null : `${wire} · EOA, type 0`, missing: "choose a side" },
+    { label: "maker → taker", value: amounts, missing: "complete the ticket first" },
+    { label: "fee ceiling", value: `${CLOB_CAP_FEE_BPS.toLocaleString("en-US")} bps`, note: "policy ceiling, not the venue's quote", caution: true },
   ];
 }
 

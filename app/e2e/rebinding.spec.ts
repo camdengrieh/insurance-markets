@@ -2,7 +2,7 @@ import { bearer, startE2eDaemon, type E2eDaemon } from "../../bridge/test/e2e/ha
 import { DIST } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { startHostilePage } from "./support/servers";
-import { observe } from "./support/world";
+import { HERO_H1, observe } from "./support/world";
 
 // M1-1 and M1-2 in a real browser. The browser is started with a resolver rule that maps the name `rebind.test` to 127.0.0.1,
 // which is what a DNS-rebinding attacker's name does after the flip. And a second loopback origin plays the hostile local page.
@@ -98,7 +98,7 @@ test("the user's own page, served by the daemon, keeps working next to the attac
   owned = await startE2eDaemon({ appDir: DIST.cockpit, hostile: false });
   await observe(page, { target: "cockpit" });
   await page.goto(`${owned.origin}/#/markets`);
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   expect(await page.context().cookies()).toEqual([]);
   expect(await page.evaluate(() => document.cookie)).toBe("");
 });

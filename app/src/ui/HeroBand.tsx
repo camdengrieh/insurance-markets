@@ -28,17 +28,25 @@ export interface HeroBandProps {
   readonly facts?: readonly HeroFact[];
   // Draw the field once (tests, or a page that must not move).
   readonly still?: boolean;
+  // The phone's one-line label over the field (Mobile.dc.html, "6 venues · 9 rows · 3 held"). Computed values
+  // only; it repeats the facts, so it is hidden from assistive technology, which reads the h1 and the facts.
+  readonly compact?: ReactNode;
   readonly children?: ReactNode;
 }
 
-export function HeroBand({ title, lede, facts = [], still = false, children }: HeroBandProps) {
+export function HeroBand({ title, lede, facts = [], still = false, compact, children }: HeroBandProps) {
   const headingId = useId();
   return (
-    <section className="ui-hero" aria-labelledby={headingId}>
+    <section className="ui-hero" aria-labelledby={headingId} data-compact={compact === undefined ? undefined : "true"}>
       <div className="ui-hero-field">
         <DitherField still={still} />
       </div>
       <div className="ui-hero-panel">
+        {compact === undefined ? null : (
+          <p className="ui-hero-compact" aria-hidden="true">
+            {compact}
+          </p>
+        )}
         <h1 id={headingId} tabIndex={-1} data-route-heading="">
           {title}
         </h1>

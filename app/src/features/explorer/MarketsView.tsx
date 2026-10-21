@@ -7,17 +7,17 @@
 // The top bar's search field filters the rows already loaded and sends nothing (ui/context useSearchQuery); the
 // "Ask the venues" button is the only thing that sends the text to the venues that can search by it.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 import { CATEGORY_LABEL, type Category } from "../../core/category";
 import { parseIsoMs } from "../../core/format";
 import type { VenueId } from "../../core/ports";
 import { DEFAULT_SWITCHES, type VenueSwitches } from "../../core/venue-policy";
-import { Button, Disclosure, EmptyTile, ErrorTile, Field, renderableUntrusted, useAnnounce, useNow, useReportVenueCount, useSearchQuery } from "../../ui";
+import { Button, Disclosure, EmptyTile, ErrorTile, Num, renderableUntrusted, useAnnounce, useNow, useReportVenueCount, useSearchQuery } from "../../ui";
 import { NoAddressWatched, NoVenueSelected, OutcomeTile, TotalsPanel, VenueSection, useHoldings, type Holdings } from "../portfolio";
 import { QuotientSettingsDialog, useSignalsServices, type LinkLoad } from "../signals";
-import { bookTargets, loadBooks, type BookEntry, type BookTarget } from "./books";
+import { BOOK_ROW_CAP, bookTargets, loadBooks, type BookEntry, type BookTarget } from "./books";
 import { EXPLORER_VENUES, venueStatusOf } from "./catalog";
 import { ALL_CATEGORIES, categoryEmptyWords, countsByCategory, filterByCategory, inCategory, type CategoryFilter } from "./categories";
 import { CategoryChips } from "./CategoryChips";
@@ -38,10 +38,50 @@ export type SortKey = "closing" | "venue";
 
 const SORTS: readonly { readonly value: SortKey; readonly label: string }[] = [
   { value: "closing", label: "Closing soonest" },
-  { value: "venue", label: "Venue, then the venue's own order" },
+  { value: "venue", label: "Venue order" },
 ];
 
 export const TABLE_CAPTION = "Markets across the venues that are on";
+
+// Under the table, beside the books button (Main.dc.html's footer bar).
+export const TABLE_FOOT_NOTE =
+  "Rows are the venues' own public answers, shown as published apart from length limits; an unknown figure is \"no data\", never zero. Books load only when you press the button, one request per venue; rows whose venue needs the Cockpit or has no book are skipped.";
+
+export const SEARCH_NOTE = "Typing in the search field narrows the markets already loaded and sends nothing. \"Ask the venues\" sends the text to the venues that can search by it.";
+
+// The right-aligned status line of the toolbar: "9 of 9 loaded rows · 6 venues · each venue at most 5 pages".
+export interface StatusFacts {
+  readonly shown: number;
+  readonly loaded: number;
+  readonly venues: number;
+  readonly loading: boolean;
+  readonly view: ViewId;
+  readonly category: CategoryFilter;
+}
+
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}
+
+export function StatusLine({ facts }: { readonly facts: StatusFacts | null }) {
+  if (facts === null) return <>Loading markets.</>;
+  const { shown, loaded, venues, loading, view, category } = facts;
+  // "in Signals, Politics": the view and the category that narrowed the rows, when they did.
+  const narrowed = [view === "all" ? null : VIEW_LABELS[view], category === "all" ? null : CATEGORY_LABEL[category]].filter((part): part is string => part !== null);
+  if (loading && loaded === 0) {
+    return (
+      <>
+        Loading markets from <Num>{String(venues)}</Num> {plural(venues, "venue", "venues")}.
+      </>
+    );
+  }
+  return (
+    <>
+      <Num>{String(shown)}</Num> of <Num>{String(loaded)}</Num> loaded {plural(loaded, "row", "rows")}
+      {narrowed.length === 0 ? "" : ` in ${narrowed.join(", ")}`} · <Num>{String(venues)}</Num> {plural(venues, "venue", "venues")} · each venue at most <Num>{String(MAX_PAGES_PER_VENUE)}</Num> pages
+    </>
+  );
+}
 
 const VIEW_HEADINGS: Readonly<Record<ViewId, string>> = Object.freeze({ all: "All markets", held: "Holdings", linked: "Linked markets", signals: "Signals" });
 
@@ -155,6 +195,8 @@ interface FeedProps {
   readonly onCounts: (counts: HeroCounts & Readonly<Record<ViewId, number>>) => void;
   // The category counts of the rows in the current view, for the chip row the parent renders under the view chips.
   readonly onCategoryCounts: (counts: CategoryCounts) => void;
+  // The toolbar's status line (StatusLine), reported when its figures change.
+  readonly onStatus: (facts: StatusFacts) => void;
   readonly onOpenQuotientSettings: () => void;
 }
 
@@ -165,7 +207,7 @@ export interface CategoryCounts {
 
 // Owns the queries for one selection. The parent re-mounts it (by key) when the selection changes, so extra pages and
 // loaded books never leak from one selection into another.
-function Feed({ services, selection, venueStates, filterText, sort, view, category, markContext, holdings, linkLoad, quotient, selectedKey, onSelect, onToggle, onWatch, onOpenMarket, onCounts, onCategoryCounts, onOpenQuotientSettings }: FeedProps) {
+function Feed({ services, selection, venueStates, filterText, sort, view, category, markContext, holdings, linkLoad, quotient, selectedKey, onSelect, onToggle, onWatch, onOpenMarket, onCounts, onCategoryCounts, onStatus, onOpenQuotientSettings }: FeedProps) {
   const { feeds, loadMore, retry } = useMarketFeed(services, selection);
   const signals = useSignalsServices();
   const nowMs = useNow(10_000);
@@ -247,29 +289,31 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
     [load, services.adapters],
   );
 
-  const venuesLabel = `${feeds.length} ${feeds.length === 1 ? "venue" : "venues"}`;
-  const filtered = rows.length !== all.length;
-  const selected = selectedKey === null ? null : (rows.find((row) => row.key === selectedKey) ?? all.find((row) => row.key === selectedKey) ?? null);
+  // The inspected row: the one picked, while the table shows it; otherwise the first row shown (Main.dc.html selects
+  // the first row on load). Selecting never requests anything.
+  const selected = (selectedKey === null ? undefined : rows.find((row) => row.key === selectedKey)) ?? rows[0] ?? null;
   // A category that empties a view with rows gets the category's words; an empty view keeps its own.
   const empty = rows.length === 0 ? (category !== "all" && viewRows.length > 0 ? categoryEmptyWords(category) : emptyWords(view, holdings)) : null;
   const venuesSummary = `Venues: ${okCount} of ${feeds.length} selected read${failed > 0 ? `, ${failed} could not be read` : ""}, ${panelRows.length - feeds.length} not read in this build or switched off`;
 
+  const shownCount = rows.length;
+  const loadedCount = all.length;
+  const venueCount = feeds.length;
+  useEffect(() => {
+    onStatus({ shown: shownCount, loaded: loadedCount, venues: venueCount, loading, view, category });
+  }, [shownCount, loadedCount, venueCount, loading, view, category, onStatus]);
+
+  // "the first 10" when the cap leaves some rows that could have a book unasked.
+  const capped = targets.length === BOOK_ROW_CAP && rows.filter((row) => row.adapter.books.state === "available").length > BOOK_ROW_CAP;
+  const booksLabel = targets.length === 0 ? "Load books (none of these rows can)" : `Load books for ${capped ? "the first " : "the "}${targets.length} visible ${targets.length === 1 ? "row" : "rows"}`;
+
   return (
     <>
-      <section aria-labelledby="explorer-markets-heading" className="explorer-section explorer-list">
-        <h2 id="explorer-markets-heading">{VIEW_HEADINGS[view]}</h2>
+      <section aria-labelledby="explorer-markets-heading" className="explorer-list">
+        <h2 id="explorer-markets-heading" className="ui-visually-hidden">
+          {VIEW_HEADINGS[view]}
+        </h2>
         <ViewHeader view={view} holdings={holdings} linkLoad={linkLoad} quotient={quotient} onOpenQuotientSettings={onOpenQuotientSettings} />
-        <p role="status" className="explorer-count" data-testid="explorer-count">
-          {loading && all.length === 0
-            ? `Loading markets from ${venuesLabel}.`
-            : `${rows.length} ${rows.length === 1 ? "market" : "markets"} shown${view === "all" ? "" : ` in the ${VIEW_LABELS[view]} view`}${category === "all" ? "" : ` in ${CATEGORY_LABEL[category]}`}${filtered ? ` of ${all.length} loaded` : ""} from ${venuesLabel}. Each venue shows at most ${MAX_PAGES_PER_VENUE} pages.`}
-        </p>
-        <div className="explorer-actions">
-          <Button busy={booksBusy} disabled={targets.length === 0} onClick={onLoadBooks}>
-            {targets.length === 0 ? "Load order books (none of these rows can)" : `Load order books for the first ${targets.length} ${targets.length === 1 ? "row" : "rows"}`}
-          </Button>
-          <span className="explorer-note">One request per venue, only when you press the button. Rows from venues that need the Cockpit or have no book are skipped.</span>
-        </div>
         <div className="explorer-split">
           <div className="explorer-main">
             {rows.length === 0 ? (
@@ -279,12 +323,14 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
                 </EmptyTile>
               )
             ) : (
-              <MarketTable rows={rows} caption={TABLE_CAPTION} context={{ books, nowMs, selectedKey, onSelect: (key) => onSelect(key === selectedKey ? null : key), onOpenMarket }} />
+              <MarketTable rows={rows} caption={TABLE_CAPTION} context={{ books, nowMs, selectedKey: selected?.key ?? null, onSelect, onOpenMarket }} />
             )}
-            <p className="explorer-note">
-              Every row is the venue's own data, shown as published apart from length limits. A display price is what the venue lists beside the market; it is not an order book and not a price you can trade at. An unknown
-              figure is shown as "no data", never as zero.
-            </p>
+            <div className="explorer-table-foot">
+              <p className="explorer-note">{TABLE_FOOT_NOTE}</p>
+              <Button busy={booksBusy} disabled={targets.length === 0} onClick={onLoadBooks}>
+                {booksLabel}
+              </Button>
+            </div>
           </div>
           <Inspector
             row={selected}
@@ -303,9 +349,11 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
         </div>
       </section>
       {view === "held" ? <HoldingsPanels holdings={holdings} /> : null}
-      <Disclosure summary={venuesSummary} defaultOpen={failed > 0 || okCount === 0}>
-        <VenuePanel rows={panelRows} mode={services.mode} nowMs={nowMs} query={selection.query} onToggle={onToggle} onRetry={retry} onLoadMore={loadMore} />
-      </Disclosure>
+      <div className="explorer-venues-fold">
+        <Disclosure summary={venuesSummary} defaultOpen={failed > 0 || okCount === 0}>
+          <VenuePanel rows={panelRows} mode={services.mode} nowMs={nowMs} query={selection.query} onToggle={onToggle} onRetry={retry} onLoadMore={loadMore} />
+        </Disclosure>
+      </div>
     </>
   );
 }
@@ -370,6 +418,8 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [counts, setCounts] = useState<(HeroCounts & Readonly<Record<ViewId, number>>) | null>(null);
   const [linkLoad, setLinkLoad] = useState<LinkLoad | null>(null);
+  const [statusFacts, setStatusFacts] = useState<StatusFacts | null>(null);
+  const searchNoteId = useId();
 
   const holdings = useHoldings();
   const signals = useSignalsServices();
@@ -439,6 +489,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const onOpenMarket = useCallback((row: ExplorerRow) => setOpened({ venue: row.summary.ref.venue, marketId: row.summary.ref.marketId }), []);
   const onCounts = useCallback((next: HeroCounts & Readonly<Record<ViewId, number>>) => setCounts(next), []);
   const onCategoryCounts = useCallback((next: CategoryCounts) => setCategoryCounts(next), []);
+  const onStatus = useCallback((facts: StatusFacts) => setStatusFacts(facts), []);
   const openQuotientSettings = useCallback(() => setSettingsOpen(true), []);
 
   // Which rows are linked, from the loaded dataset and the rows this visit has seen (memory holds every list row).
@@ -487,7 +538,9 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
     [services.memory],
   );
 
-  const band = <ExplorerHero title="Markets" counts={counts} holdings={holdings.state.kind} links={linkLoad} quotient={quotient} />;
+  // The venues whose reader runs with the current settings: the number the h1 names (never a hard-coded one).
+  const readable = switches === null ? null : venueStates.filter((state) => state.status.kind === "active").length;
+  const band = <ExplorerHero venues={readable} rows={counts === null ? null : counts.all} counts={counts} holdings={holdings.state.kind} links={linkLoad} quotient={quotient} />;
 
   if (switches === null) {
     return (
@@ -504,6 +557,8 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const selection: FeedSelection = { venues: selectedVenues, status, query: venueQuery };
   const signature = JSON.stringify([selectedVenues, status, venueQuery]);
   const chipCounts = counts === null ? null : { all: counts.all, held: counts.held, linked: counts.linked, signals: counts.signals };
+  // "Ask the venues" and "Clear search" matter only once there is text to send or a venue search to clear.
+  const searching = filterText.trim() !== "" || venueQuery !== "";
 
   return (
     <div className="explorer" data-view={view} data-category={category}>
@@ -513,6 +568,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
       ) : null}
       <div className="explorer-toolbar">
         <ViewChips view={view} counts={chipCounts} onView={onView} />
+        <span className="explorer-toolbar-rule" aria-hidden="true" />
         <form
           className="explorer-filters"
           role="search"
@@ -524,45 +580,50 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
             announce(next === "" ? "Showing the plain list." : "Asking the venues that can search by text.");
           }}
         >
-          <Field label="Status">
-            {(id) => (
-              <select id={id} className="ui-select" value={status} onChange={(event) => setStatus(event.currentTarget.value as StatusFilter)}>
-                {STATUS_FILTERS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-          <Field label="Order by">
-            {(id) => (
-              <select id={id} className="ui-select" value={sort} onChange={(event) => setSort(event.currentTarget.value as SortKey)}>
-                {SORTS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-          <div className="explorer-filter-buttons">
-            <Button type="submit" variant="primary">
-              Ask the venues
-            </Button>
-            <Button
-              onClick={() => {
-                setQuery("");
-                setVenueQuery("");
-              }}
-            >
-              Clear search
-            </Button>
-          </div>
+          <label className="explorer-inline-field">
+            <span>Status</span>
+            <select className="ui-select" value={status} onChange={(event) => setStatus(event.currentTarget.value as StatusFilter)}>
+              {STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="explorer-inline-field">
+            <span>Sort</span>
+            <select className="ui-select" value={sort} onChange={(event) => setSort(event.currentTarget.value as SortKey)}>
+              {SORTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {searching ? (
+            <span className="explorer-filter-buttons">
+              <Button type="submit" aria-describedby={searchNoteId}>
+                Ask the venues
+              </Button>
+              <Button
+                onClick={() => {
+                  setQuery("");
+                  setVenueQuery("");
+                }}
+              >
+                Clear search
+              </Button>
+            </span>
+          ) : null}
+          <span id={searchNoteId} hidden>
+            {SEARCH_NOTE}
+          </span>
         </form>
+        <p role="status" className="explorer-status-line" data-testid="explorer-count">
+          <StatusLine facts={statusFacts} />
+        </p>
       </div>
       <CategoryChips category={category} counts={categoryCounts === null ? null : categoryCounts.byCategory} total={categoryCounts === null ? null : categoryCounts.total} onCategory={onCategory} />
-      <p className="explorer-note">Typing in the search field narrows the markets already loaded and sends nothing. "Ask the venues" sends the text to the venues that can search by it.</p>
       <Feed
         key={signature}
         services={services}
@@ -583,6 +644,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
         onOpenMarket={onOpenMarket}
         onCounts={onCounts}
         onCategoryCounts={onCategoryCounts}
+        onStatus={onStatus}
         onOpenQuotientSettings={openQuotientSettings}
       />
       {open === null ? null : (

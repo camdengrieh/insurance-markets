@@ -145,7 +145,7 @@ class RuleFieldAdapter implements VenueReadAdapter {
   async getMarket(ref: { marketId: string }): Promise<Market> {
     const market = await this.inner.getMarket(ref);
     return Object.assign({}, market, {
-      extras: { ruleFields: this.record(ref.marketId), rulesHashRecipe: "rules-v2", coreRulesSha256: "0".repeat(64), warnings: [], geoRestricted: null },
+      extras: { ruleFields: this.record(ref.marketId), rulesHashRecipe: "rules-v2", warnings: [], geoRestricted: null },
     }) as Market;
   }
   getBooks: VenueReadAdapter["getBooks"] = (tokens) => this.inner.getBooks(tokens);

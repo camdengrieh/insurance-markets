@@ -1,3 +1,4 @@
+import { rulesFingerprintOfFields } from "@sdk/rules";
 import { sha256, toBytes } from "viem";
 
 import { parseIsoMs } from "../../core/format";
@@ -108,9 +109,9 @@ export function normalizeForHash(text: string): string {
   return kept.replace(/\s+/gu, " ").trim();
 }
 
+// The shared rules-v2 canonicalisation (sdk/rules.ts) over the full rules text.
 export function rulesFingerprint(text: string): string {
-  const normalized = normalizeForHash(text);
-  return normalized === "" ? "" : sha256(toBytes(normalized)).slice(2);
+  return rulesFingerprintOfFields([text]);
 }
 
 // ---- status ------------------------------------------------------------------------------------------------------------

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { checkEvmAddress } from "../../core/address";
 import type { CapabilityFacts } from "../../core/capabilities";
-import { ErrorTile, Field, NeedsCockpitTile, Tile, UntrustedText, useAppMode, type TileHeading } from "../../ui";
+import { Disclosure, ErrorTile, Field, NeedsCockpitTile, Tile, UntrustedText, useAppMode, type TileHeading } from "../../ui";
 import { untrustedField } from "../../core/untrusted";
 import { PAIR_REASON_TEXT } from "../terminal/session";
 import { usePairing, type Pairing } from "../terminal/usePairing";
@@ -27,6 +27,11 @@ import { useTradeServices, type OwnerChoice, type TradeServices } from "./servic
 // Limitless market (`clobMarket`: the venue ticket, signed by the wallet itself), and the full set of panels
 // is still available to any host that asks for `panels: "all"`. The host says which heading level the desk's
 // sections sit at (`heading`): h2 on a page of its own, h4 inside the market modal's "Order ticket" section.
+//
+// In the market modal (`panels: "order"`) the desk is the design's one-line ticket (Market.dc.html): the bar first,
+// then everything secondary (what this page does and does not do, the owner chooser, the account or maker panel)
+// under one disclosure, still in the page and still read by a screen reader. Not paired, the pairing notice takes the
+// bar's place: it is the reason there is no bar.
 //
 // Pairing is the page's one shared hook (features/terminal/usePairing), the same the dock and the inspector use, so
 // the desk never holds a pairing state of its own that could disagree with the strip.
@@ -184,27 +189,59 @@ export function TradeDesk({ services: provided, panels = "all", tokenChoices, cl
   const clobFlag = clobMarket === undefined ? null : clobMarket.venue === "polymarket" ? "ENABLE_CLOB_POLYMARKET" : "ENABLE_CLOB_LIMITLESS";
   const flagView = flagViewOf(account);
   const clobFlagOn = clobFlag === null || flagView === null ? null : flagView.plugin?.[clobFlag] === true && flagView.relay?.[clobFlag] === true;
+  const intro = (
+    <Tile tone="info" title="This page prepares. It never signs and never sends." role="note" dataKind="trade-intro" heading={below(heading)}>
+      <p>
+        Everything here ends in a checked, prepared item and a hand-off for your agent. You approve it in PayBox; your agent sends it while you hold an ARM window open. All write paths are off until the operator switches them on, and each
+        action names the live tests it still depends on as &quot;unproven&quot;. Creating markets is not offered.
+      </p>
+    </Tile>
+  );
+  const ownerAndAccount =
+    !ready || owners === null ? null : (
+      <>
+        <OwnerChooser owners={owners} onOwner={setOwner} heading={heading} />
+        {clobMarket === undefined ? <AccountPanel state={state} facts={facts} onRefresh={refresh} heading={heading} /> : <MakerPanel owner={owner} venue={clobMarket.venue} flagOn={clobFlagOn} heading={heading} />}
+      </>
+    );
+
+  if (panels === "order") {
+    return (
+      <div className="tr-root tr-compact">
+        {!ready ? (
+          <PairingNotice pairing={pairing} heading={below(heading)} />
+        ) : owners === null ? (
+          <p role="status">Loading saved addresses.</p>
+        ) : owner === null ? (
+          <p role="note">Choose an owner address to see what can be prepared: open &quot;Account and safety notes&quot; below.</p>
+        ) : clobMarket !== undefined ? (
+          <ClobOrderPanel ctx={ctx} facts={clobMarket} tokenChoices={tokenChoices} heading={heading} layout="compact" />
+        ) : (
+          <OrderPanel ctx={ctx} tokenChoices={tokenChoices} heading={heading} layout="compact" />
+        )}
+        <Disclosure summary="Account and safety notes">
+          <div className="ui-stack">
+            {intro}
+            {ownerAndAccount}
+          </div>
+        </Disclosure>
+      </div>
+    );
+  }
+
   return (
     <div className="tr-root ui-stack">
-      <Tile tone="info" title="This page prepares. It never signs and never sends." role="note" dataKind="trade-intro" heading={below(heading)}>
-        <p>
-          Everything here ends in a checked, prepared item and a hand-off for your agent. You approve it in PayBox; your agent sends it while you hold an ARM window open. All write paths are off until the operator switches them on, and each
-          action names the live tests it still depends on as &quot;unproven&quot;. Creating markets is not offered.
-        </p>
-      </Tile>
+      {intro}
       <PairingNotice pairing={pairing} heading={below(heading)} />
       {!ready ? null : owners === null ? (
         <p role="status">Loading saved addresses.</p>
       ) : (
         <>
-          <OwnerChooser owners={owners} onOwner={setOwner} heading={heading} />
-          {clobMarket === undefined ? <AccountPanel state={state} facts={facts} onRefresh={refresh} heading={heading} /> : <MakerPanel owner={owner} venue={clobMarket.venue} flagOn={clobFlagOn} heading={heading} />}
+          {ownerAndAccount}
           {owner === null ? (
             <p>Choose an owner address to see what can be prepared.</p>
           ) : clobMarket !== undefined ? (
             <ClobOrderPanel ctx={ctx} facts={clobMarket} tokenChoices={tokenChoices} heading={heading} />
-          ) : panels === "order" ? (
-            <OrderPanel ctx={ctx} tokenChoices={tokenChoices} heading={heading} />
           ) : (
             <ActionPanelsInOrder ctx={ctx} heading={heading} />
           )}

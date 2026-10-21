@@ -1,0 +1,471 @@
+/*
+  The market modal (docs/design/cockpit-v2 Market.dc.html). Tokens from ui/theme.css only; no inline styles, fonts
+  or URLs. Square corners, 1.5 px lines (var(--line)), 2 px frames (var(--line-strong)), 44 px targets; every number
+  is set in Martian Mono by the Num primitive. Everything here is scoped to the modal's root class `.mk`.
+
+  Layout: the dialog's own h2 "Market" stays as the accessible name, set small; under it one header block (meta row,
+  the title in a 26 px well, the caption) closed by a 2 px ink rule; then three columns [Order book | Same question
+  elsewhere | Quotient] that fold to one below about 1,060 px; the cautions; the one-line ticket bar; and the
+  details disclosure. Below 720 px the dialog is a bottom sheet (ui/components.css) and the gutters drop to 16 px.
+*/
+
+/* ---- the dialog frame, for this modal only ---------------------------------------------------------------------- */
+
+.ui-dialog:has(> .ui-dialog-body > .mk) > .ui-dialog-head {
+  align-items: center;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* The fixed accessible heading, set as a small label: the market's own title is the large line below it. */
+.ui-dialog:has(> .ui-dialog-body > .mk) > .ui-dialog-head h2 {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.ui-dialog:has(> .ui-dialog-body > .mk) > .ui-dialog-body {
+  padding: 0;
+}
+
+.mk {
+  padding: 18px 24px;
+}
+
+.mk:has(> .explorer-detail) {
+  padding: 0;
+}
+
+/* explorer.css spaces every modal section with a top rule; the columns and bands below draw their own. */
+.mk .explorer-detail > .explorer-section,
+.mk .mk-grid > .explorer-section {
+  margin: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* ---- header ----------------------------------------------------------------------------------------------------- */
+
+.mk .mk-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 24px 14px;
+  border-bottom: var(--line-strong) solid var(--text);
+}
+
+.mk .mk-head > * + * {
+  margin-top: 0;
+}
+
+.mk .mk-head > p,
+.mk .mk-head > ul {
+  margin: 0;
+}
+
+.mk-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+
+.mk-meta .ui-provenance {
+  margin: 0;
+  min-width: 0;
+}
+
+.mk-meta-dim {
+  color: var(--text-muted);
+}
+
+/* The title well: market text in the untrusted slot, never a heading. */
+.mk .mk-title {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mk .mk-title .ui-untrusted {
+  display: block;
+  padding: 6px 10px;
+  border-left: calc(var(--line) * 2) solid var(--border);
+  font-weight: 700;
+  text-wrap: pretty;
+}
+
+/* ---- the three columns ------------------------------------------------------------------------------------------ */
+
+/* Each column draws its right and bottom rule (the board's own); the grid reaches 1.5 px past the right edge so the
+   last column's rule is clipped away, whatever the number of columns that fit. */
+.mk .explorer-detail {
+  overflow-x: clip;
+}
+
+.mk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  margin-right: calc(-1 * var(--line));
+}
+
+.mk .mk-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  column-gap: 8px;
+  row-gap: 12px;
+  min-width: 0;
+  padding: 18px 24px;
+  border-right: var(--line) solid var(--border);
+  border-bottom: var(--line) solid var(--border);
+}
+
+/* The heading and its dim note share the first row; everything else spans the column. */
+.mk .mk-col > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-block: 0;
+}
+
+.mk .mk-col > h3 {
+  grid-column: 1;
+  align-self: baseline;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.mk .mk-col > .mk-col-note {
+  grid-column: 2;
+  align-self: baseline;
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-align: end;
+}
+
+.mk-col-actions {
+  margin: 0;
+}
+
+.mk .mk-col .ui-tile {
+  margin: 0;
+}
+
+/* ---- order book ------------------------------------------------------------------------------------------------- */
+
+.mk-book-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 16px;
+}
+
+.mk .explorer-book {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* An implied side keeps its caution: a dashed strong line around it, with the words inside. */
+.mk .explorer-book[data-implied="true"] {
+  padding: 8px 10px;
+  border: var(--line) dashed var(--border-strong);
+}
+
+.mk .explorer-book > * {
+  margin: 0;
+}
+
+.mk-side-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+.mk .mk-side-name {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.mk .explorer-book[data-role="yes"] .mk-side-name {
+  color: var(--yes);
+}
+
+.mk .explorer-book[data-role="no"] .mk-side-name {
+  color: var(--no);
+}
+
+.mk-bidask {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.mk-bidask > div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.mk-bidask dt {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.mk-bidask dd {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.mk .explorer-book-sides {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.mk .mk-book-facts {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.mk .mk-book-facts > div {
+  border-top: var(--line) solid var(--border);
+  padding-top: 4px;
+}
+
+.mk .explorer-book .ui-provenance {
+  margin: 0;
+  font-size: 0.65625rem;
+}
+
+/* Levels in a narrow side: price · bar · size; the size wraps under itself before the price does. */
+.mk .explorer-level {
+  grid-template-columns: max-content minmax(1rem, 1fr) minmax(0, max-content);
+  gap: 4px;
+  font-size: 0.6875rem;
+}
+
+.mk .explorer-level > :first-child {
+  white-space: nowrap;
+}
+
+.mk-bidask dt,
+.mk-bidask dd {
+  white-space: nowrap;
+}
+
+.mk-side-label .ui-untrusted {
+  display: inline;
+}
+
+.mk-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  gap: 10px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.mk-strip > div {
+  border-top: var(--line) solid var(--border);
+  padding-top: 6px;
+}
+
+.mk-strip dt {
+  color: var(--text-muted);
+}
+
+.mk-strip dd {
+  margin: 0;
+}
+
+/* ---- same question elsewhere ------------------------------------------------------------------------------------ */
+
+.mk .explorer-same-question > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.mk .explorer-same-question > * + * {
+  margin-top: 12px;
+}
+
+.mk .explorer-same-question .ui-table-scroll {
+  margin-bottom: 0;
+}
+
+.mk .explorer-same-question .ui-table {
+  font-size: 0.75rem;
+}
+
+.mk .explorer-same-question .ui-table th,
+.mk .explorer-same-question .ui-table td {
+  padding: 6px 8px;
+  border-top-width: var(--line);
+}
+
+.mk .explorer-proposed > * + * {
+  margin-top: 8px;
+}
+
+.mk-leg-listing {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mk-leg-title {
+  min-width: 0;
+}
+
+.mk-leg-title .ui-untrusted {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-leg-id {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.mk-leg-state {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.mk-leg-state-word {
+  color: var(--caution);
+  font-weight: 600;
+}
+
+/* ---- Quotient: the two figure blocks, only from a row Quotient returned ------------------------------------------- */
+
+.mk-q-row > * + * {
+  margin-top: 12px;
+}
+
+.mk-q-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  gap: 12px;
+}
+
+.mk-q-figure {
+  padding-top: 8px;
+  border-top: var(--line-strong) solid var(--text);
+  min-width: 0;
+}
+
+.mk-q-figure[data-rule="no"] {
+  border-top-color: var(--no);
+}
+
+.mk-q-figure > p {
+  margin: 0;
+}
+
+.mk-q-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.mk-q-value {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-q-sub {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.mk .explorer-quotient-panel > * {
+  margin-top: 0;
+}
+
+.mk .explorer-quotient-panel > * + * {
+  margin-top: 12px;
+}
+
+/* ---- the bands below the grid: cautions, the ticket bar, the details ---------------------------------------------- */
+
+.mk-band {
+  padding: 16px 24px 0;
+}
+
+.mk-band .ui-tile {
+  margin: 0;
+}
+
+.mk .explorer-detail > .mk-ticket {
+  padding: 16px 24px;
+}
+
+.mk .mk-ticket > h3 {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.mk .mk-ticket .ui-disclosure {
+  margin-bottom: 0;
+}
+
+.mk-details {
+  padding-bottom: 18px;
+  border-top: var(--line) solid var(--border);
+}
+
+.mk-details .ui-disclosure {
+  margin-bottom: 0;
+}
+
+.mk-details .explorer-section {
+  margin-block: 0.75rem 0;
+}
+
+@media (max-width: 719px) {
+  .mk {
+    padding: 14px 16px;
+  }
+
+  .mk .mk-head {
+    padding: 6px 16px 12px;
+  }
+
+  .mk .mk-title {
+    font-size: 1.25rem;
+  }
+
+  .mk .mk-col,
+  .mk .explorer-detail > .mk-ticket {
+    padding: 14px 16px;
+  }
+
+  .mk-band {
+    padding: 14px 16px 0;
+  }
+}

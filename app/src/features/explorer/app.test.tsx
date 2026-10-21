@@ -20,6 +20,8 @@ const loaders: Record<string, Loader> = {
 };
 
 const HOSTILE = '<img src=x onerror=alert(1)> javascript:alert(1)';
+// The hero band's h1: a sentence naming the number of venues this build reads (HeroBand.tsx heroTitle).
+const HERO_H1 = /^Every open market this build can read\. [A-Z][a-z]+ venues?, one book at a time\.$/;
 
 async function mountApp(mode: "standalone" | "cockpit", path = "/markets") {
   const xo = fakeEntry("xo", {
@@ -48,7 +50,7 @@ describe("the explorer's routes inside the shell", () => {
         const { container } = await mountApp(mode, path);
         expect(container.querySelector("nav")).toBeNull();
         expect(container.querySelectorAll("h1")).toHaveLength(1);
-        expect(must(container, "h1").textContent).toBe("Markets");
+        expect(must(container, "h1").textContent).toMatch(HERO_H1);
         expect(document.title).toBe("Markets · XO Cockpit");
         expect(container.querySelector('[data-kind="needs-cockpit"][data-code="page"]')).toBeNull();
         expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
@@ -66,7 +68,7 @@ describe("the explorer's routes inside the shell", () => {
     click(link);
     await flush(10);
     expect(location.history.at(-1)).toBe("/markets");
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(document.title).toBe("Markets · XO Cockpit");
     const dialog = must(document.body, "[role='dialog']");
     // The creator's text is in the modal, inside the untrusted slot, and nowhere a heading or title could carry it.
@@ -84,13 +86,13 @@ describe("the explorer's routes inside the shell", () => {
     await flush(10);
     expect(document.title).toBe("Market · XO Cockpit");
     expect(container.querySelectorAll("h1")).toHaveLength(1);
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(container.querySelector(".ui-hero")).not.toBeNull();
     const dialog = must(document.body, "[role='dialog']");
-    click([...dialog.querySelectorAll("button")].find((b) => b.textContent === "Back to the Markets list") as Element);
+    click(must(dialog, "button.ui-dialog-close"));
     await flush(10);
     expect(location.history.at(-1)).toBe("/");
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(document.body.querySelector("[role='dialog']")).toBeNull();
   });
 
@@ -98,7 +100,7 @@ describe("the explorer's routes inside the shell", () => {
     const { container, location, xo } = await mountApp("standalone");
     act(() => location.navigate("/market/xo/%3Cimg%20src%3Dx%3E"));
     await flush(10);
-    expect(must(container, "h1").textContent).toBe("Markets");
+    expect(must(container, "h1").textContent).toMatch(HERO_H1);
     expect(allText(container)).toContain("This is not a market address");
     expect(document.body.querySelector("[role='dialog']")).toBeNull();
     expect(xo.detailCalls).toHaveLength(0);

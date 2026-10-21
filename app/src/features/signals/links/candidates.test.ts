@@ -91,11 +91,12 @@ describe("proposed (not approved) links in the dataset", () => {
     expect([...linkedRowKeys({ state: "absent" }, rows, { candidates: true })]).toEqual([]);
   });
 
-  it("rules fingerprints are comparable only when the recipe is this page's own", () => {
-    expect(APP_RULES_RECIPE).toBe("app-v1");
+  it("rules fingerprints are comparable only when the recipe is the shared one (sdk/rules.ts rules-v2)", () => {
+    expect(APP_RULES_RECIPE).toBe("rules-v2");
     expect(rulesComparable(dataset([]))).toBe(true);
-    expect(rulesComparable(dataset([], { rulesRecipe: "app-v1" }))).toBe(true);
-    expect(rulesComparable(dataset([], { rulesRecipe: "rules-v2" }))).toBe(false);
+    expect(rulesComparable(dataset([], { rulesRecipe: "rules-v2" }))).toBe(true);
+    expect(rulesComparable(dataset([], { rulesRecipe: "app-v1" }))).toBe(false);
+    expect(rulesComparable(dataset([], { rulesRecipe: "rules-v3" }))).toBe(false);
   });
 
   it("loads the sample the linker's export writes (pm/test/linker/fixtures/app-dataset.sample.json)", () => {
@@ -104,7 +105,8 @@ describe("proposed (not approved) links in the dataset", () => {
     expect(load.state).toBe("loaded");
     if (load.state !== "loaded") return;
     expect(load.dataset.rulesRecipe).toBe("rules-v2");
-    expect(rulesComparable(load.dataset)).toBe(false);
+    // The linker and this page now share one recipe, so a proposed leg's rules are re-checked here too.
+    expect(rulesComparable(load.dataset)).toBe(true);
     const proposals = load.dataset.links.filter(isProposed);
     expect(proposals.length).toBeGreaterThan(0);
     // Statistical proposals carry a band; a native-group proposal (partition from a neg-risk id) carries provenance instead.

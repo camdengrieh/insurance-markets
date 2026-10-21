@@ -119,10 +119,41 @@
   filter: brightness(0.96);
 }
 
+/* A 44 x 44 icon button of the top bar (theme, the phone's search): a light outline, the icon in the ink. */
+.ui-icon-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: var(--line) solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ui-icon-button:hover {
+  background: var(--surface);
+}
+
+/* The phone's search button: hidden on a wide screen, where the field itself is always shown. */
+.ui-search-toggle {
+  display: none;
+}
+
+.ui-search-slot {
+  flex: 1 1 320px;
+  max-width: 35rem;
+  min-width: 0;
+  display: flex;
+}
+
 /* The search well: a 44 px field with a magnifier and the shortcut hint; it filters loaded rows only. */
 .ui-search {
-  flex: 1 1 240px;
-  max-width: 35rem;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -163,6 +194,78 @@
   border: 1px solid var(--border);
   font-size: 0.6875rem;
   color: var(--text-muted);
+}
+
+.ui-search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* The phone's top bar (Mobile.dc.html): one row of the brand, the 44 px search button, the compact mono wallet chip
+   and the theme button. The search field opens as a full-width row under it; the build's mode words stay in the
+   page for assistive technology (the dock says them too). */
+@media (max-width: 719px) {
+  .ui-header-row {
+    gap: 8px;
+    min-height: 52px;
+  }
+
+  .ui-brand {
+    font-size: 1rem;
+  }
+
+  .ui-search-toggle {
+    display: inline-flex;
+    margin-left: auto;
+    border-color: transparent;
+  }
+
+  .ui-search-toggle[aria-expanded="true"] {
+    border-color: var(--text);
+  }
+
+  .ui-search-slot {
+    order: 99;
+    flex: 1 1 100%;
+    max-width: none;
+    padding-bottom: 4px;
+  }
+
+  .ui-search-slot[data-open="false"] {
+    display: none;
+  }
+
+  .ui-header-tools {
+    margin-left: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .ui-mode {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .ui-wallet-chip {
+    gap: 6px;
+    padding: 0 10px;
+    font-size: 0.75rem;
+  }
+
+  .ui-wallet-chip > svg {
+    display: none;
+  }
+
+  .ui-wallet-chip .ui-num {
+    font-size: 0.6875rem;
+  }
 }
 
 .ui-statusbar {
@@ -255,6 +358,15 @@
 
 .ui-hero-panel h1 {
   margin: 0;
+  text-wrap: pretty;
+}
+
+/* The phone's one-line label over the field ("6 venues · 9 rows · 3 held"); a wide screen shows the panel instead. */
+.ui-hero-compact {
+  display: none;
+  margin: 0;
+  font-size: 0.78125rem;
+  font-weight: 600;
 }
 
 .ui-hero-lede {
@@ -368,6 +480,24 @@
 
   .ui-hero-fact dd .ui-num {
     font-size: 0.75rem;
+  }
+
+  /* With a compact label, the box over the field holds that label only; the h1, the lede and the facts stay in the
+     page for assistive technology (the label repeats them and is hidden from it). */
+  .ui-hero[data-compact="true"] .ui-hero-compact {
+    display: block;
+  }
+
+  .ui-hero[data-compact="true"] .ui-hero-panel h1,
+  .ui-hero[data-compact="true"] .ui-hero-facts {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -708,7 +838,7 @@
 /* The inspected row: a panel fill and a Yes-blue rule on its left edge. */
 .ui-table tbody tr[aria-selected="true"],
 .ui-table tbody tr[data-selected="true"] {
-  background: var(--surface-2);
+  background: var(--surface);
   box-shadow: inset 3px 0 0 var(--yes);
 }
 
@@ -867,6 +997,11 @@
 
 .ui-dialog-backdrop[data-size="wide"] .ui-dialog {
   max-width: 73.75rem;
+}
+
+/* The Signature Card (760 px) and Connect (820 px) boards: wider than a form, narrower than the market modal. */
+.ui-dialog-backdrop[data-size="medium"] .ui-dialog {
+  max-width: 51.25rem;
 }
 
 .ui-dialog-head {

@@ -4,7 +4,7 @@ import { DIST } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { unknownViolations } from "./support/known-issues";
 import { pagePairedToken } from "./support/session";
-import { observe, openVenuePanel, waitForMarkets } from "./support/world";
+import { HERO_H1, observe, openMarketDetails, openVenuePanel, waitForMarkets } from "./support/world";
 
 // A full read journey against the local mock XO, in a real browser, in both builds.
 //
@@ -28,9 +28,9 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   expect(shown, "the mock's active markets (3 default, 13 hostile)").toBe(16);
 
   // The hero band carries the one h1 and computed facts, never sample counts.
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   await expect(page.locator(".ui-hero-facts")).toContainText("no address watched");
-  await expect(page.locator(".ui-hero-facts")).toContainText("none approved");
+  await expect(page.locator(".ui-hero-facts")).toContainText("no link dataset in this build");
   await expect(page.locator(".ui-hero-facts")).toContainText("licence first");
 
   // The venue panel, folded under the table: XO read; the rest of this build's venues are down in the test world and say so, not "empty".
@@ -43,18 +43,19 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(page.getByText("Limitless: needs the Cockpit")).toBeVisible();
   await expect(page.getByText("Polymarket: The venue did not answer in time").or(page.getByText(/Polymarket: This venue is paused/))).toBeVisible();
 
-  // The table: XO rows carry a display price, labelled as such, and no executable spread.
+  // The table: an XO row says its book needs the Cockpit and carries no price and no executable spread. Its display
+  // price, labelled as such, is in the inspector (checked below).
   const table = page.getByRole("table", { name: /Markets across the venues/ });
   await expect(table).toBeVisible();
   const row = table.getByRole("row", { name: /Mock market A \(CLOB, active\)/ });
   await expect(row).toHaveCount(1);
-  await expect(row).toContainText("display price, not executable");
-  await expect(row).toContainText("needs the Cockpit");
+  await expect(row).toContainText("book via Cockpit");
+  await expect(row).not.toContainText("display price");
   await expect(row).not.toContainText(/book spread/i);
 
   // The view chips are filter states of the same table: Signals narrows to the venues Quotient covers (XO is not one).
   await page.getByRole("button", { name: /^Signals/ }).click();
-  await expect(page.getByTestId("explorer-count")).toContainText("0 markets shown in the Signals view");
+  await expect(page.getByTestId("explorer-count")).toHaveText(/^0 of \d+ loaded rows in Signals/);
   // The view chip "All <count>", not the category chip "All categories".
   await page.getByRole("button", { name: /^All \d/ }).click();
   await expect(table.getByRole("row", { name: /Mock market A \(CLOB, active\)/ })).toHaveCount(1);
@@ -68,9 +69,10 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await page.getByRole("button", { name: "Clear search" }).click();
 
   // Inspect a row: the aside shows its provenance, title slot, the caution tile for the book and the actions.
-  await table.getByRole("row", { name: /Mock market A \(CLOB, active\)/ }).getByRole("button", { name: "Inspect" }).click();
+  await table.getByRole("button", { name: /^Inspect Mock market A \(CLOB, active\)/ }).click();
   const aside = page.getByRole("complementary", { name: "Inspector" });
   await expect(aside).toContainText("Mock market A");
+  await expect(aside).toContainText("display price, not executable");
   await expect(aside).toContainText("XO Market: needs the Cockpit");
   await expect(aside).toContainText("candidates, not proof");
   await expect(aside.getByRole("button", { name: /Prepare order/ })).toBeDisabled();
@@ -81,16 +83,16 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(titleLink).toHaveAttribute("href", /#\/market\/xo\/0x[0-9a-f]{64}$/);
   await titleLink.click();
   await expect(page).toHaveURL(/#\/markets$/);
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   const modal = page.getByRole("dialog", { name: "Market" });
-  await expect(modal.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+  await openMarketDetails(modal);
   await expect(modal.getByText("This fee is a ceiling that has not been reconciled with a real fill.")).toBeVisible();
   await expect(modal.getByText("XO Market: needs the Cockpit").first()).toBeVisible();
   await expect(modal.getByText(/Rules fingerprint \(sha256/)).toBeVisible();
   await expect(modal.getByText(/not an arbitrage|no links/i).first()).toBeVisible();
   await expect(modal.getByText("Prepare order: needs the Cockpit")).toBeVisible();
-  await modal.getByRole("button", { name: "Back to the Markets list" }).click();
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await modal.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
 
   // Over the whole journey: XO's host was answered by the mock, every other listed host was a stub, nothing outside the CSP.
   const external = seen.external();
@@ -166,7 +168,7 @@ test("cockpit UI: the paired page lists XO's markets through the proxy, and says
   await page.evaluate(() => {
     location.hash = "#/markets";
   });
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   const shown = await waitForMarkets(page);
   expect(shown, "XO's active markets, read through the daemon: 3 default and 13 hostile").toBeGreaterThanOrEqual(16);
   const table = page.getByRole("table", { name: /Markets across the venues/ });

@@ -1,12 +1,19 @@
 /*
   The Markets surface: toolbar, table, inspector aside, market modal (docs/design/cockpit-v2 Main.dc.html, Market.dc.html,
   Mobile.dc.html). Tokens from ui/theme.css only; no inline styles, fonts or URLs. Square corners, 1.5 px lines.
-  Layout target: 360 px wide with the page's 16 px gutter and no sideways page scroll (the wide table scrolls inside its
-  own focusable region; on a phone its rows are cards and the inspector is a bottom sheet), touch targets of at least 44 px.
+  Layout: one surface under the hero band, edge to edge of the main column: the toolbar row, the category row, then
+  the table and the inspector side by side divided by one 1.5 px rule, with no boxes and no gaps between them.
+  Target: 360 px wide with the page's 16 px gutter and no sideways page scroll (the wide table scrolls inside its own
+  focusable region; on a phone its rows are cards, the chip rows scroll inside themselves and the inspector is a bottom
+  sheet), touch targets of at least 44 px.
 */
 
 .explorer {
   min-width: 0;
+}
+
+.explorer > .ui-hero {
+  margin-bottom: 0;
 }
 
 .explorer-section {
@@ -14,75 +21,52 @@
   min-width: 0;
 }
 
-.explorer-list > h2,
-.explorer-inspector-heading {
-  margin: 0 0 0.5rem;
-  font-size: 1.125rem;
-  letter-spacing: -0.01em;
-}
-
-/* ---- toolbar: view chips, status and sort, the venue search ---------------------------------------------------- */
+/* ---- toolbar: view chips | status | sort | the status line on the right -------------------------------------------- */
 
 .explorer-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem 1.25rem;
-  margin-block: 1rem 0.5rem;
-  padding-block: 0.5rem;
-  border-top: var(--line) solid var(--border);
+  align-items: center;
+  gap: 8px 12px;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 10px var(--gutter);
   border-bottom: var(--line) solid var(--border);
 }
 
 .explorer-chips {
-  flex: 1 1 18rem;
-  align-self: center;
-}
-
-/* The category chip row under the view chips: the same chips, one line that scrolls sideways on a phone (the page
-   never scrolls sideways and the table never wraps for it). Reduced motion: nothing here animates. */
-.explorer-category-chips {
-  margin-block: 0 0.5rem;
+  flex: none;
   min-width: 0;
 }
 
-@media (max-width: 719px) {
-  .explorer-category-chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-block: 2px;
-    scrollbar-width: thin;
-  }
-
-  .explorer-category-chips .ui-chip {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
+.explorer-toolbar-rule {
+  flex: none;
+  width: var(--line);
+  height: 28px;
+  background: var(--border);
 }
 
 .explorer-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.75rem 1rem;
+  align-items: center;
+  gap: 8px 12px;
   min-width: 0;
 }
 
-.explorer-filters .ui-field {
-  flex: 1 1 10rem;
-  min-width: 0;
-}
-
-.explorer-filters label {
-  font-size: 0.75rem;
+.explorer-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
   color: var(--text-muted);
+}
+
+.explorer-inline-field .ui-select {
+  color: var(--text);
 }
 
 .explorer-filter-buttons,
 .explorer-actions,
-.explorer-inspector-actions,
 .explorer-view-note {
   display: flex;
   flex-wrap: wrap;
@@ -90,17 +74,62 @@
   gap: 0.5rem 0.75rem;
 }
 
+.explorer-status-line {
+  margin: 0 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.explorer-status-line .ui-num {
+  font-size: 0.6875rem;
+}
+
 .explorer-actions {
   margin-block: 0.5rem 1rem;
 }
 
-.explorer-view-note {
-  margin-block: 0.25rem 0.75rem;
+/* The words of a narrowing view (Holdings, Linked, Signals): one slim strip over the table. */
+.explorer-list > [data-view-note] {
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 8px var(--gutter);
+  border-bottom: var(--line) solid var(--border);
 }
 
 .explorer-view-note > p {
   flex: 1 1 20rem;
   margin: 0;
+}
+
+/* The category row: one line that scrolls sideways inside itself at every width, ending in the note on where a
+   category comes from (Main.dc.html). Reduced motion: nothing here animates. */
+.explorer-category-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px 16px;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 8px var(--gutter);
+  border-bottom: var(--line) solid var(--border);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.explorer-category-chips {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+.explorer-category-chips .ui-chip {
+  flex: none;
+  white-space: nowrap;
+}
+
+.explorer-category-note {
+  flex: none;
+  margin: 0 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ---- words --------------------------------------------------------------------------------------------------- */
@@ -127,14 +156,7 @@
   color: var(--text-muted);
 }
 
-.explorer-count {
-  margin: 0.5rem 0;
-  font-size: 0.8125rem;
-}
-
-.explorer-count,
 .explorer-sub .ui-num,
-.explorer-depth-figures,
 .explorer-book-top .ui-num {
   font-variant-numeric: tabular-nums;
 }
@@ -164,52 +186,200 @@
   word-break: break-all;
 }
 
-/* ---- the table ------------------------------------------------------------------------------------------------- */
+/* ---- the surface: table | inspector --------------------------------------------------------------------------- */
 
 .explorer-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
+  margin-inline: calc(-1 * var(--gutter));
+  border-bottom: var(--line) solid var(--border);
 }
 
 @media (min-width: 960px) {
   .explorer-split {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 28.75rem);
+  }
+
+  .explorer-main {
+    border-right: var(--line) solid var(--border);
   }
 }
 
 .explorer-main {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
 }
 
-.explorer-table .ui-table tbody th {
-  min-width: 14rem;
+.explorer-main > .ui-tile {
+  margin: 1rem var(--gutter);
 }
 
-/* The category column is narrow: the label only, never wrapped. */
-.explorer-table [data-col="category"] {
-  width: 1%;
-  white-space: nowrap;
+/* Under the table (Main.dc.html's footer bar): what the rows are, and the books button. */
+.explorer-table-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: auto;
+  padding: 10px var(--gutter);
+  border-top: var(--line) solid var(--border);
+}
+
+.explorer-table-foot .explorer-note {
+  flex: 1 1 24rem;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+/* ---- the table: one 44 px line per market ------------------------------------------------------------------------- */
+
+.explorer-table {
+  margin: 0;
+  border: 0;
+  background: var(--bg);
+}
+
+.explorer-table .ui-table {
+  table-layout: fixed;
+  min-width: 58rem;
+}
+
+.explorer-table .ui-table thead th {
+  padding: 8px 12px;
+  background: var(--bg);
+  font-family: var(--font);
+  font-size: 0.75rem;
+}
+
+.explorer-table .ui-table tbody th,
+.explorer-table .ui-table tbody td {
+  height: var(--tap);
+  padding: 0 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.explorer-table .ui-table [data-col="venue"] {
+  width: 7rem;
+  padding-inline-start: var(--gutter);
+}
+
+.explorer-table .ui-table [data-col="category"] {
+  width: 6rem;
+}
+
+.explorer-table .ui-table [data-col="price"] {
+  width: 8rem;
+}
+
+.explorer-table .ui-table [data-col="spread"] {
+  width: 5.5rem;
+}
+
+.explorer-table .ui-table [data-col="depth"] {
+  width: 8.5rem;
+}
+
+.explorer-table .ui-table [data-col="closes"] {
+  width: 8.25rem;
+}
+
+.explorer-table .ui-table [data-col="marks"] {
+  width: 4.5rem;
+  padding-inline-end: var(--gutter);
+}
+
+.explorer-table .ui-table tbody tr {
+  cursor: pointer;
+}
+
+.explorer-table .ui-table tbody tr:hover {
+  background: var(--surface);
+}
+
+/* The keyboard target of a row: its venue cell. A click anywhere else on the row selects it too. */
+.explorer-row-select {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.explorer-row-select .ui-venue-mark {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.explorer-row-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.explorer-row-link:hover .ui-untrusted {
+  text-decoration: underline;
+}
+
+.explorer-row-title {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.explorer-row-title .ui-untrusted {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .explorer-category {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .explorer-category-line {
   overflow-wrap: anywhere;
 }
 
-.explorer-prices {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.explorer-price-word {
+  font-family: var(--font);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
-.explorer-prices li {
-  white-space: nowrap;
+.explorer-price-word[data-book="needs_cockpit"] {
+  color: var(--caution);
+}
+
+.explorer-tier {
+  font-family: var(--font);
+  font-size: 0.6875rem;
+  color: var(--caution);
+}
+
+/* "spread" before the figure on a phone card only; the column header says it on a wide screen. */
+.explorer-cell-label {
+  display: none;
+  font-family: var(--font);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .explorer-depth {
@@ -217,11 +387,25 @@
   justify-content: flex-end;
 }
 
-.explorer-depth-figures {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 0.75rem;
+.explorer-depth .ui-dither-bar {
+  flex: none;
+  width: 32px;
+  min-width: 32px;
+}
+
+.explorer-table [data-col="depth"],
+.explorer-table [data-col="closes"],
+.explorer-table [data-col="price"] {
+  white-space: nowrap;
+}
+
+.explorer-table tbody [data-col="closes"],
+.explorer-table tbody [data-col="depth"] {
+  font-size: 0.6875rem;
+}
+
+.explorer-table tbody [data-col="closes"] {
+  color: var(--text-muted);
 }
 
 .explorer-table [data-align="end"] .ui-badge,
@@ -229,26 +413,58 @@
   font-family: var(--font);
 }
 
-/* Rows as cards on a phone (Mobile.dc.html): venue · closes on the first line, the clamped title full width,
-   price left and spread right, then depth, then the marks and the Inspect button. Each cell carries its column key
-   in data-col, which places it; the column names stay for Venue, Market, Closes and Marks only as hidden text in the
-   cells' aria (the thead is visually hidden, not removed), and are drawn for the figures. */
+.explorer-prices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}
+
+.explorer-prices li {
+  white-space: nowrap;
+}
+
+/* A creator's outcome label beside "Yes" or "No": one short inline well, cut with an ellipsis. */
+.explorer-prices .ui-untrusted[data-clamp="1"] {
+  display: inline-block;
+  max-width: 10rem;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* Rows as cards on a phone (Mobile.dc.html): venue · closes and the marks on the first line, the title over two
+   lines, price on the left and spread on the right; the whole card is the tap target (the venue cell's button
+   covers it, the title link sits above). Category and depth are in the inspector. */
 @media (max-width: 719px) {
-  .explorer-table .ui-table tbody th {
+  .explorer-table .ui-table {
     min-width: 0;
+    table-layout: auto;
   }
 
   .explorer-table .ui-table[data-cards="true"] tbody tr {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 4px 12px;
-    padding: 10px 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 10px var(--gutter);
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .explorer-table .ui-table[data-cards="true"] tbody th,
   .explorer-table .ui-table[data-cards="true"] tbody td {
     display: block;
+    width: auto;
+    height: auto;
+    min-width: 0;
     padding: 0;
+    border: 0;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="venue"] {
@@ -259,9 +475,14 @@
   .explorer-table .ui-table[data-cards="true"] [data-col="closes"] {
     grid-column: 2;
     grid-row: 1;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+
+  .explorer-table .ui-table[data-cards="true"] [data-col="marks"] {
+    grid-column: 3;
+    grid-row: 1;
     justify-self: end;
-    text-align: end;
-    font-size: 0.75rem;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="title"] {
@@ -269,69 +490,84 @@
     grid-row: 2;
   }
 
-  .explorer-table .ui-table[data-cards="true"] [data-col="category"] {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    width: auto;
-    white-space: normal;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-
   .explorer-table .ui-table[data-cards="true"] [data-col="price"] {
-    grid-column: 1;
-    grid-row: 4;
+    grid-column: 1 / 3;
+    grid-row: 3;
+    text-align: start;
   }
 
   .explorer-table .ui-table[data-cards="true"] [data-col="spread"] {
-    grid-column: 2;
-    grid-row: 4;
+    grid-column: 3;
+    grid-row: 3;
     text-align: end;
   }
 
+  .explorer-table .ui-table[data-cards="true"] [data-col="category"],
   .explorer-table .ui-table[data-cards="true"] [data-col="depth"] {
-    grid-column: 1 / -1;
-    grid-row: 5;
+    display: none;
   }
 
-  .explorer-table .ui-table[data-cards="true"] [data-col="marks"] {
-    grid-column: 1;
-    grid-row: 6;
-    align-self: center;
-  }
-
-  .explorer-table .ui-table[data-cards="true"] [data-col="inspect"] {
-    grid-column: 2;
-    grid-row: 6;
-    justify-self: end;
-  }
-
-  .explorer-table .ui-table[data-cards="true"] [data-col="venue"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="title"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="category"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="closes"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="marks"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="inspect"]::before {
+  .explorer-table .ui-table[data-cards="true"] tbody [data-label]::before {
     content: none;
   }
 
-  .explorer-table .ui-table[data-cards="true"] [data-col="price"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="spread"]::before,
-  .explorer-table .ui-table[data-cards="true"] [data-col="depth"]::before {
-    display: block;
+  .explorer-table .ui-table[data-cards="true"] tbody [data-col="closes"]::before {
+    content: "· ";
+    display: inline;
   }
 
-  .explorer-table .ui-table[data-cards="true"] [data-col="spread"] .explorer-caption {
-    text-align: end;
+  .explorer-cell-label {
+    display: inline;
   }
 
-  .explorer-depth {
-    justify-content: flex-start;
-    max-width: 100%;
+  /* The ::after overlay makes the whole card the tap target; the button's own box still meets 44 px, which is what
+     assistive tech and the touch-target audit measure. */
+  .explorer-row-select {
+    min-height: var(--tap);
+    min-width: var(--tap);
   }
 
-  .explorer-depth-figures {
-    align-items: flex-start;
+  .explorer-row-select::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .explorer-row-link {
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+  }
+
+  .explorer-row-title .ui-untrusted[data-clamp="1"] {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: 0.875rem;
+    line-height: 1.3;
+  }
+
+  .explorer-toolbar-rule {
+    display: none;
+  }
+
+  /* The view chips scroll sideways inside their own row, like the category row (Mobile.dc.html). */
+  .explorer-toolbar > .explorer-chips {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    padding-block: 2px;
+  }
+
+  .explorer-toolbar > .explorer-chips .ui-chip {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .explorer-status-line {
+    flex: 1 1 100%;
+    margin-left: 0;
   }
 }
 
@@ -406,59 +642,191 @@
   height: 1.25rem;
 }
 
-/* ---- the inspector aside ------------------------------------------------------------------------------------------ */
+/* ---- the inspector aside: the panel ground beside the table ------------------------------------------------------ */
 
 .explorer-inspector {
-  border: var(--line) solid var(--border);
-  background: var(--surface);
-  padding: 0.75rem 1rem;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
 }
 
 @media (min-width: 960px) {
   .explorer-inspector {
     position: sticky;
-    top: 0.75rem;
-    max-height: calc(100vh - 1.5rem);
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
     overflow: auto;
   }
 }
 
-@media (max-width: 719px) {
-  .explorer-inspector {
-    padding: 0.5rem var(--gutter);
-    margin-inline: calc(-1 * var(--gutter));
-    border-inline: 0;
-  }
+.explorer-inspector-empty {
+  padding: 16px 20px;
 }
 
-.explorer-inspector-body > * + * {
-  margin-top: 0.5rem;
-}
-
-.explorer-inspector-venue {
+.explorer-inspector-body {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-}
-
-.explorer-inspector-section {
-  border-top: var(--line) solid var(--border);
-  padding-top: 0.5rem;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.explorer-inspector-section > h3 {
-  margin: 0 0 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
+.explorer-inspector-head {
+  padding: 16px 20px 12px;
+  border-bottom: var(--line) solid var(--border);
+}
+
+.explorer-inspector-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+.explorer-inspector-top .ui-provenance {
+  margin: 0;
+  font-size: 0.6875rem;
+  text-align: end;
+}
+
+/* The title slot at 18/600 in a paper well with a 2 px rule; plain text, never a heading. */
+.explorer-inspector .explorer-title {
+  margin: 8px 0 0;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.explorer-inspector .explorer-title .ui-untrusted {
+  display: block;
+  padding: 6px 8px;
+  background: var(--bg);
+  border-left: 2px solid var(--border);
   font-weight: 600;
 }
 
+.explorer-display-prices {
+  align-items: baseline;
+}
+
+.explorer-display-prices .explorer-caption {
+  display: inline;
+}
+
+.explorer-inspector-section {
+  min-width: 0;
+  padding: 14px 20px;
+  border-bottom: var(--line) solid var(--border);
+}
+
+.explorer-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-bottom: 8px;
+}
+
+.explorer-section-head > h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.explorer-section-note {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-align: end;
+}
+
+/* The section heading carries the "candidates, not proof" note, so the compact list does not repeat it. */
+.explorer-inspector-same .explorer-same-question > .explorer-caption:first-child {
+  display: none;
+}
+
 .explorer-inspector-actions {
-  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 16px 20px;
+}
+
+.explorer-inspector-actions > .ui-button {
+  flex: 1 1 150px;
+}
+
+.explorer-watch[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+/* The bottom sheet's handle: a phone only, a 44 px target with the 40 x 4 bar (Mobile.dc.html); it folds the sheet to
+   its header and the actions. */
+.explorer-sheet-handle {
+  display: none;
+}
+
+@media (max-width: 719px) {
+  .explorer-split {
+    border-bottom: 0;
+  }
+
+  /* Under half the screen (Mobile.dc.html), so the cards stay readable above it. */
+  .explorer-inspector.ui-sheet-aside {
+    max-height: 45dvh;
+  }
+
+  .explorer-sheet-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--tap);
+    margin-bottom: -12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .explorer-sheet-bar {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-strong);
+  }
+
+  .explorer-inspector-head {
+    padding: 8px var(--gutter) 10px;
+  }
+
+  .explorer-inspector .explorer-title {
+    font-size: 1.0625rem;
+  }
+
+  .explorer-inspector-section {
+    padding: 12px var(--gutter);
+  }
+
+  .explorer-inspector-actions {
+    padding: 12px var(--gutter) 16px;
+  }
+
+  .explorer-inspector[data-folded="true"] .explorer-inspector-more,
+  .explorer-inspector[data-folded="true"] .explorer-inspector-head > .explorer-sub {
+    display: none;
+  }
+}
+
+.explorer-venues-fold {
+  margin-top: 1.5rem;
 }
 
 .explorer-candidates {

@@ -7,7 +7,7 @@ import { DIST } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { unknownViolations } from "./support/known-issues";
 import { pagePairedToken } from "./support/session";
-import { observe, waitForMarkets } from "./support/world";
+import { HERO_H1, observe, waitForMarkets } from "./support/world";
 
 // W0-3: a real browser loads each build under its real Content-Security-Policy and Trusted Types enforcement, and shows
 // zero securitypolicyviolation events and no request to an origin outside the CSP, on every screen.
@@ -117,7 +117,7 @@ test("the daemon serves the cockpit build under the same CSP and the page loads 
   const seen = await observe(page, { target: "cockpit", mock: daemon.mock });
   const response = await page.goto(`${daemon.origin}/#/markets`);
   expect(response?.headers()["content-security-policy"]).toBe(cspHeaderValue("cockpit"));
-  await expect(page.locator("h1")).toHaveText("Markets");
+  await expect(page.locator("h1")).toHaveText(HERO_H1);
   await page.waitForTimeout(800);
   expect(unknownViolations(await seen.violations())).toEqual([]);
   expect(seen.pageErrors()).toEqual([]);

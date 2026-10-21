@@ -3,7 +3,7 @@ import { sha256, toBytes } from "viem";
 import { categorise, type CategoryVerdict } from "../../core/category";
 import { addQty, cmpQty, decFromNumber, fromAtomic, fromBaseUnits, parseQty, subQty, toDec, type Qty } from "../../core/money";
 import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Rules, Status, Untrusted } from "../../core/ports";
-import { rulesHashOf } from "../../core/rules-hash";
+import { limitlessRuleFields, rulesFingerprint } from "@sdk/rules";
 import { untrustedField } from "../../core/untrusted";
 import { makeProv } from "../../core/venue-policy";
 import {
@@ -206,7 +206,7 @@ export function rulesOf(row: LimitlessRow): Rules {
   return {
     text,
     // Over the full description and the expiry, never the capped display copy (the shared recipe, finding A2).
-    sha256: rulesHashOf([typeof row.description === "string" ? row.description : "", typeof row.expirationTimestamp === "number" || typeof row.expirationTimestamp === "string" ? String(row.expirationTimestamp) : ""]),
+    sha256: rulesFingerprint("limitless", limitlessRuleFields(row)),
     sources: [],
     // Resolution differs by market (feeds, venue team, parity with another venue); the row does not say.
     mechanism: "unknown",

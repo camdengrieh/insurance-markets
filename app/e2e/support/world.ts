@@ -1,4 +1,4 @@
-import type { BrowserContext, Page, Request, Route } from "@playwright/test";
+import type { BrowserContext, Locator, Page, Request, Route } from "@playwright/test";
 
 import { cspDirectives, type BuildTarget } from "../../headers.config";
 import { hostileDetail } from "../../../bridge/test/e2e/corpus";
@@ -155,7 +155,8 @@ export async function waitForMarkets(page: Page): Promise<number> {
   const count = page.getByTestId("explorer-count");
   await count.waitFor({ state: "visible" });
   await page.waitForFunction(
-    () => /^\d+ markets? shown/.test(document.querySelector('[data-testid="explorer-count"]')?.textContent ?? ""),
+    // The status line reads "<shown> of <loaded> loaded rows · <venues> venues · …" once the venues answered.
+    () => /^\d+ of \d+ loaded rows?/.test(document.querySelector('[data-testid="explorer-count"]')?.textContent ?? ""),
     undefined,
     { timeout: 20_000 },
   );
@@ -170,4 +171,18 @@ export async function openVenuePanel(page: Page): Promise<void> {
   await summary.waitFor({ state: "visible" });
   const open = await summary.evaluate((element) => (element.parentElement as HTMLDetailsElement).open);
   if (!open) await summary.click();
+}
+
+// The surface's h1 is a sentence with the venue count ("Every open market this build can read. Six venues, …").
+export const HERO_H1 = /^Every open market this build can read\./;
+
+// The market modal keeps its display price, rules, fees, times and terms in one closed disclosure under the
+// three columns. Waits for the detail read to land (the summary only exists then), opens it, and returns once the
+// rules heading is visible.
+export async function openMarketDetails(scope: Page | Locator): Promise<void> {
+  const summary = scope.locator("details > summary", { hasText: "Display price, rules, fees, times and terms" }).first();
+  await summary.waitFor({ state: "visible", timeout: 15_000 });
+  const open = await summary.evaluate((element) => (element.parentElement as HTMLDetailsElement).open);
+  if (!open) await summary.click();
+  await scope.getByRole("heading", { name: /rules/i }).first().waitFor({ state: "visible" });
 }

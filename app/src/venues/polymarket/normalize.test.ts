@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { polymarketRuleFields, rulesFingerprint } from "@sdk/rules";
 import { describe, expect, it } from "vitest";
 
 import { feeSpecFrom, gammaSchemaHash, normalizeMarket, normalizeSummary, resolutionSignal, rulesHash, sameFeeParameters, statusOf, type NormalizeContext } from "./normalize";
@@ -50,12 +51,15 @@ describe("Gamma market -> port Market (recorded Senate-control market)", () => {
     expect(m.prov).toMatchObject({ fetchedAtMs: NOW, adapterVersion: "polymarket/0.1.0", schemaHash: gammaSchemaHash() });
   });
 
-  it("reads the rules from the event when the market row has none, and hashes the full normalised text", () => {
+  it("shows the event's rules when the market row has none, and then has no fingerprint (the linker cannot pin it either)", () => {
     if (!result.ok) throw new Error("expected a market");
     const description = (raw.events?.[0]?.description ?? "") as string;
     expect(description.length).toBeGreaterThan(500);
-    // Description, resolution source and end date, in that order (market-linking-design section 5).
-    expect(result.value.rules.sha256).toBe(recipeHash([description, raw.resolutionSource ?? "", raw.endDate ?? ""]));
+    // The shared recipe fingerprints the market's own description, resolution source and end date
+    // (sdk/rules.ts); an event description is display only.
+    expect(raw.description ?? null).toBeNull();
+    expect(result.value.rules.sha256).toBe("");
+    expect(rulesFingerprint("polymarket", polymarketRuleFields({ ...raw, description }))).toMatch(/^[0-9a-f]{64}$/);
     expect(rulesHash(description)).toBe(createHash("sha256").update(description.normalize("NFKC").replace(/\s+/g, " ").trim()).digest("hex"));
     expect(result.value.rules.text.untrusted).toBe(true);
     expect(result.value.rules.mechanism).toBe("uma_oo");

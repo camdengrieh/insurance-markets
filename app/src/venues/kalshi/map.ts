@@ -2,7 +2,7 @@ import { sha256, toBytes } from "viem";
 
 import { addQty, cmpQty, decFromNumber, fromAtomic, parseQty, subQty, toDec, type Qty } from "../../core/money";
 import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Rules, Status, TickRanges } from "../../core/ports";
-import { rulesHashOf } from "../../core/rules-hash";
+import { kalshiRuleFields, rulesFingerprint } from "@sdk/rules";
 import { untrustedField } from "../../core/untrusted";
 import { makeProv } from "../../core/venue-policy";
 import {
@@ -171,7 +171,7 @@ export function rulesOf(row: KalshiRow): Rules {
     text,
     // Over the full rule fields and the close time, never the capped display copy (the shared recipe, finding A2). The
     // series' settlement sources are not read here, so a change to them is not covered.
-    sha256: rulesHashOf([row.rules_primary, secondary, row.close_time]),
+    sha256: rulesFingerprint("kalshi", kalshiRuleFields(row)),
     // Settlement sources live on the series, which getMarket does not read.
     sources: [],
     mechanism: "exchange",

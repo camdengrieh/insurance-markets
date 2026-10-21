@@ -3,19 +3,24 @@ import { useId, useState } from "react";
 import type { InboxItem, Posture } from "@bridge/contract";
 
 import { NO_FACTS, isProven, type CapabilityFacts } from "../../core/capabilities";
-import { formatUtc } from "../../core/format";
+import { formatUtc, parseIsoMs } from "../../core/format";
 import { sanitizeText } from "../../core/untrusted";
 import { Badge, Button, Disclosure, Num, Tile, UntrustedText, formatCountdown, useAnnounce } from "../../ui";
-import { ChecksList, DecodedView, FreshnessText, MismatchDetail, SummaryLines, TagsPanel } from "./CardParts";
-import { GATE_REASON_TEXT, RELAY_CAPABILITY_FACT, S2_ENABLED_IN_THIS_BUILD, copyGate, signGate, type ApprovalMode, type CardEvaluation, type GateResult } from "./card";
+import { ChecksList, DecodedView, FreshnessText, MismatchDetail, SummaryLine, SummaryLines, TagsPanel } from "./CardParts";
+import { FactsList, headlineOf } from "./CardSummary";
+import { GATE_REASON_TEXT, RELAY_CAPABILITY_FACT, S2_ENABLED_IN_THIS_BUILD, copyGate, signGate, type ApprovalMode, type CardEvaluation, type CardPrepared, type GateResult, type Verification } from "./card";
 import type { ReconcileResult } from "./client";
 import { AUTONOMOUS_BANNER, KIND_TEXT, REMINDERS, STATE_TEXT, VERIFICATION_TEXT, requesterText } from "./words";
 
-// The Signature Card (dapp-design 5.3). It renders ONLY the daemon's record of the relay's Prepared item (the summary
-// lines, the decoded block, the tags), never any text this page or the agent was given another way, and it never
-// sends a signature: path S1 means the user's own agent asks PayBox to sign and then submits. The buttons are Reject (a
-// decision recorded by the daemon), Copy intent (puts the exact intent on the clipboard) and Sign with PayBox (path S2,
-// off in this build).
+// The Signature Card (dapp-design 5.3; layout docs/design/cockpit-v2 Signing). It renders ONLY the daemon's record of
+// the relay's Prepared item (the decoded block, the summary lines, the tags), never any text this page or the agent
+// was given another way, and it never sends a signature: path S1 means the user's own agent asks PayBox to sign and
+// then submits. The head is two cells: the decoded headline (CardSummary.tsx) and the 28 px countdown. The body is
+// the facts list beside the tags and the S2-off caution; every check, the decoded table, the intent and the reminders
+// sit in disclosures below, in the DOM whether open or not (open by default when a check failed). The buttons are
+// Reject (a decision recorded by the daemon), Copy intent (puts the exact intent on the clipboard) and Sign with PayBox
+// (path S2, off in this build). There is no Arm button: arming happens at the Cockpit, and the card only shows the
+// window it is told about.
 
 export interface SignatureCardProps {
   readonly record: InboxItem;
@@ -53,6 +58,47 @@ function hashToReconcile(record: InboxItem): { readonly kind: "userop" | "order"
   if (result?.user_op_hash !== undefined) return { kind: "userop", hash: result.user_op_hash };
   if ("user_op_hash" in prepared) return { kind: "userop", hash: prepared.user_op_hash };
   return null;
+}
+
+// The quote and caps paragraph, in the relay's own figures, with the advisory-caps reminder.
+function QuoteAndCaps({ item, verification }: { readonly item: CardPrepared; readonly verification: Verification }) {
+  return (
+    <>
+      {item.quote === undefined ? null : (
+        <p>
+          Quote: <code>{item.quote.shares}</code> shares at <code>{item.quote.price}</code>, worst-case cash out <code>{item.quote.max_outlay_usd}</code> USD (fee bound <code>{item.quote.fee_bound_bps}</code> bps). Fee figures are a ceiling until a real fill has been compared.
+        </p>
+      )}
+      <p>
+        Caps, as the relay states them: this item counts <code>{item.caps.reserved_usd}</code> USD, <code>{item.caps.day_remaining_usd}</code> USD left today.{" "}
+        {item.kind === "order" && verification === "verified"
+          ? "The amount this order counts was checked here against its signed terms; the amount left today is the relay's own figure."
+          : "These figures are the relay's claim; this page did not check them."}{" "}
+        {REMINDERS.advisoryCaps}
+      </p>
+    </>
+  );
+}
+
+// Who asked for the item, with an agent token's id in mono. Same words as requesterText.
+function RequesterWords({ requestedBy }: { readonly requestedBy: string }) {
+  const words = requesterText(requestedBy);
+  if (!words.startsWith("agent token ")) return <>{words}</>;
+  return (
+    <>
+      agent token <code className="signing-code">{words.slice("agent token ".length)}</code>
+    </>
+  );
+}
+
+// The checks disclosure's summary: how many passed, failed or could not run, in words.
+function checksSummary(evaluation: CardEvaluation): string {
+  const count = (status: string): number => evaluation.checks.filter((check) => check.status === status).length;
+  const parts = [`${String(count("pass"))} passed`];
+  if (count("fail") > 0) parts.push(`${String(count("fail"))} failed`);
+  if (count("unavailable") > 0) parts.push(`${String(count("unavailable"))} could not run`);
+  if (count("unchecked") > 0) parts.push(`${String(count("unchecked"))} unchecked`);
+  return parts.join(", ");
 }
 
 export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs, kill, instance, approvalMode, facts = NO_FACTS, onReject, onCopy, onReconcile, notice }: SignatureCardProps) {
@@ -97,35 +143,55 @@ export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs
     setReconciled(result ?? "failed");
   };
 
+  const createdMs = parseIsoMs(record.created_at);
+  const failed = verification === "failed";
+
   return (
     <article className="signing-card" data-verification={verification} data-state={record.state} aria-labelledby={`card-${record.prepared_id}`}>
       <header className="signing-card-head">
-        <FreshnessText evaluation={evaluation} remaining={remaining} />
-        <h3 id={`card-${record.prepared_id}`}>
-          {item === null ? "Unreadable item" : KIND_TEXT[item.kind] ?? "Prepared item"} <code>{record.prepared_id.slice(0, 8)}</code>
-        </h3>
-        <p>
-          Requested by: {requesterText(record.requested_by)}. State: <Badge tone={stateWords.tone}>{stateWords.text}</Badge>
-        </p>
-        <p className="signing-muted">{stateWords.explain}</p>
-        {evaluation.freshness.expiresAtMs === null ? null : (
-          <p className="signing-muted">
-            Expires <time dateTime={new Date(evaluation.freshness.expiresAtMs).toISOString()}>{formatUtc(evaluation.freshness.expiresAtMs)}</time>.
+        <div className="signing-card-title">
+          <p className="signing-eyebrow">
+            {item === null ? "Unreadable item" : KIND_TEXT[item.kind] ?? "Prepared item"} <code className="signing-code">{record.prepared_id.slice(0, 8)}</code> · requested by <RequesterWords requestedBy={record.requested_by} />
+            {createdMs === null ? null : (
+              <>
+                {" "}
+                at <time dateTime={new Date(createdMs).toISOString()}><Num>{formatUtc(createdMs)}</Num></time>
+              </>
+            )}
           </p>
-        )}
-        <p className="signing-arm" data-arm={effectivePosture === "ARMED" ? "open" : "closed"}>
-          ARM window:{" "}
-          {effectivePosture === "ARMED" && armedUntilMs !== null ? (
-            <>
-              <Num>{formatCountdown(armedUntilMs - nowMs)}</Num> left. Submitting needs it; this page never submits.
-            </>
-          ) : (
-            "none open. Arming is done at your Cockpit; this page only shows the window it is told about."
+          <h3 id={`card-${record.prepared_id}`} className="signing-headline">
+            {headlineOf(evaluation)}
+          </h3>
+          {evaluation.decoded !== null && "display" in evaluation.decoded && evaluation.decoded.display.title_slot !== null ? (
+            <p className="signing-title-well">
+              <SummaryLine line={evaluation.decoded.display.title_slot} />
+            </p>
+          ) : null}
+          <p className="signing-state">
+            State: <Badge tone={stateWords.tone}>{stateWords.text}</Badge> <span className="signing-muted">{stateWords.explain}</span>
+          </p>
+        </div>
+        <div className="signing-card-clock">
+          <FreshnessText evaluation={evaluation} remaining={remaining} />
+          {evaluation.freshness.expiresAtMs === null ? null : (
+            <p className="signing-muted">
+              Expires <time dateTime={new Date(evaluation.freshness.expiresAtMs).toISOString()}><Num>{formatUtc(evaluation.freshness.expiresAtMs)}</Num></time>
+            </p>
           )}
-        </p>
+          <p className="signing-arm" data-arm={effectivePosture === "ARMED" ? "open" : "closed"}>
+            ARM window:{" "}
+            {effectivePosture === "ARMED" && armedUntilMs !== null ? (
+              <>
+                <Num>{formatCountdown(armedUntilMs - nowMs)}</Num> left. Submitting needs it; this page never submits.
+              </>
+            ) : (
+              "none open. Arming is done at your Cockpit; this page only shows the window it is told about."
+            )}
+          </p>
+        </div>
       </header>
 
-      <div className="signing-verdict" role={verification === "failed" ? "alert" : "status"} data-tone={words.tone}>
+      <div className="signing-verdict" role={failed ? "alert" : "status"} data-tone={words.tone}>
         <h4>{words.title}</h4>
         <p>{words.explain}</p>
         {evaluation.mismatch === null ? null : <MismatchDetail mismatch={evaluation.mismatch} />}
@@ -137,109 +203,123 @@ export function SignatureCard({ record, evaluation, nowMs, posture, armedUntilMs
         </p>
       ) : null}
 
-      <ChecksList checks={evaluation.checks} />
-
       {item === null ? (
-        <p>This item does not satisfy the relay's contract, so none of its text is shown. Reject it and ask the agent to prepare a new one.</p>
+        <p className="signing-section">This item does not satisfy the relay's contract, so none of its text is shown. Reject it and ask the agent to prepare a new one.</p>
       ) : (
-        <>
-          <section aria-labelledby={`lines-${record.prepared_id}`}>
-            <h4 id={`lines-${record.prepared_id}`}>What you would approve (the relay's summary)</h4>
-            <SummaryLines lines={item.summary.lines} mismatchIndex={mismatchIndex === undefined ? null : Number(mismatchIndex)} />
-            {item.quote === undefined ? null : (
-              <p>
-                Quote: <code>{item.quote.shares}</code> shares at <code>{item.quote.price}</code>, worst-case cash out <code>{item.quote.max_outlay_usd}</code> USD (fee bound <code>{item.quote.fee_bound_bps}</code> bps). Fee figures are a ceiling until a real fill has been compared.
-              </p>
+        <div className="signing-card-body">
+          <div className="signing-card-main">
+            {evaluation.decoded === null ? (
+              <section aria-labelledby={`lines-${record.prepared_id}`}>
+                <h4 id={`lines-${record.prepared_id}`}>What you would approve (the relay's summary, not verified here)</h4>
+                <SummaryLines lines={item.summary.lines} mismatchIndex={mismatchIndex === undefined ? null : Number(mismatchIndex)} />
+                <QuoteAndCaps item={item} verification={verification} />
+              </section>
+            ) : (
+              <FactsList evaluation={evaluation} />
             )}
-            <p>
-              Caps, as the relay states them: this item counts <code>{item.caps.reserved_usd}</code> USD, <code>{item.caps.day_remaining_usd}</code> USD left today.{" "}
-              {item.kind === "order" && verification === "verified"
-                ? "The amount this order counts was checked here against its signed terms; the amount left today is the relay's own figure."
-                : "These figures are the relay's claim; this page did not check them."}{" "}
-              {REMINDERS.advisoryCaps}
-            </p>
-          </section>
-
-          {evaluation.decoded === null ? null : (
-            <Disclosure summary="Decoded fields" defaultOpen>
-              <DecodedView decoded={evaluation.decoded} covered={evaluation.covered} unbound={evaluation.unbound} />
-            </Disclosure>
-          )}
-
-          <TagsPanel evaluation={evaluation} />
-
-          {Object.keys(item.capabilities).length === 0 ? null : (
-            <section aria-labelledby={`caps-${record.prepared_id}`}>
-              <h4 id={`caps-${record.prepared_id}`}>What is proven</h4>
-              <ul className="signing-caps">
-                {Object.keys(item.capabilities).map((name) => {
-                  // The relay's word is not a record. Only a fact recorded on this machine can say proven.
-                  const fact = RELAY_CAPABILITY_FACT[name];
-                  const proven = fact !== undefined && isProven(facts[fact]);
-                  return (
-                    <li key={name}>
-                      <Badge tone={proven ? "ok" : "warn"}>{`${name}: ${proven ? "proven" : "unproven"}`}</Badge>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-
-          {item.warnings.length === 0 ? null : (
-            <section aria-labelledby={`warn-${record.prepared_id}`}>
-              <h4 id={`warn-${record.prepared_id}`}>Warnings from the relay</h4>
-              <ul>
-                {item.warnings.map((warning, index) => (
-                  <li key={index}>
-                    <UntrustedText value={sanitizeText("generic", warning).text} maxChars={600} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
+          </div>
+          <div className="signing-card-side">
+            <TagsPanel evaluation={evaluation} />
+            <Tile tone="warn" title="Sign with PayBox is off in this build" heading="h4" role="note" dataKind="s2-off">
+              <p>Signing path S2 is off in this build; XO accepting this item is unproven until the live tests have run.</p>
+              <Reasons gate={sign} id={signReasonsId} />
+            </Tile>
+            {Object.keys(item.capabilities).length === 0 ? null : (
+              <section aria-labelledby={`caps-${record.prepared_id}`}>
+                <h4 id={`caps-${record.prepared_id}`}>What is proven</h4>
+                <ul className="signing-caps">
+                  {Object.keys(item.capabilities).map((name) => {
+                    // The relay's word is not a record. Only a fact recorded on this machine can say proven.
+                    const fact = RELAY_CAPABILITY_FACT[name];
+                    const proven = fact !== undefined && isProven(facts[fact]);
+                    return (
+                      <li key={name}>
+                        <Badge tone={proven ? "ok" : "warn"}>{`${name}: ${proven ? "proven" : "unproven"}`}</Badge>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+          </div>
+        </div>
       )}
 
-      <section className="signing-intent" aria-labelledby={`intent-${record.prepared_id}`}>
-        <h4 id={`intent-${record.prepared_id}`}>The intent for PayBox request_wallet_sign</h4>
-        {evaluation.intentJson === null ? (
-          <p data-intent="withheld">Withheld: either a check failed or there is no intent that hashes to the digest, so there is nothing safe to hand to a signer.</p>
-        ) : (
-          <>
-            <p>Pass this to request_wallet_sign unchanged, as its intent. Do not edit it. Your agent signs it with your PayBox credential; this page never signs or submits.</p>
-            <pre className="signing-pre" tabIndex={0} aria-label="Exact intent for request_wallet_sign" data-intent="shown">
-              {evaluation.intentJson}
-            </pre>
-          </>
-        )}
-      </section>
+      {item === null || item.warnings.length === 0 ? null : (
+        <section className="signing-section signing-warnings" aria-labelledby={`warn-${record.prepared_id}`}>
+          <h4 id={`warn-${record.prepared_id}`}>Warnings from the relay</h4>
+          <ul>
+            {item.warnings.map((warning, index) => (
+              <li key={index}>
+                <UntrustedText value={sanitizeText("generic", warning).text} maxChars={600} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <section className="signing-reminders" aria-labelledby={`remind-${record.prepared_id}`}>
-        <h4 id={`remind-${record.prepared_id}`}>Before you approve in PayBox</h4>
-        <ul>
-          <li>{REMINDERS.dedicated}</li>
-          <li>{REMINDERS.approvalMode}</li>
-          <li>{REMINDERS.digestTag}</li>
-        </ul>
-      </section>
+      <div className="signing-disclosures">
+        <Disclosure summary={`Checks run in this page: ${checksSummary(evaluation)}`} defaultOpen={failed}>
+          <ChecksList checks={evaluation.checks} />
+        </Disclosure>
+
+        {item === null || evaluation.decoded === null ? null : (
+          <Disclosure summary="The relay's summary, line by line" defaultOpen={failed}>
+            <SummaryLines lines={item.summary.lines} mismatchIndex={mismatchIndex === undefined ? null : Number(mismatchIndex)} />
+            <QuoteAndCaps item={item} verification={verification} />
+          </Disclosure>
+        )}
+
+        {evaluation.decoded === null ? null : (
+          <Disclosure summary="Decoded fields">
+            <DecodedView decoded={evaluation.decoded} covered={evaluation.covered} unbound={evaluation.unbound} />
+          </Disclosure>
+        )}
+
+        <Disclosure summary="The intent for PayBox request_wallet_sign">
+          <div className="signing-intent">
+            {evaluation.intentJson === null ? (
+              <p data-intent="withheld">Withheld: either a check failed or there is no intent that hashes to the digest, so there is nothing safe to hand to a signer.</p>
+            ) : (
+              <>
+                <p>Pass this to request_wallet_sign unchanged, as its intent. Do not edit it. Your agent signs it with your PayBox credential; this page never signs or submits.</p>
+                <pre className="signing-pre" tabIndex={0} aria-label="Exact intent for request_wallet_sign" data-intent="shown">
+                  {evaluation.intentJson}
+                </pre>
+              </>
+            )}
+          </div>
+        </Disclosure>
+
+        <Disclosure summary="Before you approve in PayBox">
+          <ul className="signing-reminders">
+            <li>{REMINDERS.dedicated}</li>
+            <li>{REMINDERS.approvalMode}</li>
+            <li>{REMINDERS.digestTag}</li>
+          </ul>
+        </Disclosure>
+      </div>
 
       <div className="signing-actions" role="group" aria-label="Actions">
         <Button variant="danger" onClick={() => void reject()} disabled={!canReject} busy={busy === "reject"}>
           Reject
         </Button>
-        <Button variant="primary" onClick={() => void copyIntent()} disabled={!copy.enabled} busy={busy === "copy"} aria-describedby={copy.enabled ? undefined : copyReasonsId}>
+        <Button onClick={() => void copyIntent()} disabled={!copy.enabled} busy={busy === "copy"} aria-describedby={copy.enabled ? undefined : copyReasonsId}>
           Copy intent
         </Button>
-        <Button disabled aria-disabled="true" aria-describedby={signReasonsId} data-action="sign-s2">
-          Sign with PayBox: off in this build
-        </Button>
+        <span className="signing-actions-end">
+          <Button disabled aria-disabled="true" aria-describedby={signReasonsId} data-action="sign-s2">
+            Sign with PayBox: off in this build
+          </Button>
+        </span>
       </div>
       <Reasons gate={copy} id={copyReasonsId} />
-      <Tile tone="warn" title="Sign with PayBox is off in this build" heading="h4" role="note" dataKind="s2-off">
-        <p>Signing path S2 is off in this build; XO accepting this item is unproven until the live tests have run.</p>
-        <Reasons gate={sign} id={signReasonsId} />
-      </Tile>
+      {item === null ? (
+        <Tile tone="warn" title="Sign with PayBox is off in this build" heading="h4" role="note" dataKind="s2-off">
+          <p>Signing path S2 is off in this build; XO accepting this item is unproven until the live tests have run.</p>
+          <Reasons gate={sign} id={signReasonsId} />
+        </Tile>
+      ) : null}
       {copied === null ? null : <p role="status">{copied === "ok" ? "Copied. Paste it unchanged as the intent of request_wallet_sign." : "Could not copy. Select the text in the intent box and copy it yourself."}</p>}
       {notice === null ? null : <p role="status" className="signing-muted">{notice}</p>}
 

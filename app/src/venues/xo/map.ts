@@ -1,5 +1,7 @@
 import { sha256 } from "viem";
 
+import { rulesFingerprint, xoRuleFields } from "@sdk/rules";
+
 import { lifecycleOf, resolveTakerFee } from "@shared/xo/client.js";
 import { formatMicro, MICRO } from "@shared/xo/units.js";
 import type {
@@ -55,7 +57,6 @@ const SCHEMA_DESCRIPTOR = [
 
 // ---- hashing and text -------------------------------------------------------------------------------------------
 
-const UNIT_SEPARATOR = "␟";
 const encoder = new TextEncoder();
 
 export function sha256Hex(text: string): string {
@@ -64,33 +65,11 @@ export function sha256Hex(text: string): string {
 
 export const XO_SCHEMA_HASH = sha256Hex(SCHEMA_DESCRIPTOR);
 
-// docs/market-linking-design.md rule-hash recipe: sha256(NFKC(strip_html(join(rule-bearing fields, U+241F)))
-// with whitespace collapsed). For XO the fields are, in order: rules.description, the Yes outcome rule, the No
-// outcome rule, resolutionSources (one per line), resolverAddress, expiresAt. A missing field is the empty
-// string, so silence is a value and not a gap.
-//
-// One refinement of the recipe: each field is cleaned on its own (tags to spaces, NFKC, whitespace collapsed,
-// trimmed) before the join, so spacing or markup next to the separator cannot change the hash, and a field that
-// itself contains U+241F cannot shift text from one field into the next. For fields that are already clean the
-// result is identical to cleaning the joined string.
-export function normalizeForHash(text: string): string {
-  return text.replace(/<[^>]*>/g, " ").normalize("NFKC").replaceAll(UNIT_SEPARATOR, " ").replace(/\s+/g, " ").trim();
-}
-
-export function rulesHashFields(detail: XoDetail): readonly string[] {
-  const byIndex = (index: 0 | 1): string => detail.rules.outcomeRules.find((entry) => entry.outcomeIndex === index)?.rule ?? "";
-  return [
-    detail.rules.description ?? "",
-    byIndex(0),
-    byIndex(1),
-    detail.resolutionSources.join("\n"),
-    detail.resolverAddress ?? "",
-    detail.expiresAt ?? "",
-  ];
-}
-
+// The rules fingerprint is the shared rules-v2 recipe (sdk/rules.ts): the same fields, in the same order, that the
+// linker pins and pm_verify_link recomputes, so a proposed or approved XO leg can be re-checked in the page. A
+// lossy read (a rule-bearing field cut or dropped by the decoder) has no fingerprint ("").
 export function rulesSha256(detail: XoDetail): string {
-  return sha256Hex(rulesHashFields(detail).map(normalizeForHash).join(UNIT_SEPARATOR));
+  return rulesFingerprint("xo", xoRuleFields(detail));
 }
 
 // Untrusted slot with the shared sanitiser rule applied first (control, bidi and invisible characters stripped,

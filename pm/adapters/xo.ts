@@ -43,12 +43,12 @@ import type {
 } from "../types.js";
 import { untrusted } from "../types.js";
 import { AdapterFailure, toAdapterFailure } from "./errors.js";
+import { xoLossyRuleRead, xoRulesText } from "../../sdk/rules.js";
 import { buildRules } from "./rules.js";
 import { adapterDescriptor, XO_HOSTS } from "./policy.js";
 import { ADAPTER_VERSION, type AdapterMarket, type PmPage, type PmVenueAdapter, type RuleFields } from "./types.js";
 
 // Omission texts from src/xo/client.ts that concern rule-bearing fields.
-const RULE_OMISSION = /^(rules[ .]|\d+ outcomeRules |outcomeRules\[|resolutionSources |\d+ resolutionSources )/;
 import { sha256Text, tokenIdText } from "./values.js";
 
 export interface XoAdapterOptions {
@@ -161,17 +161,8 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
   // resolutionSources, and drops unreadable entries, recording each in detail.omissions. Edits
   // beyond those cut points would not change a hash over what was kept, so any such omission
   // makes the rules unhashable instead.
-  function lossyRuleRead(detail: {
-    readonly omissions: readonly string[];
-    readonly rules: { readonly outcomeRules: readonly unknown[]; readonly outcomeRulesTotal: number };
-    readonly resolutionSources: readonly unknown[];
-    readonly resolutionSourcesTotal: number;
-  }): string | null {
-    if (detail.rules.outcomeRulesTotal > detail.rules.outcomeRules.length) return "outcomeRules were not all read";
-    if (detail.resolutionSourcesTotal > detail.resolutionSources.length) return "resolutionSources were not all read";
-    const hit = detail.omissions.find((o) => RULE_OMISSION.test(o));
-    return hit === undefined ? null : "a rule-bearing field was cut or dropped when read";
-  }
+  // The lossy-read rule and the rules text are shared with the linker and the dApp (sdk/rules.ts).
+  const lossyRuleRead = xoLossyRuleRead;
 
   async function loadMarket(ref: MarketRef): Promise<AdapterMarket> {
     rejectRef(ref);
@@ -204,10 +195,7 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
       tokenId: o.tokenId,
     }));
 
-    const descriptionText = detail.rules.description === null ? "" : String(detail.rules.description);
-    const parts = descriptionText === "" ? [] : [descriptionText];
-    for (const r of detail.rules.outcomeRules) parts.push(`Outcome ${r.outcomeIndex}: ${String(r.rule)}`);
-    const displayText = parts.join("\n\n");
+    const displayText = xoRulesText(detail);
     const sources = detail.resolutionSources.slice(0, 20).map(String);
     const ruleFields: RuleFields = {
       ...(displayText === "" ? {} : { rules: displayText }),
@@ -268,7 +256,6 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
       extras: {
         ruleFields,
         rulesHashRecipe: built.rulesHashRecipe,
-        coreRulesSha256: built.coreRulesSha256,
         statusRaw: untrusted(String(detail.statusRaw)),
         geoRestricted: null,
         warnings,

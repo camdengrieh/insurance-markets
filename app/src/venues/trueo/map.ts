@@ -1,3 +1,4 @@
+import { rulesFingerprintOfFields } from "@sdk/rules";
 import { getAddress, sha256, toBytes } from "viem";
 
 import { fromAtomic, toDec, type Qty } from "../../core/money";
@@ -144,7 +145,8 @@ export function rulesOf(data: MarketData): Rules {
   const end = isoOfSeconds(data.endOfTrading);
   return {
     text: untrustedField("rules", full, "trueo"),
-    sha256: sha256Hex(normalizeForHash(full)),
+    // The shared rules-v2 canonicalisation (sdk/rules.ts), field by field.
+    sha256: rulesFingerprintOfFields([data.question, data.source, data.additionalInfo]),
     // The source is free text written by the market's creator, so it is inside the text and not listed as a link.
     sources: [],
     mechanism: "optimistic_council",

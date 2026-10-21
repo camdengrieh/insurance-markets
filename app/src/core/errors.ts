@@ -22,11 +22,6 @@ export function isAdapterException(value: unknown): value is AdapterException {
   return value instanceof AdapterException;
 }
 
-// A programming error: two quantities of different units were combined. It is thrown, never returned, so
-// a unit mix-up cannot turn into a wrong number on the screen.
-export class UnitMismatchError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnitMismatchError";
-  }
-}
+// A programming error: two quantities of different units were combined. Defined with the money module in the
+// SDK (sdk/money/qty.ts) so every client throws the same class.
+export { UnitMismatchError } from "@sdk/money/qty";

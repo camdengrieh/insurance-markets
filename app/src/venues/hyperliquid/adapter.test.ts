@@ -369,7 +369,9 @@ describe("getMarket", () => {
     expect(Array.isArray(market.tick)).toBe(true);
     expect(market.outcomes.map((o) => o.tokenId)).toEqual(["#143480", "#143481"]);
     const text = "template:binaryPrice\nperp:BTC|priceDescription:the Hyperliquid BTC perp trade|seconds:90|threshold:82132|time:20261020-0800";
-    expect(market.rules.sha256).toBe(createHash("sha256").update(normalizeForHash(text)).digest("hex"));
+    // The shared rules-v2 canonicalisation over the name and the description (sdk/rules.ts).
+    const [name, description] = text.split("\n") as [string, string];
+    expect(market.rules.sha256).toBe(createHash("sha256").update(`${name}\u241f${description}`.normalize("NFC").replace(/\s+/gu, " ").trim()).digest("hex"));
   });
 
   it("claims the protocol mark settlement only for the documented class", async () => {

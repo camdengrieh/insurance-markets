@@ -1,7 +1,7 @@
 import { HOSTILE_CASES } from "../../bridge/test/e2e/corpus";
 import { expect, test } from "./support/fixtures";
 import { domProblems, isClean } from "./support/inert";
-import { observe, waitForMarkets } from "./support/world";
+import { HERO_H1, observe, openMarketDetails, waitForMarkets } from "./support/world";
 
 // M0-3 and M1-9: a market whose title, rules, description and sources are hostile renders as inert text, in both builds,
 // with and without the Content-Security-Policy. The CSP-free run is the point: the page must not depend on the policy to be safe.
@@ -35,8 +35,8 @@ for (const variant of ["with the CSP", "with no security headers at all"] as con
         await page.goto(`${server.url}#/market/xo/${market.conditionId}`);
         // A cold load of a market address shows the Markets surface (its h1 is the hero band's) with the modal open
         // over it; the rules section only exists once the detail read succeeded.
-        await expect(page.locator("h1")).toHaveText("Markets");
-        await expect(page.getByRole("dialog", { name: "Market" }).getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+        await expect(page.locator("h1")).toHaveText(HERO_H1);
+        await openMarketDetails(page.getByRole("dialog", { name: "Market" }));
         await page.waitForTimeout(150);
         const problems = await domProblems(page);
         expect(problems, `${market.id}: ${JSON.stringify(problems)}`).toMatchObject({ eventHandlerAttributes: [], dangerousElements: [], foreignAnchors: [], dangerousUrls: [], markupOutsideSlots: [], activeForms: [], probeSet: false });
@@ -54,7 +54,7 @@ test("payload markup is visible as literal text inside the untrusted slot, and a
   expect(market).toBeDefined();
   await page.goto(`${standalone.url}#/market/xo/${market?.conditionId ?? ""}`);
   const modal = page.getByRole("dialog", { name: "Market" });
-  await expect(modal.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+  await openMarketDetails(modal);
   // The payload is on the page as characters (so a reader sees what the creator wrote) and nowhere as an element. The
   // page's own decorative SVGs (tile glyphs, dither bars, the scrim) are aria-hidden and carry no script or link.
   const slotText = (await page.locator("[data-trust], .ui-untrusted-block").allInnerTexts()).join("\n");

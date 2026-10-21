@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "./support/fixtures";
 import { unknownViolations } from "./support/known-issues";
-import { observe, waitForMarkets } from "./support/world";
+import { HERO_H1, observe, openMarketDetails, waitForMarkets } from "./support/world";
 
 // M0-5: axe is clean at 360 and 1280 px, in the real browser, with colour-contrast and target-size on (jsdom cannot run those),
 // in both themes and both builds, on every screen. A second group checks that the page never scrolls sideways at 360 px.
@@ -25,7 +25,7 @@ async function marketHash(mock: { dataApi: string } | null): Promise<string> {
 async function settle(page: Page, hash: string, target: "standalone" | "cockpit"): Promise<void> {
   await expect(page.locator("h1")).toBeVisible();
   if (hash === "#/markets" && target === "standalone") await waitForMarkets(page);
-  else if (hash.startsWith("#/market/") && target === "standalone") await expect(page.getByRole("heading", { name: /rules/i }).first()).toBeVisible({ timeout: 15_000 });
+  else if (hash.startsWith("#/market/") && target === "standalone") await openMarketDetails(page.getByRole("dialog", { name: "Market" }));
   else await page.waitForTimeout(500);
 }
 
@@ -121,7 +121,7 @@ test.describe("keyboard and focus, as painted", () => {
     // here is the hash itself; an unknown address is the one other screen the shell has.
     await observe(page, { target: "standalone", mock: daemon.mock });
     await page.goto(`${standalone.url}#/markets`);
-    await expect(page.locator("h1")).toHaveText("Markets");
+    await expect(page.locator("h1")).toHaveText(HERO_H1);
     await page.evaluate(() => {
       window.location.hash = "#/nonexistent";
     });

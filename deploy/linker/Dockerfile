@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.json ./
 COPY src ./src
 COPY pm ./pm
+COPY sdk ./sdk
 COPY deploy/linker/build.mjs ./deploy/linker/build.mjs
 RUN node deploy/linker/build.mjs
 

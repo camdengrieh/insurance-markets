@@ -21,7 +21,8 @@ Binding rules (do not weaken):
 
 ## Layout
 
-All new code lives in `pm/`. It may import from `src/` (read-only reuse, for example
+All new code lives in `pm/`. It may import from `sdk/` (the shared model, money, category and rules modules;
+see `sdk/README.md`) and from `src/` (read-only reuse, for example
 `src/guardrails/amount.ts`, `src/guardrails/untrusted.ts`, `src/xo/*`) but must never edit
 `src/`, `relay/`, `bridge/`, `app/`, `test/`, the root `package.json` or the root lockfile.
 There are no pm-specific dependencies; use Node 24 built-ins plus the root `viem` and `zod`.

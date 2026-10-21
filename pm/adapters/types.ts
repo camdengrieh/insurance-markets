@@ -23,8 +23,6 @@ export interface MarketExtras {
   // hashed, in which case Market.rules.sha256 is a non-hex sentinel that never equals another
   // market's value.
   readonly rulesHashRecipe: "rules-v2" | null;
-  // sha256 of the NFKC/whitespace-collapsed display text (the pm/core recipe), for reference.
-  readonly coreRulesSha256: string;
   // Venue's own status text, untrusted. Kept so an unknown enum stays visible.
   readonly statusRaw: Untrusted<string>;
   // Venue flag that the market is geo-restricted for some jurisdictions; null when not reported.

@@ -312,13 +312,14 @@ describe("the other commands still behave", () => {
 
 // ---- a real bundle with a fake daemon in the graph (ask A2) -------------------------------------------------------------------------
 
-// A scratch copy of the repo's code (src, relay) with a bridge/main.ts of its own, so the real
+// A scratch copy of the repo's code (src, relay, pm, sdk) with a bridge/main.ts of its own, so the real
 // scripts/build-local.mjs resolves the dynamic import the way it will when the real daemon exists.
 async function scratchRoot(withBridge: boolean): Promise<string> {
   const root = await scratch("xo-cockpit-root-");
   await cp(join(ROOT, "src"), join(root, "src"), { recursive: true });
   await cp(join(ROOT, "relay"), join(root, "relay"), { recursive: true });
   await cp(join(ROOT, "pm"), join(root, "pm"), { recursive: true });
+  await cp(join(ROOT, "sdk"), join(root, "sdk"), { recursive: true });
   await symlink(join(ROOT, "node_modules"), join(root, "node_modules"));
   await writeFile(join(root, "package.json"), JSON.stringify({ type: "module" }));
   if (withBridge) {

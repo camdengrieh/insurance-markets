@@ -103,15 +103,17 @@ describe("getMarket: the recorded 400 bps market", () => {
 });
 
 describe("rules hash", () => {
-  // The recipe written out a second time, with Node's own hash: docs/market-linking-design.md. Each field is
-  // cleaned (tags to spaces, NFKC, whitespace collapsed, trimmed), then joined with U+241F: rules.description,
-  // Yes rule, No rule, sources (one per line), resolver, expiresAt.
+  // The shared rules-v2 recipe (sdk/rules.ts) written out a second time, with Node's own hash, so a change to the
+  // SDK cannot pass by agreeing with itself. Fields, in order: the rules text (description, then one "Outcome i:"
+  // paragraph per outcome rule), the resolution sources joined with U+241E, the resolver address and expiresAt,
+  // joined with U+241F; then NFC, control and format characters dropped, whitespace collapsed, trimmed. Markup is
+  // kept as text and compatibility forms are not folded: the fingerprint is an equality pin.
   function expected(detail: Rec): string {
-    const rules = detail.rules as { description: string; outcomeRules: Array<{ outcomeIndex: number; rule: string }> };
-    const rule = (i: number): string => rules.outcomeRules.find((r) => r.outcomeIndex === i)?.rule ?? "";
-    const clean = (text: string): string => text.replace(/<[^>]*>/g, " ").normalize("NFKC").replace(/\s+/g, " ").trim();
-    const fields = [rules.description, rule(0), rule(1), (detail.resolutionSources as string[]).join("\n"), "", detail.expiresAt as string];
-    return createHash("sha256").update(fields.map(clean).join("\u241f"), "utf8").digest("hex");
+    const rules = detail.rules as { description: string | null; outcomeRules: Array<{ outcomeIndex: number; rule: string }> };
+    const paragraphs = [...(rules.description ? [rules.description] : []), ...rules.outcomeRules.map((r) => `Outcome ${r.outcomeIndex}: ${r.rule}`)];
+    const fields = [paragraphs.join("\n\n"), (detail.resolutionSources as string[]).join("\u241e"), /^0x[0-9a-fA-F]{40}$/.test(String(detail.resolverAddress)) ? String(detail.resolverAddress) : "", detail.expiresAt as string];
+    const joined = fields.join("\u241f").normalize("NFC").replace(/[\p{Cc}\p{Cf}]/gu, (c) => (/\s/u.test(c) ? " " : ""));
+    return createHash("sha256").update(joined.replace(/\s+/gu, " ").trim(), "utf8").digest("hex");
   }
 
   const hashOf = async (body: Rec): Promise<string> => {
@@ -119,25 +121,29 @@ describe("rules hash", () => {
     return (await adapter.getMarket(refOf(FEE400))).rules.sha256;
   };
 
-  it("matches the recipe and is 64 lowercase hex characters", async () => {
+  it("matches the shared recipe and is 64 lowercase hex characters", async () => {
     const body = detailBody();
     const hash = await hashOf(body);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
     expect(hash).toBe(expected(body));
     // Pinned: a change to the recipe changes every approved link's hash, so it must be a reviewed change.
-    expect(hash).toBe("55c4f4f6f0a8cda48cab87d3dabb65397cfff5881afbc29f3b499e4d26d175e9");
+    expect(hash).toBe("36cf09d47dfc91d0c70d1ddd46db5f50a3a1a293e6a4a6d828a7a9227ff94e34");
   });
 
-  it("ignores markup, spacing and compatibility forms, but not words, dates or sources", async () => {
+  it("ignores spacing only: markup, compatibility forms, words, dates and sources all change it", async () => {
     const base = await hashOf(detailBody());
 
     const spaced = detailBody();
-    (spaced.rules as Rec).description = `<b>${String((spaced.rules as Rec).description).replace(/ /g, "   ")}</b>\n`;
+    (spaced.rules as Rec).description = `${String((spaced.rules as Rec).description).replace(/ /g, "   ")}\n`;
     expect(await hashOf(spaced)).toBe(base);
+
+    const marked = detailBody();
+    (marked.rules as Rec).description = `<b>${String((marked.rules as Rec).description)}</b>`;
+    expect(await hashOf(marked)).not.toBe(base);
 
     const fullwidth = detailBody();
     (fullwidth.rules as Rec).description = String((fullwidth.rules as Rec).description).replace("UFC", "ＵＦＣ");
-    expect(await hashOf(fullwidth)).toBe(base);
+    expect(await hashOf(fullwidth)).not.toBe(base);
 
     const reworded = detailBody();
     (reworded.rules as Rec).description = String((reworded.rules as Rec).description).replace("Interim champions will not count", "Interim champions will count");

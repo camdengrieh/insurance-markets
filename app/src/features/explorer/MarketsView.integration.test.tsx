@@ -64,18 +64,22 @@ describe("standalone build with the real readers", () => {
       expect(JSON.stringify(call.init.headers ?? {}).toLowerCase()).not.toMatch(/authorization|cookie|user-agent/);
     }
 
-    // XO rows came from the recorded list; their prices are display prices, and the book is "needs the Cockpit".
+    // XO rows came from the recorded list; their book is read by the Cockpit only, and the price cell says so.
     const rows = [...container.querySelectorAll("tbody tr")];
     expect(rows.length).toBe(5);
     const xoRow = rows[0] as Element;
     expect(allText(xoRow)).toContain("XO Market");
-    // M0-1 at the screen: the Data API's micro-unit price 394000 is 39.4c, and a micro-unit volume is never dollars.
-    expect(allText(xoRow)).toContain("Yes 39.4c");
-    expect(allText(xoRow)).toContain("$306,091.82");
-    expect(allText(xoRow)).not.toMatch(/394000|306091829184|306,091,829,184/);
-    expect(allText(xoRow)).toContain("display price, not executable");
-    expect(allText(xoRow)).toContain("needs the Cockpit");
+    expect(allText(must(xoRow, '[data-col="price"]'))).toBe("book via Cockpit");
     expect(allText(xoRow)).not.toMatch(/bid \d|ask \d/);
+    expect(allText(xoRow)).not.toMatch(/394000|306091829184|306,091,829,184/);
+    // M0-1 at the screen: the first row is inspected, and its display price and volume are there, labelled: the Data
+    // API's micro-unit price 394000 is 39.4c, and a micro-unit volume is never dollars.
+    const head = must(container, "aside.explorer-inspector .explorer-inspector-head");
+    expect(allText(head)).toContain("Yes 39.4c");
+    expect(allText(head)).toContain("$306,091.82");
+    expect(allText(head)).not.toMatch(/394000|306091829184|306,091,829,184/);
+    expect(allText(head)).toContain("display price, not executable");
+    expect(allText(must(container, "aside.explorer-inspector"))).toContain("XO Market: needs the Cockpit");
     expect(container.querySelector('section[data-kind="needs-cockpit"][data-code="xo"]')).not.toBeNull();
     expect(container.querySelector('section[data-kind="needs-cockpit"][data-code="limitless"]')).not.toBeNull();
     expect(container.querySelector('section[data-kind="restricted"][data-code="kalshi"]')).not.toBeNull();
@@ -136,7 +140,7 @@ describe("Polymarket token ids (M0-1)", () => {
       for (const id of row["positionIds"] as string[]) positionIds.add(id);
     }
     for (const id of clobIds) expect(positionIds.has(id)).toBe(false);
-    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as HTMLButtonElement;
+    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     act(() => button.click());
     await flush(10);
@@ -172,7 +176,7 @@ describe("Cockpit build with the real readers", () => {
     }
     expect([...container.querySelectorAll("tbody tr")].length).toBe(5);
     // XO books are available in this build (the daemon reads them); the button is offered.
-    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load order books")) as HTMLButtonElement;
+    const button = [...container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Load books")) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     // Limitless is read through the daemon too: its request goes to the proxy under its own service id, and the reply
     // here (a 502) is shown as a failure, not as an empty list.

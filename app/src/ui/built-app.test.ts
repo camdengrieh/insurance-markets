@@ -106,8 +106,9 @@ for (const target of BUILD_TARGETS) {
 
         const doc = win.document;
         expect(doc.querySelectorAll("h1").length).toBe(1);
-        // "/" is the Overview while no route claims it and the Markets surface once routes/home.tsx does.
-        expect(["Overview", "Markets"]).toContain(doc.querySelector("h1")?.textContent);
+        // "/" is the Overview while no route claims it and the Markets surface once routes/home.tsx does; the
+        // surface's h1 is the hero band's sentence naming the venue count.
+        expect(doc.querySelector("h1")?.textContent ?? "").toMatch(/^(?:Overview|Every open market this build can read\..*)$/);
         // There is no navigation bar: the brand links to the start, the chips and modals do the rest.
         expect(doc.querySelector("nav")).toBeNull();
         expect(doc.querySelector("header a.ui-brand")).not.toBeNull();
