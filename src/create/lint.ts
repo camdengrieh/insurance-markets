@@ -1,5 +1,6 @@
 import * as z from "zod/v4";
 
+import { roundDiv } from "../../sdk/money/decimal.js";
 import { CEILINGS, type GuardrailConfig } from "../config.js";
 import { formatAtomic, parseDecimalAtomic, parsePriceTicks } from "../guardrails/amount.js";
 import { CREATION_FEE_ATOMIC, USDC_E_DECIMALS } from "../guardrails/constants.js";
@@ -1891,7 +1892,7 @@ function usdText(atomic: bigint): string {
 
 // The most a BUY of this stake can cost: the stake plus the exchange's fee bound, rounded up.
 function seedOutlay(stakeAtomic: bigint): bigint {
-  return stakeAtomic + ceilDiv(stakeAtomic * SEED_FEE_BOUND_BPS, 10_000n);
+  return stakeAtomic + roundDiv(stakeAtomic * SEED_FEE_BOUND_BPS, 10_000n, "ceil");
 }
 
 function seedCapItem(stakeAtomic: bigint, capAtomic: bigint): LintItem {
@@ -1996,19 +1997,15 @@ function checkSeed(draft: MarketDraft, config: GuardrailConfig, seedCapAtomic: b
 
 // Cost quote -------------------------------------------------------------------------------------------------------
 
-function ceilDiv(numerator: bigint, denominator: bigint): bigint {
-  return (numerator + denominator - 1n) / denominator;
-}
-
 // Rounds half up to one decimal place of a percentage: 287 of 571 gives "50.3".
 function percentOne(count: bigint, total: bigint): string {
-  const tenths = (count * 2000n + total) / (2n * total);
+  const tenths = roundDiv(count * 1000n, total, "half_up");
   return `${tenths / 10n}.${tenths % 10n}`;
 }
 
 // Rounds UP to three decimals, because this is a budget: 571 / 520 gives "1.099".
 function ratioCeil3(numerator: bigint, denominator: bigint): string {
-  const milli = ceilDiv(numerator * 1000n, denominator);
+  const milli = roundDiv(numerator * 1000n, denominator, "ceil");
   return `${milli / 1000n}.${(milli % 1000n).toString().padStart(3, "0")}`;
 }
 
@@ -2026,7 +2023,7 @@ export function buildCostQuote(seedAtomic: bigint, seedAssumed: boolean): CostQu
   // created again from scratch, so attempts are geometric in the approve rate.
   const restartAttempts = { num: reviewed, den: approve };
   const scenario = (assumption: string, ratio: { num: bigint; den: bigint }) => {
-    const fees = ceilDiv(fee * ratio.num, ratio.den);
+    const fees = roundDiv(fee * ratio.num, ratio.den, "ceil");
     return {
       assumption,
       expected_attempts: ratioCeil3(ratio.num, ratio.den),

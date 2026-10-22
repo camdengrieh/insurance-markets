@@ -1,8 +1,8 @@
 // Polymarket (global) read adapter for pm/: Gamma for market metadata, the CLOB for books and per-market
 // parameters. Public reads only; no auth, no POST. This file owns the HTTP side (the fixed host list, the plugin
 // User-Agent, the paging it asks for, the descriptor). EVERY parse goes through the one Polymarket parser set in
-// sdk/venues/polymarket (the dApp reads with the same code), converted with ./from-sdk.ts; the pm FeeSpec is built
-// with pm/core/fee-specs.ts from the fee the shared parser validated. What the shared parser enforces (docs/research/08
+// sdk/venues/polymarket (the dApp reads with the same code) into the SDK read model; the FeeSpec the engine prices
+// with is built with sdk/engine/fee-specs.ts from the fee the shared parser validated. What the shared parser enforces (docs/research/08
 // sections 2.2 to 2.10 and its Verification section, which overrides the body):
 //
 //   - marketId is the conditionId. Outcome token ids come from `clobTokenIds` when the market's `version` is "v1"
@@ -44,11 +44,10 @@ import {
   type NormalizeContext,
   type PolymarketFee,
 } from "../../sdk/venues/polymarket/index.js";
-import { polymarketFeeSpec, unknownFeeSpec, type FeeSource } from "../core/fee-specs.js";
-import type { AdapterError, Book, FeeSpec, MarketRef, MarketSummary, Result, Status, TokenRef } from "../types.js";
+import { polymarketFeeSpec, unknownFeeSpec, type FeeSource } from "../../sdk/engine/fee-specs.js";
+import type { AdapterError, Book, FeeSpec, MarketRef, MarketSummary, Result, Status, TokenRef } from "../../sdk/model.js";
 import { untrusted } from "../types.js";
 import { AdapterFailure, toAdapterFailure } from "./errors.js";
-import { bookFromSdk, marketFromSdk, summaryFromSdk } from "./from-sdk.js";
 import { adapterDescriptor, POLYMARKET_HOSTS } from "./policy.js";
 import { buildUrl, createJsonTransport, type JsonTransport, type TransportOptions } from "./transport.js";
 import type { AdapterMarket, PmPage, PmVenueAdapter, RuleFields } from "./types.js";
@@ -124,7 +123,8 @@ export function parseBook(json: unknown, token: TokenRef, asOfMs: number): Resul
   if (!parsed.ok) {
     return { ok: false, error: parsed.error, detail: parsed.error === "EMPTY_BOOK" ? "book has no levels" : "book is for another token, malformed or crossed" };
   }
-  return { ok: true, value: bookFromSdk(parsed.book, "best_last") };
+  // The shared parser has already re-sorted the levels; the convention names the raw payload's order.
+  return { ok: true, value: { ...parsed.book, convention: "best_last" } };
 }
 
 // ---- adapter ----
@@ -207,18 +207,13 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
     const tick = clob?.tick ?? market.tick;
     const minSize = clob?.minSize ?? market.minSize;
     const status = market.status;
-    const pm = marketFromSdk(
-      {
-        ...market,
-        rules,
-        tradable: { ok: reasons.length === 0, reasons },
-        tick,
-        ...(minSize === undefined ? {} : { minSize }),
-      },
-      fee.spec,
-    );
     return {
-      ...pm,
+      ...market,
+      rules,
+      tradable: { ok: reasons.length === 0, reasons },
+      tick,
+      ...(minSize === undefined ? {} : { minSize }),
+      fee: fee.spec,
       extras: {
         ruleFields,
         rulesHashRecipe: hashed ? "rules-v2" : null,
@@ -236,7 +231,7 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
     const skipped: Array<{ index: number; reason: string }> = [];
     rows.forEach(({ row, ctx }, index) => {
       const result = summarizeRow(row, ctx);
-      if (result.ok) items.push(summaryFromSdk(result.value));
+      if (result.ok) items.push(result.value);
       else skipped.push({ index, reason: result.reason });
     });
     if (rows.length > 0 && skipped.length === rows.length) throw drift("every market row on the page was refused");
@@ -298,8 +293,7 @@ export function createPolymarketAdapter(options: PolymarketAdapterOptions = {}):
       const wanted = q.statuses === undefined ? null : new Set<Status>(q.statuses);
       return {
         items: wanted === null ? items : items.filter((m) => wanted.has(m.status)),
-        hasNext: nextCursor !== undefined,
-        ...(nextCursor === undefined ? {} : { nextCursor }),
+        next: nextCursor ?? null,
         skipped,
       };
     },

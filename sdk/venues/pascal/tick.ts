@@ -1,4 +1,5 @@
 import type { Dec, TickRanges } from "../../model.js";
+import { atomicToDec, pow10 } from "../../money/decimal.js";
 
 // Pascal's tick (research 4, section 2): `tick = max(10^(p_sigs - sig_figs), tick_size_min)` with
 // `p' = min(p, 1 - p)` and `p_sigs` the number of digits left of the first significant figure of p' (0.15 has
@@ -9,11 +10,6 @@ import type { Dec, TickRanges } from "../../model.js";
 // the grid (tick.test.ts).
 
 const ONE = 1_000_000n;
-const POW10: bigint[] = [1n];
-function pow10(n: number): bigint {
-  while (POW10.length <= n) POW10.push((POW10[POW10.length - 1] ?? 1n) * 10n);
-  return POW10[n] ?? 1n;
-}
 
 function digitsOf(value: bigint): number {
   return value.toString().length;
@@ -35,10 +31,7 @@ export function isOnGrid(priceMicro: bigint, sigFigs: number, minMicro: bigint):
 }
 
 function decOfMicro(value: bigint): Dec {
-  const digits = value.toString().padStart(7, "0");
-  const whole = digits.slice(0, digits.length - 6);
-  const fraction = digits.slice(digits.length - 6).replace(/0+$/, "");
-  return fraction === "" ? whole : `${whole}.${fraction}`;
+  return atomicToDec(value, 6);
 }
 
 interface Segment {

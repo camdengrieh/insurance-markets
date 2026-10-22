@@ -2,7 +2,7 @@
 // invented labels. Nothing here is a real market or a real human label.
 
 import { synthSha } from "./fixtures.js";
-import type { GoldLabel, GoldSet, GoldSplit, Prediction, PredictionsFile } from "../../links/goldset/format.js";
+import type { GoldLabel, GoldSet, GoldSplit, Prediction, PredictionsFile } from "../../../sdk/links/goldset/format.js";
 import type { DivergenceAxis, Relation } from "../../links/schema.js";
 
 export const FREEZE_AT = "2026-10-18T00:00:00Z";

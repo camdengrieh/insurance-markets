@@ -213,7 +213,7 @@ export function createXoAdapter(deps: AdapterDeps, options: XoAdapterOptions): X
       const book = decodeOr(() => decodeBook(json, tokenId));
       if (book.bids.length === 0 && book.asks.length === 0) return { ok: false, error: "EMPTY_BOOK" };
       // A crossed or locked book (best bid at or above best ask) is never a state the matching engine leaves behind:
-      // it is corrupt or mid-update, so it is refused rather than shown or priced (pm/core/books.ts refuses it too).
+      // it is corrupt or mid-update, so it is refused rather than shown or priced (sdk/engine/books.ts refuses it too).
       const bestBid = book.bids[0];
       const bestAsk = book.asks[0];
       if (bestBid !== undefined && bestAsk !== undefined && bestBid.priceMicro >= bestAsk.priceMicro) return { ok: false, error: "SCHEMA_DRIFT" };

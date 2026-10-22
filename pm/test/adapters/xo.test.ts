@@ -3,7 +3,8 @@ import { describe, it } from "node:test";
 
 import { AdapterFailure, createXoAdapter, xoStatusOf } from "../../adapters/index.js";
 import { canonicalizeRecord } from "../../links/hash.js";
-import { checkFeeSpec } from "../../core/fees.js";
+import { checkFeeSpec } from "../../../sdk/engine/fees.js";
+import { feeSpecId } from "../../../sdk/engine/fee-specs.js";
 import type { PmVenueAdapter } from "../../adapters/types.js";
 import { NOW, fast, nowMs, patch, route, stubFetch, xoFixture, type Route } from "./helpers.js";
 
@@ -67,11 +68,11 @@ describe("xo adapter: getMarket", () => {
     const { adapter } = adapterFor(marketRoutes());
     const m = await adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
     assert.equal(m.fee.modelId, "curve_pq");
-    assert.equal(m.fee.id, "xo:curve_pq");
-    assert.deepEqual(m.fee.taker, { values: { bps: "400" } });
-    assert.deepEqual(m.fee.maker, { values: { bps: "0" } });
+    assert.equal(feeSpecId(m.fee), "xo:curve_pq");
+    assert.deepEqual(m.fee.taker, { bps: "400" });
+    assert.deepEqual(m.fee.maker, { bps: "0" });
     assert.ok(m.extras.warnings.some((w) => w.includes("disagree")));
-    // The spec is usable by pm/core while fresh.
+    // The spec is usable by the engine while fresh.
     assert.equal(checkFeeSpec(m.fee, NOW).ok, true);
   });
 
@@ -231,7 +232,7 @@ describe("xo adapter: getMarket", () => {
     const before = calls.length;
     const spec = await adapter.getFeeSpec(m);
     assert.ok(calls.length > before);
-    assert.equal(spec.id, "xo:curve_pq");
+    assert.equal(feeSpecId(spec), "xo:curve_pq");
   });
 });
 
@@ -311,8 +312,7 @@ describe("xo adapter: listMarkets", () => {
     const withNext = patch(listFixture, [["meta", "hasNextPage"], true]);
     const { adapter, calls } = adapterFor([route(DATA, "/api/markets", withNext)]);
     const page = await adapter.listMarkets({ limit: 50, cursor: "2" });
-    assert.equal(page.hasNext, true);
-    assert.equal(page.nextCursor, "3");
+    assert.equal(page.next, "3");
     assert.ok(page.items.length > 0);
     assert.ok(page.items.every((m) => m.ref.venue === "xo" && /^0x[0-9a-f]{64}$/.test(m.ref.marketId)));
     const q = Object.fromEntries(calls[0]!.url.searchParams);
@@ -325,8 +325,7 @@ describe("xo adapter: listMarkets", () => {
   it("stops at the last page", async () => {
     const last = patch(listFixture, [["meta", "hasNextPage"], false]);
     const page = await adapterFor([route(DATA, "/api/markets", last)]).adapter.listMarkets({});
-    assert.equal(page.hasNext, false);
-    assert.equal(page.nextCursor, undefined);
+    assert.equal(page.next, null);
   });
 
   it("clamps the page size to 50, passes search through and refuses a bad cursor or status", async () => {

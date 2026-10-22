@@ -134,6 +134,7 @@ const MAX_COEFFICIENT = parseQty("price", "0.25") as Qty;
 
 export function feeSpecOf(market: NovigMarket, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
+    venue: "novig",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${NOVIG_API_BASE}/catalog/markets/${market.marketId}`, field: "fee.coefficient", granularity: "market" },
@@ -145,6 +146,7 @@ export function feeSpecOf(market: NovigMarket, nowMs: number): FeeSpec {
   const coefficient = parseQty("price", fee.coefficient, { maxScale: 6 });
   if (coefficient === null || coefficient.atomic < 0n || cmpQty(coefficient, MAX_COEFFICIENT) > 0) return unknown;
   return {
+    venue: "novig",
     modelId: "curve_pq",
     // Fee = c * P * (1 - P) * N, taker only. The maker never pays (maker credit is a separate rebate).
     taker: { rate: toDec(coefficient) },

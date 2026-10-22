@@ -9,9 +9,11 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { buildBundle } from "../../links/bundle.js";
 import { emptyRegistry } from "../../links/store.js";
-import { appCanonicalJson, serializeAppDataset, toAppDataset } from "../../linker/app-dataset.js";
-import { groupCandidates, proposeAll, scoreCandidates } from "../../linker/candidates.js";
-import { buildFeatures, featureKey, type FeatureInput, type MarketFeatures } from "../../linker/features.js";
+import { canonicalJson } from "../../../sdk/hash.js";
+import { groupCandidates, scoreCandidates } from "../../../sdk/linker/candidates.js";
+import { buildFeatures, featureKey, type FeatureInput, type MarketFeatures } from "../../../sdk/linker/features.js";
+import { serializeAppDataset, toAppDataset } from "../../linker/app-dataset.js";
+import { proposeAll } from "../../linker/candidates.js";
 import { identityCandidate, leg, propose } from "../links/fixtures.js";
 import { REPO, syntheticHex } from "./helpers.js";
 
@@ -82,10 +84,10 @@ test("the export maps relation, proof, state, basis, band and category into the 
   assert.ok(timing);
   assert.deepEqual(timing.basis.axes, ["timing"]);
   assert.equal(dataset.rulesRecipe, "rules-v2");
-  // The pin is sha256 over the app's canonical JSON of {schemaVersion, release, links}.
-  const expected = createHash("sha256").update(appCanonicalJson({ schemaVersion: 1, release: dataset.release, links: dataset.links }), "utf8").digest("hex");
+  // The pin is sha256 over the SDK's canonical JSON of {schemaVersion, release, links}.
+  const expected = createHash("sha256").update(canonicalJson({ schemaVersion: 1, release: dataset.release, links: dataset.links }), "utf8").digest("hex");
   assert.equal(dataset.contentSha256, expected);
-  assert.equal(appCanonicalJson({ b: 1, a: [{ d: 1, c: 2 }] }), '{"a":[{"c":2,"d":1}],"b":1}');
+  assert.equal(canonicalJson({ b: 1, a: [{ d: 1, c: 2 }] }), '{"a":[{"c":2,"d":1}],"b":1}');
 });
 
 test("synthetic, restricted, wide and long links are left out by name", () => {

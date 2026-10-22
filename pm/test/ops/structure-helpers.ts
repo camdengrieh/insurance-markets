@@ -1,6 +1,6 @@
 // Builders shared by the pm_check_structure tests. Not a test file.
-import type { FeeSource } from "../../core/fee-specs.js";
-import { polymarketFeeSpec } from "../../core/fee-specs.js";
+import type { FeeSource } from "../../../sdk/engine/fee-specs.js";
+import { polymarketFeeSpec } from "../../../sdk/engine/fee-specs.js";
 import { ratFromDec, mul, neg, ratToDec, type Rational } from "../../core/rational.js";
 import type { Book, Exhaustive, FeeSpec, GroupKind, Status, VenueId } from "../../types.js";
 import { untrusted } from "../../types.js";

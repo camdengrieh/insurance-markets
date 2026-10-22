@@ -1,53 +1,21 @@
 // Loading the bundled link dataset, and the lookups over it.
 //
 // The linker's export-app step writes `src/features/signals/data/links.json` (docs/linker-runbook.md); a build that
-// has the file bundles it, and a build without one answers "absent" and every screen says "no links". A file that is present but invalid, or whose content hash does not match, is REJECTED (never
-// partially used), and the screen says that too.
+// has the file bundles it, and a build without one answers "absent" and every screen says "no links". A file that is
+// present but invalid, or whose content hash does not match, is REJECTED (never partially used), and the screen says
+// that too.
 
-import { sha256, toBytes } from "viem";
-
+import { NO_LINK_DATASET, parseLinkDataset, type LinkLoad } from "@sdk/links/dataset";
 import { RULES_HASH_RECIPE } from "@sdk/rules";
 
 import type { VenueId } from "../../../core/ports";
-import { linkDatasetSchema, type Link, type LinkDataset, type LinkLeg, type LinkProof, type LinkState } from "./schema";
+import type { Link, LinkDataset, LinkLeg, LinkProof, LinkState } from "./schema";
 
-export type DatasetRejection = "not_an_object" | "schema" | "hash_mismatch";
-
-export type LinkLoad =
-  | { readonly state: "absent" }
-  | { readonly state: "loaded"; readonly dataset: LinkDataset }
-  | { readonly state: "rejected"; readonly reason: DatasetRejection };
-
-export const NO_LINK_DATASET: LinkLoad = Object.freeze({ state: "absent" as const });
-
-// JSON with object keys sorted at every level, so the same content always hashes the same way.
-export function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  const record = value as Record<string, unknown>;
-  return `{${Object.keys(record)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-    .join(",")}}`;
-}
-
-export function contentHash(parts: { readonly schemaVersion: 1; readonly release: string; readonly links: readonly Link[] }): string {
-  const text = canonicalJson({ schemaVersion: parts.schemaVersion, release: parts.release, links: parts.links });
-  return sha256(toBytes(text)).slice(2);
-}
-
-// For the offline compile step that publishes links.json: adds the pin. The page never calls it on data it loads.
-export function pinDataset(parts: { readonly schemaVersion: 1; readonly release: string; readonly links: readonly Link[] }): LinkDataset {
-  return { schemaVersion: parts.schemaVersion, release: parts.release, links: [...parts.links], contentSha256: contentHash(parts) };
-}
-
-export function parseLinkDataset(raw: unknown): LinkLoad {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { state: "rejected", reason: "not_an_object" };
-  const parsed = linkDatasetSchema.safeParse(raw);
-  if (!parsed.success) return { state: "rejected", reason: "schema" };
-  if (contentHash(parsed.data) !== parsed.data.contentSha256) return { state: "rejected", reason: "hash_mismatch" };
-  return { state: "loaded", dataset: parsed.data };
-}
+// The pin and the parser are the SDK's (sdk/links/dataset.ts), shared with the linker's export: sha256 over the
+// canonical JSON (sdk/hash.ts) of {schemaVersion, release, links}, and a dataset that fails the schema or the pin is
+// rejected whole.
+export { canonicalJson } from "@sdk/hash";
+export { datasetContentHash as contentHash, NO_LINK_DATASET, parseLinkDataset, pinDataset, type DatasetRejection, type LinkLoad } from "@sdk/links/dataset";
 
 // Vite replaces this with the bundled module when the file exists and with an empty record when it does not.
 // The path is the one the linker's export-app step writes (BUNDLED_LINKS_PATH, pinned by a test against the runbook).

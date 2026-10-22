@@ -2,6 +2,7 @@
 // its own stored vocabulary (canonical decimal strings, fixed status codes, sorted and truncated book sides) before
 // storage. Venue payloads themselves are never read here; no free text (titles, descriptions, rules) is ever kept.
 
+import { canonicalDec, compareDecimal } from "../../../sdk/money/decimal.js";
 import type { Status } from "../../../sdk/model.js";
 import type { BookFlag, BookLevelPair, MarketStatusCode } from "../types.js";
 
@@ -17,10 +18,8 @@ export function canonDec(input: unknown): string | null {
   else if (typeof input === "number" && Number.isFinite(input)) text = String(input);
   else return null;
   if (!/^\d{1,30}(\.\d{1,30})?$/.test(text)) return null;
-  const [intPart = "0", frac = ""] = text.split(".");
-  const i = intPart.replace(/^0+(?=\d)/, "");
-  const f = frac.replace(/0+$/, "");
-  return f === "" ? i : `${i}.${f}`;
+  // Leading zeros are the one form a venue sends that the shared grammar refuses; drop them, then canonicalise there.
+  return canonicalDec(text.replace(/^0+(?=\d)/, ""));
 }
 
 // Strictly between 0 and 1, canonical.
@@ -29,16 +28,11 @@ export function canonPrice(input: unknown): string | null {
   return d !== null && /^0\.\d+$/.test(d) ? d : null;
 }
 
-function scaled(d: string, places: number): bigint {
-  const [i = "0", f = ""] = d.split(".");
-  return BigInt(i + f.padEnd(places, "0"));
-}
-
+// Both sides are canonDec output; anything else is a programming error, not data.
 export function cmpDec(a: string, b: string): -1 | 0 | 1 {
-  const places = Math.max(a.split(".")[1]?.length ?? 0, b.split(".")[1]?.length ?? 0);
-  const x = scaled(a, places);
-  const y = scaled(b, places);
-  return x < y ? -1 : x > y ? 1 : 0;
+  const order = compareDecimal(a, b);
+  if (order === null) throw new RangeError("cmpDec needs canonical decimals");
+  return order;
 }
 
 export function isoToMs(input: unknown): number | null {

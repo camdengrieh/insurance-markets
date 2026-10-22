@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildFeatures, datesOf, entitiesOf, normaliseNumber, numbersOf, numbersOutsideDates, toUtcStamp, tokensOf } from "../../linker/features.js";
+import { buildFeatures, datesOf, entitiesOf, normaliseNumber, numbersOf, numbersOutsideDates, toUtcStamp, tokensOf } from "../../../sdk/linker/features.js";
 
 test("numbers normalise so the same amount written differently hashes alike", () => {
   assert.equal(normaliseNumber("80,000", undefined), "80000");

@@ -4,7 +4,10 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { canonicalJson, canonicalPretty } from "../links/canonical.js";
+import { buildBlocks, pairsOf } from "../../sdk/linker/block.js";
+import { groupCandidates, scoreCandidates } from "../../sdk/linker/candidates.js";
+import { featureKey, toUtcStamp } from "../../sdk/linker/features.js";
+import { canonicalJson, canonicalPretty } from "../../sdk/hash.js";
 import { buildBundle, serializeBundle, validateBundle, type Bundle } from "../links/bundle.js";
 import { nodeFileEnv, readRegistry, writeRegistry } from "../links/registry-file.js";
 import type { Registry } from "../links/store.js";
@@ -14,11 +17,9 @@ import type { PoliteClient } from "../recorder/http.js";
 import type { EnvLike } from "../signals/flag.js";
 import type { ParseKind } from "../signals/parse.js";
 import { assertPersistable, isLinkerVenue, type LinkerVenue } from "./allowlist.js";
-import { buildBlocks, pairsOf } from "./block.js";
-import { groupCandidates, proposeAll, retireStale, scoreCandidates } from "./candidates.js";
+import { proposeAll, retireStale } from "./candidates.js";
 import { BUNDLE_FILE, GROUPS_FILE, PIN_FILE, STATE_FILE } from "./constants.js";
 import { discover, type DiscoverOptions } from "./discover.js";
-import { featureKey, toUtcStamp } from "./features.js";
 import { quotientLines } from "./quotient.js";
 import { runReportLines } from "./report.js";
 import { readState, writeState, type LinkerState, type RunSummary, type StoredMarket } from "./state.js";

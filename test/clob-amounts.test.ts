@@ -27,7 +27,7 @@ describe("prices on the tick grid", () => {
     assert.equal(parseClobPriceMicro("0.5", CENT), 500_000n);
     assert.equal(parseClobPriceMicro("0.525", MIL), 525_000n);
     assert.equal(code(() => parseClobPriceMicro("0.525", CENT)), "invalid_price", "three places on a two-place grid");
-    assert.equal(code(() => parseClobPriceMicro("0.5250", MIL)), "ok", "trailing zeros do not count as places");
+    assert.equal(code(() => parseClobPriceMicro("0.5250", MIL)), "invalid_price", "trailing zeros count as places (sdk/money/decimal.ts)");
     assert.equal(code(() => parseClobPriceMicro("0.0025", { tick: "0.005", priceDecimals: 4 })), "invalid_price", "not a whole multiple of the tick");
     assert.equal(parseClobPriceMicro("0.0025", { tick: "0.0025", priceDecimals: 4 }), 2_500n);
   });

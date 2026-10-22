@@ -302,7 +302,7 @@ export function createNovigAdapter(deps: AdapterDeps, options: NovigOptions = {}
     } catch (error) {
       // Unknown parameters fail closed: a spec that says "unknown", never a guessed fee. A pause is still a pause.
       if (isAdapterFailure(error) && (error.code === "RATE_LIMITED" || error.code === "VENUE_PAUSED")) throw error;
-      return { modelId: "unknown", payer: "buyer_adds_seller_withholds", paramsSource: { url: `${NOVIG_API_BASE}/catalog/markets/${market.ref.marketId}`, field: "fee.coefficient", granularity: "market" }, verifiedAt: new Date(deps.nowMs()).toISOString(), ttlSec: 0 };
+      return { venue: "novig", modelId: "unknown", payer: "buyer_adds_seller_withholds", paramsSource: { url: `${NOVIG_API_BASE}/catalog/markets/${market.ref.marketId}`, field: "fee.coefficient", granularity: "market" }, verifiedAt: new Date(deps.nowMs()).toISOString(), ttlSec: 0 };
     }
   }
 

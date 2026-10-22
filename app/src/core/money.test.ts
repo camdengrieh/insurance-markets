@@ -61,14 +61,15 @@ describe("parseQty", () => {
     expect(parseQty("usd", 5)).toBeNull();
     expect(parseQty("usd", null)).toBeNull();
     expect(parseQty("usd", undefined)).toBeNull();
-    expect(parseQty("usd", "1".repeat(101))).toBeNull();
+    expect(parseQty("usd", "1".repeat(41))).toBeNull();
   });
 
   it("refuses a negative number unless asked, and refuses more places than the limit", () => {
     expect(parseQty("usd", "-1")).toBeNull();
     expect(parseQty("usd", "0.1234567", { maxScale: 6 })).toBeNull();
-    // Extra trailing zeros are exact, so they are fine.
-    expect(toDec(parseQty("usd", "0.1234560", { maxScale: 6 }) as Qty)).toBe("0.123456");
+    // Trailing zeros count as places (the shared grammar, sdk/money/decimal.ts): "0.1234560" carries seven.
+    expect(parseQty("usd", "0.1234560", { maxScale: 6 })).toBeNull();
+    expect(toDec(parseQty("usd", "0.123450", { maxScale: 6 }) as Qty)).toBe("0.12345");
     expect(parseQty("usd", `0.${"1".repeat(19)}`)).toBeNull();
   });
 

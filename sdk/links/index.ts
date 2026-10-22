@@ -1,0 +1,32 @@
+// Barrel for the pure link registry: record schema, tier caps, invariants, the working-registry store,
+// the pinned bundle, lookup, pin checks and the gold-set tooling. approve.ts is imported by path on
+// purpose: approval is a human command (pm/links/cli.ts), so its function is not part of the general
+// surface. types.ts (the engine's view of a link) and dataset.ts (the dApp's published dataset) are
+// imported by path too, since their names overlap the record schema's.
+export * from "./schema.js";
+export * from "./tier.js";
+export * from "./invariants.js";
+// replaceLink is deliberately not re-exported: it writes any link state without the approval
+// checks, so only approve.ts and store.ts itself may use it.
+export {
+  EVENT_ACTIONS,
+  REGISTRY_FORMAT,
+  emptyRegistry,
+  eventSchema,
+  findLink,
+  pairConflicts,
+  parseRegistry,
+  proposeLink,
+  registrySchema,
+  revokeLink,
+  suspendLink,
+  vetoLink,
+  type Outcome,
+  type Proposer,
+  type Registry,
+  type RegistryEvent,
+} from "./store.js";
+export * from "./bundle.js";
+export * from "./lookup.js";
+export * from "./pins.js";
+export * as goldset from "./goldset/index.js";

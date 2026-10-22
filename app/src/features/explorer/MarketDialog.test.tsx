@@ -319,7 +319,7 @@ describe("M0-3: rules, title and sources are inert", () => {
   });
 
   it("adapter reasons and fee lines that are not plain tokens are withheld", async () => {
-    const fee: FeeSpec = { modelId: "curve_pq", taker: { rate: "<img src=x>", bps: 400 }, payer: "buyer_adds_seller_withholds", paramsSource: { url: "u", field: "f", granularity: "market" }, verifiedAt: "2026-10-19", ttlSec: 60 };
+    const fee: FeeSpec = { venue: "polymarket", modelId: "curve_pq", taker: { rate: "<img src=x>", bps: "400" }, payer: "buyer_adds_seller_withholds", paramsSource: { url: "u", field: "f", granularity: "market" }, verifiedAt: "2026-10-19", ttlSec: 60 };
     const m = { ...market("polymarket", "m1", { fee }), tradable: { ok: false, reasons: ["<img src=x onerror=alert(1)>", "closed_by_venue"] } };
     const pm = fakeEntry("polymarket", { detail: detailOf(m), getBooks: okBooks });
     await mount(show("polymarket"), fakeServices([pm]));

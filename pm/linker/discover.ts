@@ -20,14 +20,14 @@
 
 import { NO_CATEGORY, type CategoryVerdict } from "../../sdk/category.js";
 import type { Market } from "../../sdk/model.js";
-import { limitlessRuleFields, polymarketRuleFields, xoLossyRuleRead, xoRuleFields, type RuleRecord } from "../../sdk/rules.js";
+import { sha256Hex } from "../../sdk/hash.js";
+import { buildFeatures, featureKey, toUtcStamp, type MarketFeatures } from "../../sdk/linker/features.js";
+import { marketId as marketIdSchema } from "../../sdk/links/schema.js";
+import { canonicalizeRecord, hashCanonical, limitlessRuleFields, polymarketRuleFields, xoLossyRuleRead, xoRuleFields, type RuleRecord } from "../../sdk/rules.js";
 import { marketOf as limitlessMarketOf, parseListBody } from "../../sdk/venues/limitless/index.js";
 import { normalizeMarket, parseGammaMarket, parseKeysetPage } from "../../sdk/venues/polymarket/index.js";
 import { decodeMarketDetail, decodeMarketPage } from "../../sdk/venues/xo/api/client.js";
 import { marketOf as xoMarketOf, statusOf as xoStatusOf, xoRootEventSlug } from "../../sdk/venues/xo/index.js";
-import { sha256Hex } from "../links/canonical.js";
-import { canonicalizeRecord, hashCanonical } from "../links/hash.js";
-import { marketId as marketIdSchema } from "../links/schema.js";
 import type { Clock } from "../recorder/clock.js";
 import type { PoliteClient } from "../recorder/http.js";
 import type { RequestSpec } from "../recorder/types.js";
@@ -44,7 +44,6 @@ import {
   XO_LIST_PAGES,
   XO_LIST_TAKE,
 } from "./constants.js";
-import { buildFeatures, featureKey, toUtcStamp, type MarketFeatures } from "./features.js";
 import type { StoredMarket } from "./state.js";
 
 export interface DiscoverOptions {

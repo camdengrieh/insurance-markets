@@ -11,7 +11,7 @@
 import { parseRetryAfterMs } from "../transport.js";
 import { AdapterException, isAdapterException } from "../errors.js";
 import { adapterErrorOfFetch, isFetchError } from "../transport.js";
-import { fromAtomic, parseQty, toDec, type Qty } from "../../money/qty.js";
+import { cmpQty, fromAtomic, parseQty, toDec, type Qty } from "../../money/qty.js";
 import type { AdapterDeps, AdapterError, Dec, VenueId } from "../../model.js";
 import { DEFAULT_SWITCHES, venueState, type BuildKind, type VenueSwitches } from "../policy.js";
 
@@ -196,8 +196,7 @@ export const ONE_PRICE: Qty = fromAtomic("price", 1n, 0);
 export function openUnitPrice(text: unknown, maxScale = 6): Qty | null {
   const price = parseQty("price", text, { maxScale });
   if (price === null || price.atomic <= 0n) return null;
-  // price < 1  <=>  atomic < 10^scale
-  if (price.atomic >= 10n ** BigInt(price.scale)) return null;
+  if (cmpQty(price, ONE_PRICE) >= 0) return null;
   return price;
 }
 

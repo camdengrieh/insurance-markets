@@ -10,6 +10,7 @@ import {
   normalizeBareAddress,
   normalizeConditionId,
   parseDecimalToMicro,
+  parseVenueDecimalToMicro,
   parseMicroInteger,
 } from "../src/xo/units.js";
 
@@ -31,8 +32,17 @@ describe("parseDecimalToMicro", () => {
     assert.equal(parseDecimalToMicro("9007199254740993"), 9_007_199_254_740_993_000_000n);
   });
 
-  it("accepts extra fractional digits only when they are zeros", () => {
-    assert.equal(parseDecimalToMicro("0.5340000"), 534_000n);
+  it("counts trailing zeros as places, so seven places is refused even when the extra digit is 0", () => {
+    assert.equal(parseDecimalToMicro("0.5340000"), null);
+    assert.equal(parseDecimalToMicro("0.534000"), 534_000n);
+  });
+
+  it("drops exact zero padding in an API payload value, but still refuses a real seventh place", () => {
+    assert.equal(parseVenueDecimalToMicro("0.5340000"), 534_000n);
+    assert.equal(parseVenueDecimalToMicro("12.500000000000000000"), 12_500_000n);
+    assert.equal(parseVenueDecimalToMicro("0.5340001"), null);
+    assert.equal(parseVenueDecimalToMicro("-0.5"), null);
+    assert.equal(parseVenueDecimalToMicro("05"), null);
   });
 
   it("rejects more than 6 real decimals instead of rounding", () => {

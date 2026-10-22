@@ -257,6 +257,40 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    disagree; Kalshi needs its full envelopes. Not merged yet: the money helpers (`qty.ts`, `rational.ts`, `dec.ts`
    and pm's own) and pm's book, fee, tick and page shapes, which move with the books and fee engine in step 4.
 4. **Move books, fees, depth walk, links and linker scoring** from `pm/core` and `pm/links` into `sdk/`.
+   *Done 2026-10-22.* Links: the link registry's pure logic is `sdk/links` (record schema, tier caps, invariants, store, bundle, lookup,
+   pin checks, the gold-set tooling, and `approve.ts`, still reached only from `pm/links/cli.ts`), and the linker's
+   scoring is `sdk/linker` (features, blocking, pair scores, candidate inputs, the dApp dataset export). The SDK holds
+   no platform registry, so which venues' terms allow keeping derived text is injected (`PersistenceTerms`);
+   `pm/links` binds its registry's time-independent `termsAllowPersistence` and keeps the CLI, the registry file
+   helpers and the shipped bundle, and `pm/linker` keeps discovery, state files, the run loop, the report and the
+   Quotient check. The engine's view of a link (`LinkRef`, `BasisAxis` and friends) is `sdk/links/types.ts`. The
+   dApp's `links.json` now has one contract, `sdk/links/dataset.ts`: the export checks each link against the schema
+   the page parses with and leaves out by name any link the page would refuse, and both ends pin with the SDK's
+   canonical JSON (which refuses non-integer numbers instead of serialising them).
+   Money: one decimal grammar, `sdk/money/decimal.ts`, now sits under `amount`, `fixed`, `rational`, `qty` and
+   `dec`, with one base-unit conversion, one comparison and one rounding (`roundDiv`); the XO read client, the
+   plugin's XO and CLOB amounts, the relay's book prices and balances, the dApp's tickets, the Quotient units and
+   pm's signal numbers call it instead of their own copies. Where copies disagreed the stricter won: trailing zeros
+   count as places ("0.5340000" is seven) in anything a caller types, text is at most 40 characters, and 1 - p is defined
+   for p in [0, 1] only. Values a venue sends are exact as written, so the XO read client and the recorder drop zero
+   padding before the place check (`parseVenueDecimalToMicro`, `canonDec`) and still refuse a real extra place.
+   Engine: the books and fee engine is `sdk/engine` (fee models, the per-venue `FeeSpec` builders, book normalisers,
+   the depth walk and quotes, the basket walk, relation checks, the exact LP, gates and labels), with its tests beside
+   it under the app's vitest; `pm/core/index.ts` re-exports it. pm's own read shapes are gone: `pm/types.ts`
+   re-exports `Market`, `MarketSummary`, `Book`, `Quote`, `FeeSpec`, `Tick`, `Page`, `Provenance` and the adapter
+   port from `sdk/model.ts`, the adapters return the SDK rows, and `pm/adapters/from-sdk.ts` is deleted. There is one
+   `FeeSpec`: it names its venue and model and carries named decimal parameters (`rate` or `bps`, never both,
+   `multiplier`, `exponent`, `buyBps`/`sellBps`, the `amm_stack` parts, `gas`); its id is derived, never stored
+   (`feeSpecId`, `venue:model`), so a spec built for one venue never passes the registry check as another's. A
+   `Book` carries its raw-order `convention` when the engine normalised it, and the engine re-sorts every book
+   either way; tick ranges name their step `tick`; pages give `next`, null at the end. Behaviour changes: the XO
+   reader states its fee once, in basis points as a decimal string (a `rate` beside it is ambiguous and the engine
+   refuses it), so the dApp no longer shows a separate XO rate line; the unused `min`/`max` fee parameters are gone;
+   `pm_get_quote` reports tick ranges as `{from, to, tick}`; and pm's markets now also carry the venue's untrusted
+   `categoryNative`. Not merged: the readers' rounding is prose ("ceil_6dp", "usd_cent_up") rather than the
+   engine's grammar ("ceil:6"), so the engine refuses to price a reader's own spec until each is restated from its
+   source; and `app/src/core/book.ts` stays, because it is display-side (it drops and counts bad levels, keeps a
+   venue's equal-price entries and flags a crossed book) where the engine fails closed.
 5. **Move the unsigned order builders** from `src/xo/signing` and `src/clob` into `sdk/trade`; the credentialed
    signers go to `sdk/node/`. The boundary check keeps forbidding `sdk/node/` to the page.
 6. **Build `sdk/chain/`.** Merge the two RPC ports, then add position, fill and resolution readers for

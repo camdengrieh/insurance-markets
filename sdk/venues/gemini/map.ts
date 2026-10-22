@@ -2,7 +2,7 @@ import { rulesFingerprintOfFields } from "../../rules.js";
 import { sha256, toBytes } from "viem";
 
 import { parseIsoMs } from "../../format.js";
-import { parseQty, toDec } from "../../money/qty.js";
+import { cmpQty, parseQty, toDec } from "../../money/qty.js";
 import type { Collateral, Dec, FeeSpec, Market, MarketGroup, MarketRef, MarketSummary, Outcome, OutcomeSummary, Rules, Status, VolumeUnit } from "../../model.js";
 import { safeHttpsUrl, untrustedField } from "../../text.js";
 import { makeProv } from "../policy.js";
@@ -174,7 +174,7 @@ export function quoteOf(contract: GeminiContract): GeminiQuote {
   const bid = openUnitPrice(prices?.bestBid, 4);
   const ask = openUnitPrice(prices?.bestAsk, 4);
   const last = openUnitPrice(prices?.lastTradePrice, 4);
-  const crossed = bid !== null && ask !== null && bid.atomic * 10n ** BigInt(ask.scale) >= ask.atomic * 10n ** BigInt(bid.scale);
+  const crossed = bid !== null && ask !== null && cmpQty(bid, ask) >= 0;
   return {
     tokenId: contract.instrumentSymbol,
     bid: crossed || bid === null ? null : toDec(bid),
@@ -235,6 +235,7 @@ export function isoOrNull(text: string | undefined): string | null {
 // unknown. The maker fee is currently waived by a promotion that is not in the API (see GEMINI_VERIFICATION).
 export function feeSpecOf(event: GeminiEvent, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
+    venue: "gemini",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${GEMINI_API_BASE}/events`, field: "documented fee schedule (not an API field)", granularity: "category" },
@@ -249,6 +250,7 @@ export function feeSpecOf(event: GeminiEvent, nowMs: number): FeeSpec {
     if (listed === null || listed < fromMs) return unknown;
   }
   return {
+    venue: "gemini",
     modelId: "curve_pq",
     taker: { rate: GEMINI_TAKER_COEFFICIENT },
     maker: { rate: GEMINI_MAKER_COEFFICIENT },
@@ -301,7 +303,7 @@ export function tickOf(event: GeminiEvent): Dec {
   for (const contract of event.contracts) {
     const tick = openUnitPrice(contract.priceIncrement, 6);
     if (tick === null) continue;
-    if (best === null || tick.atomic * 10n ** BigInt(best.scale) > best.atomic * 10n ** BigInt(tick.scale)) best = tick;
+    if (best === null || cmpQty(tick, best) > 0) best = tick;
   }
   return best === null ? "0" : toDec(best);
 }
@@ -311,7 +313,7 @@ export function minSizeOf(event: GeminiEvent): Dec | undefined {
   for (const contract of event.contracts) {
     const size = parseQty("shares", contract.quantityMinimum, { maxScale: 6 });
     if (size === null || size.atomic <= 0n) continue;
-    if (best === null || size.atomic * 10n ** BigInt(best.scale) > best.atomic * 10n ** BigInt(size.scale)) best = size;
+    if (best === null || cmpQty(size, best) > 0) best = size;
   }
   return best === null ? undefined : toDec(best);
 }

@@ -296,7 +296,8 @@ describe("the draft tool stays offline", () => {
   });
 
   it("imports only guardrail, config, zod and SDK modules", () => {
-    const allowed = /^(?:zod\/v4|@modelcontextprotocol\/server|\.\.\/config\.js|\.\.\/guardrails\/(?:amount|constants|untrusted)\.js|\.\.\/create\/lint\.js)$/;
+    // ../../sdk/money/decimal.js is the shared exact money core: pure, no I/O.
+    const allowed = /^(?:zod\/v4|@modelcontextprotocol\/server|\.\.\/config\.js|\.\.\/guardrails\/(?:amount|constants|untrusted)\.js|\.\.\/create\/lint\.js|\.\.\/\.\.\/sdk\/money\/decimal\.js)$/;
     for (const { path, source } of files) {
       for (const match of source.matchAll(/from "([^"]+)"/g)) {
         assert.match(match[1] ?? "", allowed, `${path} imports ${match[1]}`);

@@ -178,9 +178,10 @@ describe("fee spec", () => {
     const { adapter } = setup({ body: detailBody() });
     const market = await adapter.getMarket(refOf(FEE400));
     expect(market.fee).toEqual({
+      venue: "xo",
       modelId: "ad_valorem_bps",
-      taker: { bps: 400, rate: "0.04" },
-      maker: { bps: 0, rate: "0" },
+      taker: { bps: "400" },
+      maker: { bps: "0" },
       rounding: "ceil",
       payer: "buyer_adds_seller_withholds",
       paramsSource: { url: `https://api-mainnet.xo.market/api/markets/contract/${FEE400}`, field: "effectiveFeeConfig.takerFeeBps", granularity: "market" },
@@ -244,7 +245,7 @@ describe("fee spec", () => {
     const { adapter } = setup({ body }, body.conditionId as string);
     const market = await adapter.getMarket(refOf(body.conditionId as string));
     expect(market.fee.modelId).toBe("ad_valorem_bps");
-    expect(market.fee.taker).toEqual({ bps: 0, rate: "0" });
+    expect(market.fee.taker).toEqual({ bps: "0" });
   });
 });
 

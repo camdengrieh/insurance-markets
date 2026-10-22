@@ -237,6 +237,7 @@ export function volumeOf(market: OgMarket, tickers: ReadonlyMap<string, OgTicker
 // date and expires, and the customer's region is unknown to this app, so it is stated as the US schedule.
 export function feeSpecOf(market: OgMarket, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
+    venue: "og",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${OG_PUBLIC_PATH}/get-instruments`, field: "help-centre fee table (not an API field)", granularity: "category" },
@@ -248,6 +249,7 @@ export function feeSpecOf(market: OgMarket, nowMs: number): FeeSpec {
   const category = metaOf(first(market), "PREDICT_CATEGORY");
   if (category === undefined || OG_FLAT_FEE_CATEGORIES.includes(category.toLowerCase())) return unknown;
   return {
+    venue: "og",
     modelId: "curve_pq",
     taker: { rate: OG_TAKER_COEFFICIENT },
     maker: { rate: OG_MAKER_COEFFICIENT },

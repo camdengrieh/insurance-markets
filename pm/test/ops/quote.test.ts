@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { unknownFeeSpec } from "../../core/fee-specs.js";
+import { unknownFeeSpec } from "../../../sdk/engine/fee-specs.js";
 import { getQuote, type QuoteResult } from "../../ops/quote.js";
 import {
   FEE_SOURCE,
@@ -390,12 +390,12 @@ test("FM-4: a walked price off the tick grid is not executable; ranged ticks use
   assert.equal(on.flags.includes("price_off_tick"), false);
   assert.equal(on.executable, true);
   // 0.001 grid below 0.1 and 0.01 above: 0.095 is fine, 0.625 is not.
-  const ranged = [{ from: "0", to: "0.1", step: "0.001" }, { from: "0.1", to: "1", step: "0.01" }] as const;
+  const ranged = [{ from: "0", to: "0.1", tick: "0.001" }, { from: "0.1", to: "1", tick: "0.01" }] as const;
   const okLow = await ok({ ...BUY, size: "1" }, xoAdapter({ market: { venue: "xo", marketId: ID, fee: xoSpec(), tick: ranged }, bids: [["0.05", "100"]], asks: [["0.095", "100"]] }));
   assert.equal(okLow.flags.includes("price_off_tick"), false);
   const badHigh = await ok({ ...BUY, size: "1" }, xoAdapter({ market: { venue: "xo", marketId: ID, fee: xoSpec(), tick: ranged }, asks: [["0.625", "100"]] }));
   assert.ok(badHigh.flags.includes("price_off_tick"));
-  const outside = await ok({ ...BUY, size: "1" }, xoAdapter({ market: { venue: "xo", marketId: ID, fee: xoSpec(), tick: [{ from: "0", to: "0.5", step: "0.01" }] }, asks: [["0.62", "100"]] }));
+  const outside = await ok({ ...BUY, size: "1" }, xoAdapter({ market: { venue: "xo", marketId: ID, fee: xoSpec(), tick: [{ from: "0", to: "0.5", tick: "0.01" }] }, asks: [["0.62", "100"]] }));
   assert.ok(outside.flags.includes("price_off_tick"), "a price outside every range has no grid");
 });
 

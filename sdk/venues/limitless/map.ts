@@ -217,6 +217,7 @@ export function rulesOf(row: LimitlessRow): Rules {
 
 export function unknownFee(origin: string, slug: string, nowMs: number): FeeSpec {
   return {
+    venue: "limitless",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${origin}/markets/${slug}`, field: "metadata.fee", granularity: "market" },

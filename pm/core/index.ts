@@ -1,14 +1,6 @@
-// Barrel for pm/core: pure, offline, exact-arithmetic logic. No I/O, no network, no clock
-// (callers inject `nowMs`), no floating point.
+// Barrel for pm/core. The books and fee engine lives in the SDK (sdk/engine); the rationals and the category
+// matcher are SDK modules re-exported by the two files left here. No I/O, no network, no clock (callers inject
+// `nowMs`), no floating point.
+export * from "../../sdk/engine/index.js";
 export * from "./rational.js";
-export * from "./fees.js";
-export * from "./fee-specs.js";
-export * from "./books.js";
-export * from "./walk.js";
-export * from "./basket.js";
-export * from "./depth.js";
-export * from "./edge.js";
-export * from "./relations.js";
-export * from "./lp.js";
-export * from "./labels.js";
 export * from "./category.js";

@@ -62,7 +62,7 @@ import {
   sportsSignalSchema,
   standardSignalSchema,
 } from "./schemas.js";
-import { nonNegativeDec, probability, within } from "./units.js";
+import { absDiff, nonNegativeDec, probability, within } from "./units.js";
 
 // Raw (hostile, unversioned) JSON -> QuotientRow. The one validator of a Quotient body: the dApp's Signals screen
 // and pm's signal tools both read through it, and neither fetches here. Fail closed per row: a row with an unknown
@@ -337,7 +337,7 @@ function mispricedRow(raw: unknown, ctx: IngestContext): QuotientRow {
   if (!same(qYes.qty, quotientOdds.qty)) throw new Refuse("inconsistent", "quotient_odds");
   if (read?.selected != null && !same(read.selected, marketOdds.qty)) throw new Refuse("inconsistent", "market_odds");
   // The spread is Quotient's own rounding of |q - market|; the direction is the sign of q - market.
-  const gap = absGap(quotientOdds.qty, marketOdds.qty);
+  const gap = absDiff(quotientOdds.qty, marketOdds.qty);
   if (!within(spread.qty, gap, CONSISTENCY_TOLERANCE)) throw new Refuse("inconsistent", "spread");
   const order = cmpQty(quotientOdds.qty, marketOdds.qty);
   if (order !== 0 && (direction === "q_higher") !== (order > 0)) throw new Refuse("inconsistent", "spread_direction");
@@ -371,14 +371,6 @@ function mispricedRow(raw: unknown, ctx: IngestContext): QuotientRow {
     orientation: isSports ? sportsOrientation(yesSide) : orientationOfStandard(venue, qYes.qty, null),
     prov: provFor(ctx, venue, read?.view ?? null),
   };
-}
-
-function absGap(a: Qty, b: Qty): Qty {
-  const scale = Math.max(a.scale, b.scale);
-  const left = a.atomic * 10n ** BigInt(scale - a.scale);
-  const right = b.atomic * 10n ** BigInt(scale - b.scale);
-  const diff = left >= right ? left - right : right - left;
-  return { unit: "price", atomic: diff, scale };
 }
 
 // ---- signals ---------------------------------------------------------------------------------------------------------------

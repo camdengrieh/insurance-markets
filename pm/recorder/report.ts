@@ -10,11 +10,11 @@
 // Exactness: all prices, sizes and edges are rationals (pm/core/rational.ts); the output is
 // decimal strings. Pairing tolerance, intervals and gaps are the only plain numbers (times).
 
-import { walkPair, walkPartitionLong, walkPartitionShort, type BookLeg, type DepthParams } from "../core/depth.js";
-import { DEFAULTS, lockRate } from "../core/edge.js";
-import { polymarketFeeSpec, unknownFeeSpec, xoFeeSpec, type FeeSource } from "../core/fee-specs.js";
-import { haircutForBasis } from "../core/labels.js";
-import type { ParsedBook, ParsedLevel } from "../core/books.js";
+import { walkPair, walkPartitionLong, walkPartitionShort, type BookLeg, type DepthParams } from "../../sdk/engine/depth.js";
+import { DEFAULTS, lockRate } from "../../sdk/engine/edge.js";
+import { polymarketFeeSpec, unknownFeeSpec, xoFeeSpec, type FeeSource } from "../../sdk/engine/fee-specs.js";
+import { haircutForBasis } from "../../sdk/engine/labels.js";
+import type { ParsedBook, ParsedLevel } from "../../sdk/engine/books.js";
 import {
   ONE,
   ZERO,
@@ -28,6 +28,7 @@ import {
   type Rational,
 } from "../core/rational.js";
 import type { BasisAxis, BasisClass, Exhaustive, FeeSpec, VenueId } from "../types.js";
+import type { RecVenue } from "./allowlist.js";
 import type { RecorderConfig } from "./config.js";
 import { detectGaps, thresholdMs } from "./gaps.js";
 import { countDist, dist, episodes, type CountDist, type Dist } from "./stats.js";
@@ -171,7 +172,7 @@ function feeSource(venue: string, atMs: number, ttlSec: number): FeeSource {
   };
 }
 
-export function feeSpecFor(venue: string, fee: FeeRecord, atMs: number, ttlSec: number): FeeSpec {
+export function feeSpecFor(venue: RecVenue, fee: FeeRecord, atMs: number, ttlSec: number): FeeSpec {
   const source = feeSource(venue, atMs, ttlSec);
   if (venue === "xo" && fee.model === "xo_effective" && fee.params["takerBps"] !== undefined) {
     return xoFeeSpec({ takerBps: fee.params["takerBps"], ...(fee.params["makerBps"] === undefined ? {} : { makerBps: fee.params["makerBps"] }), source });
@@ -187,7 +188,7 @@ export function feeSpecFor(venue: string, fee: FeeRecord, atMs: number, ttlSec: 
 
 interface Series {
   readonly key: string;
-  readonly venue: string;
+  readonly venue: RecVenue;
   readonly snaps: readonly SnapshotRow[];
   readonly states: readonly (MarketStateRow & { readonly id: number })[];
 }

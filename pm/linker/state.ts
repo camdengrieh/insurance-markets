@@ -3,12 +3,12 @@
 // or Quotient key can never reach this file (pm/test/linker/state.test.ts proves it).
 
 import { existsSync, readFileSync } from "node:fs";
-import { canonicalPretty } from "../links/canonical.js";
+import type { MarketFeatures } from "../../sdk/linker/features.js";
+import { canonicalPretty } from "../../sdk/hash.js";
 import { writeAtomic } from "../recorder/discover.js";
 import { isRecord } from "../recorder/venues/common.js";
 import { assertPersistable, isLinkerVenue } from "./allowlist.js";
 import { MAX_RUNS_KEPT } from "./constants.js";
-import type { MarketFeatures } from "./features.js";
 
 export const STATE_FORMAT = "pm-linker-state";
 

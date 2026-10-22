@@ -22,12 +22,13 @@
 
 import * as z from "zod/v4";
 import { UNTRUSTED_DATA_NOTICE, type UntrustedContent } from "../../src/guardrails/untrusted.js";
-import { levelEdge, repriceOrders, type LevelEdge } from "../core/basket.js";
-import { parseBook, type ParsedBook } from "../core/books.js";
-import { walkImplication } from "../core/depth.js";
-import { DEFAULTS, lockRate } from "../core/edge.js";
-import { checkFeeSpec } from "../core/fees.js";
-import { assignLabel, haircutForBasis, type BasisInfo } from "../core/labels.js";
+import { levelEdge, repriceOrders, type LevelEdge } from "../../sdk/engine/basket.js";
+import { parseBook, type ParsedBook } from "../../sdk/engine/books.js";
+import { walkImplication } from "../../sdk/engine/depth.js";
+import { DEFAULTS, lockRate } from "../../sdk/engine/edge.js";
+import { checkFeeSpec } from "../../sdk/engine/fees.js";
+import { feeSpecId } from "../../sdk/engine/fee-specs.js";
+import { assignLabel, haircutForBasis, type BasisInfo } from "../../sdk/engine/labels.js";
 import {
   ZERO,
   add,
@@ -42,13 +43,13 @@ import {
   type Rational,
   type SDec,
 } from "../core/rational.js";
-import { walkBook } from "../core/walk.js";
+import { walkBook } from "../../sdk/engine/walk.js";
 import type { Bundle } from "../links/bundle.js";
 import { lookupLinks, type LookupItem } from "../links/lookup.js";
 import { UNPRICED_AXES, type DivergenceAxis, type Link, type Tier } from "../links/schema.js";
 import type { ClassGates } from "../links/tier.js";
 import type { Outcome } from "../links/store.js";
-import { VENUE_IDS, type BasisAxis, type Market, type OutcomeRef, type Status, type VenueId } from "../types.js";
+import { VENUE_IDS, isVenueId, type BasisAxis, type Market, type OutcomeRef, type Status, type VenueId } from "../types.js";
 import {
   FUTURE_SKEW_MS,
   QUOTE_VALID_MS,
@@ -322,16 +323,16 @@ export function basisInfoOf(link: Pick<Link, "basis">): BasisInfo | undefined {
 // ---------------------------------------------------------------------------------------------
 // Pricing
 
-function view(book: ParsedBook, market: Market, outcome: OutcomeRef, hash: string, nowMs: number, ctx: OpsContext): BookView {
+function view(book: ParsedBook, market: Market, venue: VenueId, outcome: OutcomeRef, hash: string, nowMs: number, ctx: OpsContext): BookView {
   const levels = (ls: ParsedBook["bids"]): BookLevelView[] =>
     ls.slice(0, COMPARE_DEFAULTS.levelsShown).map((l) => ({ price: showRat(l.price), size: showRat(l.size) }));
   return {
-    venue: market.ref.venue,
+    venue,
     marketId: market.ref.marketId,
     outcome: {
       index: outcome.index,
       role: outcome.role,
-      label: untrustedSlot(market.ref.venue, "outcome", outcome.label.value),
+      label: untrustedSlot(venue, "outcome", outcome.label.value),
     },
     derived: book.derived,
     asOfMs: book.asOfMs,
@@ -339,8 +340,8 @@ function view(book: ParsedBook, market: Market, outcome: OutcomeRef, hash: strin
     bookSha256: hash,
     bids: levels(book.bids),
     asks: levels(book.asks),
-    feeSpecId: market.fee.id,
-    dataTerms: dataTermsOf(ctx, market.ref.venue),
+    feeSpecId: feeSpecId(market.fee),
+    dataTerms: dataTermsOf(ctx, venue),
   };
 }
 
@@ -641,11 +642,14 @@ async function compareLink(link: Link, item: LookupItem, env: LinkCompareEnv): P
   if (qLive.market.outcomes.length !== 2 || oLive.market.outcomes.length !== 2) return withheld("not_priced", ["not_binary"]);
   if (jo < 0) return withheld("not_priced", ["outcome_map_unresolvable"]);
 
-  const qAdapter = ctx.adapter(qLive.market.ref.venue);
-  const oAdapter = ctx.adapter(oLive.market.ref.venue);
+  // pm reads only its own venues; a live market naming any other has no adapter here.
+  const qVenue = isVenueId(qLive.market.ref.venue) ? qLive.market.ref.venue : null;
+  const oVenue = isVenueId(oLive.market.ref.venue) ? oLive.market.ref.venue : null;
+  const qAdapter = qVenue === null ? undefined : ctx.adapter(qVenue);
+  const oAdapter = oVenue === null ? undefined : ctx.adapter(oVenue);
   const qOutcome = qLive.market.outcomes.find((x) => x.index === iq);
   const oOutcome = oLive.market.outcomes.find((x) => x.index === jo);
-  if (qAdapter === undefined || oAdapter === undefined || qOutcome === undefined || oOutcome === undefined) {
+  if (qVenue === null || oVenue === null || qAdapter === undefined || oAdapter === undefined || qOutcome === undefined || oOutcome === undefined) {
     return withheld("withheld", ["book_unavailable"]);
   }
   // The outcome map is a human judgement made against a venue's outcome order, which the pins do
@@ -735,10 +739,10 @@ async function compareLink(link: Link, item: LookupItem, env: LinkCompareEnv): P
     ...base,
     status: "priced",
     withheldReasons: [],
-    twin: { venue: o.market.ref.venue, marketId: o.market.ref.marketId },
+    twin: { venue: oVenue, marketId: o.market.ref.marketId },
     books: {
-      queried: view(q.book, q.market, qOutcome, bookSha256(qb.book), ctx.nowMs, ctx),
-      twin: view(o.book, o.market, oOutcome, bookSha256(ob.book), ctx.nowMs, ctx),
+      queried: view(q.book, q.market, qVenue, qOutcome, bookSha256(qb.book), ctx.nowMs, ctx),
+      twin: view(o.book, o.market, oVenue, oOutcome, bookSha256(ob.book), ctx.nowMs, ctx),
     },
     discrepancy: priced.discrepancy,
     fairValue,

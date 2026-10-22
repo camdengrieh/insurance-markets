@@ -2,6 +2,7 @@
 // Floating point is never used for money, prices or share counts. `null` means unknown and is never zero.
 
 import { formatAtomic, parseDecimalAtomic } from "./amount.js";
+import { compareScaled, pow10 } from "./decimal.js";
 
 // Exact fixed-point value: the real number is units / 10^scale. Scale is 0..18 so it round-trips
 // through the guardrail parser. Fixed values with different scales are never mixed implicitly;
@@ -16,7 +17,7 @@ export type FixedResult =
   | { readonly ok: true; readonly value: Fixed }
   | { readonly ok: false; readonly reason: string };
 
-// Reuses the same strict grammar as the money guardrail (src/guardrails/amount.ts). Extra
+// Reuses the strict grammar of the money guardrail (sdk/money/amount.ts over decimal.ts). Extra
 // precision beyond `scale` is rejected, never rounded.
 export function decToFixed(input: unknown, scale: number): FixedResult {
   const parsed = parseDecimalAtomic(input, scale);
@@ -33,16 +34,13 @@ export function fixedToDec(value: Fixed): string {
 export function rescaleFixed(value: Fixed, scale: number): Fixed | null {
   if (!Number.isInteger(scale) || scale < 0 || scale > 18) return null;
   if (scale >= value.scale) {
-    return { units: value.units * 10n ** BigInt(scale - value.scale), scale };
+    return { units: value.units * pow10(scale - value.scale), scale };
   }
-  const divisor = 10n ** BigInt(value.scale - scale);
+  const divisor = pow10(value.scale - scale);
   return value.units % divisor === 0n ? { units: value.units / divisor, scale } : null;
 }
 
 // Three-way compare across scales without rounding. Returns -1, 0 or 1.
 export function compareFixed(a: Fixed, b: Fixed): -1 | 0 | 1 {
-  const scale = Math.max(a.scale, b.scale);
-  const x = a.units * 10n ** BigInt(scale - a.scale);
-  const y = b.units * 10n ** BigInt(scale - b.scale);
-  return x < y ? -1 : x > y ? 1 : 0;
+  return compareScaled(a.units, a.scale, b.units, b.scale);
 }

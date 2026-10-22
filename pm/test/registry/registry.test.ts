@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   FEE_MODEL_BY_VENUE,
@@ -10,6 +9,17 @@ import {
   isFeeSpecId,
   isRegistryVenueId,
 } from "../../registry/ids.js";
+import {
+  feeSpecId as engineFeeSpecId,
+  kalshiFeeSpec,
+  limitlessFeeSpec,
+  opinionFeeSpec,
+  polymarketFeeSpec,
+  polymarketUsFeeSpec,
+  predictFunFeeSpec,
+  trueoFeeSpec,
+  xoFeeSpec,
+} from "../../../sdk/engine/fee-specs.js";
 import { derivePools } from "../../registry/pools.js";
 import { PLATFORM_RECORDS } from "../../registry/records.js";
 import {
@@ -56,20 +66,28 @@ test("fee spec ids follow venue:model, are unique per venue and match the record
   assert.equal(FEE_SPEC_IDS.limitless, "limitless:ad_valorem_bps");
 });
 
-test("fee spec ids agree with the ids pm-core uses (when pm-core is present)", () => {
-  let source: string;
-  try {
-    source = readFileSync(new URL("../../core/fee-specs.ts", import.meta.url), "utf8");
-  } catch {
-    return; // pm-core not present in this checkout
-  }
-  const coreIds = [...source.matchAll(/base\("([a-z0-9_]+:[a-z_]+)"/g)].map((m) => m[1] as string);
-  assert.ok(coreIds.length > 0);
-  for (const id of coreIds) {
+test("fee spec ids agree with the ids the engine's builders produce", () => {
+  // The parameter values do not enter the id; only each builder's venue and model do.
+  const source = { url: "https://example.invalid/fees", field: "fee", granularity: "market" as const, verifiedAt: "2026-10-19", ttlSec: 60 };
+  const built = [
+    xoFeeSpec({ takerBps: "400", source }),
+    polymarketFeeSpec({ rate: "0.04", source }),
+    polymarketUsFeeSpec({ theta: "0.04", source }),
+    kalshiFeeSpec({ multiplier: "1", source }),
+    limitlessFeeSpec({ buyBps: "100", sellBps: "100", source }),
+    predictFunFeeSpec({ feeRateBps: "100", source }),
+    opinionFeeSpec({ takerBps: "100", minFee: "0.5", source }),
+    trueoFeeSpec({ lpFee: "0.003", hookFee: "0.001", source }),
+  ];
+  let compared = 0;
+  for (const spec of built) {
+    const id = engineFeeSpecId(spec);
     const venue = id.split(":")[0];
-    if (!isRegistryVenueId(venue)) continue; // core venues outside this registry
-    assert.equal(FEE_SPEC_IDS[venue], id, `registry and core disagree for ${venue}`);
+    if (!isRegistryVenueId(venue)) continue; // engine venues outside this registry
+    assert.equal(FEE_SPEC_IDS[venue], id, `registry and engine disagree for ${venue}`);
+    compared += 1;
   }
+  assert.ok(compared > 0);
 });
 
 test("unknown fee models fail closed and never default to zero", () => {

@@ -47,8 +47,8 @@ import {
   normalizeAddress,
   normalizeBareAddress,
   normalizeConditionId,
-  parseDecimalToMicro,
   parseMicroInteger,
+  parseVenueDecimalToMicro,
   MICRO,
 } from "./units.js";
 
@@ -367,7 +367,7 @@ function decodeCreator(value: unknown): MarketCreator | null {
 }
 
 function decodeVolumeUsd(value: unknown): bigint | null {
-  return parseDecimalToMicro(value);
+  return parseVenueDecimalToMicro(value);
 }
 
 function decodeCore(rec: Rec, path: string, outcomes: readonly MarketOutcome[], omissions: string[]): MarketCore {
@@ -660,11 +660,11 @@ function decodeLevels(value: unknown, path: string): BookLevel[] {
   return items.map((item, i) => {
     const rec = asRec(item, at(path, i));
     // Book prices sit strictly inside (0, 1); sizes are human shares with up to 6 decimals.
-    const priceMicro = parseDecimalToMicro(field(rec, "price"));
+    const priceMicro = parseVenueDecimalToMicro(field(rec, "price"));
     if (priceMicro === null || priceMicro <= 0n || priceMicro >= MICRO) {
       throw new DecodeError(at(at(path, i), "price"), "expected a decimal price between 0 and 1");
     }
-    const sizeMicro = parseDecimalToMicro(field(rec, "size"));
+    const sizeMicro = parseVenueDecimalToMicro(field(rec, "size"));
     if (sizeMicro === null || sizeMicro <= 0n) {
       throw new DecodeError(at(at(path, i), "size"), "expected a positive decimal size with at most 6 decimals");
     }
@@ -678,13 +678,13 @@ export function decodeBook(value: unknown, expectedTokenId: string): OrderBook {
   if (tokenId !== expectedTokenId) throw new DecodeError("book.asset_id", "does not match the requested token");
   const timestamp = reqString(rec, "timestamp", "book", 20);
   if (!/^[0-9]{1,16}$/.test(timestamp)) throw new DecodeError("book.timestamp", "expected a millisecond timestamp string");
-  const tick = parseDecimalToMicro(field(rec, "tick_size"));
+  const tick = parseVenueDecimalToMicro(field(rec, "tick_size"));
   if (tick === null || tick <= 0n || tick > 100_000n) throw new DecodeError("book.tick_size", "expected a decimal tick size");
   const minOrder = field(rec, "min_order_size");
   const minOrderSizeRaw = typeof minOrder === "string" ? minOrder : typeof minOrder === "number" && Number.isFinite(minOrder) ? String(minOrder) : null;
   if (minOrderSizeRaw === null || minOrderSizeRaw.length > 40) throw new DecodeError("book.min_order_size", "expected a short string");
   const lastTrade = field(rec, "last_trade_price");
-  const lastTradeMicro = lastTrade === undefined || lastTrade === null ? null : parseDecimalToMicro(lastTrade);
+  const lastTradeMicro = lastTrade === undefined || lastTrade === null ? null : parseVenueDecimalToMicro(lastTrade);
   if (lastTrade !== undefined && lastTrade !== null && lastTradeMicro === null) {
     throw new DecodeError("book.last_trade_price", "expected a decimal price");
   }
@@ -744,7 +744,7 @@ export function quoteFromBook(book: OrderBook): Quote {
 // {"price":"0.105"}. "0.000" means the side is empty, so it maps to null and never to a price.
 function decodePrice(value: unknown): bigint | null {
   const rec = asRec(value, "price");
-  const price = parseDecimalToMicro(field(rec, "price"));
+  const price = parseVenueDecimalToMicro(field(rec, "price"));
   if (price === null || price >= MICRO) throw new DecodeError("price.price", "expected a decimal price below 1");
   return price === 0n ? null : price;
 }
@@ -755,7 +755,7 @@ function decodeLastTrade(value: unknown): LastTrade | null {
   // No trade yet: the API answers price "0.5" with an empty side. That 0.5 is a placeholder.
   if (side === "") return null;
   if (side !== "BUY" && side !== "SELL") throw new DecodeError("lastTrade.side", "expected BUY, SELL or an empty string");
-  const price = parseDecimalToMicro(field(rec, "price"));
+  const price = parseVenueDecimalToMicro(field(rec, "price"));
   if (price === null || price <= 0n || price >= MICRO) throw new DecodeError("lastTrade.price", "expected a decimal price between 0 and 1");
   return { priceMicro: price, side };
 }

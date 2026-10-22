@@ -1,6 +1,4 @@
-export * from "./format.js";
-export * from "./stats.js";
-export * from "./evaluate.js";
-export * from "./report.js";
-export * from "./sample.js";
-export * from "./generator.js";
+// The gold-set tooling lives in the SDK (sdk/links/goldset); the parser is bound to the platform
+// registry's terms in ./format.ts.
+export * from "../../../sdk/links/goldset/index.js";
+export { parseGoldSet } from "./format.js";

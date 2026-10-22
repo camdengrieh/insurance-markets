@@ -160,6 +160,8 @@ export interface TickRange {
   readonly tick: Dec;
 }
 export type TickRanges = readonly TickRange[];
+// XO 0.001 globally; Polymarket per market; Kalshi price_ranges[].
+export type Tick = Dec | TickRanges;
 
 export interface Collateral {
   readonly symbol: string;
@@ -175,32 +177,71 @@ export interface MarketGroup {
   readonly exhaustive: "proven" | "by_rule" | "no" | "unknown";
 }
 
+// Whether a group's outcomes cover every case: only "proven" and "by_rule" may back a long basket.
+export type Exhaustive = MarketGroup["exhaustive"];
+
 export type FeeModelId = "curve_pq" | "curve_min" | "ad_valorem_bps" | "profit_pct" | "amm_stack" | "unknown";
 
-// Parameters of one fee side. The adapter fills what its model needs; a missing parameter makes the model
-// unusable and the spec fails closed.
+// Names a fee model for one venue, `${venue}:${modelId}` (for example "xo:curve_pq"). A spec does not store it:
+// it is derived from the spec's own venue and model (engine/fee-specs.ts feeSpecId), so it can never disagree with
+// them, and a spec built for one venue never passes as another's.
+export type FeeSpecId = string;
+
+export type FeePayer = "buyer_adds_seller_withholds" | "outcome_tokens" | "in_pool";
+export type FeeGranularity = "market" | "series" | "event" | "token" | "category";
+
+// Parameters of one fee side, as exact decimal strings. The reader fills what its model needs; the fee engine
+// (engine/fees.ts) is the only place that says what each name means. A missing parameter makes the model
+// unusable and the spec fails closed, and a missing side is unknown, never zero: a zero fee is { rate: "0" }.
 export interface FeeParams {
+  // The fee coefficient, as a fraction ("0.04") or in basis points ("400"). Exactly one of the two; a side that
+  // gives both is ambiguous and fails closed.
   readonly rate?: Dec;
-  readonly bps?: number;
-  readonly min?: Dec;
-  readonly max?: Dec;
+  readonly bps?: Dec;
+  // A factor on the coefficient (Kalshi fee_multiplier); 1 when absent.
+  readonly multiplier?: Dec;
+  // curve_pq only. Anything but 1 fails closed (never observed otherwise).
   readonly exponent?: Dec;
+  // ad_valorem_bps side overrides (Limitless charges buys and sells differently).
+  readonly buyBps?: Dec;
+  readonly sellBps?: Dec;
+  // amm_stack fractions: the pool's LP fee and hook fee (both required) and any explicit extra fee.
+  readonly lpFee?: Dec;
+  readonly hookFee?: Dec;
+  readonly extraFee?: Dec;
+  // A fixed cost per order in collateral units (gas); zero when absent.
+  readonly gas?: Dec;
 }
 
 export interface FeeSpec {
+  // The venue whose fee this is.
+  readonly venue: VenueId;
   readonly modelId: FeeModelId;
   readonly taker?: FeeParams;
   readonly maker?: FeeParams;
+  // Order-level rounding as comma-separated steps in the engine's grammar ("ceil:6", "half_up:5,min:0.00001",
+  // engine/fees.ts parseRounding). A reader that knows the rounding only as prose states the prose; the engine
+  // refuses to price with it (fail closed).
   readonly rounding?: string;
-  readonly payer: "buyer_adds_seller_withholds" | "outcome_tokens" | "in_pool";
+  readonly payer: FeePayer;
   readonly paramsSource: {
     readonly url: string;
     readonly field: string;
-    readonly granularity: "market" | "series" | "event" | "token" | "category";
+    readonly granularity: FeeGranularity;
   };
+  // ISO date the parameters were read.
   readonly verifiedAt: string;
   // Past ttl, or modelId "unknown", means fail closed: no executable label, no net-of-fee number.
   readonly ttlSec: number;
+}
+
+// Where a Market's fields came from. List rows carry the fuller `Prov` (transport, freshness, licence).
+export interface Provenance {
+  readonly fetchedAtMs: number;
+  readonly source: string;
+  readonly adapterVersion: string;
+  // Drift signal: a hash of the payload's shape (the sorted top-level key names).
+  readonly schemaHash: string;
 }
 
 export interface Market {
@@ -216,18 +257,12 @@ export interface Market {
     readonly expectedResolutionAt?: string;
     readonly latestResolutionAt?: string;
   };
-  // XO 0.001 globally; Polymarket per market; Kalshi price_ranges[].
-  readonly tick: Dec | TickRanges;
+  readonly tick: Tick;
   readonly minSize?: Dec;
   readonly collateral: Collateral;
   readonly group?: MarketGroup;
   readonly fee: FeeSpec;
-  readonly prov: {
-    readonly fetchedAtMs: number;
-    readonly source: string;
-    readonly adapterVersion: string;
-    readonly schemaHash: string;
-  };
+  readonly prov: Provenance;
   // The fixed-taxonomy verdict (category.ts). Absent when the adapter did not run it; read as "other", "none".
   readonly category?: CategoryVerdict;
   // The venue's own category words, untrusted; shown only through UntrustedText, never matched or echoed elsewhere.
@@ -269,16 +304,46 @@ export interface Level {
   readonly size: Dec;
 }
 
+// The order a venue's raw levels come in. The normaliser (engine/books.ts) re-sorts every book whatever it says
+// and warns when the raw order contradicts it, which can mean the venue changed silently.
+export type BookConvention =
+  | "best_first" // XO, Polymarket US
+  | "best_last" // Polymarket CLOB, Kalshi
+  | "yes_side_only" // Limitless, Predict.fun (NO folded into the YES book)
+  | "mirrored_per_token" // Opinion
+  | "amm_pool"; // Trueo (price from pool state, no resting orders)
+
+// "complement" books are synthetic (1 - the other side) and are never executable.
+export type BookDerivation = "native" | "complement";
+
 export interface Book {
-  readonly token: { readonly venue: VenueId; readonly tokenId: string };
+  readonly token: TokenRef;
   // Always sorted explicitly: bids descending, asks ascending. Never trust the venue's order.
   readonly bids: readonly Level[];
   readonly asks: readonly Level[];
+  // The convention of the raw payload, set by the engine's normaliser. Absent on a book a reader sorted itself;
+  // the engine re-canonicalises every book it is handed either way.
+  readonly convention?: BookConvention;
   readonly asOfMs: number;
   readonly venueTsMs?: number;
   readonly hash?: string;
-  // A complement-derived book is synthetic and never executable.
-  readonly derived: "native" | "complement";
+  readonly derived: BookDerivation;
+}
+
+export type QuoteSide = "buy" | "sell";
+
+// A depth-walked price for a stated size (engine/walk.ts). Prices that cannot be computed are null, not zero.
+export interface Quote {
+  readonly token: TokenRef;
+  readonly side: QuoteSide;
+  readonly requestedSize: Dec;
+  readonly filledSize: Dec;
+  readonly bestPrice: Dec | null;
+  // Volume-weighted average price over the filled depth, rounded against the trader; null when nothing filled.
+  readonly vwap: Dec | null;
+  readonly feeSpecId: FeeSpecId;
+  readonly derived: BookDerivation;
+  readonly asOfMs: number;
 }
 
 // ---- the adapter (aggregation-design 2.4) ------------------------------------------------------------------------------------

@@ -96,15 +96,15 @@ describe("venueStatusOf (M0-2)", () => {
 
 describe("describe", () => {
   it("an unknown fee model is said to fail closed and shows no parameters", () => {
-    const view = feeView({ modelId: "unknown", taker: { bps: 400 }, payer: "in_pool", paramsSource: { url: "x", field: "y", granularity: "market" }, verifiedAt: "2026-10-19", ttlSec: 0 });
+    const view = feeView({ venue: "polymarket", modelId: "unknown", taker: { bps: "400" }, payer: "in_pool", paramsSource: { url: "x", field: "y", granularity: "market" }, verifiedAt: "2026-10-19", ttlSec: 0 });
     expect(view.known).toBe(false);
     expect(view.lines).toEqual([]);
     expect(view.model).toBe(MODEL_TEXT.unknown);
   });
 
   it("shows only well-formed fee parameters", () => {
-    const view = feeView({ modelId: "ad_valorem_bps", taker: { bps: 800, rate: "<b>x</b>", min: "0.01" }, payer: "buyer_adds_seller_withholds", paramsSource: { url: "x", field: "y", granularity: "market" }, verifiedAt: "2026-10-19T00:00:00Z", ttlSec: 60 });
-    expect(view.lines).toEqual(["taker 800 basis points", "taker minimum 0.01"]);
+    const view = feeView({ venue: "xo", modelId: "ad_valorem_bps", taker: { bps: "800", rate: "<b>x</b>", multiplier: "1.5" }, payer: "buyer_adds_seller_withholds", paramsSource: { url: "x", field: "y", granularity: "market" }, verifiedAt: "2026-10-19T00:00:00Z", ttlSec: 60 });
+    expect(view.lines).toEqual(["taker 800 basis points", "taker multiplier 1.5"]);
     expect(view.verifiedAt).toBe("2026-10-19");
   });
 

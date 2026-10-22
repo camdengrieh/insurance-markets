@@ -8,11 +8,14 @@
 //   - null is not zero: a missing value is excluded from a total and counted, never added as 0;
 //   - text that is not an exact plain decimal (exponent, separators, sign mid-text, spaces) parses to null.
 //
-// Pure functions, no clock, no network, no global.
+// The grammar, the base-unit conversion, the comparison and the rounding are the shared ones in decimal.ts; this
+// module adds the unit tag, normalisation and the display text. Pure functions, no clock, no network, no global.
 
 import type { Dec } from "../model.js";
+import { MAX_DECIMALS, MAX_DECIMAL_CHARS, compareScaled, decFromNumber, decToAtomic, parseAtomicInteger, pow10, roundDiv, splitAtomic, type RoundMode } from "./decimal.js";
 
 export type { Dec };
+export { decFromNumber };
 
 // A programming error: two quantities of different units were combined. It is thrown, never returned, so
 // a unit mix-up cannot turn into a wrong number on the screen.
@@ -33,8 +36,8 @@ export function isQtyUnit(value: unknown): value is QtyUnit {
 }
 
 // 10^36 covers an 18-decimal token with 18 more digits of product scale.
-export const MAX_SCALE = 36;
-export const MAX_TEXT_CHARS = 100;
+export const MAX_SCALE = MAX_DECIMALS;
+export const MAX_TEXT_CHARS = MAX_DECIMAL_CHARS;
 export const DEFAULT_PARSE_SCALE = 18;
 
 export interface Qty {
@@ -45,16 +48,6 @@ export interface Qty {
 }
 
 export type RoundingMode = "down" | "up" | "half_up";
-
-const POW10_CACHE: bigint[] = [1n];
-function pow10(n: number): bigint {
-  while (POW10_CACHE.length <= n) POW10_CACHE.push((POW10_CACHE[POW10_CACHE.length - 1] ?? 1n) * 10n);
-  return POW10_CACHE[n] ?? 1n;
-}
-
-function abs(value: bigint): bigint {
-  return value < 0n ? -value : value;
-}
 
 function make(unit: QtyUnit, atomic: bigint, scale: number): Qty {
   if (!isQtyUnit(unit)) throw new RangeError("unknown unit");
@@ -71,27 +64,17 @@ function make(unit: QtyUnit, atomic: bigint, scale: number): Qty {
 
 // ---- construction -----------------------------------------------------------------------------------------------
 
-const DECIMAL = /^(-?)(0|[1-9][0-9]*)(?:\.([0-9]+))?$/;
-
 export interface ParseOptions {
-  // Most fractional digits the text may carry (extra trailing zeros are fine). Default 18.
+  // Most fractional digits the text may carry, trailing zeros included ("0.50" carries two). Default 18.
   readonly maxScale?: number;
   readonly allowNegative?: boolean;
 }
 
 // "0.534" -> Qty. Null for anything that is not an exact plain decimal within the scale limit.
 export function parseQty(unit: QtyUnit, text: unknown, options: ParseOptions = {}): Qty | null {
-  if (typeof text !== "string" || text.length === 0 || text.length > MAX_TEXT_CHARS) return null;
-  const match = DECIMAL.exec(text);
-  if (match === null) return null;
-  const negative = match[1] === "-";
-  if (negative && options.allowNegative !== true) return null;
-  const whole = match[2] ?? "0";
-  const fraction = (match[3] ?? "").replace(/0+$/, "");
   const maxScale = Math.min(options.maxScale ?? DEFAULT_PARSE_SCALE, MAX_SCALE);
-  if (fraction.length > maxScale) return null;
-  const atomic = BigInt(whole + fraction);
-  return make(unit, negative ? -atomic : atomic, fraction.length);
+  const parsed = decToAtomic(text, maxScale, { allowNegative: options.allowNegative === true });
+  return parsed.ok ? make(unit, parsed.value, maxScale) : null;
 }
 
 // A Dec (decimal string) from an upstream field becomes a quantity; null for anything not exact.
@@ -114,10 +97,10 @@ export function fromBaseUnits(unit: QtyUnit, raw: unknown, decimals: number): Qt
   let atomic: bigint;
   if (typeof raw === "bigint") {
     atomic = raw;
-  } else if (typeof raw === "string" && raw.length > 0 && raw.length <= 80 && /^(0|[1-9][0-9]*)$/.test(raw)) {
-    atomic = BigInt(raw);
   } else {
-    return null;
+    const parsed = parseAtomicInteger(raw);
+    if (parsed === null) return null;
+    atomic = parsed;
   }
   if (atomic < 0n) return null;
   return make(unit, atomic, decimals);
@@ -139,25 +122,7 @@ export function toMicro(q: Qty): bigint | null {
   return toBaseUnits(q, 6);
 }
 
-// A JSON number from an upstream (Polymarket Data API v2) to an exact decimal string. The shortest decimal
-// that round-trips is what the sender wrote for any value of 15 significant digits or fewer, so that is what
-// is returned. Non-finite, unsafe integers and exponents beyond +-30 are null (fail closed, never rounded).
-export function decFromNumber(value: unknown): Dec | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  if (Number.isInteger(value)) return Number.isSafeInteger(value) ? String(value) : null;
-  const text = String(value);
-  const match = /^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$/.exec(text);
-  if (match === null) return DECIMAL.test(text) ? text : null;
-  const exponent = Number(match[4]);
-  if (!Number.isInteger(exponent) || Math.abs(exponent) > 30) return null;
-  const digits = (match[2] ?? "") + (match[3] ?? "");
-  const point = 1 + exponent;
-  let out: string;
-  if (point <= 0) out = `0.${"0".repeat(-point)}${digits}`;
-  else if (point >= digits.length) out = digits + "0".repeat(point - digits.length);
-  else out = `${digits.slice(0, point)}.${digits.slice(point)}`;
-  return `${match[1] ?? ""}${out}`;
-}
+// decFromNumber (re-exported above): a JSON number from an upstream (Polymarket Data API v2) to exact decimal text.
 
 // ---- arithmetic -------------------------------------------------------------------------------------------------
 
@@ -187,10 +152,7 @@ export function negQty(q: Qty): Qty {
 
 export function cmpQty(a: Qty, b: Qty): -1 | 0 | 1 {
   requireSameUnit(a, b);
-  const scale = Math.max(a.scale, b.scale);
-  const left = toScale(a, scale);
-  const right = toScale(b, scale);
-  return left < right ? -1 : left > right ? 1 : 0;
+  return compareScaled(a.atomic, a.scale, b.atomic, b.scale);
 }
 
 export function eqQty(a: Qty, b: Qty): boolean {
@@ -205,18 +167,12 @@ export function isZero(q: Qty): boolean {
   return q.atomic === 0n;
 }
 
-// Divide `value` by 10^drop, rounding the magnitude by `mode` (half_up is half away from zero).
+// Divide `value` by 10^drop, rounding the magnitude by `mode`: down is toward zero, up away from zero, half_up
+// half away from zero. The division itself is the shared roundDiv.
 function divRound(value: bigint, drop: number, mode: RoundingMode): bigint {
   if (drop <= 0) return value;
-  const divisor = pow10(drop);
-  const magnitude = abs(value);
-  let quotient = magnitude / divisor;
-  const remainder = magnitude % divisor;
-  if (remainder !== 0n) {
-    if (mode === "up") quotient += 1n;
-    else if (mode === "half_up" && remainder * 2n >= divisor) quotient += 1n;
-  }
-  return value < 0n ? -quotient : quotient;
+  const direction: RoundMode = mode === "down" ? "trunc" : mode === "half_up" ? "half_up" : value < 0n ? "floor" : "ceil";
+  return roundDiv(value, pow10(drop), direction);
 }
 
 // Round to `scale` places. A scale at or above the current one is exact (no change of value).
@@ -305,10 +261,7 @@ export interface DecimalTextOptions {
 
 // Exact decimal text of a quantity: no exponent, no trailing zeros, "-" for negative.
 export function toDec(q: Qty, options: DecimalTextOptions = {}): Dec {
-  const negative = q.atomic < 0n;
-  const digits = abs(q.atomic).toString().padStart(q.scale + 1, "0");
-  const whole = digits.slice(0, digits.length - q.scale);
-  const fraction = digits.slice(digits.length - q.scale);
+  const { negative, whole, fraction } = splitAtomic(q.atomic, q.scale);
   const body = `${options.thousands === true ? groupDigits(whole) : whole}${fraction === "" ? "" : `.${fraction}`}`;
   if (negative) return `-${body}`;
   return options.plus === true && q.atomic > 0n ? `+${body}` : body;
@@ -319,10 +272,7 @@ export function toDec(q: Qty, options: DecimalTextOptions = {}): Dec {
 export function toFixedText(q: Qty, places: number, mode: RoundingMode = "down", options: DecimalTextOptions = {}): { readonly text: string; readonly roundedToZero: boolean } {
   if (!Number.isInteger(places) || places < 0 || places > MAX_SCALE) throw new RangeError("places out of range");
   const rounded = q.scale > places ? divRound(q.atomic, q.scale - places, mode) : q.atomic * pow10(places - q.scale);
-  const negative = rounded < 0n;
-  const digits = abs(rounded).toString().padStart(places + 1, "0");
-  const whole = digits.slice(0, digits.length - places);
-  const fraction = digits.slice(digits.length - places);
+  const { negative, whole, fraction } = splitAtomic(rounded, places);
   const body = `${options.thousands === true ? groupDigits(whole) : whole}${places === 0 ? "" : `.${fraction}`}`;
   const text = negative ? `-${body}` : options.plus === true && rounded > 0n ? `+${body}` : body;
   return { text, roundedToZero: rounded === 0n && q.atomic !== 0n };

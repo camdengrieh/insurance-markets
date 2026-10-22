@@ -27,7 +27,7 @@ const dataTerms = z
 
 const tick = z.union([
   decimal,
-  z.array(z.strictObject({ from: decimal, to: decimal, step: decimal })),
+  z.array(z.strictObject({ from: decimal, to: decimal, tick: decimal })),
 ]);
 
 // ---- pm_get_quote ----

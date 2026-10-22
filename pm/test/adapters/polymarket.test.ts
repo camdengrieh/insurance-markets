@@ -4,7 +4,8 @@ import { describe, it } from "node:test";
 
 import { AdapterFailure, createPolymarketAdapter, polymarketStatus } from "../../adapters/index.js";
 import type { PmVenueAdapter } from "../../adapters/types.js";
-import { checkFeeSpec, feePerShare } from "../../core/fees.js";
+import { checkFeeSpec, feePerShare } from "../../../sdk/engine/fees.js";
+import { feeSpecId } from "../../../sdk/engine/fee-specs.js";
 import { dec } from "../../core/rational.js";
 import { canonicalizeRecord } from "../../links/hash.js";
 import { NOW, fast, nowMs, route, stubFetch, type Route } from "./helpers.js";
@@ -97,8 +98,8 @@ suite("polymarket adapter: getMarket", () => {
     const recomputed = canonicalizeRecord("polymarket", m.extras.ruleFields);
     assert.equal(recomputed.ok, true);
     if (recomputed.ok) assert.equal(m.rules.sha256, recomputed.value.rulesSha256);
-    assert.equal(m.fee.id, "polymarket:curve_pq");
-    assert.deepEqual(m.fee.taker, { values: { rate: "0.04", exponent: "1" } });
+    assert.equal(feeSpecId(m.fee), "polymarket:curve_pq");
+    assert.deepEqual(m.fee.taker, { rate: "0.04", exponent: "1" });
     assert.equal(m.fee.paramsSource.field, "feeSchedule;feeType=politics_fees");
     assert.equal(checkFeeSpec(m.fee, NOW).ok, true);
     assert.equal(m.ref.native["eventSlug"], EVENT_SLUG);
@@ -197,10 +198,10 @@ suite("polymarket adapter: getMarket", () => {
     // Fees off: an explicit zero rate, not unknown.
     const off = await adapterFor(routes(gamma({ feesEnabled: false, feeSchedule: undefined }), clobInfo({ fd: undefined }))).adapter.getMarket(ref);
     assert.equal(off.fee.modelId, "curve_pq");
-    assert.deepEqual(off.fee.taker, { values: { rate: "0" } });
+    assert.deepEqual(off.fee.taker, { rate: "0" });
     // Sports-style 0.03 read from the market, not from a category table.
     const sports = await adapterFor(routes(gamma({ feeType: "sports_fees_nfl_cfb_oct26", feeSchedule: { exponent: 1, rate: 0.03, takerOnly: true, rebateRate: 0.15 } }), clobInfo({ fd: { r: 0.03, e: 1, to: true } }))).adapter.getMarket(ref);
-    assert.deepEqual(sports.fee.taker, { values: { rate: "0.03", exponent: "1" } });
+    assert.deepEqual(sports.fee.taker, { rate: "0.03", exponent: "1" });
     // An exponent other than 1 is not the documented curve: the shared parser reads the fee as unknown, so pm/core
     // has nothing to price.
     const exp2 = await adapterFor(routes(gamma({ feeSchedule: { exponent: 2, rate: 0.04, takerOnly: true } }), clobInfo({ fd: undefined }))).adapter.getMarket(ref);
@@ -230,7 +231,7 @@ suite("polymarket adapter: getMarket", () => {
     assert.equal(noFd.fee.modelId, "unknown");
     // With no CLOB record at all, Gamma's own schedule is the only source and is used.
     const noClob = await adapterFor([route(GAMMA, `/markets/slug/${SLUG}`, gamma()), route(CLOB, `/clob-markets/${CID}`, { error: "x" }, { status: 404 })]).adapter.getMarket(ref);
-    assert.deepEqual(noClob.fee.taker, { values: { rate: "0.04", exponent: "1" } });
+    assert.deepEqual(noClob.fee.taker, { rate: "0.04", exponent: "1" });
   });
 
   it("marks rules unavailable (non-hex sentinel, not tradable) when the description is missing", async () => {
@@ -289,7 +290,7 @@ suite("polymarket adapter: getMarket", () => {
     const before = calls.length;
     const spec = await adapter.getFeeSpec(m);
     assert.ok(calls.length > before);
-    assert.equal(spec.id, "polymarket:curve_pq");
+    assert.equal(feeSpecId(spec), "polymarket:curve_pq");
   });
 });
 
@@ -361,8 +362,7 @@ suite("polymarket adapter: listMarkets", () => {
     const { adapter, calls } = adapterFor([route(GAMMA, "/markets/keyset", keyset([gamma(), gamma({ conditionId: OTHER_CID, slug: "second-market" })], "CURSOR_2"))]);
     const page = await adapter.listMarkets({ limit: 500 });
     assert.equal(page.items.length, 2);
-    assert.equal(page.hasNext, true);
-    assert.equal(page.nextCursor, "CURSOR_2");
+    assert.equal(page.next, "CURSOR_2");
     const q = Object.fromEntries(calls[0]!.url.searchParams);
     assert.equal(q["limit"], "100");
     assert.equal(q["closed"], "false");
@@ -384,7 +384,7 @@ suite("polymarket adapter: listMarkets", () => {
     const page = await adapter.listMarkets({});
     assert.equal(page.items.length, 1);
     assert.deepEqual(page.skipped.map((s) => s.index), [1, 2]);
-    assert.equal(page.hasNext, false);
+    assert.equal(page.next, null);
   });
 
   it("searches through /public-search and pages by number", async () => {
@@ -392,7 +392,7 @@ suite("polymarket adapter: listMarkets", () => {
     const { adapter, calls } = adapterFor([route(GAMMA, "/public-search", search)]);
     const page = await adapter.listMarkets({ text: "senate", cursor: "2" });
     assert.equal(page.items.length, 2);
-    assert.equal(page.nextCursor, "3");
+    assert.equal(page.next, "3");
     assert.equal(calls[0]!.url.searchParams.get("q"), "senate");
     assert.equal(calls[0]!.url.searchParams.get("page"), "2");
   });
@@ -454,7 +454,7 @@ suite("polymarket adapter: captured live shapes (sdk/venues/polymarket/fixtures)
     assert.equal(m.tick, "0.01");
     assert.equal(m.minSize, "5");
     assert.equal(m.group?.kind, "neg_risk");
-    assert.deepEqual(m.fee.taker, { values: { rate: "0.04", exponent: "1" } });
+    assert.deepEqual(m.fee.taker, { rate: "0.04", exponent: "1" });
     assert.equal(m.outcomes[0]?.role, "yes");
     assert.equal(m.extras.geoRestricted, true);
     assert.equal(checkFeeSpec(m.fee, NOW).ok, true);

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { blockKey, bucketOf, buildBlocks, pairsOf } from "../../linker/block.js";
-import { MAX_BLOCK_SIZE } from "../../linker/constants.js";
-import type { MarketFeatures } from "../../linker/features.js";
+import { blockKey, bucketOf, buildBlocks, pairsOf } from "../../../sdk/linker/block.js";
+import { MAX_BLOCK_SIZE } from "../../../sdk/linker/constants.js";
+import type { MarketFeatures } from "../../../sdk/linker/features.js";
 
 function f(id: string, category: string, closeUtc: string, venue: MarketFeatures["venue"] = "xo"): MarketFeatures {
   return { venue, marketId: id, titleTokens: [], ruleTokens: [], numbers: [], dates: [], entities: [], rulesSha256: "a".repeat(64), maskedSha256: "b".repeat(64), closeUtc, category, categoryConfidence: "none", voidPolicy: "unknown", resolverId: null, groupKey: null, groupKind: null, outcomes: 2 };

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { getAddress, type Address, type Hex } from "viem";
 
+import { decFromNumber, decToAtomic } from "../sdk/money/decimal.js";
 import { formatAtomic } from "../src/guardrails/amount.js";
 import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, MICRO, parseTickMicro, type ClobAmounts } from "../src/clob/amounts.js";
 import { buildDecodedClobAuth, buildDecodedClobOrder, sharesMicroOf } from "../src/clob/decoded.js";
@@ -524,13 +525,11 @@ async function polymarketClock(context: RelayContext, fresh: boolean): Promise<{
 
 type Levels = { readonly bestBidMicro: bigint | undefined; readonly bestAskMicro: bigint | undefined };
 
+// A book price (decimal string, or JSON number taken at its exact text) in micro units, strictly inside (0, 1).
 function priceMicroOf(value: unknown): bigint | undefined {
-  if (typeof value !== "string" && typeof value !== "number") return undefined;
-  const text = String(value);
-  if (!/^(0|[1-9][0-9]*)(\.[0-9]{1,6})?$/.test(text)) return undefined;
-  const [whole = "0", fraction = ""] = text.split(".");
-  const micro = BigInt(whole) * MICRO + BigInt(fraction.padEnd(6, "0") || "0");
-  return micro > 0n && micro < MICRO ? micro : undefined;
+  const parsed = decToAtomic(typeof value === "number" ? decFromNumber(value) : value, 6);
+  if (!parsed.ok) return undefined;
+  return parsed.value > 0n && parsed.value < MICRO ? parsed.value : undefined;
 }
 
 function levelsOf(bids: unknown, asks: unknown): Levels {

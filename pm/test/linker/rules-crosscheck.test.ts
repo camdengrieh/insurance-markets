@@ -11,7 +11,7 @@ import { normalizeMarket, parseGammaMarket } from "../../../sdk/venues/polymarke
 import { decodeMarketDetail } from "../../../sdk/venues/xo/api/client.js";
 import { marketOf as xoMarketOf } from "../../../sdk/venues/xo/index.js";
 import { APP_DATASET_RULES_RECIPE } from "../../linker/app-dataset.js";
-import { legOf } from "../../linker/candidates.js";
+import { legOf } from "../../../sdk/linker/candidates.js";
 import { discover } from "../../linker/discover.js";
 import { PoliteClient } from "../../recorder/http.js";
 import { readFixture, startWorld, type World } from "./helpers.js";

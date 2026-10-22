@@ -21,7 +21,7 @@
 
 import { createHash } from "node:crypto";
 import * as z from "zod/v4";
-import { DEFAULTS } from "../core/edge.js";
+import { DEFAULTS } from "../../sdk/engine/edge.js";
 import {
   ONE,
   ZERO,

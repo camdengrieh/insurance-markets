@@ -28,6 +28,7 @@ import {
 import { SIDE_BUY, SIDE_SELL } from "@shared/xo/signing/constants";
 import { SigningError } from "@shared/xo/signing/errors";
 
+import { decToAtomic } from "../../core/money";
 import type { Market } from "../../core/ports";
 import type { SignCell } from "./ticket";
 
@@ -149,8 +150,9 @@ export function buildClobTicket(input: ClobTicketInput, facts: ClobMarketFacts):
   if (isSide(input.side)) {
     try {
       const minMicro = ((): bigint => {
-        const [whole = "0", fraction = ""] = facts.minSize.split(".");
-        return BigInt(whole) * 1_000_000n + BigInt((fraction.padEnd(6, "0") || "0").slice(0, 6));
+        const parsed = decToAtomic(facts.minSize, 6);
+        if (!parsed.ok) throw new SigningError("invalid_size", "the market's minimum size is not a plain decimal with at most 6 places");
+        return parsed.value;
       })();
       amounts = computeClobAmounts({ side: input.side === "BUY" ? SIDE_BUY : SIDE_SELL, price: input.price, shares: input.shares, grid: { tick: facts.tick, priceDecimals: priceDecimalsOf(facts) }, sizeDecimals: CLOB_SIZE_DECIMALS, minSharesMicro: minMicro });
       cap = clobCapAmount(amounts, CLOB_CAP_FEE_BPS);
@@ -232,10 +234,8 @@ export function expectedClobQuote(ticket: ClobTicket): ExpectedClobQuote {
 // The per-order cap the account read reports, compared exactly. null = not read.
 export function clobOverOrderCap(ticket: ClobTicket, maxOrderUsd: string | null): boolean | null {
   if (maxOrderUsd === null) return null;
-  const match = /^(0|[1-9][0-9]*)(?:\.([0-9]{1,6}))?$/.exec(maxOrderUsd);
-  if (match === null) return null;
-  const limit = BigInt(`${match[1] ?? "0"}${(match[2] ?? "").padEnd(6, "0")}`);
-  return ticket.capAtomic > limit;
+  const limit = decToAtomic(maxOrderUsd, 6);
+  return limit.ok ? ticket.capAtomic > limit.value : null;
 }
 
 // "What you sign": the signed fields the relay will put in the typed data, as far as the page can know them before

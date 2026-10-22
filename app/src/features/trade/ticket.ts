@@ -17,6 +17,8 @@ import { ORDER_CAP_FEE_BPS, computeOrderAmounts, exactShareStepMicro, formatMicr
 import { KERNEL_DOMAIN_NAME, KERNEL_DOMAIN_VERSION, ORDER_DOMAIN_NAME, ORDER_DOMAIN_VERSION, SIDE_BUY, SIDE_SELL, XO_CHAIN_ID } from "@shared/xo/signing/constants";
 import { SigningError } from "@shared/xo/signing/errors";
 
+import { decToAtomic, isDec } from "../../core/money";
+
 export const TICKET_SIDES = ["BUY", "SELL"] as const;
 export type TicketSide = (typeof TICKET_SIDES)[number];
 export const TICKET_TIFS = ["GTD", "FOK", "FAK"] as const;
@@ -179,7 +181,7 @@ export function buildTicket(input: TicketInput): TicketResult {
     }
   } else if (issues.every((entry) => entry.field !== "shares")) {
     // Still check the shares text on its own so the form can flag it alongside other issues.
-    if (!/^(0|[1-9][0-9]*)(\.[0-9]{1,6})?$/.test(input.shares) || input.shares.length > 40) issues.push(issue("shares", "bad_shares", "Shares are a plain decimal in steps of 0.001, such as 10 or 2.5."));
+    if (!isDec(input.shares, 6)) issues.push(issue("shares", "bad_shares", "Shares are a plain decimal in steps of 0.001, such as 10 or 2.5."));
   }
   if (issues.length > 0 || cap === null || !isSide(input.side)) return { ok: false, issues };
 
@@ -227,8 +229,6 @@ export function expectedQuote(ticket: Ticket): ExpectedQuote {
 // The per-order cap the account read reports (a decimal string), compared exactly. null = not read.
 export function overOrderCap(ticket: Ticket, maxOrderUsd: string | null): boolean | null {
   if (maxOrderUsd === null) return null;
-  const match = /^(0|[1-9][0-9]*)(?:\.([0-9]{1,6}))?$/.exec(maxOrderUsd);
-  if (match === null) return null;
-  const limit = BigInt(`${match[1] ?? "0"}${(match[2] ?? "").padEnd(6, "0")}`);
-  return ticket.capAtomic > limit;
+  const limit = decToAtomic(maxOrderUsd, 6);
+  return limit.ok ? ticket.capAtomic > limit.value : null;
 }

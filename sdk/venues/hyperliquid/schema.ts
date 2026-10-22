@@ -1,5 +1,6 @@
 import * as z from "zod/v4";
 
+import { DEC_PATTERN, MAX_DECIMAL_CHARS } from "../../money/decimal.js";
 import { MAX_OUTCOME } from "./encoding.js";
 
 // The Hyperliquid /info shapes this adapter understands, and where each comes from:
@@ -13,8 +14,7 @@ import { MAX_OUTCOME } from "./encoding.js";
 // POST /info was never called by any research stream, so NONE of these is verified against the REST route.
 // Hence HYPERLIQUID_SHAPE_STATUS = unverified, and every parser fails closed.
 
-const DEC = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
-const decimalString = z.string().regex(DEC).max(40);
+const decimalString = z.string().regex(DEC_PATTERN).max(MAX_DECIMAL_CHARS);
 
 export const sideSpecSchema = z.object({ name: z.string().max(200) });
 

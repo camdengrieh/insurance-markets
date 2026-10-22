@@ -282,6 +282,7 @@ export function createManifoldAdapter(deps: AdapterDeps): ManifoldAdapter {
 // modelId "unknown" and ttlSec 0: past ttl means fail closed, so no net-of-fee number is ever derived.
 function unknownFee(): FeeSpec {
   return {
+    venue: "manifold",
     modelId: "unknown",
     payer: "in_pool",
     paramsSource: { url: `${MANIFOLD_API_BASE}/market`, field: "none", granularity: "market" },

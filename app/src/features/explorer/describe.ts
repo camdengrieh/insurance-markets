@@ -1,7 +1,7 @@
 // Fixed words for the market page: closed enums become sentences written by this app, so no venue text decides what a
 // label says. Each map is a typed Record, so the compiler fails when ports.ts adds a member.
 
-import { qtyOfDec } from "../../core/money";
+import { qtyOfDec, splitDecimal } from "../../core/money";
 import type { Collateral, FeeModelId, FeeParams, FeeSpec, Market, ResolutionMechanism, VoidPolicy } from "../../core/ports";
 
 export const MECHANISM_TEXT: Readonly<Record<ResolutionMechanism, string>> = Object.freeze({
@@ -47,11 +47,9 @@ export const CUSTODY_TEXT: Readonly<Record<Collateral["custody"], string>> = Obj
   broker: "held by a broker",
 });
 
-const DEC = /^-?\d{1,30}(?:\.\d{1,30})?$/;
-
-// A decimal the venue reported, shown only if it is one.
+// A decimal the venue reported (the shared grammar, sign allowed), shown only if it is one.
 export function safeDecimal(value: string | undefined): string | null {
-  return value !== undefined && DEC.test(value) ? value : null;
+  return value !== undefined && splitDecimal(value, { allowNegative: true }).ok ? value : null;
 }
 
 export function feeParamLines(label: string, params: FeeParams | undefined): string[] {
@@ -59,11 +57,10 @@ export function feeParamLines(label: string, params: FeeParams | undefined): str
   const lines: string[] = [];
   const rate = safeDecimal(params.rate);
   if (rate !== null) lines.push(`${label} rate ${rate}`);
-  if (params.bps !== undefined && Number.isInteger(params.bps) && params.bps >= 0 && params.bps <= 100_000) lines.push(`${label} ${params.bps} basis points`);
-  const min = safeDecimal(params.min);
-  if (min !== null) lines.push(`${label} minimum ${min}`);
-  const max = safeDecimal(params.max);
-  if (max !== null) lines.push(`${label} maximum ${max}`);
+  const bps = safeDecimal(params.bps);
+  if (bps !== null && !bps.startsWith("-")) lines.push(`${label} ${bps} basis points`);
+  const multiplier = safeDecimal(params.multiplier);
+  if (multiplier !== null) lines.push(`${label} multiplier ${multiplier}`);
   const exponent = safeDecimal(params.exponent);
   if (exponent !== null) lines.push(`${label} exponent ${exponent}`);
   return lines;

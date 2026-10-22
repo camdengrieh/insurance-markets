@@ -7,7 +7,7 @@
 // stronger label was withheld. It never claims guaranteed profit and places no orders.
 
 import type { UntrustedContent } from "../../src/guardrails/untrusted.js";
-import type { EdgeLabel } from "../core/labels.js";
+import type { EdgeLabel } from "../../sdk/engine/labels.js";
 import type { SDec } from "../core/rational.js";
 import type { Book, Dec, Exhaustive, FeeSpec, GroupKind, Status, Untrusted, VenueId } from "../types.js";
 

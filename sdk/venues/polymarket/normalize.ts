@@ -277,8 +277,9 @@ export function reconcileFees(gamma: PolymarketFee, clob: PolymarketFee | null):
   return { fee: clob, disagree: false };
 }
 
-function feeSpecShell(url: string, field: string, nowMs: number): Pick<FeeSpec, "payer" | "paramsSource" | "verifiedAt"> {
+function feeSpecShell(url: string, field: string, nowMs: number): Pick<FeeSpec, "venue" | "payer" | "paramsSource" | "verifiedAt"> {
   return {
+    venue: "polymarket",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url, field, granularity: "market" },
     verifiedAt: new Date(nowMs).toISOString(),

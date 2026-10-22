@@ -112,11 +112,6 @@ export function displayPrice(micro: bigint | null): string | null {
   return micro === null || micro <= 0n || micro >= MICRO ? null : formatMicro(micro);
 }
 
-function bpsRate(bps: number): string {
-  // bps/10000 as an exact decimal: bps * 100 micro units.
-  return formatMicro(BigInt(bps) * 100n);
-}
-
 // ---- status -----------------------------------------------------------------------------------------------------
 
 type StatusFacts = Pick<XoRow, "status" | "startsAt" | "expiresAt" | "settlement">;
@@ -245,6 +240,7 @@ export function feeSpecOf(detail: XoDetail, fetchedAtMs: number, feeRateBps: rea
     granularity: "market" as const,
   };
   const base = {
+    venue: "xo" as const,
     payer: "buyer_adds_seller_withholds" as const,
     paramsSource,
     verifiedAt: new Date(fetchedAtMs).toISOString(),
@@ -257,8 +253,9 @@ export function feeSpecOf(detail: XoDetail, fetchedAtMs: number, feeRateBps: rea
   if (assessment.takerFeeBps === null) return { modelId: "unknown", ...base };
   return {
     modelId: "ad_valorem_bps",
-    taker: { bps: assessment.takerFeeBps, rate: bpsRate(assessment.takerFeeBps) },
-    maker: { bps: config.makerFeeBps, rate: bpsRate(config.makerFeeBps) },
+    // Whole basis points as the API states them; the coefficient is given once (bps), never also as a rate.
+    taker: { bps: String(assessment.takerFeeBps) },
+    maker: { bps: String(config.makerFeeBps) },
     rounding: "ceil",
     ...base,
   };

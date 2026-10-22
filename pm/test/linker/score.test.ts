@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BAND_GOOD_BPS, BAND_STRONG_BPS, CANDIDATE_MIN_BPS, CLOSE_WINDOW_MINUTES, NEAR_CLOSE_MINUTES } from "../../linker/constants.js";
-import { buildFeatures, type FeatureInput, type MarketFeatures } from "../../linker/features.js";
-import { agreementBps, bandOf, closeProximityBps, evidenceCode, jaccardBps, scorePair } from "../../linker/score.js";
+import { BAND_GOOD_BPS, BAND_STRONG_BPS, CANDIDATE_MIN_BPS, CLOSE_WINDOW_MINUTES, NEAR_CLOSE_MINUTES } from "../../../sdk/linker/constants.js";
+import { buildFeatures, type FeatureInput, type MarketFeatures } from "../../../sdk/linker/features.js";
+import { agreementBps, bandOf, closeProximityBps, evidenceCode, jaccardBps, scorePair } from "../../../sdk/linker/score.js";
 
 function feat(title: string, rules: string, over: Partial<FeatureInput> = {}): MarketFeatures {
   const base: FeatureInput = {

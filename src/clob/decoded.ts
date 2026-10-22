@@ -19,13 +19,14 @@ import {
   type RebuildOutcome,
   type TypedData,
 } from "../relay/contract.js";
+import { decToAtomic } from "../../sdk/money/decimal.js";
 import { formatAtomic } from "../guardrails/amount.js";
 import { parseOwner, AccountError } from "../xo/account/derive.js";
 import { SIDE_BUY, ZERO_ADDRESS } from "../xo/signing/constants.js";
 import { SigningError } from "../xo/signing/errors.js";
 import { isoSecond } from "../xo/signing/lines.js";
 import type { OrderCapAmount } from "../xo/signing/amounts.js";
-import { clobCapAmount, decodeClobAmounts, formatMicro, parseTickMicro, MICRO, type ClobAmounts } from "./amounts.js";
+import { clobCapAmount, decodeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "./amounts.js";
 import { hashLimitlessOrder, limitlessOrderSignTypedData, type LimitlessOrder } from "./limitless/order.js";
 import { hashPolymarketClobAuth, polymarketClobAuthSignTypedData, POLYMARKET_CLOB_AUTH_MESSAGE } from "./polymarket/clobauth.js";
 import { depositWalletProxyOf } from "./polymarket/deposit-wallet.js";
@@ -231,7 +232,14 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
     if (error instanceof SigningError) return fail("decoded.order.maker_amount", error.message);
     throw error;
   }
-  if (amounts.sharesMicro < sharesMicroOf(d.params.min_size)) return fail("decoded.params.min_size", "the order is below the minimum size it states");
+  let minSharesMicro: bigint;
+  try {
+    minSharesMicro = sharesMicroOf(d.params.min_size);
+  } catch (error) {
+    if (error instanceof SigningError) return fail("decoded.params.min_size", error.message);
+    throw error;
+  }
+  if (amounts.sharesMicro < minSharesMicro) return fail("decoded.params.min_size", "the order is below the minimum size it states");
 
   // The venue's order struct, hashed under its pinned domain.
   let digest: Hex;
@@ -367,8 +375,10 @@ export function rebuildClobAuth(d: DecodedClobAuth): RebuildOutcome {
   return { ok: true, digest, inner_hash: digest, lines: clobAuthSummaryLines(d), covered: ["clob_auth"], unbound: ["ttl_s"], typed_data: typed };
 }
 
-// Shares in micro units from the canonical "min_size" text, for callers that need the number.
+// Shares in micro units from the canonical "min_size" text, for callers that need the number. Anything that is not
+// a plain decimal with at most 6 places is refused (sdk/money/decimal.ts), never truncated.
 export function sharesMicroOf(text: string): bigint {
-  const [whole = "0", fraction = ""] = text.split(".");
-  return BigInt(whole) * MICRO + BigInt((fraction.padEnd(6, "0") || "0").slice(0, 6));
+  const parsed = decToAtomic(text, 6);
+  if (!parsed.ok) throw new SigningError("invalid_size", "the minimum size must be a plain decimal with at most 6 places");
+  return parsed.value;
 }

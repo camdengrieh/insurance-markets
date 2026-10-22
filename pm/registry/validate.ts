@@ -2,6 +2,7 @@
 // of human-readable problems; an empty list means the records are well formed. This checks shape
 // and honesty rules, not facts: it cannot tell whether a recorded fact is true.
 
+import { isDec } from "../../sdk/money/decimal.js";
 import { FEE_MODEL_BY_VENUE, REGISTRY_VENUE_IDS, feeSpecId, isFeeSpecId } from "./ids.js";
 import { derivePools } from "./pools.js";
 import { SECTION_KEYS, SECTION_POLICY, parseIsoDate, type Section } from "./staleness.js";
@@ -105,7 +106,7 @@ export function validateRegistry(records: readonly PlatformRecord[]): string[] {
       problems.push(`${at}.fees: docs_only cannot be used for pricing; use rule must be fail_closed`);
     }
     for (const [name, value] of Object.entries(f.indicative)) {
-      if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(value)) problems.push(`${at}.fees.indicative.${name}: not a plain decimal`);
+      if (!isDec(value)) problems.push(`${at}.fees.indicative.${name}: not a plain decimal`);
     }
 
     // Geo

@@ -3,8 +3,8 @@
 // safety. Offline, deterministic, fixed clock.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeKalshiBook } from "../../core/books.js";
-import { kalshiFeeSpec, unknownFeeSpec } from "../../core/fee-specs.js";
+import { normalizeKalshiBook } from "../../../sdk/engine/books.js";
+import { kalshiFeeSpec, unknownFeeSpec } from "../../../sdk/engine/fee-specs.js";
 import type { FeeSpec } from "../../types.js";
 import { checkStructure, type StructureFinding, type StructureOptions, type StructureResult } from "../../ops/structure.js";
 import { structureOutputSchema } from "../../ops/structure-schema.js";

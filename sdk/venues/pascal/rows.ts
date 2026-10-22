@@ -1,4 +1,4 @@
-import { fromAtomic, parseQty, type Qty } from "../../money/qty.js";
+import { addQty, cmpQty, fromAtomic, parseQty, toMicro, type Qty } from "../../money/qty.js";
 import { safeHttpsUrl } from "../../text.js";
 import { displayAttributesSchema, marketRowSchema, msOf, parseReference, parseScalar, type PascalReference } from "./schemas.js";
 
@@ -40,9 +40,7 @@ function price(value: string | null | undefined): Qty | null | "bad" {
   const qty = parseQty("price", value, { maxScale: 6 });
   if (qty === null) return "bad";
   if (qty.atomic <= 0n) return null;
-  // Compare against 1 exactly: atomic / 10^scale <= 1.
-  const one = 10n ** BigInt(qty.scale);
-  return qty.atomic <= one ? qty : "bad";
+  return cmpQty(qty, ONE_PRICE) <= 0 ? qty : "bad";
 }
 
 function parseLabels(value: unknown): Labels {
@@ -86,10 +84,10 @@ export function parseRow(raw: unknown): PascalRow | null {
   const tickMin = parseQty("price", row.tick_size_min, { maxScale: 6 });
   if (takerFeeRate === null || makerRebateShare === null || tickMin === null) return null;
   // A fee above 100 per cent, a rebate share above 1 or a tick of zero is not a Pascal market.
-  if (takerFeeRate.atomic > 10n ** BigInt(takerFeeRate.scale)) return null;
-  if (makerRebateShare.atomic > 10n ** BigInt(makerRebateShare.scale)) return null;
-  const tickMinMicro = tickMin.atomic * 10n ** BigInt(6 - tickMin.scale);
-  if (tickMinMicro <= 0n || tickMinMicro >= 1_000_000n) return null;
+  if (cmpQty(takerFeeRate, ONE_PRICE) > 0) return null;
+  if (cmpQty(makerRebateShare, ONE_PRICE) > 0) return null;
+  const tickMinMicro = toMicro(tickMin);
+  if (tickMinMicro === null || tickMinMicro <= 0n || tickMinMicro >= 1_000_000n) return null;
 
   const bestBid = price(row.best_bid);
   const bestAsk = price(row.best_ask);
@@ -98,12 +96,7 @@ export function parseRow(raw: unknown): PascalRow | null {
   const window = row.stats?.last_24h;
   const buy = window?.taker_buy_volume_notional === undefined ? null : parseQty("usd", window.taker_buy_volume_notional, { maxScale: 6 });
   const sell = window?.taker_sell_volume_notional === undefined ? null : parseQty("usd", window.taker_sell_volume_notional, { maxScale: 6 });
-  let volume24h: Qty | null = null;
-  if (buy !== null && sell !== null) {
-    const scale = Math.max(buy.scale, sell.scale);
-    const lift = (q: Qty): bigint => q.atomic * 10n ** BigInt(scale - q.scale);
-    volume24h = fromAtomic("usd", lift(buy) + lift(sell), scale);
-  }
+  const volume24h: Qty | null = buy !== null && sell !== null ? addQty(buy, sell) : null;
 
   const event = row.symbol.slice(0, row.symbol.indexOf("."));
   const eventText = attrs.data.event_description?.trim() ?? "";

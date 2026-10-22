@@ -1,6 +1,7 @@
 import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, getAbiItem, toEventSelector } from "viem";
 import * as z from "zod/v4";
 
+import { parseAtomicInteger } from "../sdk/money/decimal.js";
 import { formatAtomic, parseDecimalAtomic } from "../src/guardrails/amount.js";
 import {
   digestTag,
@@ -327,7 +328,8 @@ export interface OrderbookAccount {
 
 const CONDITION_RESOLUTION_TOPIC = toEventSelector(getAbiItem({ abi: CONDITIONAL_TOKENS_ABI, name: "ConditionResolution" }));
 const BARE_OR_PREFIXED_ADDRESS = /^(?:0x)?[0-9a-fA-F]{40}$/;
-const MICRO = /^(0|[1-9][0-9]{0,30})$/;
+// The orderbook's credited balance is an integer string of micro USDC.e, at most 31 digits.
+const MAX_BALANCE_DIGITS = 31;
 // Node lookups are paced by the upstream client (4 requests a second per host), so 12 fit inside the
 // request budget next to the other reads.
 // After this long a node that asked for a key is asked once more (the upstream client's own retry window).
@@ -422,7 +424,7 @@ export class XoReads {
       else if (typeof smart === "string" && BARE_OR_PREFIXED_ADDRESS.test(smart)) registry = { kind: "read", smartAccount: smart };
       else return unavailable;
       const balance = record["balance"];
-      const balanceMicro = typeof balance === "string" && MICRO.test(balance) ? BigInt(balance) : null;
+      const balanceMicro = typeof balance === "string" && balance.length <= MAX_BALANCE_DIGITS ? parseAtomicInteger(balance) : null;
       return { registry, balanceMicro };
     } catch {
       return unavailable;

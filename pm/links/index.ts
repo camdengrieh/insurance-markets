@@ -1,6 +1,7 @@
-// Barrel for the pure parts of pm/links (no file or process access). The CLI (cli.ts), the
-// working-registry file helpers and approve.ts are imported by path on purpose: approval is a
-// human command, so its function is not part of the general surface.
+// Barrel for the pure parts of pm/links (no file or process access): the SDK's link registry
+// (sdk/links) with its validating functions bound to the platform registry's terms. The CLI
+// (cli.ts), the working-registry file helpers and approve.ts are imported by path on purpose:
+// approval is a human command, so its function is not part of the general surface.
 export * from "./canonical.js";
 export * from "./hash.js";
 export * from "./schema.js";

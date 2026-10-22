@@ -236,6 +236,7 @@ function unknownFee(): FeeSpec {
   // Fees are charged only on close or settle, with no numeric rate in the official docs and a per-deployer
   // fee scale (census, H/M). modelId "unknown" and ttlSec 0 fail closed: no net-of-fee number is derived.
   return {
+    venue: "hyperliquid",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: HYPERLIQUID_INFO_URL, field: "userFees", granularity: "market" },

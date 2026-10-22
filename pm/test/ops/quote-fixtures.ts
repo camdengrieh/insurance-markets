@@ -3,7 +3,7 @@
 // in-memory adapters: nothing here touches a network or reads real market data.
 
 import assert from "node:assert/strict";
-import { kalshiFeeSpec, polymarketFeeSpec, xoFeeSpec, type FeeSource } from "../../core/fee-specs.js";
+import { kalshiFeeSpec, polymarketFeeSpec, xoFeeSpec, type FeeSource } from "../../../sdk/engine/fee-specs.js";
 import { buildBundle, type Bundle } from "../../links/bundle.js";
 import { hashRuleRecord } from "../../links/hash.js";
 import { classKeyForLink, type ClassGates } from "../../links/tier.js";
@@ -22,6 +22,7 @@ import {
   type OutcomeRef,
   type Result,
   type Status,
+  type TokenRef,
   type VenueId,
   type VenueReadAdapter,
 } from "../../types.js";
@@ -191,8 +192,8 @@ export class FakeAdapter implements VenueReadAdapter {
     this.options = options;
   }
 
-  listMarkets(): Promise<{ items: never[]; hasNext: false }> {
-    return Promise.resolve({ items: [], hasNext: false });
+  listMarkets(): Promise<{ items: never[]; next: null }> {
+    return Promise.resolve({ items: [], next: null });
   }
 
   getMarket(ref: { marketId: string }): Promise<Market> {
@@ -205,7 +206,7 @@ export class FakeAdapter implements VenueReadAdapter {
     return Promise.resolve(market);
   }
 
-  getBooks(tokens: readonly { venue: VenueId; tokenId: string }[]): Promise<Array<Result<Book, AdapterError>>> {
+  getBooks(tokens: readonly TokenRef[]): Promise<Array<Result<Book, AdapterError>>> {
     this.calls.getBooks += 1;
     return Promise.resolve(
       tokens.map((t): Result<Book, AdapterError> => {

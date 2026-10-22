@@ -16,26 +16,24 @@
 // The cap arithmetic is the XO one (src/xo/signing/amounts.ts orderCapAmount) with the CLOB policy fee ceiling, so a
 // BUY counts principal plus the ceiling and a SELL the larger of its proceeds and its face value.
 
-import { formatAtomic } from "../guardrails/amount.js";
+import { atomicToDec, decToAtomic, pow10 } from "../../sdk/money/decimal.js";
 import { orderCapAmount, type OrderCapAmount } from "../xo/signing/amounts.js";
 import { SIDE_BUY, SIDE_SELL } from "../xo/signing/constants.js";
 import { SigningError } from "../xo/signing/errors.js";
 import { CLOB_CAP_FEE_BPS, CLOB_COLLATERAL_DECIMALS, LIMITLESS_MIN_MAKER_AMOUNT, LIMITLESS_PRICE_TICK } from "./venues.js";
 
 export const MICRO = 1_000_000n;
-const MAX_INPUT_LENGTH = 40;
-const DECIMAL = /^(0|[1-9][0-9]*)(?:\.([0-9]+))?$/;
 
 export type ClobSide = typeof SIDE_BUY | typeof SIDE_SELL;
 
+// Text at most `maxDecimals` places (trailing zeros count, sdk/money/decimal.ts), as micro units.
 function scaled(value: unknown, maxDecimals: number, label: string, code: "invalid_price" | "invalid_size"): bigint {
-  if (typeof value !== "string" || value.length === 0 || value.length > MAX_INPUT_LENGTH) throw new SigningError(code, `${label} must be a plain decimal string`);
-  const match = DECIMAL.exec(value);
-  if (match === null) throw new SigningError(code, `${label} must be a plain non-negative decimal string`);
-  const whole = match[1] ?? "0";
-  const fraction = (match[2] ?? "").replace(/0+$/, "");
-  if (fraction.length > maxDecimals) throw new SigningError(code, `${label} has more than ${maxDecimals} decimal places`);
-  return BigInt(whole) * MICRO + BigInt(fraction.padEnd(CLOB_COLLATERAL_DECIMALS, "0") || "0");
+  if (!Number.isInteger(maxDecimals) || maxDecimals < 0 || maxDecimals > CLOB_COLLATERAL_DECIMALS) throw new SigningError(code, `${label} allows at most ${CLOB_COLLATERAL_DECIMALS} decimal places`);
+  const parsed = decToAtomic(value, maxDecimals);
+  if (parsed.ok) return parsed.value * pow10(CLOB_COLLATERAL_DECIMALS - maxDecimals);
+  if (parsed.failure === "not_text" || parsed.failure === "length") throw new SigningError(code, `${label} must be a plain decimal string`);
+  if (parsed.failure === "precision") throw new SigningError(code, `${label} has more than ${maxDecimals} decimal places`);
+  throw new SigningError(code, `${label} must be a plain non-negative decimal string`);
 }
 
 // A tick such as "0.01" as micro units (10000n). Refuses anything that is not a price step.
@@ -69,7 +67,7 @@ export function parseClobSharesMicro(shares: unknown, sizeDecimals: number): big
 
 // Canonical text of a micro amount: "0.52", "10", "2.5" (no trailing zeros, no exponent).
 export function formatMicro(micro: bigint): string {
-  return formatAtomic(micro, CLOB_COLLATERAL_DECIMALS);
+  return atomicToDec(micro, CLOB_COLLATERAL_DECIMALS);
 }
 
 export interface ClobAmountsInput {

@@ -175,6 +175,7 @@ export function tradableOf(data: MarketData, yes: Qty | null, no: Qty | null): {
 // or inconsistent makes the model "unknown" and the aggregator fails closed.
 export function feeSpecOf(data: MarketData, hookFee: { readonly numerator: bigint; readonly denominator: bigint } | null, deployment: TrueoDeployment, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
+    venue: "trueo",
     modelId: "unknown",
     payer: "in_pool",
     paramsSource: { url: `${deployment.caip2}:${getAddress(data.hook.address)}`, field: "poolKey.fee,hook.feeNumerator,hook.FEE_DENOMINATOR", granularity: "market" },
@@ -190,6 +191,7 @@ export function feeSpecOf(data: MarketData, hookFee: { readonly numerator: bigin
   // lp / 1e6 + numerator / 1e4, over a common denominator of 1e10.
   const rate = fromAtomic("price", BigInt(yesFee) * 10_000n + hookFee.numerator * 1_000_000n, 10);
   return {
+    venue: "trueo",
     modelId: "amm_stack",
     taker: { rate: toDec(rate) },
     payer: "in_pool",

@@ -154,6 +154,7 @@ export function rulesOf(row: SxRow): Rules {
 
 export function unknownFee(origin: string, marketHash: string, nowMs: number): FeeSpec {
   return {
+    venue: "sx",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${origin}/markets/find?marketHashes=${marketHash}`, field: "takerPayoutFee (keyed route)", granularity: "token" },

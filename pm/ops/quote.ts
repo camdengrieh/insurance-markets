@@ -18,8 +18,9 @@ import {
   sanitizeField,
   type UntrustedContent,
 } from "../../src/guardrails/untrusted.js";
-import { checkFeeSpec } from "../core/fees.js";
-import { quoteBook } from "../core/walk.js";
+import { checkFeeSpec } from "../../sdk/engine/fees.js";
+import { feeSpecId } from "../../sdk/engine/fee-specs.js";
+import { quoteBook } from "../../sdk/engine/walk.js";
 import {
   ZERO,
   cmp,
@@ -31,7 +32,7 @@ import {
   type Rational,
   type SDec,
 } from "../core/rational.js";
-import { parseBook } from "../core/books.js";
+import { parseBook } from "../../sdk/engine/books.js";
 import { canonicalSha256 } from "../links/canonical.js";
 import { dataPolicy, getPlatform } from "../registry/registry.js";
 import { readSection } from "../registry/staleness.js";
@@ -167,7 +168,7 @@ export function feeRegistryCheck(ctx: OpsContext, venue: string, spec: FeeSpec):
     return { flags: ["venue_not_in_registry"], modelMatches: null, registryStatus: null, gateOk: false };
   }
   const flags: string[] = [];
-  const modelMatches = spec.id === rec.fees.value.feeSpecId;
+  const modelMatches = feeSpecId(spec) === rec.fees.value.feeSpecId;
   if (!modelMatches) flags.push("fee_model_registry_mismatch");
   const read = readSection(rec.fees, "gate", ctx.nowMs);
   if (!read.usable) flags.push("fee_registry_not_gate_usable");
@@ -204,7 +205,7 @@ export function tickProblem(tick: Tick): string | null {
   for (const range of tick) {
     const from = ratFromDec(range.from);
     const to = ratFromDec(range.to);
-    if (!from.ok || !to.ok || positiveStep(range.step) === null) return "tick_invalid";
+    if (!from.ok || !to.ok || positiveStep(range.tick) === null) return "tick_invalid";
     if (cmp(from.value, to.value) >= 0) return "tick_invalid";
     if (previousTo !== null && cmp(from.value, previousTo) < 0) return "tick_invalid";
     previousTo = to.value;
@@ -387,7 +388,7 @@ export function offTick(price: Rational, tick: Tick): boolean {
     const from = ratFromDec(range.from);
     const to = ratFromDec(range.to);
     if (!from.ok || !to.ok) return true;
-    if (cmp(price, from.value) >= 0 && cmp(price, to.value) <= 0) return !onGrid(price, range.step, from.value);
+    if (cmp(price, from.value) >= 0 && cmp(price, to.value) <= 0) return !onGrid(price, range.tick, from.value);
   }
   return true;
 }
@@ -531,7 +532,7 @@ export async function getQuote(rawInput: unknown, ctx: OpsContext): Promise<Quot
     vwap: walk.quote.vwap,
     fee: feeAmount,
     netCost,
-    feeSpecId: spec.id,
+    feeSpecId: walk.quote.feeSpecId,
     derived: book.derived,
     asOfMs,
     bookSha256: bookSha256(book),
@@ -575,7 +576,7 @@ export async function getQuote(rawInput: unknown, ctx: OpsContext): Promise<Quot
     vwap: walk.quote.vwap,
     notional: walk.notional,
     fee: {
-      specId: spec.id,
+      specId: walk.quote.feeSpecId,
       modelId: spec.modelId,
       role: "taker",
       amount: feeAmount,

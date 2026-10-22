@@ -1,3 +1,4 @@
+import { atomicToDec, decToAtomic, roundDiv } from "../../../sdk/money/decimal.js";
 import type { CapBasis } from "../../relay/contract.js";
 import { FEE_RATE_CEILING_BPS, MAX_FEE_RATE_BPS, SHARE_MICRO_PER_SHARE, SHARE_STEP_MICRO } from "../chain/constants.js";
 import { MAX_TICK, MIN_TICK, SIDE_BUY, SIDE_SELL, TICK_DENOMINATOR } from "./constants.js";
@@ -10,6 +11,8 @@ import type { OrderSide } from "./order.js";
 //   - BUY:  makerAmount = collateral micro, takerAmount = shares micro
 //   - SELL: makerAmount = shares micro,     takerAmount = collateral micro
 //   - collateral micro = sharesMicro * tick / 1000, and the division must be exact
+//   - text goes through the shared decimal grammar (sdk/money/decimal.ts): more places than the scale is refused,
+//     trailing zeros included
 // XO documents no rounding rule for inexact products, so those are rejected (never rounded). With the
 // share step at 1,000 micro-shares every product is exact at every tick, so the question never arises.
 //
@@ -25,23 +28,16 @@ import type { OrderSide } from "./order.js";
 // BUY can cost is makerAmount plus the bound (rounded up), and the least a SELL can net is takerAmount
 // minus the bound (rounded up, so the net is rounded down). Both round in the safe direction.
 
-const MAX_INPUT_LENGTH = 40;
-
 function parseScaledDecimal(
   value: unknown,
   scale: number,
   label: string,
   code: "invalid_price" | "invalid_size",
 ): bigint {
-  if (typeof value !== "string" || value.length > MAX_INPUT_LENGTH || !/^(0|[1-9][0-9]*)(\.[0-9]+)?$/.test(value)) {
-    throw new SigningError(code, `${label} must be a plain non-negative decimal string`);
-  }
-  const [whole = "0", rawFraction = ""] = value.split(".");
-  const fraction = rawFraction.replace(/0+$/, "");
-  if (fraction.length > scale) {
-    throw new SigningError(code, `${label} has more than ${scale} decimal places`);
-  }
-  return BigInt(whole) * 10n ** BigInt(scale) + BigInt(fraction.padEnd(scale, "0") || "0");
+  const parsed = decToAtomic(value, scale);
+  if (parsed.ok) return parsed.value;
+  if (parsed.failure === "precision") throw new SigningError(code, `${label} has more than ${scale} decimal places`);
+  throw new SigningError(code, `${label} must be a plain non-negative decimal string`);
 }
 
 // "0.55" -> 550. Throws on off-tick prices and on anything outside the open interval (0, 1).
@@ -81,21 +77,14 @@ function assertTick(priceTick: number): void {
   }
 }
 
-function fixed(value: bigint, scale: number): string {
-  const digits = value.toString().padStart(scale + 1, "0");
-  const whole = digits.slice(0, digits.length - scale);
-  const fraction = digits.slice(digits.length - scale).replace(/0+$/, "");
-  return fraction === "" ? whole : `${whole}.${fraction}`;
-}
-
 export function formatTick(priceTick: number): string {
   assertTick(priceTick);
-  return fixed(BigInt(priceTick), 3);
+  return atomicToDec(BigInt(priceTick), 3);
 }
 
 export function formatMicro(micro: bigint): string {
   if (micro < 0n) throw new SigningError("invalid_integer", "micro amount must not be negative");
-  return fixed(micro, 6);
+  return atomicToDec(micro, 6);
 }
 
 // Floors and the share step. Fields left out take the default below; to switch one off pass the value
@@ -227,13 +216,9 @@ function positiveAmount(value: unknown, label: string): bigint {
   return value;
 }
 
-function ceilDiv(numerator: bigint, denominator: bigint): bigint {
-  return (numerator + denominator - 1n) / denominator;
-}
-
 // The most the fee on a BUY leg can be: feeBps of the principal, rounded UP.
 export function maxBuyFee(makerAmount: bigint, feeBps: number | bigint): bigint {
-  return ceilDiv(positiveAmount(makerAmount, "makerAmount") * feeBpsOf(feeBps), BPS_DENOMINATOR);
+  return roundDiv(positiveAmount(makerAmount, "makerAmount") * feeBpsOf(feeBps), BPS_DENOMINATOR, "ceil");
 }
 
 // The most a BUY can pull from the maker's balance in total: principal plus the fee bound. Whatever
@@ -250,7 +235,7 @@ export function maxBuyOutlay(makerAmount: bigint, feeBps: number | bigint): bigi
 // [docs/research/22 (c.1)]; that dust is less than one micro-USDC per fill.
 export function minSellProceeds(takerAmount: bigint, feeBps: number | bigint): bigint {
   const amount = positiveAmount(takerAmount, "takerAmount");
-  return amount - ceilDiv(amount * feeBpsOf(feeBps), BPS_DENOMINATOR);
+  return amount - roundDiv(amount * feeBpsOf(feeBps), BPS_DENOMINATOR, "ceil");
 }
 
 // The fee bound the relay EXPECTS on chain: the exchange's own bound today (800 bps). The relay watches it with

@@ -1,4 +1,4 @@
-import { cmpQty, decFromNumber, fromAtomic, parseQty, toDec, type Qty } from "../../money/qty.js";
+import { cmpQty, decFromNumber, fromAtomic, negQty, parseQty, signOf, subQty, toDec, type Qty } from "../../money/qty.js";
 import type { Dec } from "../../model.js";
 
 // Quotient mixes scales in one object (research 12 section 5.1): `entry_q` and `entry_pm` are 0 to 100,
@@ -41,11 +41,8 @@ export function nonNegativeDec(value: unknown): Dec | null {
 
 // |a - b| as an exact decimal.
 export function absDiff(a: Qty, b: Qty): Qty {
-  const scale = Math.max(a.scale, b.scale);
-  const left = a.atomic * 10n ** BigInt(scale - a.scale);
-  const right = b.atomic * 10n ** BigInt(scale - b.scale);
-  const diff = left >= right ? left - right : right - left;
-  return fromAtomic("price", diff, scale);
+  const diff = subQty(a, b);
+  return signOf(diff) < 0 ? negQty(diff) : diff;
 }
 
 export function within(a: Qty, b: Qty, tolerance: Dec): boolean {

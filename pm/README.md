@@ -31,19 +31,19 @@ There are no pm-specific dependencies; use Node 24 built-ins plus the root `viem
 | Path | Owner stream | Contents |
 |---|---|---|
 | `pm/tsconfig.json`, `pm/types.ts`, `pm/index.ts`, `pm/README.md`, `pm/test/.gitkeep` | pm-scaffold | Package config, shared types and exact-decimal bridge (`Dec`, `Fixed`, `decToFixed`, `fixedToDec`), barrel, this file |
-| `pm/core/` | pm-core | Pure logic, no I/O: book normalisers, fee models, depth-walk, edge gates and labels, set/ladder/implication checks, rule hashing |
+| `pm/core/` | pm-core | A barrel over the SDK's pure logic: the books and fee engine is `sdk/engine` (book normalisers, fee models and builders, depth walk and quotes, basket walk, edge gates and labels, set/ladder/implication checks, the exact LP), with its tests beside it; `rational.ts` and `category.ts` re-export `sdk/money/rational.ts` and `sdk/category.ts` |
 | `pm/registry/` | pm-registry | Platform registry and link registry records, JSON schemas, hash pinning, verifier |
-| `pm/links/` | pm-links | Link proposal and verification pipeline (propose/veto only, never promote) |
+| `pm/links/` | pm-links | Link proposal and verification pipeline (propose/veto only, never promote). The pure record logic (schema, tiers, invariants, store, bundle, lookup, pins, approval, gold set) is `sdk/links`; pm keeps the CLI, the registry file helpers, the shipped bundle and thin modules that bind the SDK to the platform registry's data terms (`registryTerms` in `pm/links/schema.ts`) |
 | `pm/adapters/` | pm-adapters | Per-venue read adapters (fetch, parse, fixtures), flagged OFF by default where terms restrict use |
 | `pm/ops/` | pm-ops | Rate limits, caching (memory-only for restricted data), staleness, health, feature flags |
 | `pm/signals/` | pm-signals | Quotient request/parse helpers and alert/signal layer (no network) |
 | `pm/recorder/` | pm-recorder | Optional local recorder of unrestricted public data (`node:sqlite`); tested against fixtures and a local fake server only |
-| `pm/linker/` | pm-linker | Scheduled link proposer: discovers open markets on the allowlisted venues, scores same-question pairs, writes `candidate` links through `store.proposeLink` (never approves); see `docs/linker-runbook.md` |
+| `pm/linker/` | pm-linker | Scheduled link proposer: discovers open markets on the allowlisted venues, scores same-question pairs, writes `candidate` links through `store.proposeLink` (never approves); see `docs/linker-runbook.md`. The scoring (features, blocking, pair scores, candidate inputs, the dApp dataset export) is `sdk/linker`; pm keeps discovery over HTTP, the state files, the run loop, the report, the allowlist and the Quotient check |
 | `pm/tools/` | pm-tools | MCP tool surface; exports `registerPmTools(server)` from `pm/tools/index.ts` (wiring into `src/plugin.ts` is a later step) |
 | `pm/test/` | everyone | Tests for pm-wide code; each subfolder may also keep tests under `pm/<sub>/test/` or in `pm/test/<sub>/` |
 
-Dependency direction: `pm/types.ts` imports only `src/guardrails/amount.ts`. `pm/core` imports
-types only. Adapters import `core` and `types`. Tools import everything. Nothing in `pm/` may
+Dependency direction: `pm/types.ts` imports only `sdk/` types. `sdk/engine` (reached directly or through
+`pm/core`) imports only other `sdk/` files. Adapters import the engine and `types`. Tools import everything. Nothing in `pm/` may
 import a signing or trading module.
 
 ## Gate
@@ -62,8 +62,10 @@ injected clocks. Every guardrail and refusal needs a failing-case test.
 
 ## Shared types
 
-`pm/types.ts` (re-exported from `pm/index.ts`) is the single source of the venue-agnostic types:
-`VenueId`, `MarketRef`, `OutcomeRef`, `TokenRef`, `Market`, `Rules`, `BookLevel`, `Book` (with its
-`convention` tag and `derived` flag), `Quote`, `FeeSpec` and `FeeSpecId`, `Link`, `LinkRef`,
-`AdapterError`, `Result`, `Page` and `VenueReadAdapter`. Boundary values are `Dec` strings; the
+`pm/types.ts` (re-exported from `pm/index.ts`) is where pm reaches the venue-agnostic types. They are
+defined once in the SDK (`sdk/model.ts`, the link types in `sdk/links/types.ts`) and re-exported: `Market`,
+`MarketSummary`, `Rules`, `TokenRef`, `BookLevel`, `Book` (with its optional `convention` tag and `derived`
+flag), `Quote`, `FeeSpec` (named parameters, its `FeeSpecId` derived from venue and model), `Tick`, `Link`,
+`LinkRef`, `AdapterError`, `Result`, `Page` and `VenueReadAdapter`. pm adds only its venue subset
+(`VenueId`) and the `MarketRef` narrowed to it. Boundary values are `Dec` strings; the
 engine uses `Fixed` (bigint units with an explicit scale 0 to 18). Do not add a second decimal type.

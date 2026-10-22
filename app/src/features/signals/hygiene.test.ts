@@ -100,7 +100,7 @@ describe("Signals source hygiene", () => {
         const specifier = match[1] ?? "";
         expect(specifier, name).not.toMatch(/(?:^|\/)(?:payment|signer|signing|signature|hmac|wallet|relay|bridge)(?:\/|$|\.)/i);
         // The shared SDK's pure modules (sdk/README.md) are allowed; they hold no payment, signing or wallet code.
-        const allowed = specifier.startsWith(".") || /^(?:react|zod\/v4|viem|vitest)$/.test(specifier) || /^@sdk\/(?:rules|hash|model|category)$/.test(specifier);
+        const allowed = specifier.startsWith(".") || /^(?:react|zod\/v4|viem|vitest)$/.test(specifier) || /^@sdk\/(?:rules|hash|model|category|links\/dataset)$/.test(specifier);
         expect(allowed, `${name} imports ${specifier}`).toBe(true);
       }
     }

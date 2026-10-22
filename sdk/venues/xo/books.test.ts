@@ -110,7 +110,7 @@ describe("standalone: no books, and no request to the orderbook host", () => {
     const market = { ref: { venue: "xo", marketId: FEE400, native: {} } } as Market;
     const spec = await adapter.getFeeSpec(market);
     expect(spec.modelId).toBe("ad_valorem_bps");
-    expect(spec.taker?.bps).toBe(400);
+    expect(spec.taker?.bps).toBe("400");
     expect(calls.map((call) => call.url.hostname)).toEqual([DATA]);
   });
 
@@ -264,18 +264,18 @@ describe("cockpit: fee spec", () => {
 
   it("uses the larger of the Data API figure and /fee-rate, which only ever raises it", async () => {
     const zero = build([detailRoute, rate(YES, { body: { base_fee: 0 } }), rate(NO, { body: { base_fee: 0 } })], "cockpit");
-    expect((await zero.adapter.getFeeSpec(market)).taker?.bps).toBe(400);
+    expect((await zero.adapter.getFeeSpec(market)).taker?.bps).toBe("400");
     const higher = build([detailRoute, rate(YES, { body: { base_fee: 0 } }), rate(NO, { body: { base_fee: 800 } })], "cockpit");
     const spec = await higher.adapter.getFeeSpec(market);
-    expect(spec.taker).toEqual({ bps: 800, rate: "0.08" });
+    expect(spec.taker).toEqual({ bps: "800" });
     expect(spec.modelId).toBe("ad_valorem_bps");
   });
 
   it("falls back to the Data API figure when /fee-rate fails, but not when it answers something that is not a fee", async () => {
     const down = build([detailRoute, rate(YES, { status: 500, body: {} }), rate(NO, { reject: true })], "cockpit");
-    expect((await down.adapter.getFeeSpec(market)).taker?.bps).toBe(400);
+    expect((await down.adapter.getFeeSpec(market)).taker?.bps).toBe("400");
     const odd = build([detailRoute, rate(YES, { body: { base_fee: "800" } }), rate(NO, { body: { base_fee: -1 } })], "cockpit");
-    expect((await odd.adapter.getFeeSpec(market)).taker?.bps).toBe(400);
+    expect((await odd.adapter.getFeeSpec(market)).taker?.bps).toBe("400");
   });
 
   it("stays unknown when the Data API has no usable config, even if /fee-rate answers a figure", async () => {

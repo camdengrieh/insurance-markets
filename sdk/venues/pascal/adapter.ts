@@ -1,4 +1,4 @@
-import { fromAtomic, notional, parseQty, toDec, type Qty } from "../../money/qty.js";
+import { cmpQty, fromAtomic, notional, parseQty, toDec, toMicro, type Qty } from "../../money/qty.js";
 import type {
   AdapterCaps,
   AdapterDeps,
@@ -32,7 +32,7 @@ import { AdapterFailure } from "./errors.js";
 import { getJson, resolveDeadline } from "./http.js";
 import { bookOf, COLLATERAL, complement, crossed, feeSpecOf, isCrossedPair, marketOf, parseTokenId, provOf, refOf, sortLevels, statusOf, summaryOf, tokenIdOf, type RawLevel } from "./map.js";
 import type { VenuePosition } from "./positions.js";
-import { parseRows, type PascalRow } from "./rows.js";
+import { ONE_PRICE, parseRows, type PascalRow } from "./rows.js";
 import { accountDataSchema, accountPositionSchema, bookSchema, booksDataSchema, envelopeSchema, marketsDataSchema, msOf, SYMBOL } from "./schemas.js";
 
 // Pascal (Solana): a noncustodial exchange with an off-chain central limit order book. Read-only, keyless,
@@ -198,7 +198,7 @@ export function createPascalAdapter(deps: AdapterDeps, options: PascalOptions = 
     // Filter and order the cheap row form first; build (and sanitise) summaries for the one page only.
     const matched = snap.rows.filter((row) => statuses.has(statusOf(row, now)) && (needle === "" || row.titleText.toLowerCase().includes(needle) || row.symbol.toLowerCase().includes(needle)));
     // Busiest first (24 hour notional), then by symbol, so a page is deterministic.
-    const volumeOf = (row: PascalRow): bigint => (row.volume24h === null ? -1n : row.volume24h.atomic * 10n ** BigInt(6 - Math.min(row.volume24h.scale, 6)));
+    const volumeOf = (row: PascalRow): bigint => (row.volume24h === null ? -1n : (toMicro(row.volume24h) ?? -1n));
     matched.sort((a, b) => {
       const va = volumeOf(a);
       const vb = volumeOf(b);
@@ -224,7 +224,7 @@ export function createPascalAdapter(deps: AdapterDeps, options: PascalOptions = 
       const size = parseQty("contracts", sizeText, { maxScale: 6 });
       if (price === null || size === null) return null;
       // A price of 0 or 1 is not a quote; a zero size is an empty level.
-      if (price.atomic <= 0n || price.atomic >= 10n ** BigInt(price.scale)) return null;
+      if (price.atomic <= 0n || cmpQty(price, ONE_PRICE) >= 0) return null;
       out.push({ price, size });
     }
     return out;

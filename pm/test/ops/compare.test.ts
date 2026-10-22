@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { unknownFeeSpec } from "../../core/fee-specs.js";
-import { repriceOrders } from "../../core/basket.js";
-import { parseBook } from "../../core/books.js";
-import { walkImplication } from "../../core/depth.js";
-import { DEFAULTS, lockRate } from "../../core/edge.js";
+import { unknownFeeSpec } from "../../../sdk/engine/fee-specs.js";
+import { repriceOrders } from "../../../sdk/engine/basket.js";
+import { parseBook } from "../../../sdk/engine/books.js";
+import { walkImplication } from "../../../sdk/engine/depth.js";
+import { DEFAULTS, lockRate } from "../../../sdk/engine/edge.js";
 import { cmp, mul, rat, ratFromDec, ratToDec, sub, type Rational } from "../../core/rational.js";
 import { untrusted } from "../../types.js";
 import { buildBundle } from "../../links/bundle.js";

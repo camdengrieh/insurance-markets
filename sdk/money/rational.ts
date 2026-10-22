@@ -1,13 +1,16 @@
 // Exact rational arithmetic on bigint. The engine needs products of prices, sizes, fee rates and
 // day fractions, so a single fixed scale is not enough; a reduced fraction never loses a digit.
 // No floating point anywhere: decimals enter through the strict money grammar of
-// sdk/money/amount.ts and leave through explicit, directed rounding.
+// sdk/money/amount.ts (over decimal.ts) and leave through explicit, directed rounding (decimal.ts roundDiv).
 //
 // Signed decimal strings ("-0.0152") are only ever produced here for results (edges can be
 // negative). Input decimals stay unsigned `Dec` strings (sdk/model.ts).
 
 import { formatAtomic, parseDecimalAtomic, type ParseResult } from "./amount.js";
+import { pow10, roundDiv, type RoundMode } from "./decimal.js";
 import type { Fixed } from "./fixed.js";
+
+export { roundDiv, type RoundMode };
 
 // Signed decimal string used for results such as net edges.
 export type SDec = string;
@@ -54,7 +57,7 @@ export function ratFromInt(value: bigint | number): Rational {
 export function ratFromDec(input: unknown): ParseResult<Rational> {
   const parsed = parseDecimalAtomic(input, 18);
   if (!parsed.ok) return parsed;
-  return { ok: true, value: rat(parsed.value, 10n ** 18n) };
+  return { ok: true, value: rat(parsed.value, pow10(18)) };
 }
 
 // For constants in code and tests only: throws on bad input instead of returning a result.
@@ -65,14 +68,13 @@ export function dec(input: string): Rational {
 }
 
 export function ratFromFixed(value: Fixed): Rational {
-  return rat(value.units, 10n ** BigInt(value.scale));
+  return rat(value.units, pow10(value.scale));
 }
 
 // Exact conversion; null when the value does not fit the scale without rounding.
 export function ratToFixed(value: Rational, scale: number): Fixed | null {
   if (!Number.isInteger(scale) || scale < 0 || scale > 18) return null;
-  const unit = 10n ** BigInt(scale);
-  const scaled = value.n * unit;
+  const scaled = value.n * pow10(scale);
   if (scaled % value.d !== 0n) return null;
   return { units: scaled / value.d, scale };
 }
@@ -146,47 +148,18 @@ export function sum(values: readonly Rational[]): Rational {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Rounding. Always explicit: fees round up, displayed vwaps round against the trader.
-
-export type RoundMode = "floor" | "ceil" | "trunc" | "half_up" | "half_even";
-
-// Integer division of n by d (d > 0) with a stated direction. `half_up` rounds ties away from
-// zero; `half_even` rounds ties to the even integer.
-export function roundDiv(n: bigint, d: bigint, mode: RoundMode): bigint {
-  if (d <= 0n) throw new RangeError("roundDiv needs a positive denominator");
-  const q = n / d; // truncates toward zero
-  const r = n % d;
-  if (r === 0n) return q;
-  const negative = n < 0n;
-  const floor = negative ? q - 1n : q;
-  switch (mode) {
-    case "trunc":
-      return q;
-    case "floor":
-      return floor;
-    case "ceil":
-      return floor + 1n;
-    case "half_up":
-    case "half_even": {
-      const twice = 2n * abs(r);
-      if (twice < d) return q;
-      if (twice > d) return negative ? q - 1n : q + 1n;
-      // exact tie
-      if (mode === "half_up") return negative ? q - 1n : q + 1n;
-      return q % 2n === 0n ? q : negative ? q - 1n : q + 1n;
-    }
-  }
-}
+// Rounding. Always explicit: fees round up, displayed vwaps round against the trader. RoundMode and roundDiv
+// (integer division with a stated direction) are the shared ones from decimal.ts, re-exported above.
 
 // Number of units of 10^-scale after rounding.
 export function roundRat(value: Rational, scale: number, mode: RoundMode): bigint {
   assertScale(scale);
-  return roundDiv(value.n * 10n ** BigInt(scale), value.d, mode);
+  return roundDiv(value.n * pow10(scale), value.d, mode);
 }
 
 // Rounds onto the 10^-scale grid and returns the grid value as a rational.
 export function roundToGrid(value: Rational, scale: number, mode: RoundMode): Rational {
-  return rat(roundRat(value, scale, mode), 10n ** BigInt(scale));
+  return rat(roundRat(value, scale, mode), pow10(scale));
 }
 
 export function floorRat(value: Rational): bigint {
@@ -222,7 +195,8 @@ export function ratToDecExact(value: Rational): SDec | null {
     fives += 1;
   }
   if (d !== 1n) return null;
-  return formatAtomic(value.n * (10n ** BigInt(Math.max(twos, fives)) / value.d), Math.max(twos, fives));
+  const places = Math.max(twos, fives);
+  return formatAtomic(value.n * (pow10(places) / value.d), places);
 }
 
 // Ratio helper for displays such as "net / capital": null when the denominator is zero.

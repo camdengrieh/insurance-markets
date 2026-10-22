@@ -76,7 +76,7 @@ block, between a block and the next week's block of the same category, and betwe
 question). Each unordered pair is scored exactly once. Blocks above 400 markets are truncated and the report
 says so. Within-venue pairs are scored like cross-venue ones.
 
-The score of a pair, in integer basis points (`pm/linker/score.ts`, weights in `pm/linker/constants.ts`):
+The score of a pair, in integer basis points (`sdk/linker/score.ts`, weights in `sdk/linker/constants.ts`):
 
 ```
 score = ( 35 * J(titleTokens) + 20 * J(ruleTokens) + 15 * A(numbers)

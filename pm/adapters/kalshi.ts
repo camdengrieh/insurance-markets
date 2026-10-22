@@ -12,10 +12,10 @@
 //   - Every Market carries a provenance source starting "restricted:kalshi".
 //
 // Parsing is shared: every answer body goes through the one Kalshi parser in sdk/venues/kalshi (parse.ts, map.ts),
-// the same code the dApp reads with, and is converted to this layer's shapes by from-sdk.ts. What stays here is
-// this layer's own: the gate, the descriptor, the transport and request plan, the fee spec (pm/core/fee-specs.ts
-// from the parser's validated fee inputs), the fee_changes check, tradability and provenance. Sharing the parser
-// changes nothing about who may call it.
+// the same code the dApp reads with, into the SDK read model. What stays here is this layer's own: the gate, the
+// descriptor, the transport and request plan, the fee spec (sdk/engine/fee-specs.ts from the parser's validated
+// fee inputs), the fee_changes check, tradability and provenance. Sharing the parser changes nothing about who may
+// call it.
 //
 // Facts encoded (docs/research/08 section 4 and its Verification section):
 //   - Order books are BIDS ONLY: `yes_dollars` and `no_dollars`, ascending, best LAST. YES ask =
@@ -56,11 +56,10 @@ import {
   type TokenSeparator,
 } from "../../sdk/venues/kalshi/index.js";
 import { kalshiRuleFields } from "../../sdk/rules.js";
-import { kalshiFeeSpec, unknownFeeSpec, type FeeSource } from "../core/fee-specs.js";
-import type { AdapterError, Book, FeeSpec, Market, MarketRef, MarketSummary, Result, Status, TokenRef } from "../types.js";
+import { kalshiFeeSpec, unknownFeeSpec, type FeeSource } from "../../sdk/engine/fee-specs.js";
+import type { AdapterError, Book, FeeSpec, Market, MarketRef, MarketSummary, Result, Status, TokenRef } from "../../sdk/model.js";
 import { untrusted } from "../types.js";
 import { AdapterFailure, toAdapterFailure } from "./errors.js";
-import { bookFromSdk, marketFromSdk, summaryFromSdk, tickFromSdk } from "./from-sdk.js";
 import { adapterDescriptor, KALSHI_HOSTS } from "./policy.js";
 import { buildUrl, createJsonTransport, type JsonTransport, type TransportOptions } from "./transport.js";
 import { ADAPTER_VERSION, type AdapterMarket, type PmPage, type PmVenueAdapter, type RuleFields } from "./types.js";
@@ -173,7 +172,7 @@ export function createKalshiAdapter(gate: KalshiGate | undefined, options: Kalsh
     const series = event === null || seriesJson === undefined ? null : parseSeriesBody(seriesJson, event.seriesTicker);
     if (event !== null && series === null) warnings.push("Kalshi series record was not found or not readable; the fee is unknown");
 
-    // Fee: the parser validates fee_type and fee_multiplier; the spec is this layer's (pm/core/fee-specs.ts).
+    // Fee: the parser validates fee_type and fee_multiplier; the spec is the engine's (sdk/engine/fee-specs.ts).
     const feeSource: FeeSource = {
       url: `${ORIGIN}${BASE}/series`,
       field: "fee_type,fee_multiplier",
@@ -224,11 +223,13 @@ export function createKalshiAdapter(gate: KalshiGate | undefined, options: Kalsh
 
     // One price range is one global step, as this layer has always written it.
     const only = ticks.length === 1 ? ticks[0] : undefined;
-    const converted: Market = marketFromSdk({ ...market, rules, tradable: { ok: reasons.length === 0, reasons } }, fee);
     const ruleFields = (kalshiRuleFields(row) ?? {}) as RuleFields;
     return {
-      ...converted,
-      tick: only === undefined ? tickFromSdk(ticks) : only.tick,
+      ...market,
+      rules,
+      tradable: { ok: reasons.length === 0, reasons },
+      fee,
+      tick: only === undefined ? ticks : only.tick,
       prov: {
         fetchedAtMs: now,
         source: `restricted:kalshi:${ORIGIN}${BASE}/markets`,
@@ -283,13 +284,13 @@ export function createKalshiAdapter(gate: KalshiGate | undefined, options: Kalsh
       const body = await transport.getJson(url(["markets"], query));
       const read = parseListBody(body, ORIGIN, nowMs(), SEPARATOR);
       if (!read.ok) throw refused(read.error, read.detail);
-      const items = read.value.items.map(summaryFromSdk);
+      const items = read.value.items;
       const skipped = read.value.rejected.map((r) => ({
         index: r.index,
         reason: r.reason === "unsupported_market" ? "not a plain binary Kalshi market" : "row is not a recognisable Kalshi market",
       }));
       const next = read.value.next;
-      return { items, skipped, hasNext: next !== null, ...(next === null ? {} : { nextCursor: next }) };
+      return { items, skipped, next };
     },
 
     getMarket: load,
@@ -349,8 +350,9 @@ export function createKalshiAdapter(gate: KalshiGate | undefined, options: Kalsh
           continue;
         }
         books.set(t, {
-          yes: { ok: true, value: bookFromSdk(bookOf("yes", t, read.value, asOfMs, SEPARATOR), "best_last") },
-          no: { ok: true, value: bookFromSdk(bookOf("no", t, read.value, asOfMs, SEPARATOR), "best_last") },
+          // The shared parser has already sorted both views; the convention names the raw payload's order.
+          yes: { ok: true, value: { ...bookOf("yes", t, read.value, asOfMs, SEPARATOR), convention: "best_last" } },
+          no: { ok: true, value: { ...bookOf("no", t, read.value, asOfMs, SEPARATOR), convention: "best_last" } },
         });
       }
 

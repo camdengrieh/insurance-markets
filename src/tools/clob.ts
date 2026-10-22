@@ -6,6 +6,7 @@ import type { WriteFlagName } from "../relay/flags.js";
 import { clobAccountOf } from "../clob/polymarket/deposit-wallet.js";
 import { CLOB_CAP_FEE_BPS, LIMITLESS_GEOBLOCK_NOTE, POLYMARKET_GEOBLOCK_NOTE, venueDisplayName, type ClobVenue } from "../clob/venues.js";
 import { parseDecimalToMicro } from "../xo/units.js";
+import { roundDiv } from "../../sdk/money/decimal.js";
 import { CEILINGS } from "../config.js";
 import { checkOrderCap } from "../guardrails/limits.js";
 import {
@@ -233,8 +234,8 @@ export async function handleClobOrder(input: ClobOrderInput, deps: RelayToolDeps
     const priceMicro = parseDecimalToMicro(input.price, 6);
     const sharesMicro = parseDecimalToMicro(input.shares, 6);
     if (priceMicro === null || sharesMicro === null || priceMicro <= 0n || priceMicro >= 1_000_000n || sharesMicro <= 0n) return refusalResult(deps, ctx, { code: "invalid_request", message: "The price is a decimal strictly between 0 and 1 and the size a positive decimal.", next: 'Pass price as "0.52" and shares as "10".' });
-    const principal = (priceMicro * sharesMicro + 999_999n) / 1_000_000n;
-    const worst = input.side === "BUY" ? (principal * BigInt(10_000 + CLOB_CAP_FEE_BPS) + 9_999n) / 10_000n : principal > sharesMicro ? principal : sharesMicro;
+    const principal = roundDiv(priceMicro * sharesMicro, 1_000_000n, "ceil");
+    const worst = input.side === "BUY" ? roundDiv(principal * BigInt(10_000 + CLOB_CAP_FEE_BPS), 10_000n, "ceil") : principal > sharesMicro ? principal : sharesMicro;
     const config = deps.config();
     const cap = checkOrderCap(worst, config);
     if (!cap.allowed) return refusalResult(deps, ctx, { code: "cap_exceeded", message: cap.message, next: nextFor("cap_exceeded") });

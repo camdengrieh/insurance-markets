@@ -1,13 +1,13 @@
 // Reports: the run summary printed by `once`/`run`, and the `report` subcommand over the files
 // in --out. Ids, hashes, counts, scores and categories only.
 
+import { buildBlocks } from "../../sdk/linker/block.js";
+import { bandOf } from "../../sdk/linker/score.js";
 import type { Bundle } from "../links/bundle.js";
 import type { Link } from "../links/schema.js";
 import type { Registry } from "../links/store.js";
-import { buildBlocks } from "./block.js";
 import { LINKER_HANDLE } from "./constants.js";
 import type { DiscoverResult } from "./discover.js";
-import { bandOf } from "./score.js";
 import type { LinkerState, StoredMarket } from "./state.js";
 
 export function scoreOf(link: Pick<Link, "proof">): number | null {

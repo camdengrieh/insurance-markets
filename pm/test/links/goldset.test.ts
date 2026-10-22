@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { evaluate, TARGETS } from "../../links/goldset/evaluate.js";
+import { evaluate, TARGETS } from "../../../sdk/links/goldset/evaluate.js";
 import {
   parseGoldSet,
   parsePredictions,
   type GoldLabel,
 } from "../../links/goldset/format.js";
-import { candidateFromPrediction, exactRulesBaseline, type PairInput } from "../../links/goldset/generator.js";
-import { formatReport } from "../../links/goldset/report.js";
-import { mulberry32, stratifiedSample } from "../../links/goldset/sample.js";
-import { cohenKappa, requiredSampleSize, wilson } from "../../links/goldset/stats.js";
+import { candidateFromPrediction, exactRulesBaseline, type PairInput } from "../../../sdk/links/goldset/generator.js";
+import { formatReport } from "../../../sdk/links/goldset/report.js";
+import { mulberry32, stratifiedSample } from "../../../sdk/links/goldset/sample.js";
+import { cohenKappa, requiredSampleSize, wilson } from "../../../sdk/links/goldset/stats.js";
 import { lookupLinks } from "../../links/lookup.js";
 import { buildBundle } from "../../links/bundle.js";
 import { emptyRegistry, proposeLink } from "../../links/store.js";

@@ -18,7 +18,7 @@ function files(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const mine = [...files(join(PM, "linker")), ...files(join(PM, "test/linker")), ...files(join(REPO, "deploy/linker")), join(REPO, "docs/linker-runbook.md"), join(PM, "core/category.ts")];
+const mine = [...files(join(PM, "linker")), ...files(join(REPO, "sdk/linker")), ...files(join(PM, "test/linker")), ...files(join(REPO, "deploy/linker")), join(REPO, "docs/linker-runbook.md"), join(PM, "core/category.ts")];
 
 test("linker sources, docs, deploy files and tests contain no personal identifiers or machine paths", () => {
   assert.ok(mine.length > 15);

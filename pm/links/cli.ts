@@ -27,9 +27,9 @@ import { lookupLinks } from "./lookup.js";
 import { nodeConfirm, nodeFileEnv, readRegistry, writeRegistry, type FileEnv } from "./registry-file.js";
 import { PROPOSER_SOURCES, TIERS, type ProposerSource, type Tier } from "./schema.js";
 import { findLink, proposeLink, revokeLink, suspendLink, vetoLink } from "./store.js";
-import { evaluate } from "./goldset/evaluate.js";
+import { evaluate } from "../../sdk/links/goldset/evaluate.js";
 import { parseGoldSet, parsePredictions } from "./goldset/format.js";
-import { formatReport } from "./goldset/report.js";
+import { formatReport } from "../../sdk/links/goldset/report.js";
 
 export interface CliEnv {
   readonly files: FileEnv;

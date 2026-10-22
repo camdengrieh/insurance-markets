@@ -1,5 +1,6 @@
 import { encodeAbiParameters, keccak256 } from "viem";
 
+import { pow10, roundDiv } from "../../money/decimal.js";
 import { fromAtomic, type Qty } from "../../money/qty.js";
 import type { Address, Hex } from "./rpc.js";
 
@@ -27,10 +28,10 @@ export function poolIdOf(key: PoolKey): Hex {
 
 const Q192 = 1n << 192n;
 export const PRICE_SCALE = 12;
-const TEN_POW_24 = 10n ** 24n;
+const TEN_POW_24 = pow10(24);
 
 function divHalfUp(numerator: bigint, denominator: bigint): bigint {
-  return (numerator * 2n + denominator) / (denominator * 2n);
+  return roundDiv(numerator, denominator, "half_up");
 }
 
 // TYD per outcome token from a pool's sqrtPriceX96 (research 11 section 7.2). With P = (sqrtPriceX96 / 2^96)^2
@@ -45,7 +46,7 @@ export function sqrtPriceToPrice(sqrtPriceX96: bigint, outcomeIsCurrency0: boole
   if (outcomeDecimals !== 18 || tydDecimals !== 6) return null;
   const square = sqrtPriceX96 * sqrtPriceX96;
   const scaled = outcomeIsCurrency0 ? divHalfUp(square * TEN_POW_24, Q192) : divHalfUp(TEN_POW_24 * Q192, square);
-  if (scaled > 10n ** BigInt(PRICE_SCALE)) return null;
+  if (scaled > pow10(PRICE_SCALE)) return null;
   return fromAtomic("price", scaled, PRICE_SCALE);
 }
 
@@ -54,8 +55,5 @@ export type Rounding = "floor" | "ceil";
 // numerator / denominator as a decimal with `scale` places, rounded by `mode`. Denominator must be positive.
 export function ratioQty(unit: "price", numerator: bigint, denominator: bigint, scale: number, mode: Rounding): Qty {
   if (denominator <= 0n || numerator < 0n) throw new RangeError("ratio needs a positive denominator and a non-negative numerator");
-  const scaled = numerator * 10n ** BigInt(scale);
-  let quotient = scaled / denominator;
-  if (mode === "ceil" && scaled % denominator !== 0n) quotient += 1n;
-  return fromAtomic(unit, quotient, scale);
+  return fromAtomic(unit, roundDiv(numerator * pow10(scale), denominator, mode), scale);
 }

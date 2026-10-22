@@ -13,7 +13,8 @@
 // digests. Restricted-terms rule text (Kalshi) is hashed in memory and never returned.
 
 import * as z from "zod/v4";
-import { checkFeeSpec } from "../core/fees.js";
+import { checkFeeSpec } from "../../sdk/engine/fees.js";
+import { feeSpecId } from "../../sdk/engine/fee-specs.js";
 import { entityTableSha256, hashRuleRecord, type MaskOptions } from "../links/hash.js";
 import { verifyLegPins, type LiveLegState, type PinMismatch } from "../links/pins.js";
 import type { Bundle } from "../links/bundle.js";
@@ -320,7 +321,7 @@ export async function verifyLinkDetailed(
       outcomeCount: { pinned: leg.outcomeMap.length, live: market.outcomes.length, matches: countMatches },
       tick: { problem },
       fee: {
-        specId: market.fee.id,
+        specId: feeSpecId(market.fee),
         modelId: market.fee.modelId,
         usable: feeCheck.ok && registry.modelMatches !== false,
         registryModelMatches: registry.modelMatches,

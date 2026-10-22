@@ -11,6 +11,7 @@
 // Everything else, including approved partitions, ladders and complements and any unapproved
 // candidate, is "related, not identical" and carries no probability for the other venue.
 
+import { complementOfOne } from "../../sdk/money/decimal.js";
 import type { Link, LinkLeg } from "../links/schema.js";
 import type { VenueId } from "../types.js";
 import { LABEL_RELATED, type QuotientVenue } from "./constants.js";
@@ -140,19 +141,6 @@ export function classifyLink(link: Link, nowMs: number, allowSynthetic: boolean)
   return { kind: reasons.length === 0 ? kind : null, deltaMinutes: delta, reasons };
 }
 
-function oneMinus(q: string): string {
-  // q is an exact decimal string in [0,1] produced by pm/signals/parse.ts.
-  const [whole = "0", frac = ""] = q.split(".");
-  const places = frac.length;
-  const scaled = BigInt(whole + frac);
-  const unit = 10n ** BigInt(places);
-  const diff = unit - scaled;
-  const digits = diff.toString().padStart(places + 1, "0");
-  const intPart = digits.slice(0, digits.length - places);
-  const fracPart = digits.slice(digits.length - places).replace(/0+$/, "");
-  return fracPart === "" ? intPart : `${intPart}.${fracPart}`;
-}
-
 function targetsFor(link: Link, leg: LinkLeg, row: JoinableRow, opts: JoinOptions): JoinTarget[] {
   const others = link.legs.filter((l) => l !== leg);
   const withhold = (reason: string): JoinTarget[] =>
@@ -166,6 +154,9 @@ function targetsFor(link: Link, leg: LinkLeg, row: JoinableRow, opts: JoinOption
   }
   if (leg.outcomeMap.length !== 2) return withhold("only binary legs are supported");
   const base = leg.outcomeMap[yesIdx] as number;
+  // qYes is an exact decimal in [0, 1] produced by pm/signals/parse.ts; anything else carries no complement.
+  const qNo = complementOfOne(row.qYes);
+  if (qNo === null) return withhold("probability is not a decimal from 0 to 1");
   return others.map((l) => {
     const t = l.outcomeMap.indexOf(base);
     if (l.outcomeMap.length !== 2 || t < 0 || l.outcomeMap.lastIndexOf(base) !== t) {
@@ -176,7 +167,7 @@ function targetsFor(link: Link, leg: LinkLeg, row: JoinableRow, opts: JoinOption
       marketId: l.marketId,
       outcomes: [
         { outcomeIndex: t, probability: row.qYes },
-        { outcomeIndex: 1 - t, probability: oneMinus(row.qYes) },
+        { outcomeIndex: 1 - t, probability: qNo },
       ],
       withheldReason: null,
     };

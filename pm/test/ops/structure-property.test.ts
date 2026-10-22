@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { checkStructure, type StructureFinding, type StructureResult } from "../../ops/structure.js";
 import { structureOutputSchema } from "../../ops/structure-schema.js";
-import { int, prng } from "../core/helpers.js";
+import { int, prng } from "../../../sdk/engine/fixtures/helpers.js";
 import { DAY_MS, FRICTIONLESS, NOW_MS, group, member, poly, type Levels } from "./structure-helpers.js";
 
 function ok(g: Parameters<typeof checkStructure>[0], o: Parameters<typeof checkStructure>[1] = {}): StructureResult {

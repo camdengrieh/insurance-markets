@@ -47,7 +47,7 @@ export function summary(venue: VenueId, marketId: string, options: Partial<Omit<
   };
 }
 
-const FEE: FeeSpec = {
+const FEE: Omit<FeeSpec, "venue"> = {
   modelId: "unknown",
   payer: "buyer_adds_seller_withholds",
   paramsSource: { url: "test", field: "test", granularity: "market" },
@@ -78,7 +78,7 @@ export function market(venue: VenueId, marketId: string, options: { readonly tit
     timesUtc: { closesAt: "2026-12-01T00:00:00.000Z" },
     tick: "0.01",
     collateral: { symbol: "USDC", chain: "eip155:8453", decimals: 6, custody: "self" },
-    fee: options.fee ?? FEE,
+    fee: options.fee ?? { venue, ...FEE },
     prov: { fetchedAtMs: NOW - 1000, source: `test-${venue}`, adapterVersion: "test", schemaHash: "test" },
   };
 }
@@ -135,7 +135,7 @@ export function fakeEntry(venue: VenueId, options: FakeOptions = {}): FakeEntry 
       if (options.getBooks === undefined) return tokens.map(() => ({ ok: false as const, error: "NOT_FOUND" as AdapterError }));
       return options.getBooks(tokens.map((token) => token.tokenId));
     },
-    getFeeSpec: async () => FEE,
+    getFeeSpec: async () => ({ venue, ...FEE }),
     health: async () => ({ ok: true, notes: [] }),
   };
   return {

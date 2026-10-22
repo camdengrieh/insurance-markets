@@ -1,6 +1,7 @@
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 
+import { roundDiv } from "../../sdk/money/decimal.js";
 import { CEILINGS } from "../config.js";
 import { USDC_E_DECIMALS } from "../guardrails/constants.js";
 import { formatAtomic } from "../guardrails/amount.js";
@@ -220,8 +221,6 @@ interface LocalOrder {
   readonly outlayAtomic: bigint;
 }
 
-const ceilDiv = (numerator: bigint, denominator: bigint): bigint => (numerator + denominator - 1n) / denominator;
-
 function localOrder(input: PrepareOrderInput): Parsed<LocalOrder> {
   const priceMicro = parseDecimalToMicro(input.price, 6);
   const sharesMicro = parseDecimalToMicro(input.shares, 6);
@@ -237,7 +236,7 @@ function localOrder(input: PrepareOrderInput): Parsed<LocalOrder> {
   if (!notional.ok) return bad("size_off_grid", notional.reason, "Adjust the size so that shares times price is a whole number of USDC.e units.");
   // The same worst cases the relay counts against the caps: a BUY its principal plus the cap fee bound (SI-2), a SELL
   // the larger of its proceeds and its face value, one dollar a share (RT-3). Shares have 6 decimals, like USDC.e.
-  const outlay = input.side === "BUY" ? ceilDiv(notional.value * BigInt(10_000 + ORDER_CAP_FEE_BPS), 10_000n) : notional.value > sharesMicro ? notional.value : sharesMicro;
+  const outlay = input.side === "BUY" ? roundDiv(notional.value * BigInt(10_000 + ORDER_CAP_FEE_BPS), 10_000n, "ceil") : notional.value > sharesMicro ? notional.value : sharesMicro;
   return { ok: true, value: { priceMicro, sharesMicro, ticks, outlayAtomic: outlay } };
 }
 

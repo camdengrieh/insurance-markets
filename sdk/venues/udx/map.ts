@@ -166,6 +166,7 @@ export function rulesOf(row: UdxRow): Rules {
 // effective 2026-10-09). A venue document, not an API field: it carries its read date and a fourteen-day ttl.
 export function feeSpec(origin: string): FeeSpec {
   return {
+    venue: "udx",
     modelId: "curve_pq",
     taker: { rate: UDX_TAKER_COEFFICIENT },
     maker: { rate: UDX_MAKER_COEFFICIENT },

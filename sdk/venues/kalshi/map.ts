@@ -260,7 +260,7 @@ export function rulesOf(row: KalshiRow, context: KalshiMarketContext = {}): Rule
 
 // The validated fee inputs of a series. Only the quadratic families are read: taker = coefficient x fee_multiplier x
 // C x P x (1 - P). The multiplier must be a positive decimal of at most six places. Each host builds its own fee
-// spec from these (the dApp's below, pm's with pm/core/fee-specs.ts).
+// spec from these (the dApp's below, pm's with sdk/engine/fee-specs.ts).
 export type KalshiFeeInputs =
   | { readonly ok: true; readonly feeType: "quadratic" | "quadratic_with_maker_fees"; readonly multiplier: Dec }
   | { readonly ok: false; readonly reason: "fee_type_not_modelled" | "multiplier_invalid" };
@@ -275,6 +275,7 @@ export function feeInputsOf(series: Pick<KalshiSeries, "feeType" | "feeMultiplie
 
 export function unknownFee(origin: string, ticker: string, nowMs: number): FeeSpec {
   return {
+    venue: "kalshi",
     modelId: "unknown",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${origin}${KALSHI_API_PREFIX}/markets/${ticker}`, field: "series.fee_type", granularity: "series" },
@@ -295,6 +296,7 @@ export function feeSpecOf(series: KalshiSeries, origin: string, nowMs: number): 
   if (multiplier === null || coefficient === null) return fallback;
   const rate = fromAtomic("price", coefficient.atomic * multiplier.atomic, coefficient.scale + multiplier.scale);
   return {
+    venue: "kalshi",
     modelId: "curve_pq",
     taker: { rate: toDec(rate) },
     rounding: "ceil_6dp",

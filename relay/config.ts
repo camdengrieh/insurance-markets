@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
 import { loadConfig, Secret, type GuardrailConfig } from "../src/config.js";
-import { parseDecimalAtomic } from "../src/guardrails/amount.js";
+import { formatAtomic, parseDecimalAtomic } from "../src/guardrails/amount.js";
 import { USDC_E_DECIMALS } from "../src/guardrails/constants.js";
 import { RELAY_PENDING_AFTER_MS } from "../src/relay/contract.js";
 import { RelayError } from "../src/relay/errors.js";
@@ -499,7 +499,12 @@ declare module "./types.js" {
 
 // A one-screen summary for the start-up banner. Booleans and words only: no key, no URL, no path.
 export function describeConfig(config: RelayConfig, effective: Flags): string[] {
-  const usd = (atomic: bigint): string => `${atomic / 1_000_000n}.${(atomic % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "").padEnd(2, "0")}`;
+  // Exact dollars with at least two places: "5.00", "0.30", "1.234567".
+  const usd = (atomic: bigint): string => {
+    const text = formatAtomic(atomic, USDC_E_DECIMALS);
+    const point = text.indexOf(".");
+    return point === -1 ? `${text}.00` : text.padEnd(point + 3, "0");
+  };
   const lines = [
     config.keys.current === undefined ? "bind: none (in-process relay, no listener, no relay key)" : `bind: ${config.host} (loopback only)`,
     `credential store: ${config.credentialStore ? "on" : "off"}`,

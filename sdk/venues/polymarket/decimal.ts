@@ -1,7 +1,8 @@
-import { cmpQty, decFromNumber, parseQty, subQty, toDec, type Qty } from "../../money/qty.js";
+import { compareDecimal, complementOfOne, decFromNumber } from "../../money/decimal.js";
+import { parseQty, toDec, type Qty } from "../../money/qty.js";
 
-// Decimal-string helpers for the Polymarket adapter, a thin layer over sdk/money/qty.ts (exact bigint arithmetic,
-// no floating point). The wire gives prices and sizes as strings like "0.380" and JSON numbers like 0.3799999982;
+// Decimal-string helpers for the Polymarket adapter, a thin layer over sdk/money (exact bigint arithmetic, no
+// floating point). The wire gives prices and sizes as strings like "0.380" and JSON numbers like 0.3799999982;
 // the adapter needs a canonical text form, a comparison and a complement, nothing more. Every helper returns
 // null for anything that is not an exact plain decimal, so a caller cannot sort or add garbage.
 //
@@ -33,9 +34,7 @@ export function numericToDec(input: unknown): Dec | null {
 
 // -1, 0 or 1; null when either side is not a decimal.
 export function cmpDec(a: Dec, b: Dec): -1 | 0 | 1 | null {
-  const left = qtyOf(a);
-  const right = qtyOf(b);
-  return left === null || right === null ? null : cmpQty(left, right);
+  return compareDecimal(a, b, { allowNegative: true });
 }
 
 export function isPositive(dec: Dec): boolean {
@@ -47,9 +46,7 @@ export function isOpenUnitInterval(dec: Dec): boolean {
   return cmpDec(dec, "0") === 1 && cmpDec(dec, "1") === -1;
 }
 
-// 1 - p, exactly. Used only for a synthetic complement book.
+// 1 - p, exactly, for p in [0, 1]; null otherwise. Used only for a synthetic complement book.
 export function oneMinus(dec: Dec): Dec | null {
-  const q = qtyOf(dec);
-  const one = qtyOf("1");
-  return q === null || one === null ? null : toDec(subQty(one, q));
+  return complementOfOne(dec);
 }

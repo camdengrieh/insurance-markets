@@ -14,7 +14,7 @@ import {
   type KalshiGate,
 } from "../../adapters/index.js";
 import type { PmVenueAdapter } from "../../adapters/types.js";
-import { checkFeeSpec } from "../../core/fees.js";
+import { checkFeeSpec } from "../../../sdk/engine/fees.js";
 import { canonicalizeRecord } from "../../links/hash.js";
 import { NOW, fast, nowMs, route, stubFetch, type Route } from "./helpers.js";
 

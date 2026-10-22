@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { unknownFeeSpec } from "../../core/fee-specs.js";
+import { unknownFeeSpec } from "../../../sdk/engine/fee-specs.js";
 import { buildBundle } from "../../links/bundle.js";
 import { entityTableSha256 } from "../../links/hash.js";
 import { emptyRegistry } from "../../links/store.js";
@@ -185,9 +185,9 @@ test("an invalid tick suspends", async () => {
   const r = await run({ poly: { tick: "0" } });
   assert.equal(r.verdict, "suspended");
   assert.ok(codes(r).includes("1:tick:tick_invalid"));
-  const ranges = await run({ poly: { tick: [{ from: "0", to: "0.5", step: "0.01" }, { from: "0.4", to: "1", step: "0.001" }] } });
+  const ranges = await run({ poly: { tick: [{ from: "0", to: "0.5", tick: "0.01" }, { from: "0.4", to: "1", tick: "0.001" }] } });
   assert.ok(codes(ranges).includes("1:tick:tick_invalid"));
-  const good = await run({ poly: { tick: [{ from: "0", to: "0.5", step: "0.01" }, { from: "0.5", to: "1", step: "0.001" }] } });
+  const good = await run({ poly: { tick: [{ from: "0", to: "0.5", tick: "0.01" }, { from: "0.5", to: "1", tick: "0.001" }] } });
   assert.equal(good.verdict, "ok", codes(good).join(", "));
 });
 

@@ -5,9 +5,9 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { evaluate } from "../../links/goldset/evaluate.js";
-import { exactRulesBaseline, type PairInput } from "../../links/goldset/generator.js";
-import type { PredictionsFile } from "../../links/goldset/format.js";
+import { evaluate } from "../../../sdk/links/goldset/evaluate.js";
+import type { PredictionsFile } from "../../../sdk/links/goldset/format.js";
+import { exactRulesBaseline, type PairInput } from "../../../sdk/links/goldset/generator.js";
 import { leg } from "../links/fixtures.js";
 import { goldSet, label, FREEZE_AT } from "../links/goldset-fixtures.js";
 

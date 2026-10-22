@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isAutomationHandle, linkErrors } from "../../links/invariants.js";
 import { emptyRegistry, findLink } from "../../links/store.js";
-import { groupCandidates, pairCandidate, proposeAll, retireStale, scoreCandidates } from "../../linker/candidates.js";
+import { groupCandidates, pairCandidate, scoreCandidates } from "../../../sdk/linker/candidates.js";
+import { buildFeatures, type FeatureInput, type MarketFeatures } from "../../../sdk/linker/features.js";
+import { scorePair } from "../../../sdk/linker/score.js";
+import { proposeAll, retireStale } from "../../linker/candidates.js";
 import { LINKER_HANDLE } from "../../linker/constants.js";
-import { buildFeatures, type FeatureInput, type MarketFeatures } from "../../linker/features.js";
-import { scorePair } from "../../linker/score.js";
 import { approve } from "../links/fixtures.js";
 
 const TODAY = "2026-10-20";

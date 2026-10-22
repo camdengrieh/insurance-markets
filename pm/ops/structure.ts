@@ -16,11 +16,11 @@
 // buy-every-NO basket is valid for it.
 
 import { FIELD_LIMITS, sanitizeUntrusted } from "../../src/guardrails/untrusted.js";
-import { repriceOrders, walkBasket, type BasketLeg, type BasketOutcome, type RepricedBasket } from "../core/basket.js";
-import { complementBook, midPrice, parseBook, type ParsedBook } from "../core/books.js";
-import { DEFAULTS, effectiveDays, lockRate } from "../core/edge.js";
-import type { FeeErrorCode, FeeResult } from "../core/fees.js";
-import { assignLabel, type EdgeLabel, type GateInput } from "../core/labels.js";
+import { repriceOrders, walkBasket, type BasketLeg, type BasketOutcome, type RepricedBasket } from "../../sdk/engine/basket.js";
+import { complementBook, midPrice, parseBook, type ParsedBook } from "../../sdk/engine/books.js";
+import { DEFAULTS, effectiveDays, lockRate } from "../../sdk/engine/edge.js";
+import type { FeeErrorCode, FeeResult } from "../../sdk/engine/fees.js";
+import { assignLabel, type EdgeLabel, type GateInput } from "../../sdk/engine/labels.js";
 import {
   ONE,
   ZERO,
@@ -45,7 +45,7 @@ import {
   type QuotedLeg,
   type RelationParams,
   type Rung,
-} from "../core/relations.js";
+} from "../../sdk/engine/relations.js";
 import type { Book, Exhaustive, FeeSpec, GroupKind, Result, Status } from "../types.js";
 import { isVenueId } from "../types.js";
 import {

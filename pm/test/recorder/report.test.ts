@@ -4,7 +4,7 @@ import { complementOf, feeSpecFor, horizonBucket, toParsedBook, buildReport, for
 import { mustConfig } from "../../recorder/config.js";
 import { RecorderStore } from "../../recorder/store.js";
 import type { SnapshotRow, Target, TargetGroup, TargetLink } from "../../recorder/types.js";
-import { checkFeeSpec } from "../../core/fees.js";
+import { checkFeeSpec } from "../../../sdk/engine/fees.js";
 import { dec } from "../../core/rational.js";
 
 const H = 3_600_000;

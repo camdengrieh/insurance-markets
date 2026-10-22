@@ -115,6 +115,7 @@ export function feeSpecOf(row: PascalRow, nowMs: number): FeeSpec {
   const rebate = fromAtomic("price", row.takerFeeRate.atomic * row.makerRebateShare.atomic, row.takerFeeRate.scale + row.makerRebateShare.scale);
   const rebateText = rebate.atomic === 0n ? "0" : `-${toDec(rebate)}`;
   return {
+    venue: "pascal",
     modelId: "curve_pq",
     taker: { rate: toDec(row.takerFeeRate) },
     maker: { rate: rebateText },

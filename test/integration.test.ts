@@ -200,9 +200,9 @@ describe("guardrail constants and signing constants agree", () => {
 });
 
 describe("the two decimal parsers agree on money", () => {
-  // src/xo/units.ts (read client) tolerates extra fractional digits that are all zero;
-  // src/guardrails/amount.ts (limit checks) rejects any extra digit. That is the only intended
-  // difference, so a read-client amount never turns into a different number inside a guard.
+  // src/xo/units.ts (read client) and src/guardrails/amount.ts (limit checks) both go through
+  // sdk/money/decimal.ts, so they accept exactly the same strings with the same value: a
+  // read-client amount never turns into a different number inside a guard.
   const wholes = ["0", "1", "7", "10", "123456789", "01", ""];
   const fractions = ["", "0", "5", "50", "123456", "1234567", "5000000", "0000000", "0000001"];
   const corpus: string[] = [
@@ -212,23 +212,22 @@ describe("the two decimal parsers agree on money", () => {
   ];
   for (const whole of wholes) for (const fraction of fractions) corpus.push(fraction === "" ? whole : `${whole}.${fraction}`);
 
-  it("accepts the same strings with the same value, except extra all-zero digits", () => {
+  it("accepts the same strings with the same value, extra all-zero digits included", () => {
     let both = 0;
-    let onlyUnits = 0;
+    let rejected = 0;
     for (const text of corpus) {
       const guarded = parseDecimalAtomic(text, 6);
       const read = parseDecimalToMicro(text);
       if (guarded.ok) {
         assert.equal(read, guarded.value, `value differs for ${JSON.stringify(text)}`);
         both += 1;
-      } else if (read !== null) {
-        const extra = (text.split(".")[1] ?? "").slice(6);
-        assert.ok(extra.length > 0 && !/[1-9]/.test(extra), `read client accepts ${JSON.stringify(text)} but the guard rejects it`);
-        onlyUnits += 1;
+      } else {
+        assert.equal(read, null, `read client accepts ${JSON.stringify(text)} but the guard rejects it`);
+        rejected += 1;
       }
     }
     assert.ok(both >= 20, `corpus too small (${both})`);
-    assert.ok(onlyUnits >= 2, "the documented difference was not exercised");
+    assert.ok(rejected >= 2, "no rejected string was exercised");
   });
 
   it("neither parser rounds: an extra non-zero digit is rejected by both", () => {

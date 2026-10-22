@@ -2,8 +2,8 @@
 // every XO trap (marketType=2,4 discovery, take<=50, paging on meta.hasNextPage only, micro-unit parsing, strict
 // decoders that fail closed, explicit User-Agent, host allowlist) and its reader mapping (./map.ts) turns the
 // decoded detail, list rows and books into the SDK read model. Nothing here decodes an XO response or maps one by
-// hand: the Market comes from the SDK mapping through ./from-sdk.ts, and this file adds only what pm has and the
-// dApp does not (the orderbook cross-check, the rules-hash sentinel and extras, the pm FeeSpec, warnings).
+// hand: the Market is the SDK mapping's, and this file adds only what pm has and the dApp does not (the orderbook
+// cross-check, the rules-hash sentinel and extras, the engine's FeeSpec, warnings).
 // Transport (fetch, clock, sleep) is injected through the client options; src/xo/client.ts fills Node's defaults.
 //
 // Mapping notes:
@@ -12,24 +12,23 @@
 //   - Prices come from the orderbook only. List display prices and the constant detail
 //     currentPrice are dropped by the client and never reach a Book or Quote.
 //   - Fee: the SDK decides whether the fee is known (only the FLAT_BPS model, the larger of /fee-rate and
-//     effectiveFeeConfig); pm/core/fee-specs.ts builds pm's spec from that figure. The two sources disagree
-//     live, so the market carries a warning and pm/core refuses the executable tier until a real fill
-//     reconciles them.
+//     effectiveFeeConfig); sdk/engine/fee-specs.ts builds the engine's spec from that figure. The two sources
+//     disagree live, so the market carries a warning and the engine refuses the executable tier until a real
+//     fill reconciles them.
 //   - XO has no batch book route that was ever tested, so getBooks fetches one token at a time.
 //   - Sizes and prices are micro integers inside the client; the SDK mapping turns them into exact decimal
-//     strings and pm/core into rationals. No floating point.
+//     strings and sdk/engine into rationals. No floating point.
 
 import { XoClient } from "../../src/xo/client.js";
 import type { HttpOptions } from "../../src/xo/http.js";
 import { DEFAULT_TAKE, LIST_STATUSES, MAX_TAKE, lifecycleOf, type XoClient as SdkXoClient } from "../../sdk/venues/xo/api/client.js";
 import type { Lifecycle, MarketDetail } from "../../sdk/venues/xo/api/types.js";
 import { bookOf, feeSpecOf, marketOf, statusOfLifecycle, summaryOf, xoStatusesFor } from "../../sdk/venues/xo/index.js";
-import { normalizeSortedBook } from "../core/books.js";
-import { unknownFeeSpec, xoFeeSpec, type FeeSource } from "../core/fee-specs.js";
-import type { AdapterError, Book, FeeSpec, Market, MarketRef, MarketSummary, Result, Status, TokenRef } from "../types.js";
+import { normalizeSortedBook } from "../../sdk/engine/books.js";
+import { unknownFeeSpec, xoFeeSpec, type FeeSource } from "../../sdk/engine/fee-specs.js";
+import type { AdapterError, Book, FeeSpec, Market, MarketRef, MarketSummary, Result, Status, TokenRef } from "../../sdk/model.js";
 import { untrusted } from "../types.js";
 import { AdapterFailure, toAdapterFailure } from "./errors.js";
-import { marketFromSdk, summaryFromSdk } from "./from-sdk.js";
 import { xoLossyRuleRead, xoRulesText } from "../../sdk/rules.js";
 import { buildRules } from "./rules.js";
 import { adapterDescriptor, XO_HOSTS } from "./policy.js";
@@ -142,7 +141,8 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
     warnings.push(...fee.warnings);
 
     const market: AdapterMarket = {
-      ...marketFromSdk(shared, fee.spec),
+      ...shared,
+      fee: fee.spec,
       // The shared rules block (sanitised text, https-only sources), with pm's hash slot: the rules-v2 value over
       // extras.ruleFields, or a sentinel that is not hex and embeds the market id when the rules cannot be hashed.
       rules: { ...shared.rules, sha256: built.rules.sha256 },
@@ -158,8 +158,9 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
     return market;
   }
 
-  // The SDK decides whether the fee is known and which figure applies (sdk/venues/xo/map.ts feeSpecOf); pm builds its
-  // own spec from that figure (pm/core/fee-specs.ts), because pm/core/fees.ts prices with its own model.
+  // The SDK reader decides whether the fee is known and which figure applies (sdk/venues/xo/map.ts feeSpecOf, a
+  // ceiling for display); the engine's spec is built from that figure (sdk/engine/fee-specs.ts xoFeeSpec, the
+  // documented p(1-p) curve the engine prices with).
   function feeSpecFrom(detail: MarketDetail, feeRateBps: readonly number[], now: number): { spec: FeeSpec; warnings: string[] } {
     const source: FeeSource = {
       url: `${XO_BASE}/markets/contract/${detail.conditionId}`,
@@ -174,8 +175,8 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
     }
     return {
       spec: xoFeeSpec({
-        takerBps: String(shared.taker.bps),
-        ...(shared.maker?.bps === undefined ? {} : { makerBps: String(shared.maker.bps) }),
+        takerBps: shared.taker.bps,
+        ...(shared.maker?.bps === undefined ? {} : { makerBps: shared.maker.bps }),
         source,
       }),
       warnings: [],
@@ -218,7 +219,7 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
         }),
       );
       const now = nowMs();
-      let items = result.markets.map((row) => summaryFromSdk(summaryOf(row, now, now)));
+      let items = result.markets.map((row) => summaryOf(row, now, now));
       if (q.statuses !== undefined) {
         const wanted = new Set<Status>(q.statuses);
         items = items.filter((m) => wanted.has(m.status));
@@ -226,8 +227,7 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
       return {
         items,
         skipped: result.skipped.map((row) => ({ index: row.index, reason: row.reason })),
-        hasNext: result.meta.hasNextPage,
-        ...(result.meta.hasNextPage ? { nextCursor: String(page + 1) } : {}),
+        next: result.meta.hasNextPage ? String(page + 1) : null,
       };
     },
 
