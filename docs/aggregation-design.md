@@ -334,7 +334,7 @@ Liquidity tier uses [14 §9]: A at least $1B/30d, B $100M to $1B, C $10M to $100
 | **Polymarket US** | P2 | A ($3.06B) | `gateway.polymarket.us` public REST (25 req/s); WS on the authenticated host | separate adapter: slug ids, one YES instrument per market, best-first books, no public tape on the retail gateway | [08 §3] |
 | **Predict.fun** | P2 | B ($345.8M) downgraded to C (points farming; mainnet depth never sampled) | mainnet requires `x-api-key` on every read (240 rpm); testnet open | `polymarketConditionIds`, `kalshiMarketTicker` cross-refs (mostly Polymarket mirrors) | [09 §2.1, 16 §3.6] |
 | **Opinion** | P2 | B ($276M) downgraded to C | keyless reads, 5 rps live (docs say 15 with key) | mirrored YES/NO books; thin depth; headline volume concentrated in two parent markets | [09 §2.2, 09 V-E2] |
-| **Hyperliquid HIP-4** | P2 | C ($45.1M; attribution-dependent) | reads are `POST /info`; live shapes unverified | crypto up/down binaries only; terms exclude persons in an open-ended jurisdiction list | [09 §2.6, 09 V-C1, 14 V-A2] |
+| **Hyperliquid HIP-4** | P2 | C ($45.1M; attribution-dependent) | reads are `POST /info`; live shapes verified 2026-10-22 | crypto up/down binaries only; terms exclude persons in an open-ended jurisdiction list | [09 §2.6, 09 V-C1, 14 V-A2] |
 | **Manifold** | P2, signal only | play money | keyless, 500 req/min/IP | slow prior; duplicate-question lint for creation; terms permit bots | [09 §2.10] |
 | SX Bet | skip | C ($38.9M) | books need `x-sx-api-key`; chain 4162 | sports only; weakest PayBox fit | [09 §2.7] |
 | MagicMarkets | skip | C ($62.8M) | offers need a key and a 10 USDT deposit | custodial sports exchange | [09 §2.8] |

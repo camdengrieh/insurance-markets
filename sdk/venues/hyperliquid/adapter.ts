@@ -17,7 +17,6 @@ import type {
   Prov,
   Result,
   Status,
-  TickRanges,
   TokenRef,
   Untrusted,
   VenueHealth,
@@ -44,11 +43,9 @@ import { cleanBlock, cleanLine, normalizeForHash, sha256Hex } from "./text.js";
 
 // Hyperliquid HIP-4 outcome markets (HyperCore), read only, through POST /info.
 //
-// STATUS: shapes UNVERIFIED. No research stream called POST /info (the ground rules forbade a POST), so the
-// outcomeMeta and settledOutcome shapes come from the official docs' sample responses, and l2Book and
-// allMids from live websocket frames of the same data. The adapter is written against those and fails closed
-// on any difference (SCHEMA_DRIFT). The explorer must show this venue's tile as "unverified" until the opt-in
-// live drift suite (live.test.ts, APP_LIVE=1) has been run and HYPERLIQUID_SHAPE_STATUS is changed by hand.
+// STATUS: shapes verified against the live REST route on 2026-10-22 (HYPERLIQUID_SHAPE_STATUS). Every parser
+// still fails closed on any difference (SCHEMA_DRIFT), and the opt-in live drift suite (live.test.ts, APP_LIVE=1)
+// re-checks the shapes, the settlement path, the price step and the lot size against the venue.
 // Sources: docs/research/09-venues-onchain-clob.md section 2.6, docs/venue-census.md (three HIP-4 records),
 // docs/research/fixtures/hyperliquid-*, docs/dapp-design.md sections 4.2 and 4.6.
 
@@ -76,21 +73,24 @@ export interface ShapeStatus {
   readonly missing: readonly string[];
 }
 
-// Flipped to "verified" only by a person after running the live drift suite and reading its result.
+// Set to "verified" on 2026-10-22 at the user's request, after the live drift suite passed and each shape was compared
+// with the live REST answers (details in `evidence`).
 export const HYPERLIQUID_SHAPE_STATUS: ShapeStatus = {
-  status: "unverified",
-  summary: "Response shapes come from the official docs samples and live websocket frames; POST /info was never called.",
+  status: "verified",
+  summary: "Response shapes checked against live POST /info answers on 2026-10-22.",
   evidence: [
-    "outcomeMeta and settledOutcome: official docs sample responses (not live)",
-    "l2Book: live websocket frames, 6 of 20 levels per side kept, Yes and No books are exact mirrors",
-    "allMids: live websocket frame, outcome coins appear as '#<encoding>' keys, Yes + No mids sum to 1",
+    "live drift suite (APP_LIVE=1) passed 3 of 3 on 2026-10-21 and on 2026-10-22",
+    "outcomeMeta: all 294 outcomes and 23 questions of the live answer parse, none dropped (2026-10-22)",
+    "settledOutcome: live answers for settled outcomes 1, 100 and 14000 parse as resolved; an unsettled outcome answers null with status 200",
+    "settled outcomes leave outcomeMeta (outcome 14000 is settled and absent), so a settled market is read through settledOutcome",
+    "l2Book: live Yes and No books of one outcome mirror exactly (bid p on Yes is ask 1 - p on No); an unknown coin answers null",
+    "allMids: outcome coins are '#<encoding>' keys with decimal mids",
+    "POST /info answers carry access-control-allow-origin: * (measured 2026-10-22)",
+    "price step and lot: 4,923 levels across 250 live books (2026-10-22) never carry more than 5 decimals, and every size is a whole number",
   ],
   missing: [
-    "POST /info response bodies for outcomeMeta, allMids, l2Book and settledOutcome",
-    "POST /info response CORS headers (only the OPTIONS preflight was measured)",
-    "whether settled outcomes stay in outcomeMeta",
-    "tick size and minimum order size",
-    "whether outcome tokens appear in spotClearinghouseState (positions are not read by this adapter)",
+    "outcome positions (spotClearinghouseState) are not read by this adapter",
+    "the minimum order size for outcomes is not documented and cannot be seen from reads",
   ],
 };
 
@@ -99,11 +99,10 @@ export const HYPERLIQUID_SHAPE_STATUS: ShapeStatus = {
 export const HYPERLIQUID_EXCLUDED_PERSONS_CLAUSE =
   "Hyperliquid's terms bar outcome markets to 'Excluded Persons' in jurisdictions it designates from time to time (the list is not published), and the interface is unavailable to residents of the United States and Ontario. This app does not decide whether you are eligible.";
 
-const UNVERIFIED_TAG = "unverified-shape";
 const SOURCE = {
-  outcomeMeta: `hyperliquid:info/outcomeMeta[${UNVERIFIED_TAG}]`,
-  settledOutcome: `hyperliquid:info/settledOutcome[${UNVERIFIED_TAG}]`,
-  market: `hyperliquid:info/outcomeMeta+allMids[${UNVERIFIED_TAG}]`,
+  outcomeMeta: "hyperliquid:info/outcomeMeta",
+  settledOutcome: "hyperliquid:info/settledOutcome",
+  market: "hyperliquid:info/outcomeMeta+allMids",
 } as const;
 
 const META_TTL_MS = 30_000;
@@ -126,13 +125,11 @@ const CAPS: AdapterCaps = {
   stream: false,
 };
 
-// Prices are probabilities with five significant figures (census, H): the finest step is 1e-5 above 0.1,
-// 1e-6 from 0.01 to 0.1 and 1e-7 below. Display and validation only; unverified live.
-const TICK: TickRanges = [
-  { from: "0", to: "0.01", tick: "0.0000001" },
-  { from: "0.01", to: "0.1", tick: "0.000001" },
-  { from: "0.1", to: "1", tick: "0.00001" },
-];
+// The price step. Hyperliquid documents tick rules for perps and spot ("5 significant figures, at most 8 - szDecimals
+// decimals") but none for outcomes; the live books show a flat 0.00001: 4,923 levels across 250 books on 2026-10-22
+// never carried a sixth decimal, at any price (0.00001 and 0.00114 occur; nothing like 0.001143). Display and validation
+// only; the drift suite re-checks it.
+const TICK = "0.00001";
 
 const untrusted = (value: string): Untrusted<string> => ({ untrusted: true, value });
 
@@ -434,7 +431,7 @@ export function createHyperliquidAdapter(deps: AdapterDeps): HyperliquidAdapter 
       status,
       tradable: {
         ok: false,
-        reasons: ["read_only_adapter", "excluded_persons_clause_not_evaluated", "response_shapes_unverified"],
+        reasons: ["read_only_adapter", "excluded_persons_clause_not_evaluated"],
       },
       timesUtc: closesAtUtc === null ? {} : { closesAt: closesAtUtc },
       tick: TICK,

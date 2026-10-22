@@ -3,16 +3,9 @@ import * as z from "zod/v4";
 import { DEC_PATTERN, MAX_DECIMAL_CHARS } from "../../money/decimal.js";
 import { MAX_OUTCOME } from "./encoding.js";
 
-// The Hyperliquid /info shapes this adapter understands, and where each comes from:
-//   outcomeMeta  official docs sample (docs/research/fixtures/hyperliquid-hip-4-outcome-markets/
-//                DOCS_NOT_LIVE_outcomeMeta_settledOutcome_shapes.json, NOT a live capture) plus the live
-//                websocket outcomeMetaUpdates frames, whose outcomeCreated payload is the same spec;
-//   l2Book       live websocket frames (ws_l2Book_yes_no_pair.json); the REST answer is documented to match;
-//   allMids      live websocket frame keys (ws_allMids_outcome_keys.json); the REST answer is documented as
-//                a flat coin to mid map;
-//   settledOutcome  official docs sample only.
-// POST /info was never called by any research stream, so NONE of these is verified against the REST route.
-// Hence HYPERLIQUID_SHAPE_STATUS = unverified, and every parser fails closed.
+// The Hyperliquid /info shapes this adapter understands: outcomeMeta, l2Book, allMids and settledOutcome, each
+// compared with live POST /info answers on 2026-10-22 (HYPERLIQUID_SHAPE_STATUS in adapter.ts; the recorded answers
+// are in fixtures/). Every parser fails closed on any difference.
 
 const decimalString = z.string().regex(DEC_PATTERN).max(MAX_DECIMAL_CHARS);
 

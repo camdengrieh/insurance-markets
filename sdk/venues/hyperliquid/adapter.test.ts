@@ -97,21 +97,22 @@ function clone<T>(value: T): T {
 }
 
 describe("shape status", () => {
-  it("is unverified and says what is missing", () => {
-    expect(HYPERLIQUID_SHAPE_STATUS.status).toBe("unverified");
-    expect(HYPERLIQUID_SHAPE_STATUS.missing.join(" ")).toMatch(/POST \/info response bodies/);
+  it("is verified against the live route, with its evidence, and says what is still not read", () => {
+    expect(HYPERLIQUID_SHAPE_STATUS.status).toBe("verified");
+    expect(HYPERLIQUID_SHAPE_STATUS.evidence.join(" ")).toMatch(/access-control-allow-origin: \*/);
+    expect(HYPERLIQUID_SHAPE_STATUS.missing.join(" ")).toMatch(/spotClearinghouseState/);
     expect(createHyperliquidAdapter({ fetch: fakeFetch({}).fetch, nowMs: () => NOW }).shapeStatus).toBe(HYPERLIQUID_SHAPE_STATUS);
   });
 
-  it("tags every provenance and market source as unverified", async () => {
+  it("names the info route in every provenance and market source, with no unverified tag", async () => {
     const { adapter } = rig(META_OK);
     const [first] = (await adapter.listMarkets({})).items;
-    expect(first?.prov.source).toContain("unverified-shape");
+    expect(first?.prov.source).toBe("hyperliquid:info/outcomeMeta+allMids");
     const market = await adapter.getMarket({ venue: "hyperliquid", marketId: "14348", native: {} });
-    expect(market.prov.source).toContain("unverified-shape");
+    expect(market.prov.source).toBe("hyperliquid:info/outcomeMeta+allMids");
     expect(market.prov.adapterVersion).toBe(HYPERLIQUID_ADAPTER_VERSION);
     expect(market.prov.schemaHash).toBe(HYPERLIQUID_SCHEMA_HASH);
-    expect(market.tradable.reasons).toContain("response_shapes_unverified");
+    expect(market.tradable.reasons).not.toContain("response_shapes_unverified");
   });
 
   it("pins the schema hash to the descriptor", () => {
@@ -364,7 +365,7 @@ describe("getMarket", () => {
     expect(market.rules.void).toBe("scalar");
     expect(market.tradable.ok).toBe(false);
     expect(market.fee).toMatchObject({ modelId: "unknown", ttlSec: 0 });
-    expect(Array.isArray(market.tick)).toBe(true);
+    expect(market.tick).toBe("0.00001");
     expect(market.outcomes.map((o) => o.tokenId)).toEqual(["#143480", "#143481"]);
     const text = "template:binaryPrice\nperp:BTC|priceDescription:the Hyperliquid BTC perp trade|seconds:90|threshold:82132|time:20261020-0800";
     // The shared rules-v2 canonicalisation over the name and the description (sdk/rules.ts).
@@ -586,12 +587,12 @@ describe("order books", () => {
 });
 
 describe("health, capabilities and the terms clause", () => {
-  it("reports reachable with the unverified status and the Excluded Persons clause, and no verdict", async () => {
+  it("reports reachable with the verified status and the Excluded Persons clause, and no verdict", async () => {
     const { adapter } = rig(META_OK);
     const health = await adapter.health();
     expect(health.ok).toBe(true);
     const text = health.notes.join("\n");
-    expect(text).toContain("unverified");
+    expect(text).toContain("response shapes verified");
     expect(text).toContain(HYPERLIQUID_EXCLUDED_PERSONS_CLAUSE);
     expect(text).toMatch(/outcomes parsed: 14, dropped: 0, questions dropped: 0/);
     expect(HYPERLIQUID_EXCLUDED_PERSONS_CLAUSE).toMatch(/does not decide/);

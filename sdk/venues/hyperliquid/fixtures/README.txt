@@ -18,5 +18,6 @@ the files are trimmed to a handful of items.
 These replace the earlier websocket-frame stand-ins, the documentation samples and the hand-written metadata file
 (deleted). Rows that no capture covers (hostile text, an unparseable close time, malformed rows) are built inside
 adapter.test.ts from copies of captured outcomes; they are not venue output.
-The shape-status constant in adapter.ts is left as it was: CORS headers of the POST answers were not measured.
+The CORS header of the POST answers was measured on 2026-10-22 (access-control-allow-origin: *), and the shapes were
+re-checked against the live answers then; HYPERLIQUID_SHAPE_STATUS in adapter.ts is "verified" with that evidence.
 fake-fetch.ts: a scripted fetch double (no network, no data). An unmatched request throws.

@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { AdapterDeps, FetchLike } from "../../model.js";
 import { HYPERLIQUID_INFO_URL, createHyperliquidAdapter } from "./adapter.js";
 
-// Opt-in drift suite. It does NOT run unless APP_LIVE=1, and it was written but not run when this file was
-// authored. It sends read-only POSTs to the public info route (the same requests the adapter makes) and is
-// the evidence needed to move HYPERLIQUID_SHAPE_STATUS from "unverified" to "verified": a person runs it,
-// reads the result, and edits the constant by hand. It also records the one CORS fact still open: whether
-// the POST response (not just the preflight) carries access-control-allow-origin.
+// Opt-in drift suite. It does NOT run unless APP_LIVE=1. It sends read-only POSTs to the public info route (the same
+// requests the adapter makes) and is the evidence behind HYPERLIQUID_SHAPE_STATUS: it passed on 2026-10-21 and
+// 2026-10-22, when the status was set to "verified". A failure here means the venue drifted from what the adapter
+// and the status claim: the shapes, the settlement path, the CORS header, the 0.00001 price step or the whole-share lot.
 const LIVE = process.env.APP_LIVE === "1";
 const USER_AGENT = "insurance-markets-research/0.1";
 
@@ -31,8 +30,8 @@ describe.skipIf(!LIVE)("Hyperliquid live drift (APP_LIVE=1)", () => {
       body: JSON.stringify({ type: "allMids" }),
     });
     expect(response.status).toBe(200);
-    // Not asserted equal to "*": the point is to record what the POST really answers (dapp-design 10 item 23).
-    console.info("hyperliquid POST /info access-control-allow-origin:", response.headers.get("access-control-allow-origin"));
+    // Measured "*" on 2026-10-22; the standalone build reads this route straight from the page.
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
   });
 
   it("lists outcomes whose rows all parse", async () => {
@@ -52,5 +51,39 @@ describe.skipIf(!LIVE)("Hyperliquid live drift (APP_LIVE=1)", () => {
     const [yes, no] = await adapter.getBooks(tokens, { deadlineMs: Date.now() + 10_000 });
     expect(yes?.ok || (!yes?.ok && yes?.error === "EMPTY_BOOK")).toBe(true);
     expect(no?.ok || (!no?.ok && no?.error === "EMPTY_BOOK")).toBe(true);
+  });
+
+  it("reads a settled outcome that has left outcomeMeta as resolved, and an unsettled one is not found", async () => {
+    const adapter = createHyperliquidAdapter(deps);
+    // Outcome 1 is the first recurring BTC binary, settled long ago and no longer listed.
+    const settled = await adapter.getMarket({ venue: "hyperliquid", marketId: "1", native: {} });
+    expect(settled.status).toBe("resolved");
+    const page = await adapter.listMarkets({ limit: 1 });
+    const listed = page.items[0]?.ref.marketId;
+    expect(listed).toBeDefined();
+    const raw = await fetch(HYPERLIQUID_INFO_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "user-agent": USER_AGENT },
+      body: JSON.stringify({ type: "settledOutcome", outcome: Number(listed) }),
+    });
+    expect(raw.status).toBe(200);
+    expect(await raw.json()).toBeNull();
+  });
+
+  it("keeps every live book level on the 0.00001 step with whole-share sizes", async () => {
+    const adapter = createHyperliquidAdapter(deps);
+    const page = await adapter.listMarkets({ limit: 20 });
+    const tokens = page.items.slice(0, 10).flatMap((m) => m.outcomes.map((o) => ({ venue: "hyperliquid" as const, tokenId: o.tokenId })));
+    const books = await adapter.getBooks(tokens, { deadlineMs: Date.now() + 20_000 });
+    let levels = 0;
+    for (const book of books) {
+      if (!book.ok) continue;
+      for (const level of [...book.value.bids, ...book.value.asks]) {
+        levels += 1;
+        expect(level.price).toMatch(/^0\.[0-9]{1,5}$/);
+        expect(level.size).toMatch(/^[1-9][0-9]*$/);
+      }
+    }
+    expect(levels).toBeGreaterThan(0);
   });
 });
