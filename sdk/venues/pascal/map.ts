@@ -3,6 +3,7 @@ import { sha256, toBytes } from "viem";
 import { addQty, cmpQty, fromAtomic, subQty, toDec, type Qty } from "../../money/qty.js";
 import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Rules, Status, TickRanges } from "../../model.js";
 import { untrustedField } from "../../text.js";
+import { ROUNDING_UNKNOWN } from "../../engine/fee-specs.js";
 import {
   PASCAL_ADAPTER_VERSION,
   PASCAL_API_BASE,
@@ -110,7 +111,9 @@ export function outcomeSummariesOf(row: PascalRow): readonly OutcomeSummary[] {
 
 // Taker fee per fill: size * price * (1 - price) * taker_fee_rate, USD, six decimals. The maker gets
 // maker_rebate_share of it back, expressed here as a negative rate. Read per market, never hard-coded
-// (91 of 3,255 markets use 0.01 / 0.50 instead of 0.02 / 0.25).
+// (91 of 3,255 markets use 0.01 / 0.50 instead of 0.02 / 0.25). docs.pascal.trade/llms/general.txt ("Fees", read
+// 2026-10-22) says "Fees are charged per fill" and "rounded to 6 fractional digits" but not in which direction, so
+// the rounding is ROUNDING_UNKNOWN and the engine does not price it.
 export function feeSpecOf(row: PascalRow, nowMs: number): FeeSpec {
   const rebate = fromAtomic("price", row.takerFeeRate.atomic * row.makerRebateShare.atomic, row.takerFeeRate.scale + row.makerRebateShare.scale);
   const rebateText = rebate.atomic === 0n ? "0" : `-${toDec(rebate)}`;
@@ -119,7 +122,7 @@ export function feeSpecOf(row: PascalRow, nowMs: number): FeeSpec {
     modelId: "curve_pq",
     taker: { rate: toDec(row.takerFeeRate) },
     maker: { rate: rebateText },
-    rounding: "usd_6dp",
+    rounding: ROUNDING_UNKNOWN,
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${PASCAL_API_BASE}/markets`, field: "taker_fee_rate,maker_rebate_share", granularity: "market" },
     verifiedAt: new Date(nowMs).toISOString(),

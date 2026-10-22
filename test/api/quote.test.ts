@@ -5,7 +5,7 @@ import { issueKey } from "../../api/keys.js";
 import type { TradeView } from "../../api/markets.js";
 import { legOutcomeIndex, quoteLeg, rankLegs } from "../../api/quote.js";
 import type { ServingPolicy } from "../../api/serving.js";
-import { polymarketFeeSpec, unknownFeeSpec } from "../../sdk/engine/fee-specs.js";
+import { unknownFeeSpec, xoFeeSpec } from "../../sdk/engine/fee-specs.js";
 import type { Book, FeeSpec, Market, VenueId } from "../../sdk/model.js";
 import { rebuildClobOrder } from "../../sdk/trade/clob/decoded.js";
 import { POLYMARKET_EXCHANGES } from "../../sdk/trade/clob/venues.js";
@@ -23,7 +23,7 @@ const NOW = Date.parse("2026-10-22T12:00:00Z");
 const OWNER = "0x1111111111111111111111111111111111111111";
 
 function book(levels: { bids: Array<[string, string]>; asks: Array<[string, string]> }, derived: "native" | "complement" = "native"): Book {
-  return { token: { venue: "polymarket", tokenId: "1" }, bids: levels.bids.map(([price, size]) => ({ price, size })), asks: levels.asks.map(([price, size]) => ({ price, size })), asOfMs: NOW - 1_000, derived };
+  return { token: { venue: "xo", tokenId: "1" }, bids: levels.bids.map(([price, size]) => ({ price, size })), asks: levels.asks.map(([price, size]) => ({ price, size })), asOfMs: NOW - 1_000, derived };
 }
 
 function view(b: Book | null, fee: FeeSpec | null, tradable = true): TradeView {
@@ -32,20 +32,21 @@ function view(b: Book | null, fee: FeeSpec | null, tradable = true): TradeView {
   return { market, marketOrigin: source, books: [{ tokenId: "1", book: b, source: b === null ? { source: null, reason: "The book could not be read: the venue's book was empty." } : source }], fee, feeOrigin: fee === null ? { source: null, reason: "The fee could not be read: the read failed." } : source, venueReason: null };
 }
 
-const source = (verifiedAt: string) => ({ url: "https://clob.polymarket.com/clob-markets/test", field: "fd", granularity: "market" as const, verifiedAt, ttlSec: 300 });
-const FRESH = polymarketFeeSpec({ rate: "0.04", source: source(new Date(NOW - 10_000).toISOString()) });
+// XO's spec: the documented p(1-p) curve at 400 bps, floored to the micro-dollar (sdk/engine/fee-specs.ts xoFeeSpec).
+const source = (verifiedAt: string) => ({ url: "https://api-mainnet.xo.market/api/markets/contract/test", field: "effectiveFeeConfig.takerFeeBps", granularity: "market" as const, verifiedAt, ttlSec: 300 });
+const FRESH = xoFeeSpec({ takerBps: "400", makerBps: "0", source: source(new Date(NOW - 10_000).toISOString()) });
 const DEEP = book({ bids: [["0.38", "100"]], asks: [["0.40", "100"], ["0.42", "100"]] });
-const leg = (v: TradeView, venue: VenueId = "polymarket") => quoteLeg({ venue, marketId: "m", outcomeIndex: 0, view: v }, "buy", "10", NOW);
+const leg = (v: TradeView, venue: VenueId = "xo") => quoteLeg({ venue, marketId: "m", outcomeIndex: 0, view: v }, "buy", "10", NOW);
 
 test("a native book with a fresh fee spec: the engine's walk and fee, every number with its source and age", () => {
   const q = leg(view(DEEP, FRESH));
   assert.equal(q.executable, true, q.reasons.join("; "));
   assert.equal(q.quote?.vwap, "0.4");
   assert.equal(q.quote?.notional, "4");
-  // C x rate x p x (1 - p) = 10 x 0.04 x 0.4 x 0.6, rounded half up at 5 places, added to a buy.
+  // C x bps/10000 x p x (1 - p) = 10 x 0.04 x 0.4 x 0.6, floored at 6 places, added to a buy.
   assert.equal(q.quote?.fee, "0.096");
   assert.equal(q.quote?.netCost, "4.096");
-  assert.equal(q.quote?.feeSpecId, "polymarket:curve_pq");
+  assert.equal(q.quote?.feeSpecId, "xo:curve_pq");
   assert.deepEqual(q.sources.book, { source: "venue_api", asOfMs: NOW - 1_000, ageMs: 1_000, bookAsOfMs: NOW - 1_000 });
   assert.equal(q.sources.fee?.verifiedAt, new Date(NOW - 10_000).toISOString());
   assert.equal(q.sources.fee?.ageMs, 10_000);
@@ -53,9 +54,9 @@ test("a native book with a fresh fee spec: the engine's walk and fee, every numb
 });
 
 test("fails closed exactly as the engine does: unknown model, stale spec, missing fee, complement and crossed books, thin depth, untradable", () => {
-  const unknown = leg(view(DEEP, unknownFeeSpec("polymarket", source(new Date(NOW).toISOString()))));
+  const unknown = leg(view(DEEP, unknownFeeSpec("xo", source(new Date(NOW).toISOString()))));
   assert.deepEqual([unknown.executable, unknown.quote?.feeError?.code, unknown.quote?.netCost], [false, "MODEL_UNKNOWN", null]);
-  const stale = leg(view(DEEP, polymarketFeeSpec({ rate: "0.04", source: source(new Date(NOW - 301_000).toISOString()) })));
+  const stale = leg(view(DEEP, xoFeeSpec({ takerBps: "400", source: source(new Date(NOW - 301_000).toISOString()) })));
   assert.deepEqual([stale.executable, stale.quote?.feeError?.code, stale.quote?.fee], [false, "SPEC_STALE", null]);
   const noFee = leg(view(DEEP, null));
   assert.deepEqual([noFee.executable, noFee.quote?.feeError?.code], [false, "MODEL_UNKNOWN"]);
@@ -69,7 +70,7 @@ test("fails closed exactly as the engine does: unknown model, stale spec, missin
   assert.match(crossed.reasons[0] ?? "", /crossed or locked/);
   const locked = leg(view(book({ bids: [["0.40", "10"]], asks: [["0.40", "10"]] }), FRESH));
   assert.equal(locked.quote, null);
-  const thin = quoteLeg({ venue: "polymarket", marketId: "m", outcomeIndex: 0, view: view(DEEP, FRESH) }, "buy", "1000", NOW);
+  const thin = quoteLeg({ venue: "xo", marketId: "m", outcomeIndex: 0, view: view(DEEP, FRESH) }, "buy", "1000", NOW);
   assert.deepEqual([thin.executable, thin.quote?.complete, thin.quote?.filledSize], [false, false, "200"]);
   const closed = leg(view(DEEP, FRESH, false));
   assert.equal(closed.executable, false);
@@ -122,20 +123,29 @@ for (const state of FAKE_VENUE_STATES) {
       bodies.push(approved.json);
       assert.equal(approved.status, 200, JSON.stringify(approved.json));
       assert.equal((approved.json["group"] as Record<string, unknown>)["state"], "approved");
-      assert.equal(approved.json["best"], null, "no reader's own fee spec prices today: nothing is executable");
       const legs = approved.json["legs"] as Array<Record<string, unknown>>;
       assert.equal(legs.length, 2);
-      for (const l of legs) {
-        assert.equal(l["executable"], false);
-        assert.equal(l["rank"], null);
-        assert.ok((l["reasons"] as string[]).length > 0);
-        if (state === "ok") {
+      if (state === "ok") {
+        // Trueo's reader states its LP and hook fees from the chain, so the engine prices its own spec: the pool's
+        // quote already holds both (in_pool), the fee on top is zero and the net cost is the walked notional.
+        const best = approved.json["best"] as Record<string, unknown>;
+        assert.equal(best["venue"], "trueo");
+        const first = legs[0] as Record<string, unknown>;
+        assert.deepEqual([first["executable"], first["rank"], first["marketId"]], [true, 1, best["marketId"]]);
+        for (const l of legs) {
           const quote = l["quote"] as Record<string, unknown>;
-          assert.equal((quote["feeError"] as Record<string, unknown>)["code"], "PARAMS_MISSING", "Trueo's spec lacks the engine's amm_stack parameters");
-          assert.equal(quote["netCost"], null);
+          assert.deepEqual([quote["feeError"], quote["fee"], quote["feePayer"], quote["feeSpecId"]], [null, "0", "in_pool", "trueo:amm_stack"]);
+          assert.equal(quote["netCost"], quote["notional"]);
           assert.equal(typeof quote["vwap"], "string");
           assert.equal(((l["sources"] as Record<string, Record<string, unknown>>)["book"] as Record<string, unknown>)["source"], "chain");
-        } else {
+          if (l["executable"] !== true) assert.ok((l["reasons"] as string[]).length > 0);
+        }
+        assert.equal(best["netCost"], (first["quote"] as Record<string, unknown>)["netCost"]);
+      } else {
+        assert.equal(approved.json["best"], null);
+        for (const l of legs) {
+          assert.equal(l["executable"], false);
+          assert.equal(l["rank"], null);
           assert.equal(l["quote"], null);
           assert.equal(typeof (l["reasons"] as string[])[0], "string");
         }
@@ -206,7 +216,7 @@ test("a Polymarket leg (test policy): the reader's fee spec is refused by the en
     assert.equal(answer.status, 200);
     const pmLeg = (answer.json["legs"] as Array<Record<string, unknown>>).find((l) => l["venue"] === "polymarket") as Record<string, unknown>;
     const quote = pmLeg["quote"] as Record<string, unknown>;
-    // Polymarket's reader states its rounding in prose; the engine refuses to price with it (step 4 of section 9).
+    // Polymarket publishes 5 dp but not its rounding mode, so its spec says "unknown" and the engine refuses to price it.
     assert.equal((quote["feeError"] as Record<string, unknown>)["code"], "ROUNDING_UNSUPPORTED");
     assert.equal(quote["derived"], "native");
     assert.equal(pmLeg["executable"], false);
@@ -214,6 +224,25 @@ test("a Polymarket leg (test policy): the reader's fee spec is refused by the en
     assert.equal(sources["book"]?.["source"], "venue_api");
     assert.match(String(sources["fee"]?.["url"]), /^https:\/\/clob\.polymarket\.com\/clob-markets\//);
     assert.ok(poly.calls.some((u) => u.includes("/book?token_id=")), "the book was read");
+  } finally {
+    await h.close();
+  }
+});
+
+test("an executable best venue under the test policy: Trueo's own spec prices, Polymarket's is refused and ranks last", async () => {
+  const { h, groupId, live } = await polymarketHarness();
+  try {
+    const { key } = issueKey(h.metering, { label: "t", tier: "full" }, Date.now());
+    const answer = await h.get(`/v1/quote?group=${groupId}&side=buy&size=10`, { authorization: `Bearer ${key}` });
+    assert.equal(answer.status, 200, JSON.stringify(answer.json));
+    const legs = answer.json["legs"] as Array<Record<string, unknown>>;
+    assert.deepEqual(legs.map((l) => [l["venue"], l["executable"], l["rank"]]), [["trueo", true, 1], ["polymarket", false, null]]);
+    const trueoQuote = legs[0]?.["quote"] as Record<string, unknown>;
+    assert.deepEqual([trueoQuote["feeError"], trueoQuote["fee"], trueoQuote["complete"], trueoQuote["derived"]], [null, "0", true, "native"]);
+    assert.equal(trueoQuote["netCost"], trueoQuote["notional"]);
+    assert.deepEqual(answer.json["best"], { venue: "trueo", marketId: live, netCost: trueoQuote["netCost"], vwap: trueoQuote["vwap"] });
+    const fee = (legs[0]?.["sources"] as Record<string, Record<string, unknown>>)["fee"];
+    assert.equal(fee?.["field"], "poolKey.fee,hook.feeNumerator,hook.FEE_DENOMINATOR");
   } finally {
     await h.close();
   }

@@ -113,7 +113,7 @@ const XO: PlatformRecord = {
   fees: sec(
     "fees",
     fees("xo", {
-      formula: "fee = C x (feeBps / 10000) x p x (1 - p) per filled leg",
+      formula: "fee = C x (feeBps / 10000) x p x (1 - p) per filled leg, each fill rounded down to the micro-dollar",
       paramsSource: {
         url: "https://orderbooks.xo.market/fee-rate",
         field: "base_fee",
@@ -271,7 +271,7 @@ const POLYMARKET: PlatformRecord = {
   fees: sec(
     "fees",
     fees("polymarket", {
-      formula: "fee = C x rate x p x (1 - p), taker only, 5 dp rounding; fail closed if exponent is not 1",
+      formula: "fee = C x rate x p x (1 - p), taker only, 5 dp rounding in an unpublished mode (so no fee is priced); fail closed if exponent is not 1",
       paramsSource: {
         url: "https://gamma-api.polymarket.com/markets",
         field: "feeSchedule",
@@ -442,7 +442,7 @@ const KALSHI: PlatformRecord = {
   fees: sec(
     "fees",
     fees("kalshi", {
-      formula: "fee = ceil_6dp(0.07 x M x C x p x (1 - p)) plus a rounding fee, minus accumulator rebate",
+      formula: "fee = ceil_6dp(0.07 x M x C x p x (1 - p)) plus a rounding fee to the balance grid, minus accumulator rebate",
       paramsSource: {
         url: "https://external-api.kalshi.com/trade-api/v2/series",
         field: "fee_type,fee_multiplier",

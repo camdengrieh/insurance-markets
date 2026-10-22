@@ -70,9 +70,9 @@ export const DOCUMENTED_LIMITS_PER_10S = Object.freeze({
   dataStatus: 100,
 });
 
-// Fee model facts (note 08 2.7): fee = C x rate x p x (1 - p), taker only, rounded to 5 dp with a 0.00001
-// minimum. The rounding MODE is not documented, so this adapter publishes the parameters and no fee amount.
-export const FEE_ROUNDING = "5dp, minimum 0.00001; rounding mode not documented";
+// Fee model facts (note 08 2.7): fee = C x rate x p x (1 - p), taker only, rounded to 5 dp ("Anything smaller rounds
+// to zero"). The rounding MODE is not documented (docs.polymarket.com/trading/fees, read 2026-10-22), so the spec's
+// rounding is the engine's ROUNDING_UNKNOWN (engine/fee-specs.ts polymarketFeeSpec) and no fee amount is derived.
 export const FEE_TTL_SEC = 600;
 
 // Rules: Polymarket's own void outcome is "Unknown/50-50": each token redeems 0.50 (note 08 2.10).

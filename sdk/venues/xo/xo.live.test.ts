@@ -97,7 +97,7 @@ suite("XO live drift (APP_LIVE=1, GET only)", () => {
     const market = await adapter.getMarket(first.ref);
     expect(market.rules.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(market.tick).toBe("0.001");
-    expect(["ad_valorem_bps", "unknown"]).toContain(market.fee.modelId);
+    expect(["curve_pq", "unknown"]).toContain(market.fee.modelId);
     const raw = JSON.parse((await get(`${XO_DATA_ORIGIN}/api/markets/contract/${market.ref.marketId}`)).text) as { outcomes: Array<{ currentPrice: string }> };
     expect(raw.outcomes.map((outcome) => outcome.currentPrice)).toEqual(["500000", "500000"]);
   });

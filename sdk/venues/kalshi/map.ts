@@ -4,6 +4,7 @@ import { addQty, cmpQty, decFromNumber, fromAtomic, parseQty, subQty, toDec, typ
 import type { Book, Collateral, Dec, FeeSpec, Level, Market, MarketGroup, MarketRef, MarketSummary, Outcome, OutcomeSummary, Rules, Status, TickRanges } from "../../model.js";
 import { kalshiRuleFields, rulesFingerprint } from "../../rules.js";
 import { untrustedField } from "../../text.js";
+import { kalshiFeeSpec } from "../../engine/fee-specs.js";
 import { makeProv } from "../policy.js";
 import {
   KALSHI_ADAPTER_VERSION,
@@ -12,7 +13,6 @@ import {
   KALSHI_COLLATERAL_SYMBOL,
   KALSHI_FEE_TTL_SEC,
   KALSHI_LIST_TTL_MS,
-  KALSHI_TAKER_COEFFICIENT,
 } from "./constants.js";
 import { TICKER, type KalshiBookBody, type KalshiRow } from "./schemas.js";
 
@@ -286,25 +286,18 @@ export function unknownFee(origin: string, ticker: string, nowMs: number): FeeSp
 }
 
 // The dApp models the plain quadratic series only (its spec has no maker side): taker = coefficient x fee_multiplier
-// x C x P x (1 - P), rounded up. Series with maker fees, combo fees or a flat fee stay unknown here.
+// x C x P x (1 - P), with Kalshi's documented rounding. The spec is the engine's (engine/fee-specs.ts kalshiFeeSpec).
+// Series with maker fees, combo fees or a flat fee stay unknown here.
 export function feeSpecOf(series: KalshiSeries, origin: string, nowMs: number): FeeSpec {
   const fallback = unknownFee(origin, series.ticker, nowMs);
   const inputs = feeInputsOf(series);
   if (!inputs.ok || inputs.feeType !== "quadratic") return fallback;
   const multiplier = parseQty("price", inputs.multiplier, { maxScale: 6 });
-  const coefficient = parseQty("price", KALSHI_TAKER_COEFFICIENT);
-  if (multiplier === null || coefficient === null) return fallback;
-  const rate = fromAtomic("price", coefficient.atomic * multiplier.atomic, coefficient.scale + multiplier.scale);
-  return {
-    venue: "kalshi",
-    modelId: "curve_pq",
-    taker: { rate: toDec(rate) },
-    rounding: "ceil_6dp",
-    payer: "buyer_adds_seller_withholds",
-    paramsSource: { url: `${origin}${KALSHI_API_PREFIX}/series/${series.ticker}`, field: "fee_type,fee_multiplier", granularity: "series" },
-    verifiedAt: iso(nowMs),
-    ttlSec: KALSHI_FEE_TTL_SEC,
-  };
+  if (multiplier === null) return fallback;
+  return kalshiFeeSpec({
+    multiplier: toDec(multiplier),
+    source: { url: `${origin}${KALSHI_API_PREFIX}/series/${series.ticker}`, field: "fee_type,fee_multiplier", granularity: "series", verifiedAt: iso(nowMs), ttlSec: KALSHI_FEE_TTL_SEC },
+  });
 }
 
 // ---- market ---------------------------------------------------------------------------------------------------------------------

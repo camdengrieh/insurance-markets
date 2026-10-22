@@ -63,6 +63,13 @@ export function feeParamLines(label: string, params: FeeParams | undefined): str
   if (multiplier !== null) lines.push(`${label} multiplier ${multiplier}`);
   const exponent = safeDecimal(params.exponent);
   if (exponent !== null) lines.push(`${label} exponent ${exponent}`);
+  // amm_stack parts, as fractions of the amount (Trueo: the pool's LP fee and the hook's fee).
+  const lpFee = safeDecimal(params.lpFee);
+  if (lpFee !== null) lines.push(`${label} pool fee ${lpFee}`);
+  const hookFee = safeDecimal(params.hookFee);
+  if (hookFee !== null) lines.push(`${label} hook fee ${hookFee}`);
+  const extraFee = safeDecimal(params.extraFee);
+  if (extraFee !== null) lines.push(`${label} extra fee ${extraFee}`);
   return lines;
 }
 

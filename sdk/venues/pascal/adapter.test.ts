@@ -10,6 +10,8 @@ import booksRecorded from "./fixtures/books_recorded.json";
 import { fakeFetch, type FakeRoute } from "./fixtures/fake-fetch.js";
 import marketsRecorded from "./fixtures/markets_recorded.json";
 import { tokenIdOf } from "./map.js";
+import { orderFee } from "../../engine/fees.js";
+import { dec } from "../../money/rational.js";
 
 // Fixed clock: ten seconds after the recorded answers (2026-10-19). Nothing here reads the real time or network.
 const NOW = 1_792_368_171_000;
@@ -203,6 +205,10 @@ describe("pascal: market detail", () => {
     // 0.02 x 0.25 market: the default pair.
     const epl = await marketOf("EPL_26OCT19_TOTCOV_ML.COV");
     expect(epl.fee).toMatchObject({ taker: { rate: "0.02" }, maker: { rate: "-0.005" } });
+    // docs.pascal.trade/llms/general.txt states six decimals but no rounding direction: the engine refuses to price it.
+    expect(house.fee.rounding).toBe("unknown");
+    const fee = orderFee(house.fee, "taker", "buy", [{ price: dec("0.5"), qty: dec("100") }]);
+    expect(fee.ok ? "priced" : fee.code).toBe("ROUNDING_UNSUPPORTED");
   });
 
   it("describes a referenced market as settling to Polymarket and carries the exact link ids", async () => {

@@ -14,6 +14,7 @@ import {
   NOVIG_TICK_RANGES,
 } from "./constants.js";
 import { ONE_PRICE, isoOfMs, openUnitPrice } from "./shared.js";
+import { FEE_ROUNDING_PLACES } from "./fee.js";
 import { SCHEMA_DESCRIPTOR, type NovigBook, type NovigEvent, type NovigMarket } from "./schemas.js";
 
 export const NOVIG_SCHEMA_HASH = sha256(toBytes(SCHEMA_DESCRIPTOR)).slice(2);
@@ -151,7 +152,9 @@ export function feeSpecOf(market: NovigMarket, nowMs: number): FeeSpec {
     // Fee = c * P * (1 - P) * N, taker only. The maker never pays (maker credit is a separate rebate).
     taker: { rate: toDec(coefficient) },
     maker: { rate: "0" },
-    rounding: "usd_5dp_half_up",
+    // docs.novig.com/api/concepts/fees (read 2026-10-22): "A fee rounds half up to the millicent", on each fill, with
+    // no one-cent minimum (fee.ts). The engine rounds the order once: under $0.00001 per extra fill either way.
+    rounding: `half_up:${FEE_ROUNDING_PLACES}`,
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${NOVIG_API_BASE}/catalog/markets/${market.marketId}`, field: "fee.coefficient,fee.charged,fee.makerCredit", granularity: "market" },
     verifiedAt: new Date(nowMs).toISOString(),

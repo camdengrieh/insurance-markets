@@ -46,7 +46,7 @@ const HERO_H1 = /^Every open market this build can read\. [A-Z][a-z]+ venues?, o
 
 describe("the list", () => {
   it("shows one row per market with the fixed columns, units and labels", async () => {
-    const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { title: "Will it rain", prices: ["0.6", "0.4"] }), summary("xo", "m2", { title: "Second" })]], feeNote: "ceiling, unreconciled" });
+    const xo = fakeEntry("xo", { pages: [[summary("xo", "m1", { title: "Will it rain", prices: ["0.6", "0.4"] }), summary("xo", "m2", { title: "Second" })]], feeNote: "documented curve, larger of two rates" });
     const pm = fakeEntry("polymarket", { pages: [[summary("polymarket", "p1", { title: "Poly one", volume: { amount: "980.25", unit: "unknown", windowHours: 24 } })]] });
     const { container } = await mount(<MarketsView />, fakeServices([xo, pm]));
     expect(headers(container)).toEqual(["Venue", "Market", "Category", "Yes bid / ask", "Spread", "Depth ±5¢", "Closes (UTC)", "Marks"]);

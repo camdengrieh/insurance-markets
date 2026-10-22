@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import type { Market, MarketRef } from "../../model.js";
 import { XO_COLLATERAL, XO_FEE_STATUS, XO_SCHEMA_HASH, XO_TICK, createXoAdapter, isXoAdapterError, rulesSha256, XoAdapterError, type XoAdapter } from "./index.js";
 import { manualClock, scriptedFetch, type ScriptedReply } from "./testkit.js";
+import { checkFeeSpec, orderFee, xoFeeMicro } from "../../engine/fees.js";
+import { dec, ratToDecExact } from "../../money/rational.js";
 
 // getMarket: rules, the rules hash, the fee spec, tradability and hostile text, against recorded detail routes.
 
@@ -174,15 +176,15 @@ describe("rules hash", () => {
 });
 
 describe("fee spec", () => {
-  it("reports the Data API figure as an unreconciled ceiling, with exact rates", async () => {
+  it("states the documented p(1-p) curve with the Data API rate, floored to the micro-dollar", async () => {
     const { adapter } = setup({ body: detailBody() });
     const market = await adapter.getMarket(refOf(FEE400));
     expect(market.fee).toEqual({
       venue: "xo",
-      modelId: "ad_valorem_bps",
+      modelId: "curve_pq",
       taker: { bps: "400" },
       maker: { bps: "0" },
-      rounding: "ceil",
+      rounding: "floor:6",
       payer: "buyer_adds_seller_withholds",
       paramsSource: { url: `https://api-mainnet.xo.market/api/markets/contract/${FEE400}`, field: "effectiveFeeConfig.takerFeeBps", granularity: "market" },
       verifiedAt: "2026-10-19T12:00:00.000Z",
@@ -190,19 +192,31 @@ describe("fee spec", () => {
     });
     const detailed = await adapter.getMarketDetail(refOf(FEE400));
     expect(detailed.fee.status).toBe(XO_FEE_STATUS);
-    expect(XO_FEE_STATUS).toBe("ceiling_unreconciled");
+    expect(XO_FEE_STATUS).toBe("curve_larger_rate");
   });
 
-  it("is never below the p(1-p) curve it may really be: bps on notional is the larger of the two", async () => {
-    // For any price p in (0,1): p >= p(1-p). Checked on a grid of integer micro prices without floating point.
+  it("prices the venue's worked example with the reader's own spec (docs.xo.market/product/trading/fees)", async () => {
+    // "A taker buys 200 shares at 50¢ on a market with a 4% taker base rate: fee = 200 × 0.04 × 0.50 × 0.50 = $2.00".
     const { adapter } = setup({ body: detailBody() });
     const spec = (await adapter.getMarket(refOf(FEE400))).fee;
-    const bps = BigInt(spec.taker?.bps ?? -1);
-    for (let micro = 1000n; micro < 1_000_000n; micro += 7000n) {
-      const flat = bps * micro; // bps * p, scaled by 1e6
-      const curve = (bps * micro * (1_000_000n - micro)) / 1_000_000n; // bps * p(1-p), scaled by 1e6
-      expect(flat >= curve).toBe(true);
-    }
+    expect(checkFeeSpec(spec, NOW).ok).toBe(true);
+    const fee = orderFee(spec, "taker", "buy", [{ price: dec("0.5"), qty: dec("200") }]);
+    expect(fee.ok && ratToDecExact(fee.value)).toBe("2");
+    // The fee table's 100 shares at 30¢: 0.84 (rounded to the cent "for readability"; exact 0.84).
+    const table = orderFee(spec, "taker", "buy", [{ price: dec("0.3"), qty: dec("100") }]);
+    expect(table.ok && ratToDecExact(table.value)).toBe("0.84");
+  });
+
+  it("prices a Pulse market's recorded 600 bps the way sampled on-chain fills were charged, floored to the micro-dollar", async () => {
+    const body = clone(fixture("data-market-by-contract-pulse.json")) as Rec;
+    const { adapter } = setup({ body }, body.conditionId as string);
+    const spec = (await adapter.getMarket(refOf(body.conditionId as string))).fee;
+    expect([spec.modelId, spec.taker?.bps]).toEqual(["curve_pq", "600"]);
+    // 410,000 micro of principal at tick 82 is 5 shares; the fill carried 22,582 micro of fee (docs/research/22
+    // section 9 item 9). 5 x 0.06 x 0.082 x 0.918 = 0.0225828, floored to 0.022582; 600 bps of notional would be 0.0246.
+    const fee = orderFee(spec, "taker", "buy", [{ price: dec("0.082"), qty: dec("5") }]);
+    expect(fee.ok && ratToDecExact(fee.value)).toBe("0.022582");
+    expect(xoFeeMicro(600n, 5_000_000n, 82n)).toBe(22_582n);
   });
 
   it("fails closed for a curve it does not know, a missing config, or an unusable one", async () => {
@@ -244,7 +258,7 @@ describe("fee spec", () => {
     const body = clone(fixture("data-market-by-slug.json")) as Rec;
     const { adapter } = setup({ body }, body.conditionId as string);
     const market = await adapter.getMarket(refOf(body.conditionId as string));
-    expect(market.fee.modelId).toBe("ad_valorem_bps");
+    expect(market.fee.modelId).toBe("curve_pq");
     expect(market.fee.taker).toEqual({ bps: "0" });
   });
 });

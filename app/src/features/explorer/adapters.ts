@@ -91,7 +91,7 @@ export function createExplorerAdapters(deps: AdapterDeps, mode: AppMode): Partia
         return { market: result.market, notes: result.notes, settlement: result.settlement };
       },
       deadlineFor: duration,
-      feeNote: XO_FEE_STATUS === "ceiling_unreconciled" ? "ceiling, unreconciled" : String(XO_FEE_STATUS).replace(/_/g, " "),
+      feeNote: XO_FEE_STATUS === "curve_larger_rate" ? "documented curve, larger of two rates" : String(XO_FEE_STATUS).replace(/_/g, " "),
       shape: null,
       clause: null,
     },

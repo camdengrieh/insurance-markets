@@ -30,6 +30,7 @@ import type {
   Untrusted,
 } from "../../model.js";
 import { XO_DATA_ORIGIN } from "./urls.js";
+import { xoFeeSpec } from "../../engine/fee-specs.js";
 
 // Pure mapping from the shared XO decoders' output (./api/client.ts, already strict and bounded) to the venue
 // port. Nothing here touches the network or the clock; callers pass `nowMs` and `fetchedAtMs`.
@@ -227,11 +228,15 @@ export function summaryOf(row: XoRow, nowMs: number, fetchedAtMs: number): Marke
 
 // ---- detail -----------------------------------------------------------------------------------------------------
 
-// The fee, as far as it is known. XO has two disagreeing sources (/fee-rate answers 0 for every token, the Data
-// API says 400 to 800 bps) and a field named FLAT_BPS next to docs that describe a p(1-p) curve. Until a real
-// fill reconciles them the spec is the CEILING: the larger bps figure applied to notional (ad valorem), which is
-// never below the curve. XO_FEE_STATUS says so; no executable label or net-of-fee edge may be built on it.
-export const XO_FEE_STATUS = "ceiling_unreconciled" as const;
+// The fee, as far as it is known. XO's own pages state one model for every fill: the taker pays C x bps/10000 x
+// p x (1-p) in collateral, added to a buy and withheld from a sell, each fill rounded down to the micro-dollar
+// (docs.xo.market/product/trading/fees and docs.xo.market/guides/fees, read 2026-10-22: "The base rate is used in
+// the fee curve, rather than charged as a flat percentage"). FLAT_BPS names a flat base RATE in that curve: a
+// Pulse market's effectiveFeeConfig says FLAT_BPS at 600 bps, and sampled on-chain fills are the floored curve
+// at 600 bps (engine/fees.ts xoFeeMicro), not 600 bps of notional. The spec is the engine's (engine/fee-specs.ts
+// xoFeeSpec). The rate is the larger of the two sources (/fee-rate answers 0 for every token, the Data API 400
+// to 800 bps), which XO_FEE_STATUS says; CONVICTION_CURVE and any other curve name stay unknown.
+export const XO_FEE_STATUS = "curve_larger_rate" as const;
 
 export function feeSpecOf(detail: XoDetail, fetchedAtMs: number, feeRateBps: readonly number[]): FeeSpec {
   const paramsSource = {
@@ -247,18 +252,16 @@ export function feeSpecOf(detail: XoDetail, fetchedAtMs: number, feeRateBps: rea
     ttlSec: FEE_TTL_SEC,
   };
   const config = detail.effectiveFeeConfig;
-  // Only the one curve model seen on long-form markets is understood. CONVICTION_CURVE and anything new fail closed.
+  // Only the flat-rate curve is understood. CONVICTION_CURVE and anything new fail closed.
   if (config === null || config.curveModel !== "FLAT_BPS") return { modelId: "unknown", ...base };
   const assessment = resolveTakerFee({ effective: config, feeRateBps });
   if (assessment.takerFeeBps === null) return { modelId: "unknown", ...base };
-  return {
-    modelId: "ad_valorem_bps",
-    // Whole basis points as the API states them; the coefficient is given once (bps), never also as a rate.
-    taker: { bps: String(assessment.takerFeeBps) },
-    maker: { bps: String(config.makerFeeBps) },
-    rounding: "ceil",
-    ...base,
-  };
+  // Whole basis points as the API states them; the coefficient is given once (bps), never also as a rate.
+  return xoFeeSpec({
+    takerBps: String(assessment.takerFeeBps),
+    makerBps: String(config.makerFeeBps),
+    source: { ...paramsSource, verifiedAt: base.verifiedAt, ttlSec: FEE_TTL_SEC },
+  });
 }
 
 export interface TradableFacts {

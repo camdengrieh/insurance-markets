@@ -21,6 +21,7 @@ import {
   trueoFeeSpec,
   unknownFeeSpec,
   xoFeeSpec,
+  ROUNDING_UNKNOWN,
 } from "./fee-specs.js";
 import { dec, eq, ratToDecExact, sub } from "../money/rational.js";
 import { NOW_MS, SOURCE } from "./fixtures/helpers.js";
@@ -103,34 +104,63 @@ test("rounding grammar", () => {
   assert.equal(parseRounding("none").ok, true);
   const steps = value(parseRounding("half_up:5,min:0.00001"));
   assert.equal(steps.length, 2);
-  for (const bad of ["ceil", "bogus:6", "ceil:x", "min:abc", "ceil:6,,"]) {
+  assert.deepEqual(value(parseRounding("ceil:6,align:2")).map((s) => s.kind), ["round", "align"]);
+  for (const bad of ["ceil", "bogus:6", "ceil:x", "min:abc", "ceil:6,,", "align:x", "align", ROUNDING_UNKNOWN]) {
     assert.equal(code(parseRounding(bad)), "ROUNDING_UNSUPPORTED", bad);
+  }
+  // The readers' former prose is refused, never read as a rule.
+  for (const prose of ["ceil_6dp", "usd_6dp", "nearest_cent_half_even", "usd_cent_up", "usd_5dp_half_up", "5dp, minimum 0.00001; rounding mode not documented"]) {
+    assert.equal(code(parseRounding(prose)), "ROUNDING_UNSUPPORTED", prose);
   }
 });
 
-test("order fee: Kalshi rounds up to a micro-dollar and then to the cent", () => {
+test("align: the trader's cash moves onto the grid against the trader, and the difference is fee", () => {
+  const spec: FeeSpec = { ...xo400, rounding: "align:2" };
+  // buy 1 at 0.5, 400 bps: fee 0.01, cash 0.51 already on the grid.
+  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", [{ price: dec("0.5"), qty: dec("1") }]))), "0.01");
+  // buy 1.5 at 0.501: notional 0.7515, fee 1.5 x 0.04 x 0.501 x 0.499 = 0.01499994; 0.76649994 is paid as 0.77.
+  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", [{ price: dec("0.501"), qty: dec("1.5") }]))), "0.0185");
+  // the same sold: 0.7515 - 0.01499994 = 0.73650006 is received as 0.73.
+  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "sell", [{ price: dec("0.501"), qty: dec("1.5") }]))), "0.0215");
+});
+
+test("order fee: Kalshi rounds the trade fee up to a micro-dollar, then aligns the balance to the cent", () => {
   const spec = kalshiFeeSpec({ multiplier: "1", source: SOURCE });
+  // docs.kalshi.com/getting_started/fee_rounding worked example: -$0.055 of revenue, model fee 0.00363825 ->
+  // trade fee 0.003639, balance change -0.06, trade fee plus rounding fee exactly 0.005.
+  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", [{ price: dec("0.055"), qty: dec("1") }]))), "0.005");
   const fills = [
     { price: dec("0.38"), qty: dec("80") },
     { price: dec("0.38"), qty: dec("40") },
     { price: dec("0.39"), qty: dec("300") },
   ];
-  // smooth total 6.97494 (docs/research/10 section 6.2); order-level round-up to the cent is 6.98
+  // smooth total 6.97494 (docs/research/10 section 6.2) on a notional of 162.6: 169.57494 is paid as 169.58
   assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", fills))), "6.98");
   const exact: FeeSpec = { ...spec, rounding: "none" };
   assert.equal(ratToDecExact(value(orderFee(exact, "taker", "buy", fills))), "6.97494");
 });
 
-test("order fee: Polymarket rounds half-up to 5 places with a 0.00001 minimum on a charged fee", () => {
+test("order fee: Polymarket publishes 5 dp but not the rounding mode, so its fee is never priced", () => {
   const spec = polymarketFeeSpec({ rate: "0.04", source: SOURCE });
-  // 1 share at 0.01: 0.04 x 0.01 x 0.99 = 0.000396 -> 0.0004
-  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", [{ price: dec("0.01"), qty: dec("1") }]))), "0.0004");
-  // 0.1 share at 0.001 smooth 0.000003996 rounds to 0 at 5 dp; the minimum lifts it to 0.00001
-  assert.equal(ratToDecExact(value(orderFee(spec, "taker", "buy", [{ price: dec("0.001"), qty: dec("0.1") }]))), "0.00001");
-  // a zero-rate market stays at zero: the minimum only applies to a charged fee
-  const free = polymarketFeeSpec({ rate: "0", source: SOURCE });
+  assert.equal(spec.rounding, ROUNDING_UNKNOWN);
+  assert.equal(code(orderFee(spec, "taker", "buy", [{ price: dec("0.01"), qty: dec("1") }])), "ROUNDING_UNSUPPORTED");
+  // the smooth curve itself is still the venue's
+  assert.ok(eq(value(feePerShare(spec, "taker", "buy", dec("0.01"))), dec("0.000396")));
+  // a minimum step lifts only a charged fee
+  const floored: FeeSpec = { ...spec, rounding: "half_up:5,min:0.00001" };
+  assert.equal(ratToDecExact(value(orderFee(floored, "taker", "buy", [{ price: dec("0.001"), qty: dec("0.1") }]))), "0.00001");
+  const free: FeeSpec = { ...polymarketFeeSpec({ rate: "0", source: SOURCE }), rounding: "half_up:5,min:0.00001" };
   assert.equal(ratToDecExact(value(orderFee(free, "taker", "buy", [{ price: dec("0.5"), qty: dec("10") }]))), "0");
-  assert.equal(code(orderFee(spec, "taker", "buy", [{ price: dec("0.5"), qty: dec("0") }])), "PARAMS_INVALID");
+  assert.equal(code(orderFee(xo400, "taker", "buy", [{ price: dec("0.5"), qty: dec("0") }])), "PARAMS_INVALID");
+});
+
+test("XO: the venue's worked example, 200 shares at 0.50 with a 4% base rate, costs $2.00 (docs.xo.market/product/trading/fees)", () => {
+  assert.equal(xo400.rounding, "floor:6");
+  assert.equal(ratToDecExact(value(orderFee(xo400, "taker", "buy", [{ price: dec("0.5"), qty: dec("200") }]))), "2");
+  // two 100-share fills at the same price: $1.00 each, $2.00 in all
+  assert.equal(ratToDecExact(value(orderFee(xo400, "taker", "buy", [{ price: dec("0.5"), qty: dec("100") }, { price: dec("0.5"), qty: dec("100") }]))), "2");
+  // a fractional micro-dollar is floored, as the venue floors each fill: 1.000001 shares at 0.5 -> 0.01000001 -> 0.01
+  assert.equal(ratToDecExact(value(orderFee(xo400, "taker", "buy", [{ price: dec("0.5"), qty: dec("1.000001") }]))), "0.01");
 });
 
 test("XO: integer micro form equals the exact formula when it divides evenly", () => {

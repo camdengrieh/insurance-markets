@@ -162,15 +162,20 @@ export function rulesOf(row: UdxRow): Rules {
   };
 }
 
-// taker 0.07 x C x P x (1 - P), maker 0.0175 x the same, nearest cent with halves to even (the schedule
-// effective 2026-10-09). A venue document, not an API field: it carries its read date and a fourteen-day ttl.
+// taker 0.07 x C x P x (1 - P), maker 0.0175 x the same, per trade, nearest cent with halves to even (the UDX Fee
+// Schedule effective 2026-10-09, underdog-exchange.pactsafe.io/versions/6ac6db492c7c473ca250669f.pdf, listed
+// on legal.underdogexchange.com, read 2026-10-22: "Round = rounds the fee to the nearest cent; amounts exactly
+// halfway between two cents are rounded to the nearest even cent"; engine grammar "half_even:2"). The engine rounds
+// the order once, so an order the venue splits into several trades can differ by up to half a cent per trade. The
+// schedule charges a combination market's maker 0.07, not 0.0175; this spec does not tell those markets apart. A
+// venue document, not an API field: it carries its read date and a fourteen-day ttl.
 export function feeSpec(origin: string): FeeSpec {
   return {
     venue: "udx",
     modelId: "curve_pq",
     taker: { rate: UDX_TAKER_COEFFICIENT },
     maker: { rate: UDX_MAKER_COEFFICIENT },
-    rounding: "nearest_cent_half_even",
+    rounding: "half_even:2",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${origin}/markets`, field: "fee schedule effective 2026-10-09 (a venue document, not fetched): taker 0.07 and maker 0.0175 x C x P x (1 - P)", granularity: "category" },
     verifiedAt: UDX_FEE_READ_AT,

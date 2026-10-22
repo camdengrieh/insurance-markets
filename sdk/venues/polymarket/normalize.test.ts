@@ -21,6 +21,8 @@ import {
 } from "./normalize.js";
 import { gammaMarketSchema, type GammaMarket } from "./schemas.js";
 import { recorded, SENATE_NO, SENATE_YES, type Json } from "./fixtures/load.js";
+import { orderFee } from "../../engine/fees.js";
+import { dec } from "../../money/rational.js";
 
 const NOW = Date.parse("2026-10-18T17:35:00Z");
 const ctx: NormalizeContext = { nowMs: NOW, transport: "T0", source: "test" };
@@ -126,6 +128,11 @@ describe("Gamma market -> port Market (recorded Senate-control market)", () => {
       paramsSource: { field: "feeSchedule", granularity: "market" },
       ttlSec: 600,
     });
+    // The venue publishes 5 dp but not the rounding mode (docs.polymarket.com/trading/fees, read 2026-10-22): the spec
+    // says so and the engine refuses to price the recorded market's fee rather than guess a mode.
+    expect(result.value.fee.rounding).toBe("unknown");
+    const fee = orderFee(result.value.fee, "taker", "buy", [{ price: dec("0.4"), qty: dec("10") }]);
+    expect(fee.ok ? "priced" : fee.code).toBe("ROUNDING_UNSUPPORTED");
   });
 });
 

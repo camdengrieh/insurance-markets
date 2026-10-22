@@ -158,9 +158,9 @@ export function createXoAdapter(options: XoAdapterOptions = {}): PmVenueAdapter 
     return market;
   }
 
-  // The SDK reader decides whether the fee is known and which figure applies (sdk/venues/xo/map.ts feeSpecOf, a
-  // ceiling for display); the engine's spec is built from that figure (sdk/engine/fee-specs.ts xoFeeSpec, the
-  // documented p(1-p) curve the engine prices with).
+  // The SDK reader decides whether the fee is known and which figure applies (sdk/venues/xo/map.ts feeSpecOf); both
+  // it and this adapter build the spec with the one engine builder (sdk/engine/fee-specs.ts xoFeeSpec, the
+  // documented p(1-p) curve, floored to the micro-dollar), here with pm's own source fields.
   function feeSpecFrom(detail: MarketDetail, feeRateBps: readonly number[], now: number): { spec: FeeSpec; warnings: string[] } {
     const source: FeeSource = {
       url: `${XO_BASE}/markets/contract/${detail.conditionId}`,

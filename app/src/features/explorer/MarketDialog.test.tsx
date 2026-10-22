@@ -188,7 +188,7 @@ describe("M0-8 and the spread labels in the modal", () => {
   it("an XO book is indicative, never executable, however fresh", async () => {
     const xo = fakeEntry("xo", {
       detail: detailOf(market("xo", "m1")),
-      feeNote: "ceiling, unreconciled",
+      feeNote: "documented curve, larger of two rates",
       getBooks: (ids) => ids.map((id) => ({ ok: true as const, value: book("xo", id, [["0.50", "10"]], [["0.54", "20"]]) })),
     });
     await mount(show("xo"), fakeServices([xo], { mode: "cockpit" }));
@@ -421,7 +421,7 @@ describe("accessibility (structure)", () => {
   it("the Cockpit build with the XO order ticket mounted keeps the heading order and has no axe violations", async () => {
     const xo = fakeEntry("xo", {
       detail: detailOf(market("xo", "m1", { title: "Rain" })),
-      feeNote: "ceiling, unreconciled",
+      feeNote: "documented curve, larger of two rates",
       getBooks: (ids) => ids.map((id) => ({ ok: true as const, value: book("xo", id, [["0.50", "10"]], [["0.54", "20"]]) })),
     });
     const services = fakeServices([xo], { mode: "cockpit" });

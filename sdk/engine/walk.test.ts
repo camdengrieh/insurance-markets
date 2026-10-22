@@ -126,13 +126,16 @@ test("a one-sided empty side returns a null vwap with no fee charged", () => {
   assert.equal(q.complete, false);
 });
 
-test("Kalshi quotes pick up the cent-grid order rounding", () => {
+test("Kalshi quotes pick up the cent-grid balance alignment", () => {
   const k = kalshiFeeSpec({ multiplier: "1", source: SOURCE });
   const b: Book = { ...book(), asks: [level("0.62", "40")] };
   const q = quote(b, "buy", "31", k);
-  assert.equal(q.fee, "0.52"); // 31 x 0.016492 = 0.511252 -> 0.52
+  assert.equal(q.fee, "0.52"); // 31 x 0.016492 = 0.511252; 19.22 + 0.511252 is paid as 19.74
   assert.equal(q.notional, "19.22");
   assert.equal(q.netCost, "19.74");
+  assert.equal(q.executable, true);
+  // Polymarket does not publish its rounding mode: the walk is shown, the fee is not priced, nothing is executable.
   const p = quote(b, "buy", "31", polymarketFeeSpec({ rate: "0.05", source: SOURCE }));
-  assert.equal(p.fee, "0.36518"); // 31 x 0.05 x 0.62 x 0.38, already on the 5 dp grid
+  assert.deepEqual([p.fee, p.netCost, p.feeError?.code, p.executable], [null, null, "ROUNDING_UNSUPPORTED", false]);
+  assert.equal(p.notional, "19.22");
 });

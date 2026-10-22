@@ -290,9 +290,17 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    reader states its fee once, in basis points as a decimal string (a `rate` beside it is ambiguous and the engine
    refuses it), so the dApp no longer shows a separate XO rate line; the unused `min`/`max` fee parameters are gone;
    `pm_get_quote` reports tick ranges as `{from, to, tick}`; and pm's markets now also carry the venue's untrusted
-   `categoryNative`. Not merged: the readers' rounding is prose ("ceil_6dp", "usd_cent_up") rather than the
-   engine's grammar ("ceil:6"), so the engine refuses to price a reader's own spec until each is restated from its
-   source; and `app/src/core/book.ts` stays, because it is display-side (it drops and counts bad levels, keeps a
+   `categoryNative`. Rounding, restated 2026-10-22 from each venue's own source (cited beside each builder): every
+   reader states it in the engine's grammar, and XO, Kalshi, Polymarket and Trueo build their spec with the same
+   `fee-specs.ts` builder as pm. XO is the documented p(1-p) curve floored per fill (`floor:6`; the `ad_valorem_bps`
+   ceiling is gone, and sampled on-chain fills match the curve), Kalshi `ceil:6,align:2` (the new `align` step puts
+   the trader's cash on the cent grid, its worked example to the cent), Gemini `ceil:2`, UDX `half_even:2`, Novig
+   `half_up:5`, Trueo `amm_stack` with its LP and hook fees read on chain (inside the pool's quote); Polymarket,
+   Pascal and OG publish no rounding mode, so their rounding is `unknown` and never priced. Behaviour changes: pm's
+   Polymarket spec no longer prices (it had assumed half-up with a minimum the venue's page contradicts), and pm's
+   Kalshi cent step became the alignment (it could understate an order whose notional was off the cent). The engine
+   rounds once per order; a venue that rounds each fill differs by under one unit per fill. And `app/src/core/book.ts`
+   stays, because it is display-side (it drops and counts bad levels, keeps a
    venue's equal-price entries and flags a crossed book) where the engine fails closed.
 5. **Move the unsigned order builders** from `src/xo/signing` and `src/clob` into `sdk/trade`; the credentialed
    signers go to `sdk/node/`. The boundary check keeps forbidding `sdk/node/` to the page.
@@ -445,8 +453,9 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    ERC-1271 wallet and the recorded USDC code (`test/api/x402.test.ts`, `keys.test.ts`, `quote.test.ts`); one local run paid
    `/v1/quote` end to end over HTTP against a loopback fake facilitator. Behaviour change: the API now passes readers an
    absolute book deadline (step 8 passed the 8 s budget, which Polymarket's reader read as a past instant, so no Polymarket
-   book was ever read). Not done: no quote is executable today, because no reader's own fee spec prices in the engine
-   (Trueo's lacks `lpFee`/`hookFee`, Polymarket's rounding is prose, step 4); route prepare builds Polymarket EOA orders
+   book was ever read). Since step 4's rounding was restated, a reader's own spec prices: with the real policy a Trueo leg can be
+   executable and named best (`best` in the answer), and Polymarket's leg stays unpriced because the venue publishes
+   no rounding mode. Not done: route prepare builds Polymarket EOA orders
    only (Limitless: the reader carries no exchange or fee module; XO: Kernel user operations; Trueo: a pool swap; Polymarket
    Deposit Wallet: needs the relay's chain read); with the real policy only Trueo is served, so it builds nothing yet; x402
    version 1 (X-PAYMENT) is not accepted; the PayBox listing is not submitted (PayBox lists services from the x402 Bazaar,

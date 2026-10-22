@@ -109,7 +109,7 @@ describe("standalone: no books, and no request to the orderbook host", () => {
     const { adapter, calls } = build([{ host: DATA, path: `/api/markets/contract/${FEE400}`, reply: { body: detail } }], "standalone");
     const market = { ref: { venue: "xo", marketId: FEE400, native: {} } } as Market;
     const spec = await adapter.getFeeSpec(market);
-    expect(spec.modelId).toBe("ad_valorem_bps");
+    expect(spec.modelId).toBe("curve_pq");
     expect(spec.taker?.bps).toBe("400");
     expect(calls.map((call) => call.url.hostname)).toEqual([DATA]);
   });
@@ -268,7 +268,7 @@ describe("cockpit: fee spec", () => {
     const higher = build([detailRoute, rate(YES, { body: { base_fee: 0 } }), rate(NO, { body: { base_fee: 800 } })], "cockpit");
     const spec = await higher.adapter.getFeeSpec(market);
     expect(spec.taker).toEqual({ bps: "800" });
-    expect(spec.modelId).toBe("ad_valorem_bps");
+    expect(spec.modelId).toBe("curve_pq");
   });
 
   it("falls back to the Data API figure when /fee-rate fails, but not when it answers something that is not a fee", async () => {

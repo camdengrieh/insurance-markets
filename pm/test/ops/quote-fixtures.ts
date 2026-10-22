@@ -42,8 +42,10 @@ export const FEE_SOURCE: FeeSource = {
 export function xoSpec(): FeeSpec {
   return xoFeeSpec({ takerBps: "400", source: FEE_SOURCE });
 }
+// Polymarket's curve with a STATED test rounding (half-up at 5 places): the venue does not publish its mode, so the
+// product spec (polymarketFeeSpec) is never priced. Test data for a priced leg, not a venue fact.
 export function polySpec(): FeeSpec {
-  return polymarketFeeSpec({ rate: "0.04", source: FEE_SOURCE });
+  return { ...polymarketFeeSpec({ rate: "0.04", source: FEE_SOURCE }), rounding: "half_up:5" };
 }
 export function kalshiSpec(): FeeSpec {
   return kalshiFeeSpec({ multiplier: "1", source: FEE_SOURCE });

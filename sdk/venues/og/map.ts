@@ -4,6 +4,7 @@ import { parseIsoMs } from "../../format.js";
 import { addQty, cmpQty, fromAtomic, parseQty, toDec, type Qty } from "../../money/qty.js";
 import type { Book, Collateral, Dec, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Rules, Status } from "../../model.js";
 import { untrustedField } from "../../text.js";
+import { ROUNDING_UNKNOWN } from "../../engine/fee-specs.js";
 import { makeProv } from "../policy.js";
 import { openUnitPrice } from "../novig/shared.js";
 import {
@@ -234,7 +235,10 @@ export function volumeOf(market: OgMarket, tickers: ReadonlyMap<string, OgTicker
 // US customers, most markets: taker 0.07 x C x P x (1 - P), maker 0.0175 x C x P x (1 - P). Crypto, FX, commodities
 // and equity indices pay a flat $0.02 a contract, and customers outside the US pay $0.02 everywhere; neither fits the
 // port's curve models, so they read "unknown". The table is a help-centre page, not an API field: it carries its read
-// date and expires, and the customer's region is unknown to this app, so it is stated as the US schedule.
+// date and expires, and the customer's region is unknown to this app, so it is stated as the US schedule. Neither the
+// help page (help.og.com/en/articles/12958828-fees-limits) nor the exchange's fee schedule (NADEX Fee Schedule
+// effective 2026-08-01, linked from nadex.com/pricing), both read 2026-10-22, states how a fee is rounded, so the
+// rounding is ROUNDING_UNKNOWN and the engine does not price it.
 export function feeSpecOf(market: OgMarket, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
     venue: "og",
@@ -253,7 +257,7 @@ export function feeSpecOf(market: OgMarket, nowMs: number): FeeSpec {
     modelId: "curve_pq",
     taker: { rate: OG_TAKER_COEFFICIENT },
     maker: { rate: OG_MAKER_COEFFICIENT },
-    rounding: "unknown",
+    rounding: ROUNDING_UNKNOWN,
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${OG_PUBLIC_PATH}/get-instruments`, field: "help-centre fee table, US customers (not an API field)", granularity: "category" },
     verifiedAt: OG_FEE_VERIFIED_AT,

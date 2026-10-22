@@ -219,9 +219,9 @@ export interface FeeSpec {
   readonly modelId: FeeModelId;
   readonly taker?: FeeParams;
   readonly maker?: FeeParams;
-  // Order-level rounding as comma-separated steps in the engine's grammar ("ceil:6", "half_up:5,min:0.00001",
-  // engine/fees.ts parseRounding). A reader that knows the rounding only as prose states the prose; the engine
-  // refuses to price with it (fail closed).
+  // Order-level rounding as comma-separated steps in the engine's grammar ("floor:6", "ceil:6,align:2",
+  // engine/fees.ts parseRounding), restated from the venue's own source. A venue that does not publish its rounding
+  // gets "unknown" (engine/fee-specs.ts ROUNDING_UNKNOWN), which the engine refuses to price (fail closed).
   readonly rounding?: string;
   readonly payer: FeePayer;
   readonly paramsSource: {

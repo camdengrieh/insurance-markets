@@ -49,9 +49,11 @@ export function midpointMicro(bid: bigint, ask: bigint): bigint {
   return (bid + ask) / 2n;
 }
 
-// Taker fee upper bound in micro-USDC: C * bps/10000 * p * (1 - p), rounded UP. The docs give
-// this curve (guides/fees) but not the rounding mode, so ceil is the conservative choice.
-// sizeMicro is micro-shares; priceMicro is micro-probability.
+// Taker fee upper bound in micro-USDC: C * bps/10000 * p * (1 - p), rounded UP. The curve is XO's (docs.xo.market
+// guides/fees and product/trading/fees, read 2026-10-22), which floors each fill to the micro-dollar; the engine
+// prices the same curve floored (engine/fee-specs.ts xoFeeSpec). Rounding up keeps this a bound for one fill (at most
+// one micro-dollar above the venue) for budgeting an allowance, never a price. sizeMicro is micro-shares;
+// priceMicro is micro-probability.
 export function feeUpperBoundMicro(sizeMicro: bigint, priceMicro: bigint, feeBps: number): bigint {
   if (sizeMicro < 0n || priceMicro < 0n || priceMicro > MICRO) {
     throw new RangeError("size and price must be non-negative and price at most 1");

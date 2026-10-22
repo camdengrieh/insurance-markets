@@ -230,7 +230,9 @@ export function isoOrNull(text: string | undefined): string | null {
 // ---- fee ---------------------------------------------------------------------------------------------------------------
 
 // Taker 0.07 x C x P x (1 - P) and maker 0.0175 x C x P x (1 - P), rounded up to the next cent, for contracts listed
-// on or after 2026-03-18 (gemini.com/fees/predictions, read 2026-10-19). This is a documentation fact, not an API
+// on or after 2026-03-18 (gemini.com/fees/predictions, read 2026-10-19 and 2026-10-22: "Fees are rounded up to the
+// next cent"; engine grammar "ceil:2"). The page does not say whether a fill or an order is rounded; the engine rounds
+// the order once, so an order the venue splits into several fills can cost up to a cent per extra fill more. This is a documentation fact, not an API
 // field, so it carries its read date and expires; a contract listed earlier, or an unreadable listing date, reads as
 // unknown. The maker fee is currently waived by a promotion that is not in the API (see GEMINI_VERIFICATION).
 export function feeSpecOf(event: GeminiEvent, nowMs: number): FeeSpec {
@@ -254,7 +256,7 @@ export function feeSpecOf(event: GeminiEvent, nowMs: number): FeeSpec {
     modelId: "curve_pq",
     taker: { rate: GEMINI_TAKER_COEFFICIENT },
     maker: { rate: GEMINI_MAKER_COEFFICIENT },
-    rounding: "usd_cent_up",
+    rounding: "ceil:2",
     payer: "buyer_adds_seller_withholds",
     paramsSource: { url: `${GEMINI_API_BASE}/events`, field: "documented fee schedule (not an API field)", granularity: "category" },
     verifiedAt: GEMINI_FEE_VERIFIED_AT,

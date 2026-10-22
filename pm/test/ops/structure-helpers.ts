@@ -17,7 +17,10 @@ export const SOURCE: FeeSource = {
   ttlSec: 365 * 24 * 3600,
 };
 
-export const poly = (rate: string): FeeSpec => polymarketFeeSpec({ rate, source: SOURCE });
+// Polymarket's curve with a STATED test rounding. The venue publishes 5 dp but not the mode, so the product spec
+// (polymarketFeeSpec) carries ROUNDING_UNKNOWN and is never priced; these structure tests need a priced leg, so they
+// assume half-up at 5 places, the rule the research worked with (docs/research/10). Test data, not a venue fact.
+export const poly = (rate: string): FeeSpec => ({ ...polymarketFeeSpec({ rate, source: SOURCE }), rounding: "half_up:5" });
 
 export type Levels = readonly (readonly [string, string])[];
 

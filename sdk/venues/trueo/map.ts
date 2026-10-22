@@ -4,6 +4,7 @@ import { getAddress, sha256, toBytes } from "viem";
 import { fromAtomic, toDec, type Qty } from "../../money/qty.js";
 import type { Book, Collateral, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Rules, Status } from "../../model.js";
 import { untrustedField } from "../../text.js";
+import { trueoFeeSpec } from "../../engine/fee-specs.js";
 import { MARKET_STATUS, TRUEO_ADAPTER_VERSION, TRUEO_FEE_TTL_SEC, TRUEO_LIST_TTL_MS, WINNING, type TrueoDeployment } from "./constants.js";
 import { ratioQty, sqrtPriceToPrice } from "./math.js";
 import type { Address } from "./rpc.js";
@@ -172,7 +173,8 @@ export function tradableOf(data: MarketData, yes: Qty | null, no: Qty | null): {
 // by the hook in afterSwap from the unspecified currency. A quote already includes both, so the spec says
 // "in_pool": a consumer must not add this fee on top of a quoted price. The hook's rate is admin-settable and was
 // not readable when the research was written, so it is read every time; any piece that is unreadable, dynamic
-// or inconsistent makes the model "unknown" and the aggregator fails closed.
+// or inconsistent makes the model "unknown" and the aggregator fails closed. The spec is the engine's
+// (engine/fee-specs.ts trueoFeeSpec), with each part stated as the pool and the hook report it.
 export function feeSpecOf(data: MarketData, hookFee: { readonly numerator: bigint; readonly denominator: bigint } | null, deployment: TrueoDeployment, nowMs: number): FeeSpec {
   const unknown: FeeSpec = {
     venue: "trueo",
@@ -188,17 +190,12 @@ export function feeSpecOf(data: MarketData, hookFee: { readonly numerator: bigin
   // The pool's live LP fee (slot0) must be the one its key names; an unreadable or different value means this is
   // not the static-fee pool the rate below assumes.
   if (data.yes.lpFee !== yesFee || data.no.lpFee !== yesFee) return unknown;
-  // lp / 1e6 + numerator / 1e4, over a common denominator of 1e10.
-  const rate = fromAtomic("price", BigInt(yesFee) * 10_000n + hookFee.numerator * 1_000_000n, 10);
-  return {
-    venue: "trueo",
-    modelId: "amm_stack",
-    taker: { rate: toDec(rate) },
-    payer: "in_pool",
-    paramsSource: unknown.paramsSource,
-    verifiedAt: unknown.verifiedAt,
-    ttlSec: TRUEO_FEE_TTL_SEC,
-  };
+  return trueoFeeSpec({
+    // pips: poolKey.fee / 1e6; the hook: feeNumerator / FEE_DENOMINATOR (10,000).
+    lpFee: toDec(fromAtomic("price", BigInt(yesFee), 6)),
+    hookFee: toDec(fromAtomic("price", hookFee.numerator, 4)),
+    source: { ...unknown.paramsSource, verifiedAt: unknown.verifiedAt, ttlSec: TRUEO_FEE_TTL_SEC },
+  });
 }
 
 // ---- market -----------------------------------------------------------------------------------------------------------

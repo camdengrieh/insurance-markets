@@ -14,7 +14,12 @@
 // `rounding` is a comma separated list of steps applied in order to the ORDER-LEVEL fee:
 //   "ceil:6" "floor:6" "half_up:5" "half_even:5" "trunc:6"   round to that many decimals
 //   "min:0.00001"                                             floor of a non-zero fee
+//   "align:2"                                                 move the trader's cash for the order (notional plus the
+//                                                             fee on a buy, notional minus it on a sell) onto that
+//                                                             decimal grid against the trader; the difference is part
+//                                                             of the fee (Kalshi's rounding fee)
 //   "none" or absent                                          exact, no rounding
+//   "unknown"                                                 the venue does not state its rounding: never priced
 //
 // Everything unknown fails closed with a code; nothing here ever guesses a fee.
 
@@ -86,12 +91,14 @@ export function checkFeeSpec(spec: FeeSpec, nowMs: number): FeeResult<FeeSpec> {
 
 export type RoundingStep =
   | { readonly kind: "round"; readonly mode: RoundMode; readonly places: number }
-  | { readonly kind: "min"; readonly floor: Rational };
+  | { readonly kind: "min"; readonly floor: Rational }
+  | { readonly kind: "align"; readonly places: number };
 
 const ROUND_MODES: readonly RoundMode[] = ["ceil", "floor", "trunc", "half_up", "half_even"];
 
 export function parseRounding(text: string | undefined): FeeResult<readonly RoundingStep[]> {
   if (text === undefined || text === "" || text === "none") return ok([]);
+  if (text === "unknown") return fail("ROUNDING_UNSUPPORTED", "the venue does not state how it rounds the fee");
   const steps: RoundingStep[] = [];
   for (const raw of text.split(",")) {
     const part = raw.trim();
@@ -105,18 +112,32 @@ export function parseRounding(text: string | undefined): FeeResult<readonly Roun
       steps.push({ kind: "min", floor: floor.value });
       continue;
     }
+    if (!/^[0-9]{1,2}$/.test(arg)) return fail("ROUNDING_UNSUPPORTED", "unknown rounding step");
+    if (head === "align") {
+      steps.push({ kind: "align", places: Number(arg) });
+      continue;
+    }
     const mode = ROUND_MODES.find((m) => m === head);
-    if (mode === undefined || !/^[0-9]{1,2}$/.test(arg)) return fail("ROUNDING_UNSUPPORTED", "unknown rounding step");
+    if (mode === undefined) return fail("ROUNDING_UNSUPPORTED", "unknown rounding step");
     steps.push({ kind: "round", mode, places: Number(arg) });
   }
   return ok(steps);
 }
 
-export function applyRounding(raw: Rational, steps: readonly RoundingStep[]): Rational {
+// `trade` is the order's notional (sum of price x quantity) and side, which only an "align" step reads.
+export function applyRounding(raw: Rational, steps: readonly RoundingStep[], trade: { readonly notional: Rational; readonly side: FeeSide }): Rational {
   let value = raw;
   for (const step of steps) {
     if (step.kind === "round") value = roundToGrid(value, step.places, step.mode);
-    else if (cmp(raw, ZERO) > 0) value = max(value, step.floor);
+    else if (step.kind === "min") {
+      if (cmp(raw, ZERO) > 0) value = max(value, step.floor);
+    } else if (trade.side === "buy") {
+      // The buyer pays notional + fee rounded up to the grid.
+      value = sub(roundToGrid(add(trade.notional, value), step.places, "ceil"), trade.notional);
+    } else {
+      // The seller receives notional - fee rounded down to the grid.
+      value = sub(trade.notional, roundToGrid(sub(trade.notional, value), step.places, "floor"));
+    }
   }
   return value;
 }
@@ -274,23 +295,27 @@ export interface Fill {
   readonly qty: Rational;
 }
 
-// Sums the exact fee over all fills of one order and rounds once, which is how Kalshi
-// accumulates an order's fills. Venues that round per fill differ by at most half a rounding
-// unit per fill; callers needing that precision must price fills as separate orders.
+// Sums the exact fee over all fills of one order and rounds once: Kalshi's accumulator makes an
+// order cost what one equivalent fill would. A venue that rounds each fill separately differs by
+// under one rounding unit per fill: never below the venue for a floor venue (XO), possibly below
+// it for a ceil or half venue, whose spec must say so. A book level may hold several venue fills,
+// so per-fill rounding cannot be reproduced from a depth walk.
 export function orderFee(spec: FeeSpec, role: FeeRole, side: FeeSide, fills: readonly Fill[]): FeeResult<Rational> {
   const steps = parseRounding(spec.rounding);
   if (!steps.ok) return steps;
   const parts: Rational[] = [];
+  const notional: Rational[] = [];
   for (const fill of fills) {
     if (cmp(fill.qty, ZERO) <= 0) return fail("PARAMS_INVALID", "fill quantity must be positive");
     const per = feePerShare(spec, role, side, fill.price);
     if (!per.ok) return per;
     parts.push(mul(per.value, fill.qty));
+    notional.push(mul(fill.price, fill.qty));
   }
   const smooth = sum(parts);
-  // A zero fee stays zero: the minimum only applies to a charged fee.
+  // A zero fee stays zero: the minimum and the cash alignment only apply to a charged fee.
   if (isZero(smooth)) return ok(ZERO);
-  return ok(applyRounding(smooth, steps.value));
+  return ok(applyRounding(smooth, steps.value, { notional: sum(notional), side }));
 }
 
 // Fixed cost per order in collateral units (gas); zero unless the spec records one.
@@ -329,10 +354,12 @@ export function reconcileXoFeeBps(feeRateEndpoint: Dec | null, effectiveTakerFee
   return { bps, agreed, sourcesKnown: values.length };
 }
 
-// XO's documented integer form: fee_micro = feeBps * C * tick * (1000 - tick) / (10_000 * 1000 *
-// 1000) with C in micro-shares, tick in 1..999 (price = tick / 1000) and the result in
-// micro-collateral. Integer division floors. The docs do not say which direction XO rounds in
-// practice, so reconcile against one real fill before trusting the last micro-unit.
+// XO's documented integer form for one fill (docs.xo.market/guides/fees, read 2026-10-22): fee_micro =
+// feeBps * C * tick * (1000 - tick) / (10_000 * 1000 * 1000) with C in micro-shares, tick in 1..999
+// (price = tick / 1000) and the result in micro-collateral, floor division; "Each fill's fee is
+// rounded down separately" (docs.xo.market/product/trading/fees). Sampled on-chain fills are consistent
+// with it: 22,582 and 36,132 micro on 410,000 and 656,000 of principal (docs/research/22 section 9 item 9)
+// are this floored curve at 600 bps and tick 82; a flat 600 bps of principal would be 24,600 and 39,360.
 export function xoFeeMicro(feeBps: bigint, cMicroShares: bigint, tick: bigint): bigint {
   if (feeBps < 0n || cMicroShares < 0n || tick <= 0n || tick >= 1000n) throw new RangeError("xoFeeMicro input out of range");
   return (feeBps * cMicroShares * tick * (1000n - tick)) / (BPS_DENOMINATOR * 1000n * 1000n);

@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { BROWSER_DIRECT_ORIGINS } from "../origins.js";
 import { isUntrusted } from "../../text.js";
 import type { AdapterDeps, Market, MarketRef } from "../../model.js";
+import { checkFeeSpec, orderFee } from "../../engine/fees.js";
+import { dec, ratToDecExact } from "../../money/rational.js";
 import { createTrueoAdapter } from "./adapter.js";
 import { isAdapterFailure } from "./errors.js";
 import { addMarket, buildWorld, DEPLOYMENT, HOOK_V1, HOOK_V2, NOW_MS, OWNER, rpcFor, SPARE_FIRST, TYD, USDC, variant, type World } from "./fixtures/scenario.js";
@@ -185,13 +187,21 @@ describe("trueo: market detail", () => {
 
   it("states the fee stack as in_pool: LP fee in pips plus the hook's feeNumerator / 10,000, both read from chain", async () => {
     const { market: live } = await detail((w) => w.live);
-    // 1 pip = 0.000001, plus 80 / 10,000 = 0.008 (the captured hook fee numerator).
-    expect(live.fee).toMatchObject({ modelId: "amm_stack", payer: "in_pool", taker: { rate: "0.008001" }, ttlSec: 60 });
-    expect(live.fee.taker?.rate).toBe("0.008001");
+    // 1 pip = 0.000001, and 80 / 10,000 = 0.008 (the captured hook fee numerator), stated as the engine's two parts.
+    expect(live.fee).toMatchObject({ modelId: "amm_stack", payer: "in_pool", taker: { lpFee: "0.000001", hookFee: "0.008" }, ttlSec: 60 });
+    expect(live.fee.taker?.rate).toBeUndefined();
     expect(live.fee.paramsSource.url).toBe(`eip155:8453:${HOOK_V2}`);
-    // The v1.1.0 hook with an 8000-pip pool fee: 0.008 plus the captured numerator 20 / 10,000 = 0.002.
+    // The v1.1.0 hook with an 8000-pip pool fee: 0.008, and the captured numerator 20 / 10,000 = 0.002.
     const { market: closed } = await detail((w) => w.closed);
-    expect(closed.fee).toMatchObject({ modelId: "amm_stack", taker: { rate: "0.01" } });
+    expect(closed.fee).toMatchObject({ modelId: "amm_stack", taker: { lpFee: "0.008", hookFee: "0.002" } });
+    // The engine prices the reader's own spec: the quote already holds both parts, so nothing is added on top.
+    const nowMs = Date.parse(live.fee.verifiedAt);
+    expect(checkFeeSpec(live.fee, nowMs).ok).toBe(true);
+    const fee = orderFee(live.fee, "taker", "buy", [{ price: dec("0.5"), qty: dec("10") }]);
+    expect(fee.ok && ratToDecExact(fee.value)).toBe("0");
+    // Stated on top (payer not in_pool), the same parts would cost (0.000001 + 0.008) x 0.5 x 10.
+    const onTop = orderFee({ ...live.fee, payer: "buyer_adds_seller_withholds" }, "taker", "buy", [{ price: dec("0.5"), qty: dec("10") }]);
+    expect(onTop.ok && ratToDecExact(onTop.value)).toBe("0.040005");
   });
 
   it("fails the fee model closed when any piece is unreadable, unusual or inconsistent", async () => {
@@ -507,7 +517,7 @@ describe("trueo: books from captured quotes", () => {
     const { adapter, world } = setup();
     const market = await adapter.getMarket(refOf(world.live));
     world.chain.hooks.set(HOOK_V2.toLowerCase(), { feeNumerator: 100n, denominator: 10_000n });
-    expect((await adapter.getFeeSpec(market)).taker?.rate).toBe("0.010001");
+    expect((await adapter.getFeeSpec(market)).taker).toEqual({ lpFee: "0.000001", hookFee: "0.01" });
   });
 });
 

@@ -17,7 +17,6 @@ import type {
 import {
   ADAPTER_VERSION,
   COLLATERAL,
-  FEE_ROUNDING,
   FEE_TTL_SEC,
   RULES_MAX_RAW_CHARS,
   TTL_MS,
@@ -31,6 +30,7 @@ import { safeHttpsUrl, untrustedField } from "../../text.js";
 import { cmpDec, isOpenUnitInterval, numberToDec, numericToDec, parseDec, type Dec } from "./decimal.js";
 import { selectTokenIds, type Ledger } from "./ids.js";
 import { ADDRESS, CONDITION_ID, type GammaEvent, type GammaMarket } from "./schemas.js";
+import { polymarketFeeSpec } from "../../engine/fee-specs.js";
 
 // Gamma row -> the port's MarketSummary and Market. Rules the code enforces:
 //   - every string a stranger can write goes through the shared sanitiser and sits in an Untrusted slot;
@@ -290,17 +290,11 @@ export function unknownFeeSpec(url: string, field: string, nowMs: number): FeeSp
   return { modelId: "unknown", ...feeSpecShell(url, field, nowMs), ttlSec: 0 };
 }
 
-// The read model's FeeSpec of a validated fee.
+// The read model's FeeSpec of a validated fee: the engine's (engine/fee-specs.ts polymarketFeeSpec), whose rounding
+// is unknown because the venue does not publish its rounding mode, so the engine refuses to price it.
 export function feeSpecOf(fee: PolymarketFee, url: string, field: string, nowMs: number): FeeSpec {
   if (!fee.known) return unknownFeeSpec(url, field, nowMs);
-  return {
-    modelId: "curve_pq",
-    taker: { rate: fee.rate, exponent: "1" },
-    maker: { rate: "0" },
-    rounding: FEE_ROUNDING,
-    ...feeSpecShell(url, field, nowMs),
-    ttlSec: FEE_TTL_SEC,
-  };
+  return polymarketFeeSpec({ rate: fee.rate, exponent: "1", source: { url, field, granularity: "market", verifiedAt: new Date(nowMs).toISOString(), ttlSec: FEE_TTL_SEC } });
 }
 
 // The validated fee a FeeSpec built by feeSpecOf stands for (the dApp keeps only the spec on a Market).

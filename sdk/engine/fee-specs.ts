@@ -20,6 +20,10 @@ export interface FeeSource {
   readonly ttlSec: number;
 }
 
+// The rounding of a venue whose source does not say how the fee is rounded. The engine refuses to price it
+// (engine/fees.ts parseRounding), so no fee amount, net cost or executable label is ever derived from a guess.
+export const ROUNDING_UNKNOWN = "unknown";
+
 function base(venue: VenueId, modelId: FeeSpec["modelId"], source: FeeSource, payer: FeeSpec["payer"]): Omit<FeeSpec, "taker" | "maker" | "rounding"> {
   return {
     venue,
@@ -31,9 +35,13 @@ function base(venue: VenueId, modelId: FeeSpec["modelId"], source: FeeSource, pa
   };
 }
 
-// XO: fee = C x bps/10000 x p x (1-p), added to a buy and withheld from a sell. `takerBps` must
-// already be the max of /fee-rate and effectiveFeeConfig.takerFeeBps (see reconcileXoFeeBps).
-// Rounding direction is not documented; the integer form floors, so the spec floors to 6 places.
+// XO: fee = C x bps/10000 x p x (1-p) per fill, charged in collateral to the order's maker account: added
+// to a buy and withheld from a sell (docs.xo.market/guides/fees and docs.xo.market/product/trading/fees,
+// read 2026-10-22: "the base rate is used in the fee curve, rather than charged as a flat percentage";
+// integer form with floor division; "Each fill's fee is rounded down separately"). Floor to the micro-dollar,
+// once per order here: a sum floored once is never below the venue's per-fill floors, and above them by
+// under one micro-dollar per fill. `takerBps` must already be the max of /fee-rate and
+// effectiveFeeConfig.takerFeeBps (see reconcileXoFeeBps).
 export function xoFeeSpec(args: { takerBps: Dec; makerBps?: Dec; source: FeeSource }): FeeSpec {
   return {
     ...base("xo", "curve_pq", args.source, "buyer_adds_seller_withholds"),
@@ -43,16 +51,20 @@ export function xoFeeSpec(args: { takerBps: Dec; makerBps?: Dec; source: FeeSour
   };
 }
 
-// Polymarket (international): C x rate x p x (1-p), taker only, 5 dp, minimum 0.00001. `rate`
-// and `exponent` come from the market's own feeSchedule, never from a category default.
-// Makers are never charged, so maker is recorded as an explicit zero.
+// Polymarket (international): C x rate x p x (1-p), taker only. `rate` and `exponent` come from the
+// market's own feeSchedule, never from a category default. Makers are never charged, so maker is recorded
+// as an explicit zero. The rounding MODE is not published: docs.polymarket.com/trading/fees (read
+// 2026-10-22) says only "Fees are rounded to 5 decimal places. The smallest fee charged is 0.00001 USDC.
+// Anything smaller rounds to zero"; the exchange contract only bounds a fee the operator passes in
+// (ctf-exchange-v2 src/exchange/mixins/Fees.sol validateFee), and the official client estimates with floats
+// (clob-client-v2 src/fees). So the spec carries ROUNDING_UNKNOWN and the engine does not price it.
 export function polymarketFeeSpec(args: { rate: Dec; exponent?: Dec; source: FeeSource }): FeeSpec {
   const taker: FeeParams = { rate: args.rate, ...(args.exponent === undefined ? {} : { exponent: args.exponent }) };
   return {
     ...base("polymarket", "curve_pq", args.source, "buyer_adds_seller_withholds"),
     taker,
     maker: { rate: "0" },
-    rounding: "half_up:5,min:0.00001",
+    rounding: ROUNDING_UNKNOWN,
   };
 }
 
@@ -66,15 +78,20 @@ export function polymarketUsFeeSpec(args: { theta: Dec; source: FeeSource }): Fe
   };
 }
 
-// Kalshi: ceil_6dp(0.07 x M x C x p x (1-p)) for takers, then the order is rounded up to the cent
-// grid. The cent step is a conservative stand-in for Kalshi's rounding fee and accumulator
-// rebate (it can overstate by under one cent per order). `makerFees` is true only for series
+// Kalshi: trade fee = ceil_6dp(0.07 x M x C x p x (1-p)) for takers, then a rounding fee that puts the
+// member's balance change back on its grid: $0.01 for non-direct members, $0.0001 for direct ones
+// (docs.kalshi.com/getting_started/fee_rounding, read 2026-10-22). The spec aligns to the cent, the coarser
+// grid, so a direct member's fee is never understated; for one fill it reproduces the page's worked example
+// (0.055 of revenue, model fee 0.00363825, net fee 0.005). The fee accumulator makes an order cost what one
+// equivalent fill would; what it leaves unrebated at the end of a multi-fill order (under one grid unit, and
+// up to $0.000001 per fill of separate ceilings) is not modelled. The 0.07 coefficient is from third-party
+// guides (sdk/venues/kalshi/constants.ts KALSHI_TAKER_COEFFICIENT). `makerFees` is true only for series
 // whose fee_type is quadratic_with_maker_fees; leave it undefined when unknown (maker unknown).
 export function kalshiFeeSpec(args: { multiplier: Dec; makerFees?: boolean; source: FeeSource }): FeeSpec {
   const spec: FeeSpec = {
     ...base("kalshi", "curve_pq", args.source, "buyer_adds_seller_withholds"),
     taker: { rate: "0.07", multiplier: args.multiplier },
-    rounding: "ceil:6,ceil:2",
+    rounding: "ceil:6,align:2",
   };
   if (args.makerFees === undefined) return spec;
   return { ...spec, maker: args.makerFees ? { rate: "0.0175", multiplier: args.multiplier } : { rate: "0" } };
@@ -109,9 +126,11 @@ export function opinionFeeSpec(args: { takerBps: Dec; minFee: Dec; source: FeeSo
   };
 }
 
-// Trueo: Uniswap LP fee plus an admin-settable hook fee. When the price comes from V4Quoter the
-// two are already inside it (payer in_pool). hookFee is required; its live value was NOT FOUND,
-// so a caller that cannot read it must not build this spec. `gas` is a fixed cost per swap.
+// Trueo: Uniswap LP fee (poolKey.fee / 1e6) plus the hook's fee (feeNumerator / FEE_DENOMINATOR), both
+// read on chain per pool. The hook takes its fee in afterSwap through the return delta, so V4Quoter, which
+// simulates the hook, already quotes both (payer in_pool, docs/research/11 section 6 and verification row 8):
+// nothing is added on top and nothing is rounded beyond the pool's own integer swap maths, which is inside
+// the quote. A caller that cannot read either part must not build this spec. `gas` is a fixed cost per swap.
 export function trueoFeeSpec(args: { lpFee: Dec; hookFee: Dec; extraFee?: Dec; gas?: Dec; source: FeeSource }): FeeSpec {
   const taker: FeeParams = {
     lpFee: args.lpFee,
