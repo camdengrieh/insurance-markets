@@ -11,11 +11,13 @@ import { assertStartable, loadApiConfig, type ApiConfig } from "../../api/config
 import { API_SERVING_POLICY, type ServingPolicy } from "../../api/serving.js";
 import { startApiServer, type RunningServer } from "../../api/server.js";
 import { SqliteIndexStore, type IndexStore } from "../../api/store.js";
+import { SqliteMeteringStore, type MeteringStore } from "../../api/metering-store.js";
+import { createMeter, paymentParts } from "../../api/metering.js";
 import { sha256Hex } from "../../sdk/hash.js";
 import { APPROVAL_ACK, approveLink } from "../../sdk/links/approve.js";
 import { buildBundle, serializeBundle } from "../../sdk/links/bundle.js";
 import { contentSha256, type CandidateInput, type Link, type LinkLeg } from "../../sdk/links/schema.js";
-import { findLink, proposeLink, type Registry } from "../../sdk/links/store.js";
+import { emptyRegistry, findLink, proposeLink, type Registry } from "../../sdk/links/store.js";
 import type { FetchLike, VenueId } from "../../sdk/model.js";
 import { termsAllowPersistence } from "../../sdk/venues/licence.js";
 
@@ -29,17 +31,19 @@ export interface TrueoWorld {
   readonly requests: readonly unknown[];
   readonly nowMs: number;
   readonly liveAddress: string;
+  // A second live market of the same world.
+  readonly flippedAddress: string;
 }
 
 // The SDK's Trueo world: markets read from Base mainnet on 2026-10-20 (sdk/venues/trueo/fixtures/scenario.ts), behind a
 // fake JSON-RPC endpoint.
 export async function trueoWorld(): Promise<TrueoWorld> {
   const scenario = (await import(pathToFileURL(join(REPO, "sdk/venues/trueo/fixtures/scenario.ts")).href)) as {
-    buildWorld(): { rpc: { fetch: FetchLike; requests: unknown[] }; live: { address: string } };
+    buildWorld(): { rpc: { fetch: FetchLike; requests: unknown[] }; live: { address: string }; flippedLive: { address: string } };
     NOW_MS: number;
   };
   const world = scenario.buildWorld();
-  return { fetch: world.rpc.fetch, requests: world.rpc.requests, nowMs: scenario.NOW_MS, liveAddress: world.live.address };
+  return { fetch: world.rpc.fetch, requests: world.rpc.requests, nowMs: scenario.NOW_MS, liveAddress: world.live.address, flippedAddress: world.flippedLive.address };
 }
 
 export interface PolymarketFixtures {
@@ -84,7 +88,9 @@ export interface Harness {
   readonly api: Api;
   readonly server: RunningServer;
   readonly store: IndexStore;
+  readonly metering: MeteringStore;
   get(path: string, headers?: Record<string, string>): Promise<{ status: number; headers: Headers; json: Record<string, unknown> }>;
+  post(path: string, body: unknown, headers?: Record<string, string>): Promise<{ status: number; headers: Headers; json: Record<string, unknown> }>;
   close(): Promise<void>;
 }
 
@@ -95,35 +101,54 @@ export interface HarnessOptions {
   readonly rpcFetch?: FetchLike;
   readonly clock: Clock;
   readonly store?: IndexStore;
+  readonly metering?: MeteringStore;
+  // The x402 facilitator and the Base RPC the payment token is checked on (fakes; never a real service).
+  readonly facilitatorFetch?: FetchLike;
+  readonly assetRpcFetch?: FetchLike;
+  readonly random?: (bytes: number) => Buffer;
+}
+
+const refuse = (what: string): FetchLike => async () => {
+  throw new Error(`no ${what} in this test`);
+};
+
+async function answerOf(response: Response): Promise<{ status: number; headers: Headers; json: Record<string, unknown> }> {
+  const text = await response.text();
+  return { status: response.status, headers: response.headers, json: (text === "" ? {} : JSON.parse(text)) as Record<string, unknown> };
 }
 
 export async function startHarness(options: HarnessOptions): Promise<Harness> {
   const config = options.config ?? testConfig();
   const policy = options.policy ?? API_SERVING_POLICY;
   const store = options.store ?? SqliteIndexStore.open(":memory:");
+  const metering = options.metering ?? SqliteMeteringStore.open(":memory:");
   const api = createApi({
     config,
     policy,
     store,
     fetchFor: options.fetchFor,
-    rpcFetch: options.rpcFetch ?? (async () => {
-      throw new Error("no RPC in this test");
-    }),
+    rpcFetch: options.rpcFetch ?? refuse("RPC"),
     nowMs: options.clock.read,
+    ...(options.random === undefined ? {} : { random: options.random }),
   });
-  const server = await startApiServer({ api, config, policy, nowMs: options.clock.read });
+  const parts = paymentParts(config, options.facilitatorFetch ?? refuse("facilitator"), options.assetRpcFetch ?? refuse("Base RPC"), options.clock.read);
+  const meter = createMeter({ config, store: metering, ...parts, nowMs: options.clock.read });
+  const server = await startApiServer({ api, config, policy, meter, nowMs: options.clock.read });
   return {
     api,
     server,
     store,
+    metering,
     async get(path, headers = {}) {
-      const response = await fetch(`${server.origin}${path}`, { headers });
-      const text = await response.text();
-      return { status: response.status, headers: response.headers, json: (text === "" ? {} : JSON.parse(text)) as Record<string, unknown> };
+      return answerOf(await fetch(`${server.origin}${path}`, { headers }));
+    },
+    async post(path, body, headers = {}) {
+      return answerOf(await fetch(`${server.origin}${path}`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }));
     },
     async close() {
       await server.close();
       store.close();
+      metering.close();
     },
   };
 }
@@ -190,3 +215,61 @@ export function writeBundle(dir: string, name: string, reg: Registry, includeCan
   return { bundle, pin };
 }
 
+
+// Link bundles from explicit pairs: each pair is proposed, and approved by a (test) person when `approved` is set. The
+// approved ones go in the links bundle, every live one in the candidates bundle, both pinned as pm writes them.
+export function groupEnv(pairs: ReadonlyArray<{ readonly a: LinkLeg; readonly b: LinkLeg; readonly approved: boolean }>): { readonly env: Record<string, string>; readonly linkIds: string[] } {
+  let reg = emptyRegistry();
+  const linkIds: string[] = [];
+  for (const pair of pairs) {
+    const proposed = propose(reg, identity(pair.a, pair.b, pair.approved ? SLOT_EQUAL : STATISTICS), pair.approved ? "structural" : "statistics");
+    reg = pair.approved ? approve(proposed.registry, proposed.link.linkId) : proposed.registry;
+    linkIds.push(proposed.link.linkId);
+  }
+  const dir = mkdtempSync(join(tmpdir(), "api-groups-"));
+  const links = writeBundle(dir, "links", reg, false);
+  const candidates = writeBundle(dir, "candidates", reg, true);
+  return { env: { API_LINKS_BUNDLE: links.bundle, API_LINKS_PIN: links.pin, API_CANDIDATES_BUNDLE: candidates.bundle, API_CANDIDATES_PIN: candidates.pin }, linkIds };
+}
+
+// A link leg on a real market id (lower case, as the link schema wants hex).
+export function realLeg(venue: LinkLeg["venue"], marketId: string): LinkLeg {
+  return { ...leg(venue, marketId.toLowerCase()), marketId: marketId.toLowerCase() };
+}
+
+export interface PolymarketSenate {
+  readonly conditionId: string;
+  readonly yes: string;
+  readonly no: string;
+  // The venue's answers for the recorded Senate market (Gamma market, both CLOB books, CLOB market info), as fake routes.
+  readonly routes: (url: URL) => { readonly status?: number; readonly body: string; readonly contentType?: string } | null;
+  readonly nowMs: number;
+}
+
+// Polymarket's recorded Senate market of 2026-10-18 (sdk/venues/polymarket/fixtures), served at the URLs the SDK reader asks.
+export async function polymarketSenate(): Promise<PolymarketSenate> {
+  const load = (await import(pathToFileURL(join(REPO, "sdk/venues/polymarket/fixtures/load.ts")).href)) as {
+    recorded: { senateMarket(): Record<string, unknown>; senateBook(): Record<string, unknown>; senateClobInfo(): Record<string, unknown> };
+    keysetEnvelope(rows: unknown[], next: string | null): unknown;
+    SENATE_CONDITION_ID: string;
+    SENATE_YES: string;
+    SENATE_NO: string;
+  };
+  const conditionId = load.SENATE_CONDITION_ID;
+  const json = (body: unknown) => ({ body: JSON.stringify(body), contentType: "application/json" });
+  return {
+    conditionId,
+    yes: load.SENATE_YES,
+    no: load.SENATE_NO,
+    nowMs: 1_792_344_900_000,
+    routes: (url) => {
+      if (url.origin === "https://gamma-api.polymarket.com" && url.pathname === "/markets/keyset" && url.searchParams.get("condition_ids") === conditionId) return json(load.keysetEnvelope([load.recorded.senateMarket()], null));
+      if (url.origin === "https://clob.polymarket.com" && url.pathname === "/book") {
+        const token = url.searchParams.get("token_id");
+        if (token === load.SENATE_YES || token === load.SENATE_NO) return json({ ...load.recorded.senateBook(), asset_id: token });
+      }
+      if (url.origin === "https://clob.polymarket.com" && url.pathname === `/clob-markets/${conditionId}`) return json(load.recorded.senateClobInfo());
+      return null;
+    },
+  };
+}

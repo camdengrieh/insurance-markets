@@ -40,8 +40,11 @@ test("health states the version, the served venues and the limits, and needs no 
       markets: { burst: API_LIMITS.markets.capacity, perMinute: 30 },
       reads: { burst: API_LIMITS.reads.capacity, perMinute: 60 },
       maxUrlChars: API_LIMITS.maxUrlChars,
-      bodies: "none accepted",
+      paid: { burst: API_LIMITS.paid.capacity, perMinute: 30, note: "per client without a key; a key brings its own limit" },
+      bodies: `POST /v1/route/prepare only: JSON, at most ${API_LIMITS.maxBodyBytes} bytes`,
     });
+    // Metering is stated: keys, route prepare off by default, no payment configured.
+    assert.deepEqual(answer.json["metering"], { keys: "Authorization: Bearer <key> (issued by the operator)", routePrepare: "off", x402: { configured: false } });
     assert.equal(answer.headers.get("cache-control"), "no-store");
     assert.match(answer.headers.get("x-request-id") ?? "", /^req_[0-9a-f]{12}$/);
   } finally {

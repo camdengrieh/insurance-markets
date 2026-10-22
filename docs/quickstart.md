@@ -159,6 +159,8 @@ Rules (`src/relay/flags.ts`, `relay/capabilities.ts`): accepted words are 1/true
 | `XO_READ_ADDRESS_ALLOWLIST` | Comma-separated addresses; `xo_positions` and `xo_account` then read only those |
 | `RELAY_SELF_HOST` | Your own https host for market metadata (creation) |
 | `RELAY_ALERT_HOOK`, `RELAY_ALERT_COMMAND` | Optional alert command (absolute path); off unless both are set |
+| `MARKETS_API_URL` | API mode (README, "API mode"): the hosted markets API's https URL (default port, no credentials, query or fragment). Unset, API mode is off and the `api_*` tools are not registered. No default: no API is deployed. In the PayBox portal its host must also be one of the plugin's network hosts |
+| `MARKETS_API_PAY_TO`, `MARKETS_API_MAX_PAYMENT_USDC` | API mode, paid calls only: the payee the API's x402 challenge must name, and the most one call may ask for in USDC (for example `0.05`). `api_quote` refuses without both |
 
 ## 7. Reading capability facts
 

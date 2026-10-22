@@ -47,6 +47,8 @@ directory) or `node scripts/call-local.mjs xo_order_status '{"order_hash":"0x...
 | `XO_KILL_SWITCH=1` | Refuse every write | off |
 | `XO_MAX_ORDER_USD`, `XO_MAX_DAILY_USD` | Caps per order and per day, per account | 10 and 50 |
 | `RELAY_ARM=ENABLE_TRADING,...` | Let a write path run before its live-test result is recorded (your own first test) | none |
+| `MARKETS_API_URL` | API mode: also register the `api_*` tools, which read the hosted markets API (https only) instead of the venues. See the root README, "API mode" | unset (off) |
+| `MARKETS_API_PAY_TO`, `MARKETS_API_MAX_PAYMENT_USDC` | API mode, paid calls: the payee and the per-call ceiling `api_quote` checks the API's x402 challenge against | unset (`api_quote` refuses) |
 
 A write path needs its `ENABLE_*` switch and either a recorded live-test result or `RELAY_ARM` naming
 it. Nothing has been proven against XO's off-chain services yet (the phase 0 gates are open), so a first

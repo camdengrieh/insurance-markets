@@ -1,3 +1,5 @@
+import { getAddress, isAddress } from "viem";
+
 import { checkRpcUrl } from "../sdk/chain/rpc.js";
 import { BASE_RPC_URL } from "../sdk/chain/limitless/constants.js";
 import { POLYGON_RPC_URL } from "../sdk/chain/polymarket/constants.js";
@@ -11,7 +13,10 @@ import { XO_RPC_URL } from "../sdk/chain/xo/pins.js";
 //   - the free tier needs no secret: every variable has a working default except the data directory, which must be named
 //     (so the index never lands in a default place inside a repository by accident);
 //   - limits are compiled in and stated (README, GET /v1/health); the environment cannot raise them;
-//   - which venues are served is code (sdk/venues/licence.ts), never configuration: no variable widens it.
+//   - which venues are served is code (sdk/venues/licence.ts), never configuration: no variable widens it;
+//   - metering (step 9) has NO defaults for money: the payTo address and every price must be named, or the paid endpoints
+//     answer "payments_not_configured"; route prepare is off unless the operator turns it on (section 5 of the design:
+//     routing for others and charging for it needs a legal read first).
 
 export const API_VERSION = "0.1.0";
 export const DEFAULT_API_PORT = 8790;
@@ -33,7 +38,38 @@ export const API_ENV = Object.freeze({
   linksPin: "API_LINKS_PIN",
   candidatesBundle: "API_CANDIDATES_BUNDLE",
   candidatesPin: "API_CANDIDATES_PIN",
+  routePrepare: "API_ROUTE_PREPARE",
+  publicUrl: "API_PUBLIC_URL",
+  facilitatorUrl: "API_X402_FACILITATOR_URL",
+  payTo: "API_X402_PAY_TO",
+  network: "API_X402_NETWORK",
+  priceQuote: "API_X402_PRICE_QUOTE",
+  priceRoutePrepare: "API_X402_PRICE_ROUTE_PREPARE",
 });
+
+// POST /v1/route/prepare (docs/sdk-and-api-design.md section 5): "off" answers the fixed code route_prepare_not_enabled;
+// "free" serves it at no charge (free-tier limits per client, or a key's); "paid" serves it to a subscription key whose tier
+// includes it or for an x402 payment. Off by default, and "paid" only after the legal read section 5 asks for.
+export const ROUTE_PREPARE_MODES = ["off", "free", "paid"] as const;
+export type RoutePrepareMode = (typeof ROUTE_PREPARE_MODES)[number];
+
+// The one x402 network the API takes payment on: Base mainnet (CAIP-2), where the USDC contract is pinned (api/x402.ts).
+export const X402_NETWORKS = ["eip155:8453"] as const;
+export type X402Network = (typeof X402_NETWORKS)[number];
+
+// A price is USDC with at most 6 decimal places, more than zero and at most this many atomic units (10 USDC).
+export const MAX_PRICE_ATOMIC = 10_000_000n;
+
+export interface PaymentsConfig {
+  // The public https origin clients reach this API at (the x402 resource URL is built from it).
+  readonly publicUrl: string;
+  // The facilitator's base URL; /verify and /settle are appended. Never printed.
+  readonly facilitatorUrl: string;
+  readonly payTo: `0x${string}`;
+  readonly network: X402Network;
+  // Atomic USDC units (6 decimals) per call; null: that endpoint has no price and is not sold.
+  readonly prices: { readonly quote: bigint | null; readonly routePrepare: bigint | null };
+}
 
 // Per chain: API_RPC_<CHAIN> (comma-separated https URLs, tried in order), API_START_BLOCK_<CHAIN>, API_CONFIRMATIONS_<CHAIN>.
 export function chainVariable(kind: "RPC" | "START_BLOCK" | "CONFIRMATIONS", chain: ChainKey): string {
@@ -63,28 +99,36 @@ export interface RateLimitSpec {
 export interface ApiHttpLimits {
   readonly maxUrlChars: number;
   readonly maxHeaderBytes: number;
-  // Every free route is a GET: a request that declares or sends a body is refused.
-  readonly maxBodyBytes: 0;
+  // Every free route is a GET: a request that declares or sends a body is refused. POST /v1/route/prepare alone takes a
+  // JSON body of at most this many bytes.
+  readonly maxBodyBytes: number;
   readonly headersTimeoutMs: number;
   readonly requestTimeoutMs: number;
   // An upstream read started for a request is abandoned at this point; the answer then comes from the cache, stated.
   readonly upstreamBudgetMs: number;
   readonly shutdownGraceMs: number;
-  // Per client address. `markets` covers both market routes; `reads` every other route.
+  // Per client address. `markets` covers both market routes; `reads` every other free route; `paid` the quote and route
+  // prepare routes for a caller without a key (a 402 answer counts too). A subscription key brings its own limit.
   readonly markets: RateLimitSpec;
   readonly reads: RateLimitSpec;
+  readonly paid: RateLimitSpec;
+  // How long the facilitator's /verify and /settle may take.
+  readonly facilitatorTimeoutMs: number;
 }
 
 export const API_LIMITS: ApiHttpLimits = Object.freeze({
   maxUrlChars: 1_024,
-  maxHeaderBytes: 8 * 1024,
-  maxBodyBytes: 0,
+  // An x402 PAYMENT-SIGNATURE header from a smart account can be several kilobytes.
+  maxHeaderBytes: 16 * 1024,
+  maxBodyBytes: 16_384,
   headersTimeoutMs: 5_000,
   requestTimeoutMs: 20_000,
   upstreamBudgetMs: 8_000,
   shutdownGraceMs: 5_000,
   markets: Object.freeze({ capacity: 20, refillPerSecond: 0.5 }),
   reads: Object.freeze({ capacity: 60, refillPerSecond: 1 }),
+  paid: Object.freeze({ capacity: 30, refillPerSecond: 0.5 }),
+  facilitatorTimeoutMs: 10_000,
 });
 
 export interface ChainConfig {
@@ -106,6 +150,9 @@ export interface ApiConfig {
   readonly fillRetentionDays: number;
   readonly links: { readonly bundle: string; readonly pin: string } | null;
   readonly candidates: { readonly bundle: string; readonly pin: string } | null;
+  readonly routePrepare: RoutePrepareMode;
+  // Null when no payment variable is set: the paid endpoints then answer payments_not_configured (a key still works).
+  readonly payments: PaymentsConfig | null;
   readonly limits: ApiHttpLimits;
 }
 
@@ -167,6 +214,92 @@ function filePath(env: ApiEnv, name: string, issues: ApiConfigIssue[]): string |
     return undefined;
   }
   return raw;
+}
+
+// An https URL with no credentials, query or fragment (http only on loopback, for a facilitator run beside the API in a test).
+export function parseServiceUrl(raw: string, allowPath: boolean): string | null {
+  if (raw.length > 300 || CONTROL.test(raw)) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  const loopback = url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "localhost");
+  if (url.protocol !== "https:" && !loopback) return null;
+  if (url.username !== "" || url.password !== "" || url.search !== "" || url.hash !== "") return null;
+  if (!allowPath && url.pathname !== "/") return null;
+  const text = url.toString();
+  return text.endsWith("/") ? text.slice(0, -1) : text;
+}
+
+// "0.01" USDC to atomic units (6 decimals); null for anything that is not a plain positive decimal within the cap.
+export function parsePrice(raw: string): bigint | null {
+  const match = /^(0|[1-9][0-9]{0,5})(?:\.([0-9]{1,6}))?$/.exec(raw);
+  if (match === null) return null;
+  const atomic = BigInt(match[1] as string) * 1_000_000n + BigInt((match[2] ?? "").padEnd(6, "0") || "0");
+  return atomic > 0n && atomic <= MAX_PRICE_ATOMIC ? atomic : null;
+}
+
+const PAYMENT_VARIABLES = [API_ENV.publicUrl, API_ENV.facilitatorUrl, API_ENV.payTo, API_ENV.network, API_ENV.priceQuote, API_ENV.priceRoutePrepare] as const;
+
+function loadPayments(env: ApiEnv, fatal: (variable: string, message: string) => void): PaymentsConfig | null {
+  if (PAYMENT_VARIABLES.every((name) => read(env, name) === undefined)) return null;
+  let ok = true;
+  const need = (name: string, message: string): string | undefined => {
+    const value = read(env, name);
+    if (value === undefined) {
+      fatal(name, `${name} is required once any payment variable is set: ${message}`);
+      ok = false;
+    }
+    return value;
+  };
+  const rawPublic = need(API_ENV.publicUrl, "the public https origin of this API");
+  const rawFacilitator = need(API_ENV.facilitatorUrl, "the x402 facilitator's base URL");
+  const rawPayTo = need(API_ENV.payTo, "the address that receives payments; there is no default");
+  const rawNetwork = need(API_ENV.network, `one of ${X402_NETWORKS.join(", ")}`);
+  const publicUrl = rawPublic === undefined ? null : parseServiceUrl(rawPublic, false);
+  if (rawPublic !== undefined && (publicUrl === null || !publicUrl.startsWith("https://"))) {
+    fatal(API_ENV.publicUrl, "API_PUBLIC_URL must be an https origin with no path, query or credentials.");
+    ok = false;
+  }
+  const facilitatorUrl = rawFacilitator === undefined ? null : parseServiceUrl(rawFacilitator, true);
+  if (rawFacilitator !== undefined && facilitatorUrl === null) {
+    fatal(API_ENV.facilitatorUrl, "API_X402_FACILITATOR_URL must be an https URL with no query or credentials (http only on 127.0.0.1 or localhost).");
+    ok = false;
+  }
+  let payTo: `0x${string}` | null = null;
+  if (rawPayTo !== undefined) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(rawPayTo) || /^0x0{40}$/.test(rawPayTo)) {
+      fatal(API_ENV.payTo, "API_X402_PAY_TO must be a non-zero 20-byte hex address.");
+      ok = false;
+    } else if (!isAddress(rawPayTo, { strict: true })) {
+      // All lower case passes; mixed case must carry a valid EIP-55 checksum (a typo is refused, never repaired).
+      fatal(API_ENV.payTo, "API_X402_PAY_TO has a wrong EIP-55 checksum.");
+      ok = false;
+    } else payTo = getAddress(rawPayTo);
+  }
+  let network: X402Network | null = null;
+  if (rawNetwork !== undefined) {
+    if ((X402_NETWORKS as readonly string[]).includes(rawNetwork)) network = rawNetwork as X402Network;
+    else {
+      fatal(API_ENV.network, `API_X402_NETWORK must be ${X402_NETWORKS.join(" or ")} (Base mainnet, where the USDC contract is pinned).`);
+      ok = false;
+    }
+  }
+  const price = (name: string): bigint | null => {
+    const raw = read(env, name);
+    if (raw === undefined) return null;
+    const value = parsePrice(raw);
+    if (value === null) {
+      fatal(name, `${name} must be a USDC amount above 0 and at most 10, with at most 6 decimal places (for example 0.01).`);
+      ok = false;
+    }
+    return value;
+  };
+  const prices = { quote: price(API_ENV.priceQuote), routePrepare: price(API_ENV.priceRoutePrepare) };
+  if (!ok || publicUrl === null || facilitatorUrl === null || payTo === null || network === null) return null;
+  return Object.freeze({ publicUrl, facilitatorUrl, payTo, network, prices: Object.freeze(prices) });
 }
 
 export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
@@ -293,6 +426,14 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
     return Object.freeze({ bundle, pin });
   };
 
+  let routePrepare: RoutePrepareMode = "off";
+  const rawRoute = read(env, API_ENV.routePrepare);
+  if (rawRoute !== undefined) {
+    if ((ROUTE_PREPARE_MODES as readonly string[]).includes(rawRoute)) routePrepare = rawRoute as RoutePrepareMode;
+    else fatal(API_ENV.routePrepare, "API_ROUTE_PREPARE must be off, free or paid.");
+  }
+  const payments = loadPayments(env, fatal);
+
   const config: ApiConfig = Object.freeze({
     host,
     port,
@@ -304,6 +445,8 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
     fillRetentionDays,
     links: pair(API_ENV.linksBundle, API_ENV.linksPin),
     candidates: pair(API_ENV.candidatesBundle, API_ENV.candidatesPin),
+    routePrepare,
+    payments,
     limits: API_LIMITS,
   });
   return { config, issues, fatal: issues.filter((issue) => issue.fatal) };
@@ -334,5 +477,11 @@ export function describeConfig(config: ApiConfig): string[] {
     `fill retention: ${config.fillRetentionDays} days`,
     `approved links: ${config.links === null ? "none configured" : "bundle configured"}; candidates: ${config.candidates === null ? "none configured" : "bundle configured"}`,
     `limits: markets ${config.limits.markets.capacity} burst, ${config.limits.markets.refillPerSecond * 60}/min; other reads ${config.limits.reads.capacity} burst, ${config.limits.reads.refillPerSecond * 60}/min per client`,
+    `route prepare: ${config.routePrepare}`,
+    `payments: ${
+      config.payments === null
+        ? "not configured (paid endpoints answer payments_not_configured unless a key is sent)"
+        : `x402 on ${config.payments.network}; quote ${config.payments.prices.quote === null ? "not sold" : "priced"}, route prepare ${config.payments.prices.routePrepare === null ? "not sold" : "priced"}`
+    }`,
   ];
 }

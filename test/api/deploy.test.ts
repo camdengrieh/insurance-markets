@@ -91,8 +91,12 @@ test("the bundle builds deterministically as one file with no secrets, machine p
   assert.match(text, /insurance-markets-api\/0\.1/);
   assert.equal(/approveLink|APPROVAL_ACK/.test(text), false, "the approval path is not in the API bundle");
   assert.equal(/FAKE_BLOCK_PAGE|testkit/.test(text), false, "no test support in the bundle");
-  // No credentialed signer: nothing from sdk/node.
-  assert.equal(/createHmac|l2Headers|hmacSignature/.test(text), false);
+  // No credentialed signer: nothing from sdk/node. (viem's secp256k1, which the x402 check uses to recover a payer's
+  // signature, carries its own RFC 6979 HMAC-DRBG; that is not a request signer.)
+  assert.equal(/\bcreateHmac\(|l2Headers|hmacSignature/.test(text), false);
+  assert.equal(/from "node:crypto"[^;]*createHmac\b/.test(text), false);
+  // No private key and no signing call: the API recovers signatures, it never makes one.
+  assert.equal(/privateKeyToAccount|signTypedData\(/.test(text), false);
 });
 
 test("the bundle starts with no secret, answers health and venues, and stops cleanly on SIGTERM", async () => {
@@ -130,4 +134,31 @@ test("the bundle starts with no secret, answers health and venues, and stops cle
   assert.equal(await exited, 0);
   assert.match(out, /SIGTERM: stopping/);
   assert.match(out, /stopped/);
+});
+
+test("the bundle's operator commands: keys issue, list and revoke against the data directory, and the listing manifest", () => {
+  const dir = mkdtempSync(join(tmpdir(), "api-keys-"));
+  const env = { PATH: process.env["PATH"] ?? "", API_DATA_DIR: dir };
+  const run = (args: string[], extra: Record<string, string> = {}) => spawnSync(process.execPath, [join(DEPLOY, "dist", "api.mjs"), ...args], { cwd: REPO, env: { ...env, ...extra }, encoding: "utf8" });
+  const issued = run(["keys", "issue", "--label", "deploy test", "--tier", "full"]);
+  assert.equal(issued.status, 0, issued.stderr);
+  const key = /^key (imk_\S+)$/m.exec(issued.stdout)?.[1];
+  assert.ok(key !== undefined);
+  const listed = run(["keys", "list"]);
+  assert.equal(listed.status, 0);
+  assert.equal(listed.stdout.includes(key), false, "a key is printed once, at issue");
+  const id = /^([0-9a-f]{12}) {2}full/m.exec(listed.stdout)?.[1];
+  assert.ok(id !== undefined, listed.stdout);
+  assert.equal(run(["keys", "revoke", id]).status, 0);
+  assert.equal(run(["keys", "rotate"]).status, 2);
+  // The listing has no price unless one is configured, and none is invented.
+  const bare = run(["listing"]);
+  assert.equal(bare.status, 0, bare.stderr);
+  const manifest = JSON.parse(bare.stdout) as { payTo: unknown; endpoints: Array<{ path: string; sold: boolean; priceUsdc: unknown }> };
+  assert.equal(manifest.payTo, null);
+  assert.deepEqual(manifest.endpoints.map((e) => [e.path, e.sold, e.priceUsdc]), [["/v1/quote", false, null], ["/v1/route/prepare", false, null]]);
+  const priced = run(["listing"], { API_PUBLIC_URL: "https://api.test", API_X402_FACILITATOR_URL: "https://facilitator.test", API_X402_PAY_TO: "0x00000000000000000000000000000000000fee01", API_X402_NETWORK: "eip155:8453", API_X402_PRICE_QUOTE: "0.01" });
+  assert.equal(priced.status, 0, priced.stderr);
+  const sold = JSON.parse(priced.stdout) as { endpoints: Array<{ path: string; sold: boolean; priceUsdc: unknown; accepts: unknown[] }> };
+  assert.deepEqual(sold.endpoints.map((e) => [e.path, e.sold, e.priceUsdc, e.accepts.length]), [["/v1/quote", true, "0.01", 1], ["/v1/route/prepare", false, null, 0]]);
 });

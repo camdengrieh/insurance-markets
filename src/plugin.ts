@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
+import { apiModeRequested } from "./api/config.js";
 import { registerAccountTools } from "./tools/account.js";
+import { registerApiTools } from "./tools/api.js";
 import { registerClobTools } from "./tools/clob.js";
 import { registerCreateTools } from "./tools/create.js";
 import { registerDraftTools } from "./tools/draft.js";
@@ -42,6 +44,9 @@ function createServer() {
     // local server registers them too so both modes list one tool set (test/local-bundle.test.ts).
     registerClobTools(server);
   }
+  // API mode (src/tools/api.ts): the api_* tools read the hosted markets API and exist only when the operator names one
+  // (MARKETS_API_URL). Without it the tool set, and every request the plugin makes, are as before: local reads only.
+  if (apiModeRequested(process.env)) registerApiTools(server);
 
   return server;
 }

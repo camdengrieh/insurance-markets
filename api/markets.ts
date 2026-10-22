@@ -1,5 +1,5 @@
 import type { Category } from "../sdk/category.js";
-import type { AdapterError, Book, FetchLike, FieldOrigin, Market, MarketRef, MarketSummary, VenueId, VenueReadAdapter } from "../sdk/model.js";
+import type { AdapterError, Book, FeeSpec, FetchLike, FieldOrigin, Market, MarketRef, MarketSummary, VenueId, VenueReadAdapter } from "../sdk/model.js";
 import { RULES_HASH_RECIPE } from "../sdk/rules.js";
 import { createLimitlessAdapter } from "../sdk/venues/limitless/adapter.js";
 import { venuePolicy } from "../sdk/venues/policy.js";
@@ -31,6 +31,7 @@ export type ApiReaderVenue = (typeof API_READER_VENUES)[number];
 export const LIST_REFRESH_MS = 60_000;
 export const DETAIL_REFRESH_MS = 60_000;
 export const BOOK_REFRESH_MS = 15_000;
+export const FEE_REFRESH_MS = 15_000;
 // Each refresh reads at most MAX_LIST_PAGES pages of LIST_PAGE_LIMIT rows (each reader clamps the limit to its own
 // maximum): the list covers the first rows in the venue's own order, never more, and says how many it holds.
 export const MAX_LIST_PAGES = 3;
@@ -65,6 +66,29 @@ interface ListEntry {
   readAtMs: number | null;
   error: ReadError | null;
   inflight: Promise<void> | null;
+}
+
+type BookResults = ReadonlyArray<{ readonly ok: true; readonly value: Book } | { readonly ok: false; readonly error: AdapterError }>;
+
+interface Loaded {
+  readonly key: string;
+  readonly market: Market;
+  readonly readAtMs: number;
+  readonly fresh: boolean;
+  // Set when the venue is blocked or chain-only: no book is read and none is shown.
+  readonly reason: string | null;
+  readonly books: Timed<BookResults> | undefined;
+  readonly booksFresh: boolean;
+  readonly bookFailure: string | null;
+}
+
+export interface TradeView {
+  readonly market: Market;
+  readonly marketOrigin: Origin;
+  readonly books: ReadonlyArray<{ readonly tokenId: string; readonly book: Book | null; readonly source: Origin }>;
+  readonly fee: FeeSpec | null;
+  readonly feeOrigin: Origin;
+  readonly venueReason: string | null;
 }
 
 interface Timed<T> {
@@ -129,7 +153,8 @@ export class MarketService {
   readonly #readers = new Map<VenueId, VenueReadAdapter>();
   readonly #lists = new Map<VenueId, ListEntry>();
   readonly #details = new Map<string, Timed<Market>>();
-  readonly #books = new Map<string, Timed<ReadonlyArray<{ readonly ok: true; readonly value: Book } | { readonly ok: false; readonly error: AdapterError }>>>();
+  readonly #books = new Map<string, Timed<BookResults>>();
+  readonly #fees = new Map<string, Timed<FeeSpec>>();
 
   constructor(options: MarketsOptions) {
     this.#options = options;
@@ -320,11 +345,9 @@ export class MarketService {
     }
   }
 
-  // The market, its rules fingerprint and its books, each with its origin. Null when the venue has no reader; a venue
-  // error with nothing kept is thrown as { code } for the server to state.
-  async market(venue: VenueId, marketId: string): Promise<Record<string, unknown> | null> {
-    const reader = this.#readers.get(venue);
-    if (reader === undefined) return null;
+  // The market and its books, read now when the kept ones are due and the venue may be asked, else kept. A venue error with
+  // nothing kept is thrown as { code } for the server to state.
+  async #load(venue: VenueId, marketId: string, reader: VenueReadAdapter): Promise<Loaded> {
     const key = `${venue}|${marketId.toLowerCase()}`;
     let now = this.#options.nowMs();
     const mayAsk = this.#mayAsk(venue, now);
@@ -354,13 +377,14 @@ export class MarketService {
     const reason = state.kind === "blocked" || state.kind === "chain_only" ? venueStateReason(state, this.displayName(venue), now) : null;
 
     // Books: the venue alone holds them; a blocked venue has none, and a kept one is "cache" with its age.
-    let books: Timed<ReadonlyArray<{ readonly ok: true; readonly value: Book } | { readonly ok: false; readonly error: AdapterError }>> | undefined = this.#books.get(key);
+    let books: Timed<BookResults> | undefined = this.#books.get(key);
     let booksFresh = false;
     let bookFailure: string | null = null;
     if (reason === null && this.#mayAsk(venue, now) && (books === undefined || now - books.readAtMs >= BOOK_REFRESH_MS)) {
       try {
         const tokens = market.outcomes.map((o) => ({ venue, tokenId: o.tokenId, marketId: market.ref.marketId }));
-        const read = await within(reader.getBooks(tokens, { deadlineMs: this.#options.budgetMs }), this.#options.budgetMs);
+        // An absolute deadline on the injected clock (the readers' contract: Polymarket's reader takes only that form).
+        const read = await within(reader.getBooks(tokens, { deadlineMs: this.#options.nowMs() + this.#options.budgetMs }), this.#options.budgetMs);
         if (read !== "late") {
           books = { value: read, readAtMs: this.#options.nowMs() };
           this.#books.delete(key);
@@ -372,11 +396,81 @@ export class MarketService {
         bookFailure = READ_ERROR_TEXT[this.#noteFailure(venue, error).code];
       }
     }
-    now = this.#options.nowMs();
+    return { key, market, readAtMs: kept.readAtMs, fresh, reason, books, booksFresh, bookFailure };
+  }
+
+  #readOrigin(venue: VenueId, asOfMs: number, isFresh: boolean, now: number): Origin {
     const chainNative = venuePolicy(venue).transport === "T0-RPC";
-    const readOrigin = (asOfMs: number, isFresh: boolean): Origin =>
-      isFresh ? { source: chainNative ? "chain" : "venue_api", asOfMs, ageMs: Math.max(0, now - asOfMs), ...(chainNative ? { via: "Base 8453" } : {}) } : { source: "cache", asOfMs, ageMs: Math.max(0, now - asOfMs) };
-    const marketOrigin = readOrigin(kept.readAtMs, fresh);
+    return isFresh ? { source: chainNative ? "chain" : "venue_api", asOfMs, ageMs: Math.max(0, now - asOfMs), ...(chainNative ? { via: "Base 8453" } : {}) } : { source: "cache", asOfMs, ageMs: Math.max(0, now - asOfMs) };
+  }
+
+  // One book per outcome of the market, each with its origin, or null with the reason.
+  #bookRows(venue: VenueId, loaded: Loaded, now: number): Array<{ readonly tokenId: string; readonly book: Book | null; readonly source: Origin }> {
+    const { market, reason, books, booksFresh, bookFailure } = loaded;
+    return market.outcomes.map((outcome, index) => {
+      const answer = books?.value[index];
+      if (reason !== null) return { tokenId: outcome.tokenId, book: null, source: { source: null, reason } };
+      if (books === undefined || answer === undefined) return { tokenId: outcome.tokenId, book: null, source: { source: null, reason: bookFailure === null ? "The book was not read in time; ask again." : `The book could not be read: ${bookFailure}.` } };
+      if (!answer.ok) return { tokenId: outcome.tokenId, book: null, source: { source: null, reason: `The book could not be read: ${READ_ERROR_TEXT[answer.error]}.` } };
+      return { tokenId: outcome.tokenId, book: answer.value, source: this.#readOrigin(venue, books.readAtMs, booksFresh, now) };
+    });
+  }
+
+  // What a quote or an order needs (docs/sdk-and-api-design.md section 4: quote and route prepare): the market, each
+  // outcome's book and the fee the venue states now, each with its origin. The fee is the reader's getFeeSpec (the value
+  // the venue charges, re-read at most every FEE_REFRESH_MS), or the market's own when the reader has no separate read.
+  // Null when the venue has no reader; a venue error with nothing kept is thrown as { code }.
+  async tradeView(venue: VenueId, marketId: string): Promise<TradeView | null> {
+    const reader = this.#readers.get(venue);
+    if (reader === undefined) return null;
+    const loaded = await this.#load(venue, marketId, reader);
+    let now = this.#options.nowMs();
+    const marketOrigin = this.#readOrigin(venue, loaded.readAtMs, loaded.fresh, now);
+    let fee: FeeSpec | null;
+    let feeOrigin: Origin;
+    if (!reader.caps.getFeeSpec) {
+      fee = loaded.market.fee;
+      feeOrigin = marketOrigin;
+    } else {
+      let kept = this.#fees.get(loaded.key);
+      let fresh = false;
+      let failure: string | null = null;
+      if (loaded.reason === null && this.#mayAsk(venue, now) && (kept === undefined || now - kept.readAtMs >= FEE_REFRESH_MS)) {
+        try {
+          const read = await within(reader.getFeeSpec(loaded.market), this.#options.budgetMs);
+          if (read !== "late") {
+            kept = { value: read, readAtMs: this.#options.nowMs() };
+            this.#fees.delete(loaded.key);
+            this.#fees.set(loaded.key, kept);
+            this.#trim(this.#fees);
+            fresh = true;
+          }
+        } catch (error) {
+          failure = READ_ERROR_TEXT[this.#noteFailure(venue, error).code];
+        }
+      }
+      now = this.#options.nowMs();
+      if (kept === undefined) {
+        fee = null;
+        feeOrigin = { source: null, reason: loaded.reason ?? (failure === null ? "The fee was not read in time; ask again." : `The fee could not be read: ${failure}.`) };
+      } else {
+        fee = kept.value;
+        feeOrigin = this.#readOrigin(venue, kept.readAtMs, fresh, now);
+      }
+    }
+    now = this.#options.nowMs();
+    return { market: loaded.market, marketOrigin, books: this.#bookRows(venue, loaded, now), fee, feeOrigin, venueReason: loaded.reason };
+  }
+
+  // The market, its rules fingerprint and its books, each with its origin. Null when the venue has no reader; a venue
+  // error with nothing kept is thrown as { code } for the server to state.
+  async market(venue: VenueId, marketId: string): Promise<Record<string, unknown> | null> {
+    const reader = this.#readers.get(venue);
+    if (reader === undefined) return null;
+    const loaded = await this.#load(venue, marketId, reader);
+    const { market } = loaded;
+    const now = this.#options.nowMs();
+    const marketOrigin = this.#readOrigin(venue, loaded.readAtMs, loaded.fresh, now);
     const summaryLike: MarketSummary = {
       ref: market.ref,
       title: market.title,
@@ -388,19 +482,11 @@ export class MarketService {
     };
     const chain = this.#chainField(venue, summaryLike);
     const trades = this.#lastTrades(venue, summaryLike);
-    const bookRows = market.outcomes.map((outcome, index) => {
-      const answer = books?.value[index];
-      let source: Origin;
-      let book: Record<string, unknown> | null = null;
-      if (reason !== null) source = { source: null, reason };
-      else if (books === undefined || answer === undefined) source = { source: null, reason: bookFailure === null ? "The book was not read in time; ask again." : `The book could not be read: ${bookFailure}.` };
-      else if (!answer.ok) source = { source: null, reason: `The book could not be read: ${READ_ERROR_TEXT[answer.error]}.` };
-      else {
-        source = readOrigin(books.readAtMs, booksFresh);
-        book = { bids: answer.value.bids, asks: answer.value.asks, asOfMs: answer.value.asOfMs, derived: answer.value.derived, ...(answer.value.convention === undefined ? {} : { convention: answer.value.convention }) };
-      }
-      return { tokenId: outcome.tokenId, book, source };
-    });
+    const bookRows = this.#bookRows(venue, loaded, now).map((row) => ({
+      tokenId: row.tokenId,
+      book: row.book === null ? null : { bids: row.book.bids, asks: row.book.asks, asOfMs: row.book.asOfMs, derived: row.book.derived, ...(row.book.convention === undefined ? {} : { convention: row.book.convention }) },
+      source: row.source,
+    }));
     const settledOnChain = chain.ok && chain.resolution.state === "resolved";
     return {
       market: {

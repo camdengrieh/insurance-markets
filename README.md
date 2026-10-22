@@ -74,6 +74,29 @@ One codebase, two modes (`docs/phase1-gap-closing.md` section 5.2 and the produc
 
 You can already run `dist/plugin.mjs` yourself as a stdio MCP server in your own client, which gives you the zero-setup read tools above.
 
+## API mode (optional, off by default)
+
+Either bundle can also read the hosted markets API (`api/`, [docs/sdk-and-api-design.md](docs/sdk-and-api-design.md) sections 4 and 8) instead of reading venues itself. Nothing here needs it: with `MARKETS_API_URL` unset, API mode is off, the tool set is exactly the one above and the plugin never contacts the API. No API is deployed yet, so there is no default URL.
+
+Set `MARKETS_API_URL` (https, default port, no user name, password, query or fragment; in the PayBox portal its host must also be one of the plugin's network hosts) and five tools are added (`src/tools/api.ts`):
+
+| Tool | What it does |
+|---|---|
+| `api_venues` | `GET /v1/venues`: each venue's licence class and data terms, whether the API serves it and why not, and the API's read state for it |
+| `api_markets` | `GET /v1/markets`: markets across the venues the API serves, filtered by venue, category or title words |
+| `api_market` | `GET /v1/markets/:venue/:id`: one market with its rules fingerprint and books |
+| `api_groups` | `GET /v1/groups`: approved links and linker candidates (always "proposed") |
+| `api_quote` | Paid `GET /v1/quote`: returns a PayBox x402 payment proposal; never pays |
+
+How they behave:
+
+- **Only the API.** They reach the configured origin and nothing else, never a venue and never a local fallback (`src/api/client.ts`). The API serves only venues whose licence and data terms allow it (today Trueo alone), so for XO, Polymarket or Kalshi they answer `venue_not_served` and point to the local tools.
+- **Checked before use.** Every answer is validated with zod against the API's documented shapes (`src/api/schemas.ts`); a malformed one is refused whole. Each field keeps its source (`venue_api`, `chain` or `cache`) and age, a cached value is never called live, and market text passes through the same untrusted-text guardrail as every other read tool.
+- **Refusals stated.** A 429 states the API's Retry-After and is not retried; a venue the API does not serve, a missing market, a missing route and a server error each say so.
+- **Paying.** The plugin holds no key and pays nothing. `api_quote` asks the route once unpaid, checks the API's 402 against `MARKETS_API_PAY_TO` (the payee) and `MARKETS_API_MAX_PAYMENT_USDC` (the per-call ceiling), both required, and returns an `io.paybox/transactionProposal` of kind `x402` for that URL. As PayBox's plugin contract describes, PayBox fetches the live 402 itself, checks its asset and amount, asks the user to approve, pays and retries the URL; the quote reaches the agent through the PayBox request (poll its request id), and the plugin is not called again. Do not also pay the same quote through PayBox's `pay_x402` or `use_service`. There is no tool for the API's `POST /v1/route/prepare` yet.
+
+With the relay tools on as well, `tools/list` is already over the hosted runner's limit; API mode adds about 30 KB to it.
+
 ## Requirements
 
 - Node 24.x (the repository pins 24.21.0) and pnpm 11.11.0 (`package.json`). Do not use Node 20.

@@ -4,21 +4,27 @@ import type { AddressInfo, Socket } from "node:net";
 
 import { ApiError, ERROR_STATUS, type Api, type ErrorCode } from "./app.js";
 import type { ApiConfig, RateLimitSpec } from "./config.js";
+import type { Gate, Meter, Ticket } from "./metering.js";
 import { checkBody, ServingViolation, type ServingPolicy } from "./serving.js";
 
 // The API's HTTP server: node:http, no framework (relay/server.ts is the pattern).
 //
 // Pipeline, in this order:
 //   1. shutting down: 503;
-//   2. the method: GET and HEAD, and OPTIONS for a CORS preflight; anything else is 405;
-//   3. size: a URL over the limit is 414; a request that declares or sends a body is 413 (every free route is a GET);
-//   4. the client address (the socket's, or X-Forwarded-For through exactly the configured number of proxies) and its
-//      token bucket for the route's class: over the limit is 429 with Retry-After;
-//   5. the route and its query, validated; then the handler;
-//   6. every 2xx body is walked by the serving check (serving.ts) before it is sent.
-// Errors are JSON with a fixed code: { "error": { "code", "message" } }. Every answer carries x-request-id, cache-control
-// no-store (no shared cache may present an old answer as new), nosniff and no-referrer; CORS headers only for a configured
-// origin.
+//   2. the method: GET and HEAD on the free routes, GET on /v1/quote, POST on /v1/route/prepare, and OPTIONS for a CORS
+//      preflight; anything else is 405;
+//   3. size: a URL over the limit is 414; a GET that declares or sends a body is 413; the POST takes JSON only (415
+//      otherwise) of at most the stated bytes (413);
+//   4. a key in Authorization: Bearer, if any (metering.ts): a bad, revoked or expired key is 401 on every route;
+//   5. the rate limit: the key's own bucket, or the client address's (the socket's, or X-Forwarded-For through exactly the
+//      configured number of proxies) for the route's class: over the limit is 429 with Retry-After;
+//   6. the route and its query or body, validated; on a paid route the metering gate (a key's tier, or an x402 payment
+//      verified before the handler runs); then the handler;
+//   7. every 2xx body is walked by the serving check (serving.ts) before it is sent; a paid call is settled only after a
+//      good answer, and never after a failed one.
+// Errors are JSON with a fixed code: { "error": { "code", "message" } }; a 402 carries the x402 PaymentRequired object as
+// its body and, base64, in PAYMENT-REQUIRED. Every answer carries x-request-id, cache-control no-store (no shared cache may
+// present an old answer as new), nosniff and no-referrer; CORS headers only for a configured origin.
 
 interface Bucket {
   tokens: number;
@@ -72,6 +78,7 @@ export interface ServerOptions {
   readonly api: Api;
   readonly config: ApiConfig;
   readonly policy: ServingPolicy;
+  readonly meter: Meter;
   readonly nowMs?: () => number;
   readonly log?: (line: string) => void;
 }
@@ -92,7 +99,11 @@ function errorReply(code: ErrorCode, message: string, details?: Readonly<Record<
   return { status: ERROR_STATUS[code], body: { error: details === undefined ? { code, message } : { code, message, details } }, ...(headers === undefined ? {} : { headers }) };
 }
 
-type Route = { readonly kind: "health" | "venues" | "markets" | "groups" } | { readonly kind: "market"; readonly venue: string; readonly id: string };
+type Route =
+  | { readonly kind: "health" | "venues" | "markets" | "groups" | "quote" | "route_prepare" }
+  | { readonly kind: "market"; readonly venue: string; readonly id: string };
+
+export const ROUTE_PREPARE_PATH = "/v1/route/prepare";
 
 function route(path: string): Route | null {
   switch (path) {
@@ -104,6 +115,10 @@ function route(path: string): Route | null {
       return { kind: "markets" };
     case "/v1/groups":
       return { kind: "groups" };
+    case "/v1/quote":
+      return { kind: "quote" };
+    case ROUTE_PREPARE_PATH:
+      return { kind: "route_prepare" };
   }
   const match = /^\/v1\/markets\/([a-z_]{1,40})\/([^/]{1,200})$/.exec(path);
   if (match === null) return null;
@@ -116,8 +131,66 @@ function route(path: string): Route | null {
   return { kind: "market", venue: match[1] as string, id };
 }
 
+// The methods a path answers, for 405 and the CORS preflight.
+function allowedMethods(path: string): string {
+  if (path === ROUTE_PREPARE_PATH) return "POST, OPTIONS";
+  if (path === "/v1/quote") return "GET, OPTIONS";
+  return "GET, HEAD, OPTIONS";
+}
+
+function normalPath(rawUrl: string): string {
+  try {
+    const pathname = new URL(rawUrl, "http://api.invalid").pathname;
+    return pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  } catch {
+    return "";
+  }
+}
+
+class BodyError extends Error {
+  readonly code: "payload_too_large" | "invalid_request";
+  constructor(code: "payload_too_large" | "invalid_request", message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+// The request body as JSON, at most `max` bytes.
+function readJson(req: IncomingMessage, max: number): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let done = false;
+    req.on("data", (chunk: Buffer) => {
+      if (done) return;
+      total += chunk.length;
+      if (total > max) {
+        done = true;
+        reject(new BodyError("payload_too_large", `The body is larger than ${max} bytes.`));
+        req.resume();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (done) return;
+      done = true;
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown);
+      } catch {
+        reject(new BodyError("invalid_request", "The body is not JSON."));
+      }
+    });
+    req.on("error", () => {
+      if (done) return;
+      done = true;
+      reject(new BodyError("invalid_request", "The body could not be read."));
+    });
+  });
+}
+
 export async function startApiServer(options: ServerOptions): Promise<RunningServer> {
-  const { api, config, policy } = options;
+  const { api, config, policy, meter } = options;
   const limits = config.limits;
   const nowMs = options.nowMs ?? Date.now;
   const log = options.log ?? (() => undefined);
@@ -139,7 +212,7 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     const origin = typeof req.headers["origin"] === "string" ? req.headers["origin"] : undefined;
     if (origin !== undefined && config.corsOrigins.includes(origin)) {
       headers["access-control-allow-origin"] = origin;
-      headers["access-control-expose-headers"] = "x-request-id, retry-after";
+      headers["access-control-expose-headers"] = "x-request-id, retry-after, payment-required, payment-response";
     }
     if (origin !== undefined) headers["vary"] = "Origin";
     if (closing) headers["connection"] = "close";
@@ -158,6 +231,8 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     if (closing) return reply(errorReply("shutting_down", "The API is shutting down."));
 
     const method = req.method ?? "";
+    const rawUrl = req.url ?? "";
+    const path = normalPath(rawUrl);
     if (method === "OPTIONS") {
       const origin = typeof req.headers["origin"] === "string" ? req.headers["origin"] : undefined;
       const allowed = origin !== undefined && config.corsOrigins.includes(origin);
@@ -165,17 +240,32 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
         "cache-control": "no-store",
         "x-request-id": requestId,
         ...(origin === undefined ? {} : { vary: "Origin" }),
-        ...(allowed ? { "access-control-allow-origin": origin, "access-control-allow-methods": "GET, HEAD, OPTIONS", "access-control-max-age": "600" } : {}),
+        ...(allowed
+          ? {
+              "access-control-allow-origin": origin,
+              "access-control-allow-methods": allowedMethods(path),
+              "access-control-allow-headers": "authorization, content-type, payment-signature",
+              "access-control-max-age": "600",
+            }
+          : {}),
       });
       res.end();
       return;
     }
-    if (method !== "GET" && method !== "HEAD") return reply(errorReply("method_not_allowed", "Only GET and HEAD are served.", undefined, { allow: "GET, HEAD, OPTIONS" }));
-    const rawUrl = req.url ?? "";
+    const isPost = path === ROUTE_PREPARE_PATH;
+    const methodOk = isPost ? method === "POST" : path === "/v1/quote" ? method === "GET" : method === "GET" || method === "HEAD";
+    if (!methodOk) {
+      return reply(errorReply("method_not_allowed", `This route answers ${allowedMethods(path).replace(", OPTIONS", "")} only.`, undefined, { allow: allowedMethods(path) }));
+    }
     if (rawUrl.length > limits.maxUrlChars) return reply(errorReply("uri_too_long", `The request target is longer than ${limits.maxUrlChars} characters.`));
     const declared = req.headers["content-length"];
-    if ((declared !== undefined && declared !== "0") || req.headers["transfer-encoding"] !== undefined) {
+    if (!isPost && ((declared !== undefined && declared !== "0") || req.headers["transfer-encoding"] !== undefined)) {
       return reply(errorReply("payload_too_large", "These routes take no request body."));
+    }
+    if (isPost) {
+      const type = req.headers["content-type"];
+      if (typeof type !== "string" || !/^application\/json(\s*;\s*charset=utf-8)?$/i.test(type.trim())) return reply(errorReply("unsupported_media_type", "The body must be application/json."));
+      if (declared !== undefined && (!/^[0-9]{1,9}$/.test(declared) || Number(declared) > limits.maxBodyBytes)) return reply(errorReply("payload_too_large", `The body is larger than ${limits.maxBodyBytes} bytes.`));
     }
     let url: URL;
     try {
@@ -184,55 +274,105 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
       return reply(errorReply("invalid_request", "The request target is not valid."));
     }
     if (!rawUrl.startsWith("/") || rawUrl.startsWith("//") || url.hash !== "") return reply(errorReply("invalid_request", "The request target is not valid."));
-    const path = url.pathname.length > 1 && url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname;
     const matched = route(path);
     if (matched === null) return reply(errorReply("not_found", "No such route."));
     label = matched.kind === "market" ? "/v1/markets/:venue/:id" : path;
 
+    const auth = meter.authenticate(req.headers["authorization"]);
+    if (auth.kind === "refused") return reply(errorReply("unauthorized", auth.message, undefined, { "www-authenticate": "Bearer" }));
+    const paid = matched.kind === "quote" || matched.kind === "route_prepare";
     const client = clientAddress(req, config.trustProxyHops);
-    const cls = matched.kind === "market" || matched.kind === "markets" ? "markets" : "reads";
-    const spec = cls === "markets" ? limits.markets : limits.reads;
-    const taken = buckets.take(`${cls}|${client}`, spec, nowMs());
+    const cls = matched.kind === "market" || matched.kind === "markets" ? "markets" : paid ? "paid" : "reads";
+    const spec = auth.kind === "key" ? auth.limit : cls === "markets" ? limits.markets : cls === "paid" ? limits.paid : limits.reads;
+    const taken = buckets.take(auth.kind === "key" ? `key|${auth.row.id}` : `${cls}|${client}`, spec, nowMs());
     const limitHeader = `${spec.capacity};w=${Math.round(spec.capacity / spec.refillPerSecond)}`;
     if (!taken.allowed) {
       return reply(
-        errorReply("rate_limited", `Too many requests: ${spec.capacity} at once, then ${spec.refillPerSecond * 60} a minute per client for this route class.`, undefined, {
+        errorReply("rate_limited", auth.kind === "key" ? `Too many requests for this key: ${spec.capacity} at once, then ${Math.round(spec.refillPerSecond * 60)} a minute.` : `Too many requests: ${spec.capacity} at once, then ${spec.refillPerSecond * 60} a minute per client for this route class.`, undefined, {
           "retry-after": String(Math.max(1, Math.ceil(taken.retryAfterMs / 1000))),
           "ratelimit-policy": limitHeader,
         }),
       );
     }
 
+    let body: unknown = undefined;
+    if (isPost) {
+      try {
+        body = await readJson(req, limits.maxBodyBytes);
+      } catch (error) {
+        if (error instanceof BodyError) return reply(errorReply(error.code, error.message));
+        return reply(errorReply("invalid_request", "The body could not be read."));
+      }
+    }
+
+    let ticket: Ticket | null = null;
+    if (paid) {
+      // A malformed request is refused before any payment is asked for (route prepare: unless it is off, which says so).
+      if (matched.kind === "quote" || config.routePrepare !== "off") {
+        try {
+          api.checkPaid(matched.kind, url.searchParams, body);
+        } catch (error) {
+          if (error instanceof ApiError) return reply(errorReply(error.code, error.message, error.details));
+          throw error;
+        }
+      }
+      let gate: Gate;
+      try {
+        gate = await meter.gate({ route: matched.kind, path, target: `${url.pathname}${url.search}`, paymentHeader: req.headers["payment-signature"] }, auth);
+      } catch {
+        log(`metering failed on ${label}`);
+        return reply(errorReply("internal", "The API failed to answer. Nothing was charged."));
+      }
+      if (gate.kind === "reply") return reply(gate.reply);
+      if (gate.kind === "paid") ticket = gate.ticket;
+    }
+
+    let answer: unknown;
     try {
-      if (matched.kind !== "markets" && [...url.searchParams.keys()].length > 0) throw new ApiError("invalid_request", "This route takes no query.");
-      let body: unknown;
+      if (matched.kind !== "markets" && matched.kind !== "quote" && [...url.searchParams.keys()].length > 0) throw new ApiError("invalid_request", "This route takes no query.");
       switch (matched.kind) {
         case "health":
-          body = api.health();
+          answer = { ...api.health(), metering: meter.describe() };
           break;
         case "venues":
-          body = api.venues();
+          answer = api.venues();
           break;
         case "markets":
-          body = await api.listMarkets(url.searchParams);
+          answer = await api.listMarkets(url.searchParams);
           break;
         case "market":
-          body = await api.market(matched.venue, matched.id);
+          answer = await api.market(matched.venue, matched.id);
           break;
         case "groups":
-          body = api.groups();
+          answer = api.groups();
+          break;
+        case "quote":
+          answer = await api.quote(url.searchParams);
+          break;
+        case "route_prepare":
+          answer = await api.routePrepare(body);
           break;
       }
-      checkBody(policy, body);
-      return reply({ status: 200, body, headers: { "ratelimit-policy": limitHeader } });
+      checkBody(policy, answer);
     } catch (error) {
+      // A failed answer is never settled: the payment's claim is released and nothing is charged.
+      if (ticket !== null) meter.release(ticket);
       if (error instanceof ApiError) return reply(errorReply(error.code, error.message, error.details));
       if (error instanceof ServingViolation) log(`serving check refused an answer on ${label}`);
       else log(`handler failed on ${label}: ${error instanceof Error ? error.name : "non-error"}`);
       return reply(errorReply("internal", "The API failed to answer. Nothing was sent."));
     }
+    if (ticket === null) return reply({ status: 200, body: answer, headers: { "ratelimit-policy": limitHeader } });
+    let settled;
+    try {
+      settled = await meter.settle(ticket);
+    } catch {
+      log(`settlement failed on ${label}`);
+      return reply({ status: 200, body: answer, headers: { "ratelimit-policy": limitHeader } });
+    }
+    if (!settled.deliver) return reply(settled.reply);
+    return reply({ status: 200, body: answer, headers: { "ratelimit-policy": limitHeader, ...settled.headers } });
   }
-
   const server: Server = createServer({ maxHeaderSize: limits.maxHeaderBytes, keepAlive: true }, (req, res) => {
     const task = handle(req, res).catch(() => {
       if (!res.headersSent) res.destroy();

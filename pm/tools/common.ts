@@ -204,7 +204,8 @@ function plain<T extends object>(value: T): Record<string, unknown> {
   return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
 }
 
-export async function runPmTool(deps: PmToolDeps, meta: ToolMeta, work: () => Promise<ToolOutcome<object>>) {
+// Takes only the clock, the audit writer and the budget, so the API-mode tools (src/tools/api.ts) share the runner.
+export async function runPmTool(deps: Pick<PmToolDeps, "now" | "audit" | "budgetMs">, meta: ToolMeta, work: () => Promise<ToolOutcome<object>>) {
   const note = meta.note === undefined ? {} : { note: meta.note };
   try {
     const { summary, structured, auditWarnings } = await withBudget(deps.budgetMs, work);

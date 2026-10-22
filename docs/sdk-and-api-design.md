@@ -212,9 +212,12 @@ must be read from verified source code. The research records them only for Trueo
 - **dApp.** Imports `sdk/` directly. Standalone build reads venues in the browser as today, or the API when a
   key is set. The category mirror, the second rules recipe and `app/src/core/ports.ts` disappear.
 - **Cockpit daemon.** Unchanged role: holds credentials and the arm window. Its readers become `sdk/` readers.
-- **PayBox plugin.** Two modes behind one tool surface. Local mode runs `sdk/` in process and is free. API mode
-  calls `api/` and pays by x402. Moving the heavy work behind the API also shrinks `tools/list`, which already
+- **PayBox plugin.** Two modes. Local mode runs `sdk/` in process and is free. API mode calls `api/` and pays by
+  x402. Moving the heavy work behind the API also shrinks `tools/list`, which already
   sits 6,423 bytes over the hosted limit with the relay tools on (`docs/unified-accounts-agent.md`, V3).
+  As built (step 10): local mode is the existing `xo_*` and `pm_*` tools, unchanged; API mode adds five `api_*`
+  tools, registered only when `MARKETS_API_URL` is set, so the default tool set and `tools/list` stay as they were.
+  The two do not share tool names yet: the API serves Trueo alone, the local tools read XO, Polymarket and Kalshi.
 - **Linker job.** Uses `sdk/` readers and scoring instead of the recorder's readers. It writes candidates to
   the API's store as well as to the pull-request flow.
 - **Relay.** Keeps per-owner XO submission. Its order building already comes from shared code.
@@ -412,7 +415,64 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    name no condition, so their settlement is not placed from the index; Protocol V2 fills carry no price; each list
    covers at most three pages of a venue's own order.
 9. **Add quotes and route prepare**, then metering: subscription keys, x402 middleware, PayBox service listing.
+   *Done 2026-10-22.* `GET /v1/quote?group=&side=&size=&outcome=` (`api/quote.ts`) prices a stated size on every leg of a
+   group from `/v1/groups` (approved, or a candidate labelled `proposed` and never "approved"; identity links only, not past
+   `validUntil`) with the SDK engine alone (`sdk/engine` `quoteBook`: the depth walk, the fee models, `feeSpecId`) over the
+   market, books and fee spec the API reads for served venues (`markets.ts` `tradeView`; the fee is the reader's
+   `getFeeSpec`, re-read every 15 s); executable legs are ranked by net cost, best first, and every number carries its
+   source and age (book, fee spec with its URL, read date and ttl, market). It fails closed as the engine does: an unknown
+   model, a stale spec, a missing parameter or prose rounding leaves the fee and net cost null with the engine's code; a
+   complement book is never executable; a crossed or locked book is refused with no number; thin depth or an untradable
+   market is not executable. `POST /v1/route/prepare` (`api/route-prepare.ts`, zod-checked body: group, outcome, side, the
+   signer's own address, 1 to 4 legs of price, shares and GTC/FOK/FAK) returns unsigned typed-data orders built only with
+   `sdk/trade` (`computeClobAmounts`, the Polymarket order builders, `buildDecodedClobOrder`), each with its decoded block,
+   checked by `rebuildClobOrder` before it is sent, the summary lines, what the digest does and does not cover, the book's
+   best prices for reference and a list of what the signer must check; nothing is signed or submitted and no credential is
+   held. It is off by default (`API_ROUTE_PREPARE=off` answers `route_prepare_not_enabled`; `free` serves it at no charge;
+   `paid` sells it), because section 5 asks for a legal read before routing for others is charged. Metering is
+   `api/metering.ts` alone: subscription keys (`imk_<id>_<secret>`, issued, listed and revoked by `node api.mjs keys`, stored
+   as sha256 in the API's SQLite file, `Authorization: Bearer` only, constant-time check, a tier (`quote` or `full`) and a
+   rate limit per key); and x402 version 2 from the specification (`api/x402.ts`, sources and dates in its header): 402 with
+   PAYMENT-REQUIRED (one `exact` offer, USDC on Base, `maxTimeoutSeconds` 60, the bazaar discovery extension), the
+   PAYMENT-SIGNATURE payload checked exactly (scheme, network, asset, payTo, amount, timeout, token domain, resource,
+   validity window) and its signature checked as USDC will check it (FiatTokenV2_2's SignatureChecker: ECDSA for an address
+   with no code, ERC-1271 `isValidSignature` read on Base for a smart account; ERC-6492 refused), the payer and nonce claimed
+   atomically (replay), the facilitator's `/verify` before the handler and `/settle` only after a good answer; a failed
+   answer is never settled. USDC's proxy code, implementation (code-hash pinned), domain separator and decimals are checked on
+   chain before the first payment. The payTo address, network, facilitator, public URL and each price come only from the
+   environment, with no default; without them the paid routes answer `payments_not_configured`. `node api.mjs listing`
+   prints the listing manifest (`api/listing.ts`). Tested with a fake facilitator, keys generated in the tests, a fake
+   ERC-1271 wallet and the recorded USDC code (`test/api/x402.test.ts`, `keys.test.ts`, `quote.test.ts`); one local run paid
+   `/v1/quote` end to end over HTTP against a loopback fake facilitator. Behaviour change: the API now passes readers an
+   absolute book deadline (step 8 passed the 8 s budget, which Polymarket's reader read as a past instant, so no Polymarket
+   book was ever read). Not done: no quote is executable today, because no reader's own fee spec prices in the engine
+   (Trueo's lacks `lpFee`/`hookFee`, Polymarket's rounding is prose, step 4); route prepare builds Polymarket EOA orders
+   only (Limitless: the reader carries no exchange or fee module; XO: Kernel user operations; Trueo: a pool swap; Polymarket
+   Deposit Wallet: needs the relay's chain read); with the real policy only Trueo is served, so it builds nothing yet; x402
+   version 1 (X-PAYMENT) is not accepted; the PayBox listing is not submitted (PayBox lists services from the x402 Bazaar,
+   which a facilitator catalogs, and the CDP facilitator needs a CDP API key this server does not hold; see section 10);
+   `GET /v1/stream` is not built.
 10. **Give the plugin its API mode.**
+   *Done 2026-10-22.* `MARKETS_API_URL` (https, default port, a host name, no credentials, query or fragment; no default,
+   since no API is deployed) turns API mode on; unset, it is off and the plugin's tools, `tools/list` and requests are as
+   before (`pnpm test` still discovers 18 tools). On, `src/plugin.ts` and `src/local/server.ts` add five tools
+   (`src/tools/api.ts`): `api_venues`, `api_markets`, `api_market` and `api_groups` read `/v1/venues`, `/v1/markets`,
+   `/v1/markets/:venue/:id` and `/v1/groups` through one client (`src/api/client.ts`) that reaches only the configured
+   origin (checked again before every send; GET, no credential, no redirect, one attempt, a deadline and a body cap) and
+   never a venue or a local fallback. Each answer is checked with zod against the shapes `api/` builds (`src/api/schemas.ts`):
+   a wrong type, an unknown enum, a non-decimal number, a value its own origin says it lacks, or a candidate not labelled
+   proposed refuses the whole answer. Every field keeps the API's source and age (a `cache` value stays `cache`, and the
+   summary says "not live"); venue text goes through the untrusted-text sanitiser into the fixed slot. `venue_not_served`,
+   429 with its Retry-After (no retry), 404 and 5xx each get their own sentence. Paid calls follow PayBox's plugin
+   contract for x402: `api_quote` probes `/v1/quote` unpaid, checks the 402 (version 2 header or version 1 body; exactly
+   one `exact` USDC-on-Base offer, the payee in `MARKETS_API_PAY_TO`, at most `MARKETS_API_MAX_PAYMENT_USDC`, the probed
+   resource) and returns an `io.paybox/transactionProposal` of kind `x402` built by the starter's `proposeX402`; PayBox
+   re-fetches the 402, asks the user to approve, pays and retries, and the quote reaches the agent through the PayBox
+   request (the plugin holds no key and pays nothing). Tested against a fake API on `node:http`
+   (`test/tools-api-mode.test.ts`). Not done: no tool for `POST /v1/route/prepare` (prepare-only orders the user signs;
+   left for when its body is settled), no tool validates a paid quote body the agent passes back, and a live PayBox
+   payment against the API is untested (`api/x402.ts` accepts both an ECDSA payer and an ERC-1271 smart account, as
+   USDC does; PayBox's docs say its `pay_x402` pays from a plain EOA).
 
 Steps 3 to 7 can run in parallel once step 2 lands; they change structure and add readers but no product
 surface beyond the holdings view. Steps 8 to 10 are new product.
@@ -420,7 +480,15 @@ surface beyond the holdings view. Steps 8 to 10 are new product.
 ## 10. Decisions still open
 
 - Hosting and region for `api/`, and whether the dApp's standalone build calls it by default or only with a key.
-- Pricing per call and per subscription tier.
+- Pricing per call and per subscription tier. The prices are configuration (`API_X402_PRICE_*`), with no default.
+- Decided by step 9 (forced): the facilitator is called without credentials, as the x402 specification's `/verify` and
+  `/settle` are written. The CDP facilitator authenticates with a CDP API key ID and secret, which would make the API hold
+  a secret; which facilitator to use for Base mainnet, and whether to hold that key, stays open, and until then a paid
+  route works only with a facilitator that accepts the specification's unauthenticated calls.
+- Decided by step 9 (forced): route prepare is off unless the operator sets `API_ROUTE_PREPARE` (section 5); selling it
+  (`paid`) waits for the legal read section 5 asks for.
+- Decided by step 9 (forced): the API accepts x402 version 2 only (PAYMENT-SIGNATURE). PayBox's `pay_x402` defaults to
+  version 1 unless told otherwise; whether its `use_service` pays a version 2 challenge is unverified.
 - Whether the API ever holds venue credentials to submit on a user's behalf (section 4 says not now).
 - Which `unknown`-licence venues to clear first so the API can serve them. Until one is cleared the API serves Trueo
   alone, and the chain index's fields reach no answer (step 8).

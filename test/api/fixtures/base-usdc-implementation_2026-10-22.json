@@ -1,0 +1,19 @@
+{
+  "name": "base-usdc-implementation",
+  "address": "0x2cE6311ddAE708829bc0784C967b7d77D19FD779",
+  "chain_id": 8453,
+  "address_source": "implementation() (selector 0x5c60da1b) of the USDC FiatTokenProxy 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, eth_call over https://base-rpc.publicnode.com/ on 2026-10-22",
+  "size": 23464,
+  "sha256": "dcb3b7ca28662970d0a7cdad420e529fb837d7bf8a246b1a680c20e153db79e8",
+  "keccak256": "0x11b75a237997ab8328f65b2d5a55c10f0346d0a175741ed42ddf4f2c66b9e873",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/",
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0x2ce6311ddae708829bc0784c967b7d77d19fd779?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "FiatTokenV2_2",
+  "sourcify_onchain_equals_rpc": true,
+  "selectors_present": {
+    "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)": "0xcf092995",
+    "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)": "0xe3ee160e"
+  },
+  "captured_at": "2026-10-22"
+}

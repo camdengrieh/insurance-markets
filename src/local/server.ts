@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/server";
 
+import { apiModeRequested } from "../api/config.js";
 import { registerAccountTools } from "../tools/account.js";
+import { registerApiTools } from "../tools/api.js";
 import { registerClobTools } from "../tools/clob.js";
 import { registerCreateTools } from "../tools/create.js";
 import { registerDraftTools } from "../tools/draft.js";
@@ -30,5 +32,7 @@ export function createLocalMcpServer(): McpServer {
   registerCreateTools(server);
   registerClobTools(server);
   registerPmTools(server);
+  // API mode, on the same variable as the hosted bundle (src/plugin.ts), so both list one tool set.
+  if (apiModeRequested(process.env)) registerApiTools(server);
   return server;
 }
