@@ -13,10 +13,9 @@ import { XO_RPC_URL } from "../sdk/chain/xo/pins.js";
 //   - the free tier needs no secret: every variable has a working default except the data directory, which must be named
 //     (so the index never lands in a default place inside a repository by accident);
 //   - limits are compiled in and stated (README, GET /v1/health); the environment cannot raise them;
-//   - which venues are served is code (sdk/venues/licence.ts), never configuration: no variable widens it;
+//   - which venues are read is code (api/markets.ts, every SDK reader that needs no key), never configuration;
 //   - metering (step 9) has NO defaults for money: the payTo address and every price must be named, or the paid endpoints
-//     answer "payments_not_configured"; route prepare is off unless the operator turns it on (section 5 of the design:
-//     routing for others and charging for it needs a legal read first).
+//     answer "payments_not_configured"; route prepare is off unless the operator turns it on (API_ROUTE_PREPARE).
 
 export const API_VERSION = "0.1.0";
 export const DEFAULT_API_PORT = 8790;
@@ -47,9 +46,9 @@ export const API_ENV = Object.freeze({
   priceRoutePrepare: "API_X402_PRICE_ROUTE_PREPARE",
 });
 
-// POST /v1/route/prepare (docs/sdk-and-api-design.md section 5): "off" answers the fixed code route_prepare_not_enabled;
+// POST /v1/route/prepare (docs/sdk-and-api-design.md section 4): "off" answers the fixed code route_prepare_not_enabled;
 // "free" serves it at no charge (free-tier limits per client, or a key's); "paid" serves it to a subscription key whose tier
-// includes it or for an x402 payment. Off by default, and "paid" only after the legal read section 5 asks for.
+// includes it or for an x402 payment. Off by default: the operator's switch.
 export const ROUTE_PREPARE_MODES = ["off", "free", "paid"] as const;
 export type RoutePrepareMode = (typeof ROUTE_PREPARE_MODES)[number];
 

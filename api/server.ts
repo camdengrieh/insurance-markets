@@ -5,7 +5,6 @@ import type { AddressInfo, Socket } from "node:net";
 import { ApiError, ERROR_STATUS, type Api, type ErrorCode } from "./app.js";
 import type { ApiConfig, RateLimitSpec } from "./config.js";
 import type { Gate, Meter, Ticket } from "./metering.js";
-import { checkBody, ServingViolation, type ServingPolicy } from "./serving.js";
 
 // The API's HTTP server: node:http, no framework (relay/server.ts is the pattern).
 //
@@ -20,8 +19,7 @@ import { checkBody, ServingViolation, type ServingPolicy } from "./serving.js";
 //      configured number of proxies) for the route's class: over the limit is 429 with Retry-After;
 //   6. the route and its query or body, validated; on a paid route the metering gate (a key's tier, or an x402 payment
 //      verified before the handler runs); then the handler;
-//   7. every 2xx body is walked by the serving check (serving.ts) before it is sent; a paid call is settled only after a
-//      good answer, and never after a failed one.
+//   7. a paid call is settled only after a good answer, and never after a failed one.
 // Errors are JSON with a fixed code: { "error": { "code", "message" } }; a 402 carries the x402 PaymentRequired object as
 // its body and, base64, in PAYMENT-REQUIRED. Every answer carries x-request-id, cache-control no-store (no shared cache may
 // present an old answer as new), nosniff and no-referrer; CORS headers only for a configured origin.
@@ -77,7 +75,6 @@ export function clientAddress(req: IncomingMessage, hops: number): string {
 export interface ServerOptions {
   readonly api: Api;
   readonly config: ApiConfig;
-  readonly policy: ServingPolicy;
   readonly meter: Meter;
   readonly nowMs?: () => number;
   readonly log?: (line: string) => void;
@@ -190,7 +187,7 @@ function readJson(req: IncomingMessage, max: number): Promise<unknown> {
 }
 
 export async function startApiServer(options: ServerOptions): Promise<RunningServer> {
-  const { api, config, policy, meter } = options;
+  const { api, config, meter } = options;
   const limits = config.limits;
   const nowMs = options.nowMs ?? Date.now;
   const log = options.log ?? (() => undefined);
@@ -353,13 +350,11 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
           answer = await api.routePrepare(body);
           break;
       }
-      checkBody(policy, answer);
     } catch (error) {
       // A failed answer is never settled: the payment's claim is released and nothing is charged.
       if (ticket !== null) meter.release(ticket);
       if (error instanceof ApiError) return reply(errorReply(error.code, error.message, error.details));
-      if (error instanceof ServingViolation) log(`serving check refused an answer on ${label}`);
-      else log(`handler failed on ${label}: ${error instanceof Error ? error.name : "non-error"}`);
+      log(`handler failed on ${label}: ${error instanceof Error ? error.name : "non-error"}`);
       return reply(errorReply("internal", "The API failed to answer. Nothing was sent."));
     }
     if (ticket === null) return reply({ status: 200, body: answer, headers: { "ratelimit-policy": limitHeader } });

@@ -11,13 +11,13 @@ AWS layout in `deploy/aws` (one EC2 host, the image in ECR, an EBS volume at `/d
 `deploy/aws` is not changed here. Before the first deployment, put a TLS-terminating proxy in front (the API speaks
 plain HTTP) and set `API_TRUST_PROXY_HOPS` to match it.
 
-## What it serves, and what it never serves
+## What it serves
 
 | Route | Returns |
 |---|---|
-| `GET /v1/health` | version, uptime, the served venues, each chain indexer's state and lag, the stated limits |
-| `GET /v1/venues` | every venue: licence class, data terms, served or not and why, reader capabilities, read state (`ok`, `throttled`, `blocked`, `chain_only`, or `not_read` for a venue that is never asked), the chain it settles on and the indexer's progress |
-| `GET /v1/markets?venue=&category=&q=&limit=&cursor=` | normalised markets of the served venues, each field with its source (`venue_api`, `chain`, `cache`) and age |
+| `GET /v1/health` | version, uptime, the venues read (`readers`), each chain indexer's state and lag, the stated limits |
+| `GET /v1/venues` | every venue: whether the API has a reader for it, the reader's capabilities, read state (`ok`, `throttled`, `blocked`, `chain_only`, or `not_read` for a venue with no reader), its kept list's size and age, the chain it settles on, and the indexer's progress |
+| `GET /v1/markets?venue=&category=&q=&limit=&cursor=` | normalised markets of every venue read (or one), each field with its source (`venue_api`, `chain`, `cache`) and age |
 | `GET /v1/markets/:venue/:id` | one market, its rules fingerprint (`rules-v2`), its books, each with its source and age |
 | `GET /v1/groups` | approved links (approved by a person) and linker candidates, always labelled `proposed` with their score band |
 | `GET /v1/quote?group=&side=&size=&outcome=` | paid: the engine's depth-walked fill of a size on each leg of a group, after fees, best venue first, each number with its source and age |
@@ -25,12 +25,11 @@ plain HTTP) and set `API_TRUST_PROXY_HOPS` to match it.
 
 The contract of the two paid routes, the metering rules and the listing steps are in `api/README.md`.
 
-Section 5 of the design is enforced in one place, `api/serving.ts`, over `sdk/venues/licence.ts`: a venue is served only
-when a licence class (`open` or `attribution`) is recorded for it, its terms are not restricted and the platform
-registry found no restrictive clause. As recorded on 2026-10-22 that is **Trueo alone**. The six `own_use_only` venues
-(Kalshi, Novig, OG, Gemini, Underdog Exchange, ProphetX) are never read, cached or served; XO, Polymarket, Limitless and
-every other venue without a licence class are not served until a person records one; Quotient is never read or served.
-A venue that is not served is never asked. No variable or file can widen this.
+Every venue the SDK has a keyless reader for is read and served on every endpoint: XO, Polymarket, Kalshi, Limitless,
+Trueo, Hyperliquid, Pascal, Novig, Gemini and Manifold (`api/markets.ts`). Any other venue is never asked and answers
+`no_reader` (404). The API does not filter venues by licence class or data terms. Links are served as approved only when
+a person approved them; every candidate is served as `proposed`. Quotient is not read: it is a signal service a user's own
+agent pays for per call, not a venue.
 
 ## Running it
 
@@ -69,7 +68,7 @@ Without Docker: `node deploy/api/build.mjs && API_DATA_DIR=./data node deploy/ap
 | `API_FILL_RETENTION_DAYS` | `7` | fills older than this (by index time) are pruned hourly; resolutions and preparations are kept |
 | `API_LINKS_BUNDLE`, `API_LINKS_PIN` | none | the shipped link bundle (`pm/links/data/links.bundle.json`) and its pin file |
 | `API_CANDIDATES_BUNDLE`, `API_CANDIDATES_PIN` | none | the linker's `candidates.bundle.json` and `candidates.bundle.pin` (on the AWS host, the linker's `/data/out`) |
-| `API_ROUTE_PREPARE` | `off` | `off` (the route answers `route_prepare_not_enabled`), `free` (no charge) or `paid` (a key of tier `full`, or x402). Section 5 of the design: selling it needs a legal read first |
+| `API_ROUTE_PREPARE` | `off` | `off` (the route answers `route_prepare_not_enabled`), `free` (no charge) or `paid` (a key of tier `full`, or x402) |
 | `API_PUBLIC_URL` | none | the https origin clients reach the API at (the x402 resource URL); required once any payment variable is set |
 | `API_X402_FACILITATOR_URL` | none | the x402 facilitator's base URL (`/verify` and `/settle` are appended); https, no query or credentials; called without a credential |
 | `API_X402_PAY_TO` | none, never defaulted | the address that receives payments (20-byte hex, EIP-55 checksum if mixed case, not zero) |
@@ -102,9 +101,10 @@ PaymentRequired object, also in the `PAYMENT-REQUIRED` header.
 ## Upstream behaviour
 
 Every outbound request names the service with the fixed User-Agent `insurance-markets-api/0.1`, sends no Origin,
-cookie or credential, follows no redirect and uses no proxy. Venue reads go through the SDK readers behind the shared
-state rule (`sdk/venues/state.ts`): a 429 with Retry-After cools the venue down, a 403, three 401s or a web page served
-where JSON was expected blocks it for ten minutes, and nothing retries around either. A venue's list is read at most
+cookie or credential, follows no redirect, uses no proxy and takes at most 10 MiB per answer. Venue reads go through
+the SDK readers behind the shared state rule (`sdk/venues/state.ts`): a 429 with Retry-After cools the venue down, a
+403, three 401s or a web page served where JSON was expected blocks it for ten minutes, and nothing retries around
+either. A venue's list is read at most
 once a minute and at most three pages of 50 rows; answers are kept in memory only, labelled `cache` with their age.
 
 The indexer reads only pinned contracts (code hash checked before the first log), one bounded `eth_getLogs` per range
@@ -126,22 +126,26 @@ head. A failing RPC endpoint is set aside for 30 s to 10 minutes and the next is
 ## What was and was not verified
 
 Verified (`test/api/`): the bundle builds deterministically, starts with no secret, answers `/v1/health` and
-`/v1/venues` and stops cleanly on SIGTERM; every endpoint against every venue class with the real serving policy and
-the served venue in each read state; the indexer against one recorded pass per chain (real public RPC answers of
-2026-10-22: 80 Polygon fills in 3 blocks, 5 Limitless fills, 5 resolutions and 6 condition preparations in 200 Base
-blocks, 96 XO fills in 20 blocks), failover, range halving, reorg rewind and a pin failure. On 2026-10-22 one local run
-against the real public upstreams answered `/v1/venues` with no venue request, refused `/v1/markets?venue=polymarket`
-with `venue_not_served` (licence unknown) without contacting Polymarket, and read Trueo's list over Base (25 JSON-RPC
-POSTs): the three pages it read then (60 of Trueo's 1,376 active markets, at 20 a page; the page size is now 50) were
-all conditional markets, which the SDK's Trueo reader skips, so the list was empty.
+`/v1/venues` and stops cleanly on SIGTERM; every endpoint against every venue, those with a reader served and the rest
+answering `no_reader`, with Trueo in each read state; the indexer against one recorded pass per chain (real public RPC
+answers of 2026-10-22: 80 Polygon fills in 3 blocks, 5 Limitless fills, 5 resolutions and 6 condition preparations in 200 Base
+blocks, 96 XO fills in 20 blocks), failover, range halving, reorg rewind and a pin failure. On 2026-10-22 one local run of
+the bundle with the default configuration (indexer on) against the real public upstreams: `/v1/venues` listed the 19
+venues, 10 with a reader, each `ok`, with no venue request; `/v1/markets?venue=polymarket`, `xo` and `limitless` answered
+150, 150 and 73 rows, every venue field `venue_api` and the settlement `null` with the index's block range;
+`/v1/markets/polymarket/<id>` and `/v1/markets/xo/<id>` answered the market, its rules fingerprint and both books from
+`venue_api`; Kalshi, Hyperliquid and Novig answered 150 rows each, Manifold 150 and Gemini 60 after the 8 s budget (the
+first request answered with none and the read filled the kept list), Pascal 150 once the per-answer cap was raised from
+4 MiB (its snapshot was 5.9 MB); Trueo's Base RPC throttled the list read (429), which the answer stated as `throttled`
+with the retry time; `opinion` and `og` answered `no_reader`.
 
 Verified for step 9 (`test/api/x402.test.ts`, `keys.test.ts`, `quote.test.ts`, `deploy.test.ts`): every paid path with a
 fake facilitator and EIP-3009 payloads signed by keys generated in the tests (no payment, bad signature, wrong amount,
 asset, network or recipient, expired, not yet valid, replayed, ERC-6492, a fake ERC-1271 wallet accepting and refusing,
 valid then settled, failed handler never settled, settlement refused, pending and unanswered, facilitator and RPC down,
 USDC code or implementation changed); keys (missing, wrong, malformed, revoked, expired, over their limit, tier); quotes
-and route prepare against the served venue in each fake state with the real policy, and Polymarket through a test policy;
-the bundle's `keys` and `listing` commands. On 2026-10-22 one local run served `/v1/quote` against the SDK's recorded Trueo
+and route prepare with Trueo in each fake state beside a leg on a venue with no reader, and Polymarket from its recorded
+market; the bundle's `keys` and `listing` commands. On 2026-10-22 one local run served `/v1/quote` against the SDK's recorded Trueo
 world and paid it end to end over HTTP: 402, a signed payment, the loopback fake facilitator's `/verify` and `/settle`, 200
 with `PAYMENT-RESPONSE`, then 402 for the replay.
 

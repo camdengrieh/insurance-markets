@@ -96,25 +96,18 @@ function venuesBody() {
   return {
     asOfMs: NOW,
     venues: [
-      { id: "trueo", name: "Trueo", tier: "day_zero", licence: "open", dataTerms: "none_found", served: true, clause: null, reader: true, caps: { listMarkets: true }, state, list: { rows: 2, readAtMs: NOW - 30_000, ageMs: 30_000, lastError: null }, chain: { chainId: 8453, via: "Base 8453", indexed: false } },
+      { id: "trueo", name: "Trueo", reader: true, caps: { listMarkets: true }, state, list: { rows: 2, readAtMs: NOW - 30_000, ageMs: 30_000, lastError: null }, chain: { chainId: 8453, via: "Base 8453", indexed: false } },
       {
-        id: "polymarket",
-        name: "Polymarket",
-        tier: "day_zero",
-        licence: "unknown",
-        dataTerms: "unknown",
-        served: false,
-        notServed: { code: "licence_unknown", reason: "Nobody has recorded a licence class for Polymarket yet." },
-        clause: null,
+        id: "opinion",
+        name: "Opinion",
         reader: false,
         caps: null,
-        state: { kind: "not_read", reason: "Nobody has recorded a licence class for Polymarket yet.", next: null },
+        state: { kind: "not_read", reason: "The API has no reader for this venue.", next: null },
         list: null,
-        chain: { chainId: 137, via: "Polygon 137", indexed: true },
+        chain: null,
       },
     ],
     indexer: [],
-    dataTermsSource: "platform registry",
   };
 }
 
@@ -135,7 +128,7 @@ function rowBody(over: Record<string, unknown> = {}) {
     volume: { amount: "1000", unit: "usd", windowHours: 24 },
     resolution: null,
     fields: { title: read, outcomes: read, status: read, closesAt: read, displayPrice: read, volume: read, resolution: { source: null, reason: "Trueo is read from its contracts: its status is the settlement." } },
-    prov: { source: "trueo-rpc", fetchedAtMs: NOW - 45_000, freshness: "recent", licence: "open", transport: "T0-RPC" },
+    prov: { source: "trueo-rpc", fetchedAtMs: NOW - 45_000, freshness: "recent", transport: "T0-RPC" },
     ...over,
   };
 }
@@ -199,7 +192,7 @@ function groupsBody(proposed = [link("cand-1", "proposed", "good")]) {
     asOfMs: NOW,
     approved: [link("link-1", "human_approved")],
     proposed,
-    withheld: { count: 3, reason: "Links with a leg on a venue the API does not serve are left out." },
+    withheld: { count: 3, reason: "Links the dataset contract cannot carry (more than four legs, or a leg id or outcome map outside its shape) are left out." },
     sources: { approved: { state: "loaded", createdAt: "2026-10-21T00:00:00Z", manifestSha256: HASH }, candidates: { state: "absent" } },
   };
 }
@@ -290,21 +283,21 @@ describe("the API client reaches the configured API only", () => {
 });
 
 describe("configured: reads go to the API", () => {
-  it("api_venues lists the API's venues, served and not, with states and reasons", async () => {
+  it("api_venues lists the API's venues, with and without a reader, with their read states", async () => {
     routes.set("/v1/venues", { status: 200, body: venuesBody() });
     const h = await harness();
     const result = await h.call("api_venues", {});
     assert.equal(result.isError, false, result.text);
     const s = result.structured as Obj;
     assert.equal(s["mode"], "api");
-    assert.deepEqual(s["served"], ["trueo"]);
+    assert.deepEqual(s["readers"], ["trueo"]);
     assert.deepEqual((s["api"] as Obj)["origin"], API_BASE);
     const venues = s["venues"] as Obj[];
     assert.equal(venues.length, 2);
-    assert.deepEqual(venues[1]?.["notServed"], { code: "licence_unknown", reason: "Nobody has recorded a licence class for Polymarket yet." });
+    assert.deepEqual([venues[1]?.["reader"], venues[1]?.["state"]], [false, { kind: "not_read", reason: "The API has no reader for this venue.", next: null }]);
     assert.ok(!("caps" in (venues[0] as Obj)), "fields the plugin does not show are dropped");
-    assert.match(result.text, /serves trueo/);
-    const only = await h.call("api_venues", { served_only: true });
+    assert.match(result.text, /reads trueo/);
+    const only = await h.call("api_venues", { reader_only: true });
     assert.equal(((only.structured as Obj)["venues"] as Obj[]).length, 1);
     assert.deepEqual(seen, ["/v1/venues", "/v1/venues"]);
     assert.deepEqual(globalCalls, []);
@@ -381,7 +374,7 @@ describe("malformed answers are refused whole", () => {
     ["a title that is not marked untrusted", "api_markets", { status: 200, body: marketsBody([rowBody({ title: "plain text" })]) }, {}],
     ["a row from a venue the answer does not list", "api_markets", { status: 200, body: marketsBody([rowBody({ venue: "xo" })]) }, {}],
     ["a body that is not JSON", "api_venues", { status: 200, raw: "<html>blocked</html>" }, {}],
-    ["a venue served with a refusal", "api_venues", { status: 200, body: { ...venuesBody(), venues: [{ ...venuesBody().venues[0], notServed: { code: "licence_unknown", reason: "x" } }] } }, {}],
+    ["a venue with a reader that is not read", "api_venues", { status: 200, body: { ...venuesBody(), venues: [{ ...venuesBody().venues[0], state: { kind: "not_read", reason: "x", next: null } }] } }, {}],
     ["a candidate labelled approved", "api_groups", { status: 200, body: groupsBody([link("cand-1", "human_approved")]) }, {}],
     ["a book whose origin says there is none", "api_market", { status: 200, body: { ...marketBody(), books: [{ ...marketBody().books[0], source: { source: null, reason: "x" } }] } }, { venue: "trueo", market_id: "8453:0x00000000000000000000000000000000000000c3" }],
   ];
@@ -407,13 +400,13 @@ describe("malformed answers are refused whole", () => {
 });
 
 describe("the API's refusals are stated", () => {
-  it("venue_not_served: says the API does not serve it, with the API's reason, and points to the local tools", async () => {
-    routes.set("/v1/markets", { status: 403, body: { error: { code: "venue_not_served", message: "Nobody has recorded a licence class for Polymarket yet.", details: { code: "licence_unknown" } } } });
+  it("no_reader: says the API has no reader for the venue, with the API's words, and points to the local tools", async () => {
+    routes.set("/v1/markets", { status: 404, body: { error: { code: "no_reader", message: "The API has no reader for this venue." } } });
     const h = await harness();
-    const result = await h.call("api_markets", { venue: "polymarket" });
+    const result = await h.call("api_markets", { venue: "opinion" });
     assert.equal(result.isError, true);
-    assert.match(result.text, /does not serve that venue \(licence_unknown\)/);
-    assert.match(result.text, /Nobody has recorded a licence class/);
+    assert.match(result.text, /has no reader for that venue/);
+    assert.match(result.text, /The API says: "The API has no reader for this venue\."/);
     assert.match(result.text, /xo_\*, pm_\*/);
     assert.deepEqual(globalCalls, [], "no fallback to reading the venue");
   });

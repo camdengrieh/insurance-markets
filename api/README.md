@@ -11,7 +11,7 @@ environment table are in `deploy/api/README.md`.
 |---|---|
 | `main.ts` | the entry point, and the only file that reads `process.env`, the global `fetch` and the wall clock; also the `keys` and `listing` commands |
 | `config.ts` | configuration from the environment, validated (relay/config.ts is the pattern); the compiled-in limits |
-| `server.ts` | the `node:http` server: methods, size limits, the key check, per-key or per-client token buckets with 429 and Retry-After, the metering gate on paid routes, CORS for the configured dApp origins, fixed JSON errors, the serving check on every answer, settle after a good paid answer |
+| `server.ts` | the `node:http` server: methods, size limits, the key check, per-key or per-client token buckets with 429 and Retry-After, the metering gate on paid routes, CORS for the configured dApp origins, fixed JSON errors, settle after a good paid answer |
 | `app.ts` | the parts and the route handlers: `/v1/health`, `/v1/venues`, `/v1/markets`, `/v1/markets/:venue/:id`, `/v1/groups`, `/v1/quote`, `/v1/route/prepare` |
 | `quote.ts` | one leg priced by the SDK engine (`quoteBook`) with every number's source and age, the crossed-book refusal, the ranking |
 | `route-prepare.ts` | the route prepare body schema and the Polymarket EOA order built with `sdk/trade`, with its decoded block and the signer's checks |
@@ -20,8 +20,7 @@ environment table are in `deploy/api/README.md`.
 | `x402.ts` | x402 version 2 from the specification: requirements, the payload schema, the local checks, the signature as USDC checks it (ECDSA or ERC-1271 on Base), the facilitator client, the on-chain check of the pinned USDC |
 | `listing.ts` | the bazaar discovery extension every 402 carries and the listing manifest (`node api.mjs listing`) |
 | `metering-store.ts` | the `api_keys` and `x402_payments` tables in the same SQLite file as the index |
-| `serving.ts` | the one serving gate (section 5) over `sdk/venues/licence.ts`, and `checkBody`, which refuses any answer naming a venue that is not served |
-| `markets.ts` | the SDK venue readers of the served venues behind the shared state rule; the in-memory list, detail, book and fee caches with their read times; each row's fields with source and age; `tradeView` for quotes and orders |
+| `markets.ts` | every SDK venue reader that needs no key, behind the shared state rule; the in-memory list, detail, book and fee caches with their read times; each row's fields with source and age; `tradeView` for quotes and orders |
 | `chain-fields.ts` | the index's read functions: an outcome's last trade from its fills, a market's settlement from resolution events |
 | `groups.ts` | approved links and linker candidates from the hash-pinned link bundles; candidates always "proposed" with their band |
 | `upstream.ts` | the one outbound fetch: User-Agent `insurance-markets-api/0.1`, no Origin, cookie or credential, no redirect, a size cap and a deadline |
@@ -33,12 +32,14 @@ environment table are in `deploy/api/README.md`.
 
 ## Rules
 
-- **What is served is code.** `apiServability` (`sdk/venues/licence.ts`) serves a venue only with a recorded licence class
-  (`open` or `attribution`) in `sdk/venues/policy.ts`, no restriction there, and a registry data-terms status of
-  `none_found`; the stricter of the two records wins. Today that is Trueo alone. A venue that is not served is never
-  asked, and `checkBody` refuses (as `internal`, never a partial answer) any answer that names one under a `venue` key.
-  `main.ts` always passes `API_SERVING_POLICY`; no variable or file can widen it. Tests may pass another policy only to
-  exercise a path no served venue reaches today.
+- **Every venue with a reader is served.** `markets.ts` constructs every SDK reader that reads without a key and knows its
+  host: XO, Polymarket, Kalshi, Limitless, Trueo, Hyperliquid, Pascal, Novig, Gemini and Manifold. Every endpoint serves
+  each of them. Any other venue (OG, SX Bet and Underdog Exchange, whose readers have no registered host; Polymarket US,
+  Myriad, World, ProphetX, Predict.fun and Opinion, which have no reader) is never asked and answers `no_reader` (404).
+  The API does not filter venues by licence class or data terms, and no answer carries either. Quotient is not read: it
+  is a signal service a user's own agent pays for per call, not a venue.
+- **Links are approved only by a person.** `/v1/groups` serves a link as approved only when its record holds a person's
+  recorded approval; every linker candidate is served as `proposed` with its score band.
 - **Never shown as live when it is not.** A row read for this request is `venue_api` (or `chain` for a venue read from its
   contracts, like Trueo); a row kept from an earlier read is `cache` with its age; an index field is `chain` with the time
   the index read it and the block it rests on. A field with no value is `null` with the reason. Venue answers stay in
@@ -50,12 +51,11 @@ environment table are in `deploy/api/README.md`.
   no wider than the span (at most 10,000 blocks, the RPC port's cap), ending at least the confirmation depth below the head.
 
 - **Money only in `metering.ts`.** `sdk/` never sees a price, a key or a payment; the handlers never see one either. A
-  paid answer is settled only after it was built and passed the serving check; a failed answer is never settled.
+  paid answer is settled only after it was built; a failed answer is never settled.
 - **No defaults for money.** The payTo address, the network, the facilitator, the public URL and each price come from the
   environment only; without them a paid route answers `payments_not_configured` (a key still works).
-- **Route prepare is off by default** (section 5 of the design: routing orders for others and charging for it may carry
-  venue-terms and regulatory obligations, and needs a legal read before it is paid). `API_ROUTE_PREPARE=free` serves it
-  at no charge; `paid` sells it, and is for after that read.
+- **Route prepare is off by default**, the operator's switch: `API_ROUTE_PREPARE=free` serves it at no charge; `paid`
+  sells it.
 
 ## Paid endpoints (the contract)
 
@@ -72,8 +72,9 @@ A malformed request is refused (400) before any payment is asked for.
 | `outcome` | optional, the outcome index on the link's first leg (default 0); each leg's own index comes from its outcome map |
 
 Only an identity link, not past its `validUntil`, is quoted (`group_not_quotable` otherwise); a link that is not among the
-served groups is `group_not_found`. The answer: `group` (`state` `approved` with the approval stated, or `proposed` with its
-band and "no person has approved"), `request`, `best` (venue, market, net cost and vwap of the first ranked leg, or null),
+groups `/v1/groups` serves is `group_not_found`. A leg on a venue the API has no reader for is listed unranked with the
+reason "The API has no reader for this venue." The answer: `group` (`state` `approved` with the approval stated, or
+`proposed` with its band and "no person has approved"), `request`, `best` (venue, market, net cost and vwap of the first ranked leg, or null),
 `legs` (ranked first, then the rest unranked) and `method`. Each leg: `venue`, `marketId`, `outcomeIndex`, `tokenId`,
 `collateral`, `executable`, `rank`, `reasons`, `quote` (`requestedSize`, `filledSize`, `complete`, `bestPrice`, `vwap`,
 `notional`, `fee`, `netCost`, `feeSpecId`, `feePayer`, `feeError`, `derived`; null when nothing could be quoted) and
@@ -140,7 +141,7 @@ rail"; `use_service` probes the URL, parses the 402, has the user approve, pays 
 listing API of its own: a service reaches it through the x402 Bazaar, which a facilitator that implements the `bazaar`
 extension fills after it processes payments for a resource. What an operator must do:
 
-1. Have the legal read of section 5 done for whatever is sold, and set the payment variables (`deploy/api/README.md`).
+1. Set the payment variables (`deploy/api/README.md`).
 2. Run `node api.mjs listing` and keep its output beside the deployment: the service name, tags, the rail, `payTo`, and per
    endpoint the price and the exact `accepts` a 402 states, with the bazaar `info`/`schema` every 402 carries.
 3. Use a facilitator for Base mainnet that implements the bazaar extension and accepts the specification's unauthenticated
@@ -159,12 +160,8 @@ cursor, rewind deletes everything above the kept block) without changing the ind
 
 - No quote is executable today: no reader's own fee spec prices in the engine (Trueo's lacks the engine's `lpFee` and
   `hookFee`; Polymarket's rounding is prose), so every leg shows its walk with the fee and net cost null and the code.
-- With the real serving policy only Trueo is served, so route prepare builds nothing yet (Trueo is a pool swap).
 - `GET /v1/stream` is not built.
 
-- No venue on an indexed chain is served yet: XO, Polymarket and Limitless have no licence class, so the index's last
-  trades and settlements reach no answer until a person reads their terms and records one (`test/api/merge.test.ts`
-  exercises the merge with a test policy).
 - A Limitless row names no condition (its id is a slug), so its settlement is not placed from the index; its last trade is
   matched by the token ids the venue lists.
 - Protocol V2 fills on Polygon are stored without a price: their collateral and position decimals are not pinned.

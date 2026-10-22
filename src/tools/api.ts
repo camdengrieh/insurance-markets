@@ -73,7 +73,7 @@ const READ_ANNOTATIONS = { readOnlyHint: true, destructiveHint: false, idempoten
 const PAY_ANNOTATIONS = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } as const;
 
 const API_NOTICE = [
-  "Read from the hosted markets API (API mode), not from the venues: the API serves only venues whose recorded licence and data terms allow it, and never contacts one it does not serve.",
+  "Read from the hosted markets API (API mode), not from the venues: the API reads every venue it has a reader for and never contacts one it has no reader for.",
   API_SOURCE_NOTE,
   UNTRUSTED_DATA_NOTICE,
 ].join(" ");
@@ -130,10 +130,10 @@ function toolError(error: unknown, route: string): PmToolError {
       );
     case "api_error":
       switch (error.code) {
-        case "venue_not_served":
+        case "no_reader":
           return new PmToolError(
-            "VENUE_NOT_SERVED",
-            `The markets API does not serve that venue${error.detailCode === null ? "" : ` (${error.detailCode})`}, so it read nothing from it.${said(error)} The local tools (xo_*, pm_*) read XO, Polymarket and Kalshi over your own connection instead.`,
+            "NO_READER",
+            `The markets API has no reader for that venue, so it read nothing from it.${said(error)} The local tools (xo_*, pm_*) read XO, Polymarket and Kalshi over your own connection instead.`,
           );
         case "market_not_found":
           return new PmToolError("MARKET_NOT_FOUND", `The venue has no such market, according to the markets API.${said(error)}`);
@@ -194,11 +194,11 @@ const marketIdInput = z.string().regex(/^[A-Za-z0-9_.:#-]{1,120}$/, "a venue mar
 const queryText = z.string().min(1).max(100).refine((text) => !/[\u0000-\u001f\u007f]/.test(text), "no control characters");
 
 export const apiVenuesInput = z.strictObject({
-  served_only: z.boolean().optional().describe("true = only the venues the API serves. Default false (every venue, with why it is or is not served)."),
+  reader_only: z.boolean().optional().describe("true = only the venues the API has a reader for. Default false (every venue it knows)."),
 });
 
 export const apiMarketsInput = z.strictObject({
-  venue: venueInput.optional().describe("One venue id; omit for every venue the API serves."),
+  venue: venueInput.optional().describe("One venue id; omit for every venue the API reads."),
   category: z.enum(CATEGORIES).optional().describe("One of the fixed nine categories."),
   q: queryText.optional().describe("Title words to match (1 to 100 characters)."),
   limit: z.int().min(1).max(LIST_LIMIT_MAX).optional().describe(`Rows to return, 1 to ${LIST_LIMIT_MAX} (default ${LIST_LIMIT_DEFAULT}).`),
@@ -239,24 +239,19 @@ function venuesTool(deps: ApiToolDeps, input: z.infer<typeof apiVenuesInput>) {
     const all = answer.venues.map((v) => ({
       id: v.id,
       name: cleanApiText(v.name, 80),
-      tier: v.tier,
-      licence: v.licence,
-      dataTerms: v.dataTerms,
-      served: v.served,
-      notServed: v.notServed === undefined ? null : { code: v.notServed.code, reason: cleanApiText(v.notServed.reason) },
       reader: v.reader,
       state: stateOutOf(v.state),
       list: v.list === null ? null : { ...v.list, lastError: v.list.lastError === null ? null : cleanApiText(v.list.lastError) },
       chain: v.chain === null ? null : { ...v.chain, via: cleanApiText(v.chain.via, 80) },
     }));
-    const served = all.filter((v) => v.served).map((v) => v.id);
-    const venues = input.served_only === true ? all.filter((v) => v.served) : all;
-    const structured: VenuesOutput = { mode: "api", api: apiMeta(origin, answer.asOfMs, receivedAtMs), venues, served, notice: API_NOTICE };
-    const states = all.filter((v) => v.served).map((v) => `${v.id}=${v.state.kind}`);
+    const readers = all.filter((v) => v.reader).map((v) => v.id);
+    const venues = input.reader_only === true ? all.filter((v) => v.reader) : all;
+    const structured: VenuesOutput = { mode: "api", api: apiMeta(origin, answer.asOfMs, receivedAtMs), venues, readers, notice: API_NOTICE };
+    const states = all.filter((v) => v.reader).map((v) => `${v.id}=${v.state.kind}`);
     const summary =
-      `The markets API lists ${plural(all.length, "venue")} and serves ${served.length === 0 ? "none" : served.join(", ")}` +
+      `The markets API lists ${plural(all.length, "venue")} and reads ${readers.length === 0 ? "none" : readers.join(", ")}` +
       `${states.length === 0 ? "" : ` (read state: ${states.join(", ")})`}. ` +
-      `${all.length - served.length} are not served (each with its reason) and are never contacted by the API.`;
+      `${all.length - readers.length} have no reader in the API and are never contacted by it.`;
     return { summary, structured };
   });
 }
@@ -420,7 +415,7 @@ function groupsTool(deps: ApiToolDeps, input: z.infer<typeof apiGroupsInput>) {
     };
     const summary =
       `${plural(approved.length, "approved link")} and ${plural(proposed.length, "proposed candidate")} match (returned ${page.length}${structured.next === null ? "" : `, more at offset ${structured.next}`}); ` +
-      `the API withheld ${answer.withheld.count} with a leg on a venue it does not serve. Candidates are guesses, never links. An empty list means nothing was reviewed, not that markets are unrelated.`;
+      `the API withheld ${answer.withheld.count} that the published dataset shape cannot carry. Candidates are guesses, never links. An empty list means nothing was reviewed, not that markets are unrelated.`;
     return { summary, structured };
   });
 }
@@ -464,12 +459,12 @@ function quoteTool(deps: ApiToolDeps, input: z.infer<typeof apiQuoteInput>) {
 // ---- registration ----
 
 const VENUES_DESCRIPTION = [
-  "List every venue the hosted markets API knows: its licence class and data terms, whether the API serves it and why not, the API's read state for it (ok, throttled, blocked, chain_only) and the age of its kept market list.",
+  "List every venue the hosted markets API knows: whether it has a reader for it, the API's read state for it (ok, throttled, blocked, chain_only, or not_read without a reader), the age of its kept market list and the chain it settles on.",
   DESCRIPTION_TAIL,
 ].join(" ");
 
 const MARKETS_DESCRIPTION = [
-  "List open markets across the venues the markets API serves, filtered by venue, category (one of nine) or title words, in pages.",
+  "List open markets across the venues the markets API reads, filtered by venue, category (one of nine) or title words, in pages.",
   "Each row gives its title and outcome labels (untrusted), status, close time, category, display prices (never quotes), volume, the settlement read on chain where the venue settles there, each outcome's last on-chain trade, and the source and age of every field. A blocked or throttled venue keeps its rows with the fields only it holds empty and the reason stated.",
   DESCRIPTION_TAIL,
 ].join(" ");
@@ -482,7 +477,7 @@ const MARKET_DESCRIPTION = [
 
 const GROUPS_DESCRIPTION = [
   "List cross-venue groups from the markets API: links a person approved, and linker candidates, always labelled proposed with a score band. Filter by venue or market. Ids, hashes, close times, outcome maps, proof and state only: no titles, prices or rules text.",
-  "A proposed candidate is a guess and never a link. Links with a leg on a venue the API does not serve are withheld and counted.",
+  "A proposed candidate is a guess and never a link. Links the published dataset shape cannot carry are withheld and counted.",
   DESCRIPTION_TAIL,
 ].join(" ");
 

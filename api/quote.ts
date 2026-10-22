@@ -9,7 +9,7 @@ import type { Origin, TradeView } from "./markets.js";
 
 // GET /v1/quote (docs/sdk-and-api-design.md section 4): the depth-walked fill of a stated size across a group's venues,
 // after fees, best venue first. All the arithmetic is the SDK engine's (sdk/engine: the depth walk, the fee models and the
-// fee-spec id), over the books the API reads for served venues only (markets.ts tradeView). It fails closed exactly as the
+// fee-spec id), over the books the API reads (markets.ts tradeView; a venue with no reader is a leg stated unavailable). It fails closed exactly as the
 // engine does, and a little earlier:
 //   - an unknown fee model, a stale or undated fee spec, or a parameter the model needs and the spec lacks: the walk is
 //     shown, the fee and the net cost are null with the engine's code, and the leg is not executable;

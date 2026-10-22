@@ -37,7 +37,7 @@ import {
 //                                              EOA's ECDSA or a contract wallet's ERC-1271, read on Base as USDC reads it);
 //        the authorization was seen before  -> 402 (replay: the payer and nonce are claimed atomically in the store);
 //        the facilitator's /verify refuses  -> 402; it cannot be reached -> 503;
-//      then the handler runs. A handler that fails (an error answer, or an answer the serving check refuses) is NOT settled:
+//      then the handler runs. A handler that fails (an error answer, or an internal failure) is NOT settled:
 //      the claim is released and nothing is charged. A good answer is settled with /settle and sent with PAYMENT-RESPONSE.
 //      A settlement the facilitator says failed withholds the answer (402); a settlement whose outcome is unknown (pending
 //      on chain, or no answer from the facilitator) still delivers the answer, so a payer is never charged with nothing
@@ -165,7 +165,7 @@ export function createMeter(deps: MeterDeps): Meter {
     async gate(request, auth) {
       if (auth.kind === "refused") return { kind: "reply", reply: { status: 401, body: errorBody("unauthorized", auth.message), headers: { "www-authenticate": "Bearer" } } };
       if (request.route === "route_prepare" && config.routePrepare === "off") {
-        return { kind: "reply", reply: { status: 403, body: errorBody("route_prepare_not_enabled", "Route prepare is not enabled on this server (API_ROUTE_PREPARE is off): routing orders for others needs a legal read first.") } };
+        return { kind: "reply", reply: { status: 403, body: errorBody("route_prepare_not_enabled", "Route prepare is not enabled on this server (API_ROUTE_PREPARE is off).") } };
       }
       const hasPayment = request.paymentHeader !== undefined;
       if (auth.kind === "key") {

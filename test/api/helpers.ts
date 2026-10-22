@@ -8,7 +8,6 @@ import { writeFileSync } from "node:fs";
 
 import { createApi, type Api } from "../../api/app.js";
 import { assertStartable, loadApiConfig, type ApiConfig } from "../../api/config.js";
-import { API_SERVING_POLICY, type ServingPolicy } from "../../api/serving.js";
 import { startApiServer, type RunningServer } from "../../api/server.js";
 import { SqliteIndexStore, type IndexStore } from "../../api/store.js";
 import { SqliteMeteringStore, type MeteringStore } from "../../api/metering-store.js";
@@ -20,6 +19,7 @@ import { contentSha256, type CandidateInput, type Link, type LinkLeg } from "../
 import { emptyRegistry, findLink, proposeLink, type Registry } from "../../sdk/links/store.js";
 import type { FetchLike, VenueId } from "../../sdk/model.js";
 import { termsAllowPersistence } from "../../sdk/venues/licence.js";
+import { fakeResponse, json } from "../../sdk/venues/testkit/index.js";
 
 // Test support for the API: a config, a server on a free loopback port, a clock the test moves, and the SDK's recorded
 // venue worlds (loaded at run time: their modules import JSON, which the root typecheck does not resolve).
@@ -84,6 +84,15 @@ export function forbiddenFetch(venue: string, calls: string[]): FetchLike {
   };
 }
 
+// A venue the test gives no recording: every request is noted and answered 404, so its reader reads nothing and the API
+// keeps nothing for it.
+export function absentVenue(venue: VenueId, calls: string[] = []): FetchLike {
+  return async (input) => {
+    calls.push(`${venue} ${input}`);
+    return fakeResponse(json({ error: "not found" }, 404));
+  };
+}
+
 export interface Harness {
   readonly api: Api;
   readonly server: RunningServer;
@@ -96,7 +105,6 @@ export interface Harness {
 
 export interface HarnessOptions {
   readonly config?: ApiConfig;
-  readonly policy?: ServingPolicy;
   readonly fetchFor: (venue: VenueId) => FetchLike;
   readonly rpcFetch?: FetchLike;
   readonly clock: Clock;
@@ -119,12 +127,10 @@ async function answerOf(response: Response): Promise<{ status: number; headers: 
 
 export async function startHarness(options: HarnessOptions): Promise<Harness> {
   const config = options.config ?? testConfig();
-  const policy = options.policy ?? API_SERVING_POLICY;
   const store = options.store ?? SqliteIndexStore.open(":memory:");
   const metering = options.metering ?? SqliteMeteringStore.open(":memory:");
   const api = createApi({
     config,
-    policy,
     store,
     fetchFor: options.fetchFor,
     rpcFetch: options.rpcFetch ?? refuse("RPC"),
@@ -133,7 +139,7 @@ export async function startHarness(options: HarnessOptions): Promise<Harness> {
   });
   const parts = paymentParts(config, options.facilitatorFetch ?? refuse("facilitator"), options.assetRpcFetch ?? refuse("Base RPC"), options.clock.read);
   const meter = createMeter({ config, store: metering, ...parts, nowMs: options.clock.read });
-  const server = await startApiServer({ api, config, policy, meter, nowMs: options.clock.read });
+  const server = await startApiServer({ api, config, meter, nowMs: options.clock.read });
   return {
     api,
     server,
@@ -214,7 +220,6 @@ export function writeBundle(dir: string, name: string, reg: Registry, includeCan
   writeFileSync(pin, `${built.value.manifestSha256}\n`);
   return { bundle, pin };
 }
-
 
 // Link bundles from explicit pairs: each pair is proposed, and approved by a (test) person when `approved` is set. The
 // approved ones go in the links bundle, every live one in the candidates bundle, both pinned as pm writes them.

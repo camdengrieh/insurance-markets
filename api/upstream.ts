@@ -11,7 +11,9 @@ import { FetchError } from "../sdk/venues/transport.js";
 
 export const API_USER_AGENT = "insurance-markets-api/0.1";
 export const DEFAULT_UPSTREAM_TIMEOUT_MS = 10_000;
-export const DEFAULT_UPSTREAM_MAX_BYTES = 4 * 1024 * 1024;
+// Above the largest answer a reader takes: Pascal's market list is one snapshot its reader caps at 9,000,000 characters
+// (5,930,647 bytes on 2026-10-22).
+export const DEFAULT_UPSTREAM_MAX_BYTES = 10 * 1024 * 1024;
 
 export interface HonestFetchOptions {
   // The platform fetch (globalThis.fetch in main.ts); tests pass a fake.

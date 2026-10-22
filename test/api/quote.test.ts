@@ -4,20 +4,18 @@ import { test } from "node:test";
 import { issueKey } from "../../api/keys.js";
 import type { TradeView } from "../../api/markets.js";
 import { legOutcomeIndex, quoteLeg, rankLegs } from "../../api/quote.js";
-import type { ServingPolicy } from "../../api/serving.js";
 import { unknownFeeSpec, xoFeeSpec } from "../../sdk/engine/fee-specs.js";
 import type { Book, FeeSpec, Market, VenueId } from "../../sdk/model.js";
 import { rebuildClobOrder } from "../../sdk/trade/clob/decoded.js";
 import { POLYMARKET_EXCHANGES } from "../../sdk/trade/clob/venues.js";
-import { apiServability } from "../../sdk/venues/licence.js";
 import { CHAIN_ONLY_REASON, FAKE_VENUE_STATES, fakeVenue, type FakeVenueState } from "../../sdk/venues/testkit/index.js";
 import type { FetchLike } from "../../sdk/model.js";
 import { API_LIMITS } from "../../api/config.js";
 import { Clock, forbiddenFetch, groupEnv, polymarketSenate, realLeg, startHarness, testConfig, trueoWorld, venuesNamed } from "./helpers.js";
 
-// GET /v1/quote and POST /v1/route/prepare (docs/sdk-and-api-design.md sections 4 and 5): the engine's numbers and its fail-
-// closed rules, leg by leg; the served venue in every fake read state with the REAL serving policy; and Polymarket through a
-// TEST policy (no licence class is recorded for it, so only a test may serve it) for the order builder.
+// GET /v1/quote and POST /v1/route/prepare (docs/sdk-and-api-design.md section 4): the engine's numbers and its fail-closed
+// rules, leg by leg; Trueo in every fake read state beside a leg on a venue the API has no reader for; and Polymarket, from
+// its recorded Senate market, for the order builder.
 
 const NOW = Date.parse("2026-10-22T12:00:00Z");
 const OWNER = "0x1111111111111111111111111111111111111111";
@@ -99,15 +97,15 @@ function trueoFetchFor(state: FakeVenueState, ok: FetchLike, nowMs: () => number
 }
 
 for (const state of FAKE_VENUE_STATES) {
-  test(`with the real policy, Trueo ${state}: quotes and route prepare name no unserved venue and state each leg's reason`, async () => {
+  test(`Trueo ${state}: quotes and route prepare state each leg's reason, a venue without a reader included`, async () => {
     const world = await trueoWorld();
     const clock = new Clock(world.nowMs);
-    const pm = await polymarketSenate();
     const live = `8453:${world.liveAddress}`.toLowerCase();
     const groups = groupEnv([
       { a: realLeg("trueo", live), b: realLeg("trueo", `8453:${world.flippedAddress}`), approved: true },
       { a: realLeg("trueo", live), b: realLeg("trueo", `8453:${world.flippedAddress}`.replace(/.$/, "0")), approved: false },
-      { a: realLeg("polymarket", pm.conditionId), b: realLeg("trueo", live), approved: true },
+      // Opinion has no reader in the API.
+      { a: realLeg("trueo", live), b: realLeg("opinion", "op-1"), approved: true },
     ]);
     const asked: string[] = [];
     const config = { ...testConfig({ ...groups.env, API_ROUTE_PREPARE: "free" }), limits: { ...API_LIMITS, paid: { capacity: 1_000, refillPerSecond: 1 } } };
@@ -117,7 +115,7 @@ for (const state of FAKE_VENUE_STATES) {
       const { key } = issueKey(h.metering, { label: "t", tier: "full" }, clock.now);
       const auth = { authorization: `Bearer ${key}` };
       const bodies: unknown[] = [];
-      const [approvedId, proposedId, withheldId] = groups.linkIds as [string, string, string];
+      const [approvedId, proposedId, noReaderId] = groups.linkIds as [string, string, string];
 
       const approved = await h.get(`/v1/quote?group=${approvedId}&side=buy&size=10`, auth);
       bodies.push(approved.json);
@@ -158,9 +156,13 @@ for (const state of FAKE_VENUE_STATES) {
       assert.equal(label["state"], "proposed");
       assert.match(String(label["approval"]), /no person has approved/);
 
-      // A link with a leg on an unserved venue is withheld from /v1/groups and so cannot be quoted or routed.
-      const withheld = await h.get(`/v1/quote?group=${withheldId}&side=buy&size=1`, auth);
-      assert.deepEqual([withheld.status, (withheld.json["error"] as Record<string, unknown>)["code"]], [404, "group_not_found"]);
+      // A link with a leg on a venue the API has no reader for is quoted: that leg is stated unavailable, never asked.
+      const noReader = await h.get(`/v1/quote?group=${noReaderId}&side=buy&size=1`, auth);
+      bodies.push(noReader.json);
+      assert.equal(noReader.status, 200, JSON.stringify(noReader.json));
+      const opinion = (noReader.json["legs"] as Array<Record<string, unknown>>).find((l) => l["venue"] === "opinion") as Record<string, unknown>;
+      assert.deepEqual([opinion["executable"], opinion["rank"], opinion["quote"]], [false, null, null]);
+      assert.deepEqual(opinion["reasons"], ["The API has no reader for this venue."]);
 
       const prepared = await h.post("/v1/route/prepare", { group: approvedId, outcome: 0, side: "buy", owner: OWNER, legs: [{ venue: "trueo", marketId: live, price: "0.5", shares: "10", tif: "FOK" }] }, auth);
       bodies.push(prepared.json);
@@ -170,8 +172,8 @@ for (const state of FAKE_VENUE_STATES) {
       assert.deepEqual(preparedLegs.map((l) => l["built"]), [false]);
       assert.match(String(preparedLegs[0]?.["reason"]), /Uniswap v4 pools/);
 
-      assert.deepEqual(asked, [], "no unserved venue was asked");
-      for (const body of bodies) for (const venue of venuesNamed(body)) assert.equal(venue, "trueo");
+      assert.deepEqual(asked, [], "no other venue was asked");
+      for (const body of bodies) for (const venue of venuesNamed(body)) assert.ok(venue === "trueo" || venue === "opinion", venue);
     } finally {
       await h.close();
     }
@@ -193,8 +195,6 @@ test("route prepare is off by default: the fixed not-enabled code, before anythi
   }
 });
 
-const TEST_POLICY: ServingPolicy = { servability: (venue) => (venue === "polymarket" ? { served: true, licence: "open", dataTerms: "none_found" } : apiServability(venue)) };
-
 async function polymarketHarness(state: FakeVenueState = "ok", env: Record<string, string> = { API_ROUTE_PREPARE: "free" }) {
   const world = await trueoWorld();
   const pm = await polymarketSenate();
@@ -203,12 +203,12 @@ async function polymarketHarness(state: FakeVenueState = "ok", env: Record<strin
   const groups = groupEnv([{ a: realLeg("polymarket", pm.conditionId), b: realLeg("trueo", live), approved: false }]);
   const poly = fakeVenue(state, pm.routes, { venue: "polymarket", nowMs: clock.read });
   const config = { ...testConfig({ ...groups.env, ...env }), limits: { ...API_LIMITS, paid: { capacity: 1_000, refillPerSecond: 1 } } };
-  const h = await startHarness({ clock, policy: TEST_POLICY, config, random: (n) => Buffer.alloc(n, 7), fetchFor: (venue) => (venue === "trueo" ? world.fetch : venue === "polymarket" ? poly.raw : forbiddenFetch(venue, [])) });
+  const h = await startHarness({ clock, config, random: (n) => Buffer.alloc(n, 7), fetchFor: (venue) => (venue === "trueo" ? world.fetch : venue === "polymarket" ? poly.raw : forbiddenFetch(venue, [])) });
   if (state === "chain_only") h.api.tracker.declareChainOnly("polymarket", CHAIN_ONLY_REASON);
   return { h, pm, live, groupId: groups.linkIds[0] as string, poly, clock };
 }
 
-test("a Polymarket leg (test policy): the reader's fee spec is refused by the engine, and the walk is shown with its sources", async () => {
+test("a Polymarket leg: the reader's fee spec is refused by the engine, and the walk is shown with its sources", async () => {
   const { h, groupId, poly } = await polymarketHarness();
   try {
     const { key } = issueKey(h.metering, { label: "t", tier: "full" }, Date.now());
@@ -229,7 +229,7 @@ test("a Polymarket leg (test policy): the reader's fee spec is refused by the en
   }
 });
 
-test("an executable best venue under the test policy: Trueo's own spec prices, Polymarket's is refused and ranks last", async () => {
+test("an executable best venue: Trueo's own spec prices, Polymarket's is refused and ranks last", async () => {
   const { h, groupId, live } = await polymarketHarness();
   try {
     const { key } = issueKey(h.metering, { label: "t", tier: "full" }, Date.now());
@@ -324,7 +324,7 @@ test("route prepare validates its input fully before anything is read", async ()
 });
 
 for (const state of FAKE_VENUE_STATES.filter((s) => s !== "ok")) {
-  test(`route prepare and quote with Polymarket ${state} (test policy): nothing built, the venue's state stated`, async () => {
+  test(`route prepare and quote with Polymarket ${state}: nothing built, the venue's state stated`, async () => {
     const { h, pm, groupId, poly } = await polymarketHarness(state);
     try {
       const answer = await h.post("/v1/route/prepare", { group: groupId, outcome: 0, side: "buy", owner: OWNER, legs: [{ venue: "polymarket", marketId: pm.conditionId, price: "0.41", shares: "10", tif: "GTC" }] });

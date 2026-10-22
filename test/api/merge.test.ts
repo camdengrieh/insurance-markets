@@ -2,24 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { API_LIMITS } from "../../api/config.js";
-import type { ServingPolicy } from "../../api/serving.js";
 import { SqliteIndexStore } from "../../api/store.js";
 import { POLYMARKET_CONDITIONAL_TOKENS, POLYMARKET_CTF_EXCHANGE } from "../../sdk/chain/polymarket/constants.js";
 import type { FetchLike } from "../../sdk/model.js";
-import { apiServability } from "../../sdk/venues/licence.js";
 import { fakeVenue, json } from "../../sdk/venues/testkit/index.js";
 import { Clock, forbiddenFetch, polymarketFixtures, startHarness, testConfig } from "./helpers.js";
 
-// Index fields merged with venue rows, field by field (docs/sdk-and-api-design.md sections 6 and 7). No venue on a chain
-// the index reads is served today (XO, Polymarket and Limitless have no licence class), so this test serves Polymarket
-// through a TEST policy that stands in for a class someone may record later; main.ts never takes a policy. The rows are
-// Polymarket's recorded Gamma answer (sdk/venues/polymarket/fixtures); the index rows are written by the test, in the
-// shape the indexer writes them, for the recorded markets' own condition and token ids.
+// Index fields merged with venue rows, field by field (docs/sdk-and-api-design.md sections 6 and 7), for Polymarket, which
+// the index reads on Polygon. The rows are Polymarket's recorded Gamma answer (sdk/venues/polymarket/fixtures); the index
+// rows are written by the test, in the shape the indexer writes them, for the recorded markets' own condition and token ids.
 
 const NOW = Date.parse("2026-10-22T12:03:00.000Z");
-const TEST_POLICY: ServingPolicy = {
-  servability: (venue) => (venue === "polymarket" ? { served: true, licence: "open", dataTerms: "none_found" } : apiServability(venue)),
-};
 
 function roomy() {
   const config = testConfig();
@@ -34,7 +27,7 @@ test("rows carry the last trade and the settlement from the index, each with its
   const blocked = fakeVenue("blocked_page", () => null, { venue: "polymarket", nowMs: clock.read });
   const fetch: FetchLike = (input, init) => (state === "ok" ? ok.raw(input, init) : blocked.raw(input, init));
   const store = SqliteIndexStore.open(":memory:");
-  const h = await startHarness({ config: roomy(), policy: TEST_POLICY, store, fetchFor: (venue) => (venue === "polymarket" ? fetch : forbiddenFetch(venue, [])), clock });
+  const h = await startHarness({ config: roomy(), store, fetchFor: (venue) => (venue === "polymarket" ? fetch : forbiddenFetch(venue, [])), clock });
   try {
     const first = await h.get("/v1/markets?venue=polymarket");
     assert.equal(first.status, 200);

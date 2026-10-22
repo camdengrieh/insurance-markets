@@ -4,7 +4,6 @@ import { CATEGORIES, type Category } from "../sdk/category.js";
 import { createRpcPort, rpcPostFromFetch, type RpcPort } from "../sdk/chain/rpc.js";
 import { isVenueId, type FetchLike, type VenueId } from "../sdk/model.js";
 import { decToAtomic } from "../sdk/money/decimal.js";
-import { DATA_TERMS } from "../sdk/venues/licence.js";
 import { VENUE_IDS, venuePolicy } from "../sdk/venues/policy.js";
 import { VenueStateTracker } from "../sdk/venues/state.js";
 import { CHAIN_OF_VENUE, isChainReadVenue } from "../sdk/venues/state-fields.js";
@@ -16,7 +15,6 @@ import { RpcPool } from "./indexer/rpc-pool.js";
 import { DEFAULT_PAGE, MarketService, matchesQuery, MAX_PAGE, type ListQuery } from "./markets.js";
 import { groupLabel, legOutcomeIndex, legUnavailable, QUOTABLE_RELATIONS, quoteLeg, rankLegs, type LegQuote, type QuotableGroup } from "./quote.js";
 import { NOT_BUILT_REASON, notBuilt, ownerOf, preparePolymarketLeg, routePrepareBodySchema, type PreparedLeg, type RoutePrepareBody } from "./route-prepare.js";
-import type { ServingPolicy } from "./serving.js";
 import type { IndexStore } from "./store.js";
 
 // The API's parts and its route handlers, without HTTP (server.ts carries them). Built from sdk/ and its own code only.
@@ -28,7 +26,7 @@ export type ErrorCode =
   | "payload_too_large"
   | "uri_too_long"
   | "rate_limited"
-  | "venue_not_served"
+  | "no_reader"
   | "venue_unavailable"
   | "market_not_found"
   | "internal"
@@ -46,7 +44,7 @@ export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = Object.freeze({
   payload_too_large: 413,
   uri_too_long: 414,
   rate_limited: 429,
-  venue_not_served: 403,
+  no_reader: 404,
   venue_unavailable: 503,
   market_not_found: 404,
   internal: 500,
@@ -71,7 +69,6 @@ export class ApiError extends Error {
 
 export interface ApiDeps {
   readonly config: ApiConfig;
-  readonly policy: ServingPolicy;
   readonly store: IndexStore | null;
   // The honest fetch for venue reads (upstream.ts) or, in tests, a fake per venue.
   readonly fetchFor: (venue: VenueId) => FetchLike;
@@ -100,6 +97,9 @@ export interface Api {
   // The shape checks of the paid routes alone (no read, no group lookup): run before any payment is asked for.
   checkPaid(kind: "quote" | "route_prepare", query: URLSearchParams, body: unknown): void;
 }
+
+// The one answer for a venue the API does not read: not a venue id, or a venue with no keyless reader (markets.ts).
+export const NO_READER = "The API has no reader for this venue.";
 
 // A quote's size is in shares: above zero, at most this many, at most 6 decimal places.
 export const MAX_QUOTE_SHARES = 1_000_000n;
@@ -147,7 +147,7 @@ const quoteQuerySchema = z
   .strict();
 
 export function createApi(deps: ApiDeps): Api {
-  const { config, policy, store, nowMs } = deps;
+  const { config, store, nowMs } = deps;
   const log = deps.log ?? (() => undefined);
   const tracker = new VenueStateTracker();
   const startedMs = nowMs();
@@ -172,7 +172,6 @@ export function createApi(deps: ApiDeps): Api {
   // Trueo is read on Base: the first configured Base RPC, or the SDK's public one.
   const baseRpc = config.chains.find((c) => c.chain === "base")?.rpcUrls[0] ?? (DEFAULT_RPC.base[0] as string);
   const markets = new MarketService({
-    policy,
     fetchFor: deps.fetchFor,
     tracker,
     nowMs,
@@ -196,7 +195,7 @@ export function createApi(deps: ApiDeps): Api {
       asOfMs: now,
       store: store === null ? "none" : "open",
       indexer: config.indexer ? indexerStatus().map((s) => ({ chain: s["chain"], state: s["state"], lagBlocks: s["lagBlocks"] })) : "off",
-      served: markets.servedVenues(),
+      readers: markets.readVenues(),
       limits: {
         markets: { burst: config.limits.markets.capacity, perMinute: config.limits.markets.refillPerSecond * 60 },
         reads: { burst: config.limits.reads.capacity, perMinute: config.limits.reads.refillPerSecond * 60 },
@@ -212,30 +211,20 @@ export function createApi(deps: ApiDeps): Api {
     return {
       asOfMs: now,
       venues: VENUE_IDS.map((id) => {
-        const p = venuePolicy(id);
-        const verdict = policy.servability(id);
         const spec = isChainReadVenue(id) ? chainSpecById(CHAIN_OF_VENUE[id].chainId) : null;
         const reading = markets.hasReader(id);
-        const list = reading ? markets.listInfo(id, now) : null;
         return {
           id,
-          name: p.name,
-          tier: p.tier,
-          licence: verdict.licence,
-          dataTerms: verdict.dataTerms,
-          served: verdict.served,
-          ...(verdict.served ? {} : { notServed: { code: verdict.code, reason: verdict.reason } }),
-          clause: p.clause,
+          name: venuePolicy(id).name,
           reader: reading,
           caps: markets.caps(id),
-          // A venue that is not served is never asked, so it has no read state of its own.
-          state: reading ? markets.stateView(id, now) : { kind: "not_read", reason: verdict.served ? "The API has no reader for this venue." : verdict.reason, next: null },
-          list,
+          // A venue without a reader is never asked, so it has no read state of its own.
+          state: reading ? markets.stateView(id, now) : { kind: "not_read", reason: NO_READER, next: null },
+          list: reading ? markets.listInfo(id, now) : null,
           chain: spec === null ? null : { chainId: spec.chainId, via: spec.via, indexed: specs.has(spec.key) },
         };
       }),
       indexer: config.indexer ? indexerStatus() : [],
-      dataTermsSource: `platform registry, ${Object.keys(DATA_TERMS).length} records (sdk/venues/licence.ts)`,
     };
   }
 
@@ -245,9 +234,7 @@ export function createApi(deps: ApiDeps): Api {
     const data = parsed.data;
     let venue: VenueId | null = null;
     if (data.venue !== undefined) {
-      const verdict = policy.servability(data.venue);
-      if (!verdict.served) throw new ApiError("venue_not_served", verdict.reason, { code: verdict.code });
-      if (!isVenueId(data.venue)) throw new ApiError("venue_not_served", "Not a venue this API knows.");
+      if (!isVenueId(data.venue) || !markets.hasReader(data.venue)) throw new ApiError("no_reader", NO_READER);
       venue = data.venue;
     }
     if (data.q !== undefined && CONTROL.test(data.q)) throw new ApiError("invalid_request", "q may not hold control characters.");
@@ -258,8 +245,7 @@ export function createApi(deps: ApiDeps): Api {
 
   async function listMarkets(params: URLSearchParams): Promise<Record<string, unknown>> {
     const query = parseList(params);
-    const wanted = query.venue === null ? markets.servedVenues() : [query.venue];
-    if (query.venue !== null && !markets.hasReader(query.venue)) throw new ApiError("venue_not_served", "The API has no reader for this venue.");
+    const wanted = query.venue === null ? markets.readVenues() : [query.venue];
     const reads = await Promise.all(wanted.map(async (venue) => ({ venue, read: await markets.list(venue) })));
     const now = nowMs();
     const rows: Record<string, unknown>[] = [];
@@ -274,13 +260,11 @@ export function createApi(deps: ApiDeps): Api {
   }
 
   async function market(venue: string, id: string): Promise<Record<string, unknown>> {
-    const verdict = policy.servability(venue);
-    if (!verdict.served) throw new ApiError("venue_not_served", verdict.reason, { code: verdict.code });
-    if (!isVenueId(venue) || !markets.hasReader(venue)) throw new ApiError("venue_not_served", "The API has no reader for this venue.");
+    if (!isVenueId(venue) || !markets.hasReader(venue)) throw new ApiError("no_reader", NO_READER);
     if (!MARKET_ID.test(id)) throw new ApiError("invalid_request", "The market id is not one this API reads.");
     try {
       const answer = await markets.market(venue, id);
-      if (answer === null) throw new ApiError("venue_not_served", "The API has no reader for this venue.");
+      if (answer === null) throw new ApiError("no_reader", NO_READER);
       return { asOfMs: nowMs(), ...answer };
     } catch (error) {
       if (error instanceof ApiError) throw error;
@@ -293,13 +277,13 @@ export function createApi(deps: ApiDeps): Api {
 
   function groups(): Record<string, unknown> {
     const [approved, candidates] = groupsSource.current();
-    return { asOfMs: nowMs(), ...buildGroups(approved, candidates, policy, nowMs()) };
+    return { asOfMs: nowMs(), ...buildGroups(approved, candidates, nowMs()) };
   }
 
-  // A group as /v1/groups serves it (served venues only; candidates as proposed), or an ApiError.
+  // A group as /v1/groups serves it (candidates as proposed), or an ApiError.
   function quotableGroup(linkId: string, outcome: number): QuotableGroup {
     const [approved, candidates] = groupsSource.current();
-    const answer = buildGroups(approved, candidates, policy, nowMs());
+    const answer = buildGroups(approved, candidates, nowMs());
     const found = answer.approved.find((l) => l.linkId === linkId);
     const proposed = answer.proposed.find((l) => l.linkId === linkId);
     const group: QuotableGroup | null = found !== undefined ? { link: found, state: "approved" } : proposed !== undefined ? { link: proposed, state: "proposed" } : null;
@@ -354,10 +338,10 @@ export function createApi(deps: ApiDeps): Api {
         const venue = leg.venue;
         const index = legOutcomeIndex(leg.outcomeMap, outcome);
         if (index === null) return legUnavailable(venue, leg.nativeId, null, "The link's outcome map does not name this outcome exactly once on this leg.");
-        if (!markets.hasReader(venue)) return legUnavailable(venue, leg.nativeId, index, "The API has no reader for this venue.");
+        if (!markets.hasReader(venue)) return legUnavailable(venue, leg.nativeId, index, NO_READER);
         try {
           const view = await markets.tradeView(venue, leg.nativeId);
-          if (view === null) return legUnavailable(venue, leg.nativeId, index, "The API has no reader for this venue.");
+          if (view === null) return legUnavailable(venue, leg.nativeId, index, NO_READER);
           return quoteLeg({ venue, marketId: leg.nativeId, outcomeIndex: index, view }, data.side, data.size, nowMs());
         } catch (error) {
           return legUnavailable(venue, leg.nativeId, index, venueFailure(venue, error));
@@ -419,6 +403,6 @@ export function createApi(deps: ApiDeps): Api {
     };
   }
 
-  log(`api ${API_VERSION}: serving ${markets.servedVenues().join(", ") || "no venue"}; ${indexers.length} chain indexer(s)`);
+  log(`api ${API_VERSION}: reading ${markets.readVenues().join(", ") || "no venue"}; ${indexers.length} chain indexer(s)`);
   return { markets, indexers, tracker, startedMs, health, venues, listMarkets, market, groups, quote, routePrepare, checkPaid };
 }

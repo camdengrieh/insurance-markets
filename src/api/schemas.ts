@@ -5,7 +5,6 @@ import { CATEGORIES } from "../../sdk/category.js";
 import { datasetLinkSchema } from "../../sdk/links/dataset.js";
 import { FIELD_SOURCES, SUMMARY_FIELDS, VENUE_IDS, type VenueId } from "../../sdk/model.js";
 import { isDec } from "../../sdk/money/decimal.js";
-import { NOT_SERVED_CODES } from "../../sdk/venues/licence.js";
 import { cleanApiText } from "./client.js";
 
 // What the markets API's free endpoints answer (api/app.ts, api/markets.ts, api/groups.ts as built in step 8 of
@@ -90,11 +89,6 @@ export const API_SOURCE_NOTE =
 const venueIn = z.object({
   id: venueId,
   name: z.string().min(1).max(80),
-  tier: z.string().regex(/^[a-z_]{1,32}$/),
-  licence: z.enum(["own_use_only", "attribution", "open", "unknown"]),
-  dataTerms: z.enum(["restricted", "none_found", "unknown"]),
-  served: z.boolean(),
-  notServed: z.object({ code: z.enum(NOT_SERVED_CODES), reason: shortText }).optional(),
   reader: z.boolean(),
   state: stateIn,
   list: z.object({ rows: z.number().int().min(0), readAtMs: ms.nullable(), ageMs: ms.nullable(), lastError: shortText.nullable() }).nullable(),
@@ -103,7 +97,7 @@ const venueIn = z.object({
 
 export const venuesAnswerSchema = z
   .object({ asOfMs: ms, venues: z.array(venueIn).max(64) })
-  .refine((answer) => answer.venues.every((v) => v.served === (v.notServed === undefined)), "a venue is served exactly when it has no notServed reason")
+  .refine((answer) => answer.venues.every((v) => v.reader === (v.state.kind !== "not_read")), "a venue is read exactly when the API has a reader for it")
   .refine((answer) => new Set(answer.venues.map((v) => v.id)).size === answer.venues.length, "each venue once");
 
 const stateOut = z.strictObject({ kind: stateIn.shape.kind, reason: z.string().nullable(), next: z.string().nullable() });
@@ -115,18 +109,13 @@ export const venuesOutputSchema = z.strictObject({
     z.strictObject({
       id: z.string(),
       name: z.string(),
-      tier: z.string(),
-      licence: z.string(),
-      dataTerms: z.string(),
-      served: z.boolean().describe("Whether the API serves this venue at all (its licence and data terms allow it)."),
-      notServed: z.strictObject({ code: z.string(), reason: z.string() }).nullable(),
-      reader: z.boolean(),
-      state: stateOut.describe("The API's read state for the venue: ok, throttled, blocked, chain_only, or not_read when it is never asked."),
+      reader: z.boolean().describe("Whether the API has a reader for this venue; one without is never asked and answers no_reader."),
+      state: stateOut.describe("The API's read state for the venue: ok, throttled, blocked, chain_only, or not_read when it has no reader."),
       list: z.strictObject({ rows: z.number().int(), readAtMs: z.number().int().nullable(), ageMs: z.number().int().nullable(), lastError: z.string().nullable() }).nullable(),
       chain: z.strictObject({ chainId: z.number().int(), via: z.string(), indexed: z.boolean() }).nullable(),
     }),
   ),
-  served: z.array(z.string()),
+  readers: z.array(z.string()).describe("The venues the API reads."),
   notice: z.string(),
 });
 export type VenuesOutput = z.infer<typeof venuesOutputSchema>;
@@ -162,7 +151,6 @@ const rowIn = z.object({
     source: z.string().max(200),
     fetchedAtMs: ms,
     freshness: z.enum(["live", "recent", "stale", "unknown"]),
-    licence: z.enum(["own_use_only", "attribution", "open", "unknown"]),
     transport: z.enum(["T0", "T0-RPC", "T1", "T2", "T3"]),
   }),
 });

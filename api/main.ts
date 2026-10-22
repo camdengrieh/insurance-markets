@@ -6,7 +6,6 @@ import { runKeysCli } from "./keys-cli.js";
 import { serviceManifest } from "./listing.js";
 import { SqliteMeteringStore } from "./metering-store.js";
 import { createMeter, paymentParts } from "./metering.js";
-import { API_SERVING_POLICY } from "./serving.js";
 import { startApiServer } from "./server.js";
 import { SqliteIndexStore } from "./store.js";
 import { createHonestFetch } from "./upstream.js";
@@ -55,9 +54,9 @@ async function serve(config: ApiConfig): Promise<void> {
   }
   const honest = createHonestFetch({ fetchImpl: globalThis.fetch });
   const facilitatorFetch = createHonestFetch({ fetchImpl: globalThis.fetch, timeoutMs: config.limits.facilitatorTimeoutMs, maxBytes: 64 * 1024 });
-  const api = createApi({ config, policy: API_SERVING_POLICY, store, fetchFor: () => honest, rpcFetch: honest, nowMs: Date.now, log: stamp });
+  const api = createApi({ config, store, fetchFor: () => honest, rpcFetch: honest, nowMs: Date.now, log: stamp });
   const meter = createMeter({ config, store: metering, ...paymentParts(config, facilitatorFetch, honest, Date.now), nowMs: Date.now, log: stamp });
-  const server = await startApiServer({ api, config, policy: API_SERVING_POLICY, meter, log: stamp });
+  const server = await startApiServer({ api, config, meter, log: stamp });
   stamp(`listening on ${config.host}:${server.port}`);
 
   let stopping = false;

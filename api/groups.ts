@@ -4,23 +4,21 @@ import { validateBundle, type Bundle } from "../sdk/links/bundle.js";
 import type { DatasetLink } from "../sdk/links/dataset.js";
 import type { Link } from "../sdk/links/schema.js";
 import { toLinkDataset } from "../sdk/linker/dataset.js";
-import { termsAllowPersistence } from "../sdk/venues/licence.js";
-import type { ServingPolicy } from "./serving.js";
 
 // GET /v1/groups (docs/sdk-and-api-design.md sections 4 and 5): approved links, and the linker's candidates, which are
 // ALWAYS served as "proposed" with their score band.
 //
 // Both come from hash-pinned link bundles (sdk/links/bundle.ts) named in the configuration: the shipped approved bundle and
-// the linker's candidates bundle, each with the pin of its manifest in a separate file. A bundle is checked exactly as pm
-// writes it (record hashes, manifest, invariants, under the registry's persistence terms) or not used at all.
+// the linker's candidates bundle, each with the pin of its manifest in a separate file. A bundle is checked against its pin
+// (record hashes, manifest, schema and invariants) or not used at all.
 //
 // What is served:
 //   - a link is "approved" only when its record says a person approved it (state "approved" with at least one recorded
 //     approval, which only sdk/links/approve.ts can write, from the pm CLI); everything else from either bundle that is
 //     live is a candidate and is served as "proposed";
-//   - a link with any leg on a venue the serving policy does not serve is withheld entirely and only counted;
+//   - a link on any venue is served, whether or not the API has a reader for each leg (a quote states a leg it cannot read);
 //   - each link is converted by the dApp's dataset contract (sdk/linker/dataset.ts): ids, hashes, close times, outcome maps,
-//     proof, state and band; never a title, a price or rules text.
+//     proof, state and band; never a title, a price or rules text. A link the contract refuses is left out and counted.
 // The files are re-read when they change on disk (checked at most once every RELOAD_CHECK_MS).
 
 export const RELOAD_CHECK_MS = 30_000;
@@ -51,6 +49,10 @@ export interface SourceView {
 
 const PIN = /^[0-9a-f]{64}$/;
 
+// The bundle functions take the venues whose records may hold derived text, and the dataset conversion leaves out a link
+// with a leg on any other. The API serves none of that text and leaves no venue out: every venue is allowed.
+const EVERY_VENUE = (): boolean => true;
+
 export function loadBundle(source: BundleSource | null): BundleLoad {
   if (source === null) return { state: "absent" };
   let text: string;
@@ -62,7 +64,7 @@ export function loadBundle(source: BundleSource | null): BundleLoad {
     return { state: "rejected", reason: "the bundle or its pin could not be read" };
   }
   if (!PIN.test(pin)) return { state: "rejected", reason: "the pin file does not hold one sha256" };
-  const checked = validateBundle(text, { expectedManifestSha256: pin }, termsAllowPersistence);
+  const checked = validateBundle(text, { expectedManifestSha256: pin }, EVERY_VENUE);
   if (!checked.ok) return { state: "rejected", reason: "the bundle did not validate against its pin and the link schema" };
   return { state: "loaded", bundle: checked.value, manifestSha256: checked.value.manifestSha256, createdAt: checked.value.manifest.createdAt };
 }
@@ -78,8 +80,7 @@ export function approvedByAPerson(link: Link): boolean {
   return link.state === "approved" && link.approvals.length > 0 && link.approvals.every((a) => a.reviewer.trim() !== "" && a.evidence.length > 0);
 }
 
-export function buildGroups(approved: BundleLoad, candidates: BundleLoad, policy: ServingPolicy, nowMs: number): GroupsAnswer {
-  const served = (venue: string): boolean => policy.servability(venue).served;
+export function buildGroups(approved: BundleLoad, candidates: BundleLoad, nowMs: number): GroupsAnswer {
   const approvedLinks = new Map<string, Link>();
   const candidateLinks = new Map<string, Link>();
   let withheld = 0;
@@ -99,10 +100,9 @@ export function buildGroups(approved: BundleLoad, candidates: BundleLoad, policy
   }
   const convert = (links: readonly Link[]): DatasetLink[] => {
     if (links.length === 0) return [];
-    // toLinkDataset reads only the bundle's links (already validated above) and leaves out, as "restricted_leg", any link
-    // with a leg the given terms refuse: here, any venue the API does not serve. Its release date is not served.
+    // toLinkDataset reads only the bundle's links (already validated above); its release date is not served.
     const bundle = { links } as unknown as Bundle;
-    const { dataset, skipped } = toLinkDataset(bundle, { release: new Date(nowMs).toISOString().slice(0, 10) }, served);
+    const { dataset, skipped } = toLinkDataset(bundle, { release: new Date(nowMs).toISOString().slice(0, 10) }, EVERY_VENUE);
     withheld += skipped.length;
     return [...dataset.links];
   };
@@ -111,7 +111,7 @@ export function buildGroups(approved: BundleLoad, candidates: BundleLoad, policy
   return {
     approved: approvedOut,
     proposed: proposedOut,
-    withheld: { count: withheld, reason: "Links with a leg on a venue the API does not serve (sdk/venues/licence.ts) are left out, as are links the dataset contract refuses." },
+    withheld: { count: withheld, reason: "Links the dataset contract cannot carry (more than four legs, or a leg id or outcome map outside its shape) are left out." },
     sources: { approved: view(approved), candidates: view(candidates) },
   };
 }

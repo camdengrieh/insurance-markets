@@ -29,7 +29,7 @@ export const API_ERROR_CODES = [
   "payload_too_large",
   "uri_too_long",
   "rate_limited",
-  "venue_not_served",
+  "no_reader",
   "venue_unavailable",
   "market_not_found",
   "internal",
@@ -58,10 +58,8 @@ export class ApiCallError extends Error {
   readonly retryAfterS: number | null;
   // The API's own message, cleaned. Never part of `message`.
   readonly apiMessage: string | null;
-  // The API's details.code (venue_not_served carries the serving rule's code), cleaned.
-  readonly detailCode: string | null;
 
-  constructor(kind: ApiCallErrorKind, message: string, extra: { status?: number; code?: ApiErrorCode | "unrecognised"; retryAfterS?: number | null; apiMessage?: string | null; detailCode?: string | null } = {}) {
+  constructor(kind: ApiCallErrorKind, message: string, extra: { status?: number; code?: ApiErrorCode | "unrecognised"; retryAfterS?: number | null; apiMessage?: string | null } = {}) {
     super(message);
     this.name = "ApiCallError";
     this.kind = kind;
@@ -69,7 +67,6 @@ export class ApiCallError extends Error {
     this.code = extra.code ?? null;
     this.retryAfterS = extra.retryAfterS ?? null;
     this.apiMessage = extra.apiMessage ?? null;
-    this.detailCode = extra.detailCode ?? null;
   }
 }
 
@@ -82,7 +79,6 @@ const errorEnvelope = z.object({
   error: z.object({
     code: z.string().max(64),
     message: z.string().max(4000),
-    details: z.object({ code: z.string().max(64).optional() }).optional(),
   }),
 });
 
@@ -185,8 +181,6 @@ export class ApiClient {
     const apiMessage = envelope.success ? cleanApiText(envelope.data.error.message) : null;
     const rawCode = envelope.success ? envelope.data.error.code : null;
     const code: ApiErrorCode | "unrecognised" | undefined = rawCode === null ? undefined : (API_ERROR_CODES as readonly string[]).includes(rawCode) ? (rawCode as ApiErrorCode) : "unrecognised";
-    const detail = envelope.success ? envelope.data.error.details?.code : undefined;
-    const detailCode = detail === undefined || !/^[a-z_]{1,40}$/.test(detail) ? null : detail;
     if (status === 429) {
       const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"), this.#nowMs());
       throw new ApiCallError("rate_limited", "the markets API is rate limiting this client (HTTP 429)", {
@@ -197,7 +191,7 @@ export class ApiClient {
       });
     }
     if (status >= 300 && status < 400) throw new ApiCallError("http_error", `the markets API answered with a redirect (HTTP ${status}), which is refused`, { status });
-    if (code !== undefined) throw new ApiCallError("api_error", `the markets API refused the request (HTTP ${status})`, { status, code, apiMessage, detailCode });
+    if (code !== undefined) throw new ApiCallError("api_error", `the markets API refused the request (HTTP ${status})`, { status, code, apiMessage });
     throw new ApiCallError("http_error", `the markets API answered HTTP ${status}`, { status });
   }
 

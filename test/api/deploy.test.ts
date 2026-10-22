@@ -7,6 +7,8 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
+import { API_READER_VENUES } from "../../api/markets.js";
+
 // deploy/api follows deploy/recorder and deploy/linker (pm/test/linker/deploy.test.ts is the pattern): the folder keeps
 // its promises, holds no personal identifier, machine path or secret, and the bundle builds deterministically as one
 // file that starts, answers and stops on SIGTERM.
@@ -124,7 +126,7 @@ test("the bundle starts with no secret, answers health and venues, and stops cle
     const health = await fetch(`http://127.0.0.1:${port}/v1/health`);
     assert.equal(health.status, 200);
     const body = (await health.json()) as Record<string, unknown>;
-    assert.deepEqual(body["served"], ["trueo"]);
+    assert.deepEqual(body["readers"], [...API_READER_VENUES]);
     assert.equal(body["indexer"], "off");
     const venues = await fetch(`http://127.0.0.1:${port}/v1/venues`);
     assert.equal(venues.status, 200);

@@ -31,8 +31,7 @@ import type { Origin, TradeView } from "./markets.js";
 //   - Trueo: a Uniswap v4 pool swap, not an order; sdk/trade has no builder for it;
 //   - a Polymarket Deposit Wallet (type 3) order: whether the derived wallet is deployed and owned by the caller is a chain
 //     read the relay makes and the API does not.
-// Section 5 of the design: routing orders for others and charging for it may carry venue-terms and regulatory obligations,
-// so the endpoint is off unless the operator turns it on (config.ts API_ROUTE_PREPARE), and "paid" waits for a legal read.
+// The endpoint is off unless the operator turns it on (config.ts API_ROUTE_PREPARE: off, free or paid).
 
 const DECIMAL = /^(0|[1-9][0-9]{0,11})(\.[0-9]{1,6})?$/;
 const MARKET_ID = /^[A-Za-z0-9_.:#-]{1,120}$/;

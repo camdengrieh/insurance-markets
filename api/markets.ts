@@ -1,8 +1,14 @@
 import type { Category } from "../sdk/category.js";
 import type { AdapterError, Book, FeeSpec, FetchLike, FieldOrigin, Market, MarketRef, MarketSummary, VenueId, VenueReadAdapter } from "../sdk/model.js";
 import { RULES_HASH_RECIPE } from "../sdk/rules.js";
+import { createGeminiAdapter } from "../sdk/venues/gemini/adapter.js";
+import { createHyperliquidAdapter } from "../sdk/venues/hyperliquid/adapter.js";
+import { createKalshiAdapter } from "../sdk/venues/kalshi/adapter.js";
 import { createLimitlessAdapter } from "../sdk/venues/limitless/adapter.js";
-import { venuePolicy } from "../sdk/venues/policy.js";
+import { createManifoldAdapter } from "../sdk/venues/manifold/adapter.js";
+import { createNovigAdapter } from "../sdk/venues/novig/adapter.js";
+import { createPascalAdapter } from "../sdk/venues/pascal/adapter.js";
+import { DISCLOSURE_VERSION, VENUE_IDS, venuePolicy, type VenueSwitches } from "../sdk/venues/policy.js";
 import { createPolymarketAdapter } from "../sdk/venues/polymarket/adapter.js";
 import { sourceSummary, type ChainField } from "../sdk/venues/state-fields.js";
 import { createStateGuardedFetch, READ_OK, stateOfAdapterError, venueReadState, venueStateNext, venueStateReason, type VenueReadState, type VenueStateTracker } from "../sdk/venues/state.js";
@@ -10,22 +16,30 @@ import { createTrueoAdapter } from "../sdk/venues/trueo/adapter.js";
 import { createXoAdapter } from "../sdk/venues/xo/adapter.js";
 import { indexedLastTrades, indexedResolution, type IndexAnswer, type LastTrade } from "./chain-fields.js";
 import type { ChainSpec } from "./indexer/chains.js";
-import type { ServingPolicy } from "./serving.js";
 import type { IndexStore } from "./store.js";
 
-// Venue reads for the free endpoints (docs/sdk-and-api-design.md sections 4 and 6). Only a venue the serving policy serves
-// gets a reader; every other venue is never asked. Each reader is an SDK reader (sdk/venues/<venue>) over the API's honest
-// fetch behind the shared state rule (sdk/venues/state.ts): a throttled or blocked venue is refused before sending and
-// nothing retries around it.
+// Venue reads for the free endpoints (docs/sdk-and-api-design.md sections 4 and 6). Every venue the SDK has a keyless reader
+// for gets one; a venue without one is never asked and answers "no reader" (app.ts). Each reader is an SDK reader
+// (sdk/venues/<venue>) over the API's honest fetch behind the shared state rule (sdk/venues/state.ts): a throttled or
+// blocked venue is refused before sending and nothing retries around it.
 //
 // Answers are kept in memory only (sdk/venues/cache.ts canPersist: market data never reaches disk) with the time they
 // were read. A row read for this request is "venue_api"; a row kept from an earlier read is "cache" with its age, never
 // "live"; a blocked venue keeps its rows with the fields only the venue holds nulled and the reason stated. The chain
 // index (chain-fields.ts) adds each outcome's last trade and the settlement, field by field, with their own sources.
 
-// The venues the API has a reader for. Which of them is served is the policy's decision alone.
-export const API_READER_VENUES = ["trueo", "xo", "polymarket", "limitless"] as const satisfies readonly VenueId[];
+// The venues the API has a reader for: every SDK reader that reads without a key and knows its host (sdk/venues/origins.ts).
+// Not here, so answered "no reader": OG, SX Bet and Underdog Exchange (their readers have no registered host), Polymarket US
+// and Myriad (no reader), and the venues with no adapter in this release (World, ProphetX, Predict.fun, Opinion).
+export const API_READER_VENUES = ["xo", "polymarket", "kalshi", "limitless", "trueo", "hyperliquid", "pascal", "novig", "gemini", "manifold"] as const satisfies readonly VenueId[];
 export type ApiReaderVenue = (typeof API_READER_VENUES)[number];
+
+// The SDK's readers carry the dApp's venue switches, which start some venues OFF until a person turns them on. The API is
+// its own operator and turns on every reader it constructs.
+const API_SWITCHES: VenueSwitches = Object.freeze({
+  enabled: Object.freeze(Object.fromEntries(VENUE_IDS.map((id) => [id, true]))),
+  disclosureAccepted: Object.freeze(Object.fromEntries(VENUE_IDS.map((id) => [id, DISCLOSURE_VERSION]))),
+});
 
 // A venue's list is read again at most this often; a request in between gets the kept rows, labelled "cache".
 export const LIST_REFRESH_MS = 60_000;
@@ -42,7 +56,6 @@ export const DEFAULT_PAGE = 50;
 export const MAX_PAGE = 100;
 
 export interface MarketsOptions {
-  readonly policy: ServingPolicy;
   // The fetch each venue's reader is given before the state guard: the honest fetch in main.ts, a fake per venue in tests.
   readonly fetchFor: (venue: VenueId) => FetchLike;
   readonly tracker: VenueStateTracker;
@@ -159,7 +172,6 @@ export class MarketService {
   constructor(options: MarketsOptions) {
     this.#options = options;
     for (const venue of API_READER_VENUES) {
-      if (!options.policy.servability(venue).served) continue;
       const fetch = createStateGuardedFetch({ inner: options.fetchFor(venue), tracker: options.tracker, nowMs: options.nowMs, keyOf: () => venue });
       const deps = { fetch, nowMs: options.nowMs };
       this.#readers.set(venue, this.#create(venue, deps));
@@ -176,12 +188,25 @@ export class MarketService {
       case "polymarket":
         return createPolymarketAdapter(deps);
       case "limitless":
-        return createLimitlessAdapter(deps, { build: "cockpit" });
+        return createLimitlessAdapter(deps, { build: "cockpit", switches: () => API_SWITCHES });
+      case "kalshi":
+        // Kalshi refuses a request that carries an Origin; the honest fetch sends none.
+        return createKalshiAdapter(deps, { build: "cockpit", switches: () => API_SWITCHES });
+      case "hyperliquid":
+        return createHyperliquidAdapter(deps);
+      case "pascal":
+        return createPascalAdapter(deps);
+      case "novig":
+        return createNovigAdapter(deps, { build: "cockpit", switches: API_SWITCHES });
+      case "gemini":
+        return createGeminiAdapter(deps, { build: "cockpit", switches: API_SWITCHES });
+      case "manifold":
+        return createManifoldAdapter(deps);
     }
   }
 
-  // The venues served AND read by this API, in a fixed order.
-  servedVenues(): VenueId[] {
+  // The venues this API reads, in a fixed order.
+  readVenues(): VenueId[] {
     return API_READER_VENUES.filter((venue) => this.#readers.has(venue));
   }
 
@@ -326,7 +351,7 @@ export class MarketService {
       volume: summary.volume,
       resolution: sourced.resolution,
       fields: Object.fromEntries(Object.entries(sourced.fields).map(([key, value]) => [key, origin(value)])),
-      prov: { source: summary.prov.source, fetchedAtMs: summary.prov.fetchedAtMs, freshness: summary.prov.freshness, licence: summary.prov.license, transport: summary.prov.transport },
+      prov: { source: summary.prov.source, fetchedAtMs: summary.prov.fetchedAtMs, freshness: summary.prov.freshness, transport: summary.prov.transport },
     };
   }
 
@@ -471,6 +496,7 @@ export class MarketService {
     const { market } = loaded;
     const now = this.#options.nowMs();
     const marketOrigin = this.#readOrigin(venue, loaded.readAtMs, loaded.fresh, now);
+    // The row shape the chain fields are looked up by; its prov only completes the SDK type and is not served.
     const summaryLike: MarketSummary = {
       ref: market.ref,
       title: market.title,

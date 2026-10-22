@@ -96,8 +96,8 @@ caching.
 
 | Endpoint | Returns | Built from | Tier |
 |---|---|---|---|
-| `GET /v1/venues` | Registry, capabilities, licence class, health | registry | free |
-| `GET /v1/markets?category=&venue=&q=` | Normalised open markets across servable venues | venues, category | free, rate limited |
+| `GET /v1/venues` | Every venue, whether the API has a reader for it, reader capabilities, read state, indexer progress | venues, health | free |
+| `GET /v1/markets?category=&venue=&q=` | Normalised open markets across every venue the API has a reader for | venues, category | free, rate limited |
 | `GET /v1/markets/:venue/:id` | One market, rules fingerprint, book | venues, books, rules | free, rate limited |
 | `GET /v1/groups` | Approved links, plus linker candidates labelled "proposed" | links | free |
 | `GET /v1/quote?group=&side=&size=` | Depth-walked fill across the group's venues after fees, best venue first | books, links | paid |
@@ -117,17 +117,19 @@ Payment sits in `api/` middleware only; `sdk/` never knows about money.
 - **Subscription keys** for the dApp and for heavy users, checked before the handler runs.
 - **Free tier** for the reads a person browsing the dApp needs, rate limited per key or address.
 
-## 5. What the API must never serve
+## 5. What the API serves
 
-| Data | Why | Instead |
-|---|---|---|
-| Quotient responses | Its terms forbid sharing or reselling access (`docs/aggregation-design.md`, Terms section 6) | The user's own agent pays Quotient by x402 and the SDK validates the body in memory, as today |
-| The six venues classed `own_use_only` (Kalshi among them) | Licensed for the reader's own use | Readable in local mode through the user's own daemon; never cached or served by us |
-| The 13 venues whose licence is `unknown` | Unknown fails closed | Not served until someone reads the terms and records a class |
-| Links as links | Only a person approves a link | Candidates are served, always labelled "proposed" with their score band |
+The API serves every venue the SDK has a reader for that needs no key, on every endpoint. It does not filter venues by
+licence class or data terms, and no answer carries either. A venue with no such reader (no reader in the SDK, or a reader
+with no registered host) is never asked and answers `no_reader`.
 
-Routing orders for other people and charging for it may carry venue-terms and regulatory obligations
-(geofencing, acting as a broker). This needs a legal read before `/v1/route/prepare` is paid.
+| Data | Rule |
+|---|---|
+| Venue markets, books, fees | Served for every venue with a reader, each field with its source and age (section 6); venue answers are kept in memory with the time they were read |
+| Links | Served as approved only when a person approved them; linker candidates are served, always labelled "proposed" with their score band |
+| Quotient responses | Not read by the API: Quotient is a signal service the user's own agent pays for per call by x402, and the SDK validates the body in memory, as today |
+
+`POST /v1/route/prepare` is off unless the operator turns it on (`API_ROUTE_PREPARE`: `free` or `paid`).
 
 ## 6. When a venue blocks the API
 
@@ -393,18 +395,19 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
 8. **Stand up `api/`**: the indexer and the free read endpoints on the existing container pattern under `deploy/` (AWS host, `deploy/aws`).
    *Done 2026-10-22.* `api/` is built from `sdk/` and its own code only (`api/README.md`); the image is `deploy/api`
    (`deploy/api/README.md`: the run and environment table; built and tested, deployed nowhere; the AWS layout in
-   `deploy/aws` can host it beside the recorder). Free endpoints: `GET /v1/health`, `/v1/venues` (every venue's licence
-   class, data terms, served or not and why, reader capabilities, read state from `sdk/venues/state.ts`, chain and indexer
-   progress), `/v1/markets?category=&venue=&q=` (served venues only, every field with its source and age),
+   `deploy/aws` can host it beside the recorder). Free endpoints: `GET /v1/health`, `/v1/venues` (every venue, whether
+   the API has a reader for it, reader capabilities, read state from `sdk/venues/state.ts`, chain and indexer progress),
+   `/v1/markets?category=&venue=&q=` (every venue with a reader, or one, every field with its source and age),
    `/v1/markets/:venue/:id` (one market, its `rules-v2` fingerprint, its books) and `/v1/groups` (links a person approved,
-   and linker candidates always "proposed" with their band, from the hash-pinned bundles). Section 5 is enforced in one
-   place: `sdk/venues/licence.ts` `apiServability` (a recorded `open` or `attribution` licence, no restriction, and the
-   registry's data terms `none_found`; the registry's persistence table moved there and `pm/registry` re-exports it),
-   applied before any read by `api/serving.ts`, which also walks every answer and refuses one that names an unserved venue;
-   `test/api/serving.test.ts` walks every endpoint against every venue class with the real policy and the served venue in
-   each fake state. As recorded today that serves Trueo alone: XO, Polymarket and Limitless have no licence class, so
-   `/v1/markets?venue=polymarket` answers `venue_not_served` without contacting Polymarket. Reads use the SDK readers over
-   one honest fetch (User-Agent `insurance-markets-api/0.1`, no proxy, no redirect) behind the shared state rule, at most
+   and linker candidates always "proposed" with their band, from the hash-pinned bundles). Changed later on 2026-10-22, by
+   the user's decision that the API does not concern itself with licence classes: the serving gate (`api/serving.ts`,
+   `sdk/venues/licence.ts` `apiServability`) is gone, and the API reads and serves every venue the SDK has a keyless reader
+   for: XO, Polymarket, Kalshi, Limitless, Trueo, Hyperliquid, Pascal, Novig, Gemini and Manifold (`api/markets.ts`; the
+   readers' venue switches are all on). Any other venue (OG, SX Bet and Underdog Exchange, whose readers have no registered
+   host, and the venues with no reader) is never asked and answers `no_reader`. `/v1/venues` reports no licence class, data
+   terms or served verdict, and the upstream answer cap rose from 4 MiB to 10 MiB so Pascal's 5.9 MB snapshot fits.
+   `test/api/serving.test.ts` walks every endpoint against every venue, with Trueo in each fake state. Reads use the SDK
+   readers over one honest fetch (User-Agent `insurance-markets-api/0.1`, no proxy, no redirect) behind the shared state rule, at most
    one list read a minute per venue, kept in memory only and served as `cache` with its age; a blocked venue keeps its
    rows with chain fields and the stated reason. The indexer (`api/indexer`) reads Polygon (Polymarket's two CTF
    exchanges, the Protocol V2 exchange, Conditional Tokens and the two V2 modules), Base (Limitless's six exchanges and
@@ -417,8 +420,7 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    market's settlement (only for XO and Polymarket rows whose token ids derive from their condition). Tests replay one
    recorded pass per chain (`test/api/fixtures`, public RPC answers of 2026-10-22). Decision forced: the index is SQLite
    (`node:sqlite`) behind `IndexStore`, not Postgres or Ponder, because neither can be added without a dependency; a
-   Postgres store can implement the same interface. Not done: no served venue sits on an indexed chain yet, so index
-   fields reach no live answer until a licence class is recorded for XO, Polymarket or Limitless; no historical backfill
+   Postgres store can implement the same interface. Not done: no historical backfill
    (the index starts at the safe head or a configured block, and every "not seen" answer names its range); Limitless rows
    name no condition, so their settlement is not placed from the index; Protocol V2 fills carry no price; each list
    covers at most three pages of a venue's own order.
@@ -426,7 +428,8 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    *Done 2026-10-22.* `GET /v1/quote?group=&side=&size=&outcome=` (`api/quote.ts`) prices a stated size on every leg of a
    group from `/v1/groups` (approved, or a candidate labelled `proposed` and never "approved"; identity links only, not past
    `validUntil`) with the SDK engine alone (`sdk/engine` `quoteBook`: the depth walk, the fee models, `feeSpecId`) over the
-   market, books and fee spec the API reads for served venues (`markets.ts` `tradeView`; the fee is the reader's
+   market, books and fee spec the API reads (`markets.ts` `tradeView`; a leg on a venue with no reader is stated
+   unavailable; the fee is the reader's
    `getFeeSpec`, re-read every 15 s); executable legs are ranked by net cost, best first, and every number carries its
    source and age (book, fee spec with its URL, read date and ttl, market). It fails closed as the engine does: an unknown
    model, a stale spec, a missing parameter or prose rounding leaves the fee and net cost null with the engine's code; a
@@ -437,7 +440,7 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    checked by `rebuildClobOrder` before it is sent, the summary lines, what the digest does and does not cover, the book's
    best prices for reference and a list of what the signer must check; nothing is signed or submitted and no credential is
    held. It is off by default (`API_ROUTE_PREPARE=off` answers `route_prepare_not_enabled`; `free` serves it at no charge;
-   `paid` sells it), because section 5 asks for a legal read before routing for others is charged. Metering is
+   `paid` sells it): the operator's switch. Metering is
    `api/metering.ts` alone: subscription keys (`imk_<id>_<secret>`, issued, listed and revoked by `node api.mjs keys`, stored
    as sha256 in the API's SQLite file, `Authorization: Bearer` only, constant-time check, a tier (`quote` or `full`) and a
    rate limit per key); and x402 version 2 from the specification (`api/x402.ts`, sources and dates in its header): 402 with
@@ -453,11 +456,11 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    ERC-1271 wallet and the recorded USDC code (`test/api/x402.test.ts`, `keys.test.ts`, `quote.test.ts`); one local run paid
    `/v1/quote` end to end over HTTP against a loopback fake facilitator. Behaviour change: the API now passes readers an
    absolute book deadline (step 8 passed the 8 s budget, which Polymarket's reader read as a past instant, so no Polymarket
-   book was ever read). Since step 4's rounding was restated, a reader's own spec prices: with the real policy a Trueo leg can be
+   book was ever read). Since step 4's rounding was restated, a reader's own spec prices: a Trueo leg can be
    executable and named best (`best` in the answer), and Polymarket's leg stays unpriced because the venue publishes
    no rounding mode. Not done: route prepare builds Polymarket EOA orders
    only (Limitless: the reader carries no exchange or fee module; XO: Kernel user operations; Trueo: a pool swap; Polymarket
-   Deposit Wallet: needs the relay's chain read); with the real policy only Trueo is served, so it builds nothing yet; x402
+   Deposit Wallet: needs the relay's chain read); x402
    version 1 (X-PAYMENT) is not accepted; the PayBox listing is not submitted (PayBox lists services from the x402 Bazaar,
    which a facilitator catalogs, and the CDP facilitator needs a CDP API key this server does not hold; see section 10);
    `GET /v1/stream` is not built.
@@ -471,7 +474,7 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    never a venue or a local fallback. Each answer is checked with zod against the shapes `api/` builds (`src/api/schemas.ts`):
    a wrong type, an unknown enum, a non-decimal number, a value its own origin says it lacks, or a candidate not labelled
    proposed refuses the whole answer. Every field keeps the API's source and age (a `cache` value stays `cache`, and the
-   summary says "not live"); venue text goes through the untrusted-text sanitiser into the fixed slot. `venue_not_served`,
+   summary says "not live"); venue text goes through the untrusted-text sanitiser into the fixed slot. `no_reader`,
    429 with its Retry-After (no retry), 404 and 5xx each get their own sentence. Paid calls follow PayBox's plugin
    contract for x402: `api_quote` probes `/v1/quote` unpaid, checks the 402 (version 2 header or version 1 body; exactly
    one `exact` USDC-on-Base offer, the payee in `MARKETS_API_PAY_TO`, at most `MARKETS_API_MAX_PAYMENT_USDC`, the probed
@@ -494,13 +497,10 @@ surface beyond the holdings view. Steps 8 to 10 are new product.
   `/settle` are written. The CDP facilitator authenticates with a CDP API key ID and secret, which would make the API hold
   a secret; which facilitator to use for Base mainnet, and whether to hold that key, stays open, and until then a paid
   route works only with a facilitator that accepts the specification's unauthenticated calls.
-- Decided by step 9 (forced): route prepare is off unless the operator sets `API_ROUTE_PREPARE` (section 5); selling it
-  (`paid`) waits for the legal read section 5 asks for.
+- Decided by step 9: route prepare is off unless the operator sets `API_ROUTE_PREPARE` (`free` or `paid`).
 - Decided by step 9 (forced): the API accepts x402 version 2 only (PAYMENT-SIGNATURE). PayBox's `pay_x402` defaults to
   version 1 unless told otherwise; whether its `use_service` pays a version 2 challenge is unverified.
 - Whether the API ever holds venue credentials to submit on a user's behalf (section 4 says not now).
-- Which `unknown`-licence venues to clear first so the API can serve them. Until one is cleared the API serves Trueo
-  alone, and the chain index's fields reach no answer (step 8).
 - Decided by step 8 (forced): the index is SQLite behind `api/store.ts` `IndexStore` until a Postgres dependency can be
   added; when, and whether Ponder replaces the indexer, stays open.
 - RPC providers per chain, and whether to run our own nodes from the start or only once a provider refuses us.

@@ -94,8 +94,8 @@ export function dataPolicy(rec: PlatformRecord, nowMs: number): DataPolicy {
 // back (link validation): true only for a venue the registry records with no restrictive clause
 // found. A venue with no record, unknown terms or restricted terms is false. Freshness is not
 // consulted: stale terms would otherwise change what an already-written file may contain. The
-// pure table lives in the SDK (sdk/venues/licence.ts) so the hosted API applies the same rule;
-// pm/test/registry/licence.test.ts pins it to these records.
+// pure table lives in the SDK (sdk/venues/licence.ts); pm/test/registry/licence.test.ts pins it
+// to these records.
 export { termsAllowPersistence } from "../../sdk/venues/licence.js";
 
 export { REGISTRY_VENUE_IDS };

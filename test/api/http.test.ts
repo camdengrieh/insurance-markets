@@ -3,7 +3,8 @@ import { request } from "node:http";
 import { test } from "node:test";
 
 import { API_LIMITS } from "../../api/config.js";
-import { Clock, forbiddenFetch, startHarness, testConfig, trueoWorld } from "./helpers.js";
+import { API_READER_VENUES } from "../../api/markets.js";
+import { absentVenue, Clock, startHarness, testConfig, trueoWorld } from "./helpers.js";
 
 // The HTTP surface: fixed JSON errors, the stated per-client limits with 429 and Retry-After, request size limits, CORS for
 // the configured dApp origin only, and the health route. No secret is configured anywhere here.
@@ -11,7 +12,7 @@ import { Clock, forbiddenFetch, startHarness, testConfig, trueoWorld } from "./h
 async function harness() {
   const world = await trueoWorld();
   const clock = new Clock(world.nowMs);
-  const h = await startHarness({ fetchFor: (venue) => (venue === "trueo" ? world.fetch : forbiddenFetch(venue, [])), clock });
+  const h = await startHarness({ fetchFor: (venue) => (venue === "trueo" ? world.fetch : absentVenue(venue)), clock });
   return { h, clock };
 }
 
@@ -30,12 +31,13 @@ function raw(origin: string, method: string, path: string, headers: Record<strin
   });
 }
 
-test("health states the version, the served venues and the limits, and needs no secret", async () => {
+test("health states the version, the venues read and the limits, and needs no secret", async () => {
   const { h } = await harness();
   try {
     const answer = await h.get("/v1/health");
     assert.equal(answer.status, 200);
     assert.equal(answer.json["ok"], true);
+    assert.deepEqual(answer.json["readers"], [...API_READER_VENUES]);
     assert.deepEqual(answer.json["limits"], {
       markets: { burst: API_LIMITS.markets.capacity, perMinute: 30 },
       reads: { burst: API_LIMITS.reads.capacity, perMinute: 60 },
@@ -76,7 +78,7 @@ test("behind a configured proxy the client is the forwarded address; without one
   const world = await trueoWorld();
   const clock = new Clock(world.nowMs);
   const config = testConfig({ API_TRUST_PROXY_HOPS: "1" });
-  const h = await startHarness({ config, fetchFor: (venue) => (venue === "trueo" ? world.fetch : forbiddenFetch(venue, [])), clock });
+  const h = await startHarness({ config, fetchFor: (venue) => (venue === "trueo" ? world.fetch : absentVenue(venue)), clock });
   try {
     for (let i = 0; i < API_LIMITS.reads.capacity; i += 1) await h.get("/v1/groups", { "x-forwarded-for": "198.51.100.7" });
     assert.equal((await h.get("/v1/groups", { "x-forwarded-for": "198.51.100.7" })).status, 429);
@@ -132,7 +134,7 @@ test("CORS headers only for the configured dApp origin, and a preflight for it",
   }
 });
 
-test("q, category and paging filter the served rows", async () => {
+test("q, category and paging filter the rows", async () => {
   const { h } = await harness();
   try {
     const all = await h.get("/v1/markets?venue=trueo&limit=1");
