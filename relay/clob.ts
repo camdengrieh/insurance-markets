@@ -6,10 +6,10 @@ import { decFromNumber, decToAtomic } from "../sdk/money/decimal.js";
 import { formatAtomic } from "../src/guardrails/amount.js";
 import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, MICRO, parseTickMicro, type ClobAmounts } from "../src/clob/amounts.js";
 import { buildDecodedClobAuth, buildDecodedClobOrder, sharesMicroOf } from "../src/clob/decoded.js";
-import { buildLimitlessHeaders, type LimitlessToken } from "../src/clob/limitless/hmac.js";
+import { buildLimitlessHeaders, type LimitlessToken } from "../sdk/node/trade/clob/limitless/hmac.js";
 import { hashLimitlessOrder, limitlessOrderSignTypedData, limitlessOrderToWire, type LimitlessOrder } from "../src/clob/limitless/order.js";
 import { buildPolymarketL1Headers, hashPolymarketClobAuth, polymarketClobAuthSignTypedData } from "../src/clob/polymarket/clobauth.js";
-import { buildPolymarketL2Headers, type PolymarketCredentials } from "../src/clob/polymarket/l2.js";
+import { buildPolymarketL2Headers, type PolymarketCredentials } from "../sdk/node/trade/clob/polymarket/l2.js";
 import {
   DEPOSIT_WALLET_DOMAIN_CALL,
   DEPOSIT_WALLET_OWNER_CALL,

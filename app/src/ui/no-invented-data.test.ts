@@ -40,9 +40,13 @@ const all = production();
 const PINNED_ADDRESS_FILES = new Set([
   "core/address.ts", // zero and burn sentinels used to refuse a destination
   "features/trade/vet.ts", // the zero address, to refuse an order that redirects proceeds
-  "features/wallet/rpc.ts", // Multicall3, the same address on every chain
+  "sdk/chain/multicall.ts", // Multicall3, the same address on every chain
+  "sdk/chain/xo/constants.ts", // XO's pinned contracts (moved from src/xo/chain/constants.ts) and the other CLOB venues' exchanges
+  "sdk/chain/polymarket/constants.ts", // Polymarket's pinned Polygon contracts (docs.polymarket.com/resources/contracts)
+  "sdk/chain/limitless/constants.ts", // Limitless's pinned Base contracts (docs.limitless.exchange smart-contracts)
   "sdk/venues/limitless/constants.ts", // Base USDC
   "sdk/venues/trueo/constants.ts", // Trueo's pinned Base contracts (manager, token, pool reads) and Base USDC
+  "sdk/trade/xo/constants.ts", // XO's order domain contract, the Kernel ECDSA validator and the zero address
   "features/signals/quotient/constants.ts", // Base USDC and the pay-to address of the x402 route
 ]);
 

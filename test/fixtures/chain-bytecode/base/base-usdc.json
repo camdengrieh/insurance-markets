@@ -1,0 +1,16 @@
+{
+  "name": "base-usdc",
+  "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "chain_id": 8453,
+  "address_source": "https://docs.limitless.exchange/user-guide/smart-contracts.md (read 2026-10-22)",
+  "size": 1852,
+  "sha256": "98d785fcb1bf847f287adc2310759fd94cc13e754b974bc72131382e8266f607",
+  "keccak256": "0xa6705a10bb756b5dea144591118be77d7af0c3eee3bf2dfe2583dcb0364fefab",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "FiatTokenProxy",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

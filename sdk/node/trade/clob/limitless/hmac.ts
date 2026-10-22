@@ -6,8 +6,8 @@ import { createHmac } from "node:crypto";
 // a GET); the key is the base64-decoded secret; the digest is base64-encoded. Tokens are created in the venue's UI or
 // through a Privy identity token (POST /auth/api-tokens/derive) and carry scopes; `trading` places and cancels orders.
 //
-// Node-only (node:crypto): the relay signs; the page never holds a token. app/scripts/check-boundaries.ts lists this
-// file as never reachable from the bundle.
+// Node-only (node:crypto): the relay signs; the page never holds a token. app/scripts/check-boundaries.ts keeps
+// all of sdk/node out of the bundle.
 
 export interface LimitlessToken {
   readonly tokenId: string;

@@ -11,11 +11,11 @@
 // Money is bigint micro-USDC.e and exact decimal strings; there is no floating point here. Every failure is a
 // fixed sentence that never echoes the input.
 
-import { formatAtomic } from "@shared/guardrails/amount";
-import { USDC_E_DECIMALS } from "@shared/xo/chain/constants";
-import { ORDER_CAP_FEE_BPS, computeOrderAmounts, exactShareStepMicro, formatMicro, formatTick, orderCapAmount, parsePriceToTick } from "@shared/xo/signing/amounts";
-import { KERNEL_DOMAIN_NAME, KERNEL_DOMAIN_VERSION, ORDER_DOMAIN_NAME, ORDER_DOMAIN_VERSION, SIDE_BUY, SIDE_SELL, XO_CHAIN_ID } from "@shared/xo/signing/constants";
-import { SigningError } from "@shared/xo/signing/errors";
+import { formatAtomic } from "@sdk/money/amount";
+import { USDC_E_DECIMALS } from "@sdk/chain/xo/constants";
+import { ORDER_CAP_FEE_BPS, computeOrderAmounts, exactShareStepMicro, formatMicro, formatTick, orderCapAmount, parsePriceToTick } from "@sdk/trade/xo/amounts";
+import { KERNEL_DOMAIN_NAME, KERNEL_DOMAIN_VERSION, ORDER_DOMAIN_NAME, ORDER_DOMAIN_VERSION, SIDE_BUY, SIDE_SELL, XO_CHAIN_ID } from "@sdk/trade/xo/constants";
+import { SigningError } from "@sdk/trade/xo/errors";
 
 import { decToAtomic, isDec } from "../../core/money";
 

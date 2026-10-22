@@ -421,7 +421,7 @@ export function MarketsView({ market, invalidAddress = false }: MarketsViewProps
   const [statusFacts, setStatusFacts] = useState<StatusFacts | null>(null);
   const searchNoteId = useId();
 
-  const holdings = useHoldings();
+  const holdings = useHoldings(() => services.memory.rows());
   const signals = useSignalsServices();
   const snapshot = useQuotientSnapshot();
   const quotient = quotientStateOf(snapshot);

@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-neg-risk-module-implementation",
+  "address": "0x39a5B01a100edF811f2748aa37B1313715Ded70e",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 28479,
+  "sha256": "2d63a35a8d528dcdf87e374a77ce92a7a9fa4e0ebf5e00376e6c1dd51f099526",
+  "keccak256": "0xd4e04b562d38982ce9e51ecffaa1b7260cac7c9cce782a7d4bb3ae0512ee061a",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0x39a5B01a100edF811f2748aa37B1313715Ded70e?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "NegRiskModule",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

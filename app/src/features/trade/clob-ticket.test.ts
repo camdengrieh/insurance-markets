@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
-import { LIMITLESS_PRICE_TICK } from "@shared/clob/venues";
+import { depositWalletAddress } from "@sdk/trade/clob/polymarket/deposit-wallet";
+import { LIMITLESS_PRICE_TICK } from "@sdk/trade/clob/venues";
 
 import type { Market } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";

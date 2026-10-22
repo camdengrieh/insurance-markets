@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { XoOrder } from "@shared/xo/signing/order";
-import { buildDecodedOrder, rebuildDecoded } from "@shared/xo/signing/rebuild";
+import type { XoOrder } from "@sdk/trade/xo/order";
+import { buildDecodedOrder, rebuildDecoded } from "@sdk/trade/xo/rebuild";
 
 import { vetPrepared, VET_CODES, type Expected, type VetResult } from "./vet";
 import { buildTicket, type Ticket } from "./ticket";

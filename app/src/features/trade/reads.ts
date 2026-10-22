@@ -3,7 +3,7 @@
 // never throws for a normal failure, so a screen can show "could not read" without losing the rest of the page.
 
 import type { BridgeErrorCode } from "@bridge/contract";
-import { deriveAccount } from "@shared/xo/account/derive";
+import { deriveAccount } from "@sdk/trade/xo/account/derive";
 
 import type { Untrusted } from "../../core/ports";
 import { isDaemonError, type TradeClient } from "./client";

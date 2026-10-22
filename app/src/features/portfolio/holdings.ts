@@ -7,6 +7,7 @@
 
 import { useMemo } from "react";
 
+import type { MarketSummary } from "../../core/ports";
 import { useBindingsState } from "../wallet/services";
 import { usePortfolio, type PortfolioQuery } from "./usePortfolio";
 import type { PortfolioRow, VenueReadOk, VenueReadOutcome } from "./types";
@@ -33,9 +34,11 @@ function keyOf(venue: string, tokenId: string): string {
   return `${venue}:${tokenId.toLowerCase()}`;
 }
 
-export function useHoldings(): Holdings {
+// `known` returns the market rows the page has loaded (the Markets surface's memory): the chain readers take their
+// candidate token ids, titles and outcome names from them. Without it they find tokens by the transfer scan alone.
+export function useHoldings(known?: () => readonly MarketSummary[]): Holdings {
   const bindings = useBindingsState();
-  const portfolio = usePortfolio(bindings.bindings, bindings.switches, bindings.status === "ready");
+  const portfolio = usePortfolio(bindings.bindings, bindings.switches, bindings.status === "ready", known);
 
   const ok = useMemo(() => portfolio.outcomes.filter((outcome): outcome is VenueReadOk => outcome.kind === "ok"), [portfolio.outcomes]);
   const others = useMemo(() => portfolio.outcomes.filter((outcome): outcome is Exclude<VenueReadOutcome, VenueReadOk> => outcome.kind !== "ok"), [portfolio.outcomes]);

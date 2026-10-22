@@ -42,14 +42,16 @@ import {
 } from "../chain/constants.js";
 import {
   ChainReadError,
+  RPC_ALLOWED_METHODS,
   RpcReader,
+  chainReadErrorOf,
   padAddressTopic,
   readRoutePairing,
   type RoutePairingReading,
   type RouteSideReading,
-  type RpcHttpResponse,
   type RpcTransport,
 } from "../chain/reads.js";
+import { createRpcPort, isRpcError, type RpcPort } from "../../../sdk/chain/rpc.js";
 import {
   FUNDING_CHAIN,
   FundingCalldataError,
@@ -140,7 +142,6 @@ const HEX_QUANTITY = /^0x[0-9a-fA-F]{1,16}$/;
 const HEX_32 = /^0x[0-9a-fA-F]{64}$/;
 const ADDRESS_HEX = /^0x[0-9a-fA-F]{40}$/;
 const HEX_BYTES = /^0x(?:[0-9a-fA-F]{2})*$/;
-const API_KEY_COMPLAINT = /api[_\s-]?key/i;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -190,15 +191,13 @@ function parseReceipt(raw: unknown, expectedHash: string): BaseReceipt {
   };
 }
 
-// Read-only access to Base. eth_call and eth_getStorageAt go through the shared RpcReader (so the pairing
-// read is the one the tripwires use); the three extra methods below are the only others, each on an
-// allowlist. A 401 or 403 sets a latch and later calls fail fast: this code never looks for a key.
+// Read-only access to Base, over one JSON-RPC port (sdk/chain/rpc.ts). eth_call and eth_getStorageAt go through the
+// shared RpcReader (so the pairing read is the one the tripwires use); the three extra methods below are the only
+// others, each on an allowlist. The reader and these methods share the port, so a 401 or 403 seen by either sets one
+// latch and later calls fail fast: this code never looks for a key.
 export class BaseRpc {
   readonly reader: RpcReader;
-  private readonly transport: RpcTransport;
-  private readonly url: string;
-  private nextId = 1;
-  private latched = false;
+  private readonly port: RpcPort;
 
   constructor(options: BaseRpcOptions) {
     let parsed: URL;
@@ -208,56 +207,40 @@ export class BaseRpc {
       throw new ChainReadError("invalid_input", "the Base RPC URL could not be parsed");
     }
     if (parsed.protocol !== "https:") throw new ChainReadError("invalid_input", "the Base RPC URL must be https");
-    // One latch for every request, the shared reader's included: once the host wants a key, nothing more
-    // is sent to it. The extra methods below set it on a 401 or 403; the shared reader keeps its own latch
-    // for the same signal, and `requiresKey` reports either.
-    this.transport = {
-      postJson: async (url, body) => {
-        // Answer a latched host with the 401 it already gave, without sending anything: both readers then
-        // report requires_key the usual way.
-        if (this.latched) return { status: 401, body: "requires key" };
-        return options.transport.postJson(url, body);
-      },
-    };
-    this.reader = new RpcReader({ transport: this.transport, url: options.url });
-    this.url = parsed.toString();
+    try {
+      this.port = createRpcPort({
+        url: options.url,
+        post: (url, body) => options.transport.postJson(url, body),
+        methods: [...RPC_ALLOWED_METHODS, ...EXTRA_METHODS],
+        batch: "never",
+        maxLogBlockRange: null,
+        allowLatestLogs: true,
+        requireLogAddress: false,
+      });
+    } catch (error) {
+      throw new ChainReadError("invalid_input", "the Base RPC URL must carry no credentials and no query string", { cause: error });
+    }
+    this.reader = new RpcReader({ transport: options.transport, url: options.url, port: this.port });
   }
 
   get requiresKey(): boolean {
-    return this.latched || this.reader.requiresKey;
+    return this.port.requiresKey;
   }
 
   private async rpc(method: ExtraMethod, params: readonly unknown[]): Promise<unknown> {
     if (!(EXTRA_METHODS as readonly string[]).includes(method)) throw new ChainReadError("unsupported_method", "RPC method is not on the read-only allowlist");
     if (this.requiresKey) throw new ChainReadError("requires_key", "the RPC host requires a key; not retrying");
-    const id = this.nextId;
-    this.nextId += 1;
-    let response: RpcHttpResponse;
     try {
-      response = await this.transport.postJson(this.url, { jsonrpc: "2.0", id, method, params });
+      return await this.port.request(method, params);
     } catch (error) {
-      if (error instanceof ChainReadError) throw error;
-      const name = isRecord(error) ? error["name"] : undefined;
-      throw new ChainReadError(name === "TimeoutError" || name === "AbortError" ? "timeout" : "upstream_error", "the Base RPC request failed", { cause: error });
-    }
-    if (response.status === 401 || response.status === 403) {
-      this.latched = true;
-      throw new ChainReadError("requires_key", "the RPC host requires a key");
-    }
-    if (response.status === 429) throw new ChainReadError("rate_limited", "RPC rate limit reached");
-    if (response.status < 200 || response.status >= 300) {
-      const text = typeof response.body === "string" ? response.body : "";
-      if (API_KEY_COMPLAINT.test(text)) {
-        this.latched = true;
-        throw new ChainReadError("requires_key", "the RPC host requires a key");
+      if (isRpcError(error) && error.code === "unreachable") {
+        const name = isRecord(error.cause) ? error.cause["name"] : undefined;
+        throw new ChainReadError(name === "TimeoutError" || name === "AbortError" ? "timeout" : "upstream_error", "the Base RPC request failed", { cause: error.cause });
       }
-      throw new ChainReadError("upstream_error", `RPC answered HTTP ${response.status}`);
+      // None of these three methods runs contract code, so an error object is an upstream error whatever it says.
+      if (isRpcError(error) && error.code === "reverted") throw new ChainReadError("upstream_error", "RPC returned an error");
+      throw chainReadErrorOf(error);
     }
-    const body = response.body;
-    if (!isRecord(body)) throw new ChainReadError("invalid_response", "RPC answer is not a JSON object");
-    if (body["error"] !== undefined && body["error"] !== null) throw new ChainReadError("upstream_error", "RPC returned an error");
-    if (body["id"] !== id || !("result" in body)) throw new ChainReadError("invalid_response", "RPC answer does not match the request");
-    return body["result"];
   }
 
   async chainId(): Promise<number> {

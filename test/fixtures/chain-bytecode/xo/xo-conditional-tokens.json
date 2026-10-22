@@ -1,0 +1,16 @@
+{
+  "name": "xo-conditional-tokens",
+  "address": "0xCcf1b2C676E2f9A13e5674be0e0DdFF6d0B13909",
+  "chain_id": 3223,
+  "address_source": "XO Market Docs /documentation/introduction, Contracts table (read 2026-10-22 through the xo-docs MCP)",
+  "size": 14771,
+  "sha256": "f9528b7f2d4c852477915536428daf294063abbeae01a77b628b25f44f6edbc4",
+  "keccak256": "0x969a4b4dec9d773dc75c30678c2d7b6cfc2d1350e95d4614c06faf12dc500f1d",
+  "code_source": "eth_getCode over https://rpc-mainnet-2.xo.market/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": null,
+  "sourcify_match": null,
+  "sourcify_contract": null,
+  "sourcify_onchain_equals_rpc": null,
+  "captured_at": "2026-10-22"
+}

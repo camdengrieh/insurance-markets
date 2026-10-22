@@ -54,6 +54,20 @@ describe("check-boundaries", () => {
     }
   });
 
+  it("allows the pure sdk to the bundle but never sdk/node, by alias, by relative path or through an sdk file", async () => {
+    const files = {
+      "sdk/trade/clean.ts": "export const c = 1;\n",
+      "sdk/trade/leaky.ts": 'import { h } from "../node/trade/xo/hmac.js";\nexport const l = h;\n',
+      "sdk/node/trade/xo/hmac.ts": 'import { createHmac } from "node:crypto";\nexport const h = createHmac;\n',
+    };
+    expect(await rules({ ...files, "app/src/main.ts": 'import { c } from "@sdk/trade/clean";\nexport const x = c;\n' })).toEqual([]);
+    expect(await rules({ ...files, "app/src/main.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const x = h;\n' })).toEqual(["forbidden-import:app/src/main.ts"]);
+    expect(await rules({ ...files, "app/src/main.ts": 'import { h } from "../../sdk/node/trade/xo/hmac.js";\nexport const x = h;\n' })).toEqual(["forbidden-import:app/src/main.ts"]);
+    expect(await rules({ ...files, "app/src/main.ts": 'import { l } from "@sdk/trade/leaky";\nexport const x = l;\n' })).toEqual(["forbidden-import:sdk/trade/leaky.ts"]);
+    // A test is not bundled, but it may not reach the credentialed signers either.
+    expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/a.test.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/a.test.ts"]);
+  });
+
   it("fails an import outside app/ that is not on the shared allowlist", async () => {
     const found = await rules({
       "src/other.ts": "export const o = 1;\n",

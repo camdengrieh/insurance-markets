@@ -27,6 +27,16 @@ One implementation of the market model, money, categories and the rules fingerpr
 | `signals/quotient/` | Quotient body validation only (no fetching): the `/markets/mispriced` and `/signals` bodies into validated rows |
 | `links/` | The link registry, pure: the record schema (`schema.ts`), tier caps, cross-field invariants, the working-registry store, the hash-pinned bundle, offline lookup, runtime pin checks, the gold-set tooling (`goldset/`), and `approve.ts`, imported by path only (approval is a human command, run from `pm/links/cli.ts`). Which venues' terms allow keeping derived text is injected (`PersistenceTerms`); pm binds its platform registry. Also the engine's view of a link (`types.ts`) and the dApp's published dataset contract (`dataset.ts`: schemas, content pin, parser), which the linker's export and the page share |
 | `linker/` | The linker's scoring, pure: text features (hashes only), blocking, integer pair scores and vetoes, candidate inputs for pairs and native groups, and the conversion of a bundle into the dApp dataset. Discovery over HTTP, state files and the run loop stay in `pm/linker` |
+| `trade/contract.ts` | The prepared-item contract every signer and checker shares: scalar schemas, the order and CLOB vocabulary, what PayBox is asked to sign (`PreparedSign`, `toPayboxIntent`), the decoded blocks, the strict `Prepared` schema and `verifyPrepared`. `src/relay/contract.ts` re-exports it beside the relay's routes |
+| `trade/xo/` | XO's unsigned builders and checks: the order, ClobAuth and Kernel typed data and hashes, the wire signature, the verifiers, the GTD expiry window (the clock reading is an argument), amounts and caps, CTF position ids, the summary lines and the decoded-block rebuild (`rebuild.ts`, with `verifyPreparedLocal`). `account/derive.ts` is the counterfactual Kernel account; `userop/` the closed call list, execute encoding, gas plan, nonce, packing, hash, the `Prepared.sign` block and the signature check |
+| `trade/clob/` | The Polymarket and Limitless order and ClobAuth builders, the Polymarket Deposit Wallet derivation and its ERC-7739 wrapper, the CLOB amounts, venue facts (domains, exchanges, ticks) and decoded blocks |
+| `chain/rpc.ts` | The one JSON-RPC port every chain read goes through: an injected POST (`rpcPostFromFetch` builds one from a FetchLike with a body cap and a deadline), a per-port read-method allowlist (a subset of `RPC_READ_METHODS`), the key latch, envelope and result-shape checks, batching with a once-and-for-good fallback to single requests, and eth_getLogs refused for an open or too-wide range (10,000 blocks by default) |
+| `chain/pins.ts`, `chain/multicall.ts` | `ContractPin` (address, source, runtime code hash and size, EIP-1967 implementation) and `checkPin`/`createPinGuard`, which every reader runs before reading a contract; Multicall3 `aggregate3` with its Polygon and Base pins |
+| `chain/ctf.ts`, `chain/positions.ts`, `chain/fills.ts`, `chain/exchange.ts` | Conditional Tokens: the position-id derivation (`collectionIdOf`, `positionIdOf`, `binaryPositionIds`), payouts, transfer and resolution decoders; positions (`readBalances`, `readCtfPayouts`, `readModuleResults`, `readPositions`, the bounded `scanTransfersTo`); OrderFilled of the three exchange shapes (`readFills`, bounded ranges only); the XO and Limitless token registries, each answer confirmed by derivation |
+| `chain/polymarket/`, `chain/limitless/` | Each venue's pinned contracts (from its own contract list, with the code hashes read on 2026-10-22), its ABI fragments and the choice of token ids and result sources (`polymarketTargets`, `v2PositionParts`, `limitlessTargets`); recordings in `fixtures/` |
+| `chain/xo/` | XO's pinned constants and ABI fragments, the account, nonce, fee, paymaster, route and creation reads (`reads.ts`: `RpcReader` over the port, `ExplorerLogReader`), the tripwires, the code pins of its ledger and exchange (`pins.ts`) and its position targets (`positions.ts`); recordings in `fixtures/` |
+| `chain/fixtures/` | The read scenarios behind the recordings, the recording and replay transports, and the verified-ABI excerpts the fragments are checked against |
+| `node/` | Node only, never reachable from the page: `node/trade/` holds the credentialed request signers (XO L2 in `xo/hmac.ts`, Polymarket L2 in `clob/polymarket/l2.ts`, Limitless in `clob/limitless/hmac.ts`), which take a secret and use `node:crypto` |
 
 Every client parses a venue through these modules and nothing else: the dApp's readers are the `venues/<venue>`
 adapters; `pm/adapters` keeps its own transport and data-terms policy and returns the SDK read model unchanged
@@ -43,11 +53,14 @@ Rules (checked by `test/sdk/boundary.test.ts` and the app's `check-boundaries`):
   leave them out.
 - The bottom layer: imports only other `sdk/` files and the bare packages `viem` and `zod`. Never `app/`,
   `bridge/`, `relay/`, `src/` or `pm/`.
-- No secrets. Anything that takes a credential will live in `sdk/node/`, which the page may never import.
+- No secrets. Anything that takes a credential lives in `sdk/node/`, the one folder that may import `node:` built-ins
+  and which the page may never import (`app/scripts/check-boundaries.ts`).
 - Relative imports carry the `.js` extension so Node, esbuild, Vite and `tsc` all resolve them.
 
 The old locations are one-line re-exports so existing import paths keep working: `pm/core/category.ts`,
 `pm/core/rational.ts`, `pm/links/hash.ts`, `pm/links/canonical.ts`, `src/guardrails/amount.ts`,
-`src/guardrails/untrusted.ts`, `src/xo/{client,http,types,units}.ts`, and in the app `core/ports.ts`,
+`src/guardrails/untrusted.ts`, `src/xo/{client,http,types,units}.ts`, `src/xo/chain/{constants,abi,reads,tripwires}.ts`
+(`reads.ts` also keeps `readAccountCode`), the order builders under `src/xo/signing`, `src/clob`, `src/xo/userop` and
+`src/xo/account/derive.ts`, and in the app `core/ports.ts`,
 `core/category.ts`, `core/money.ts`, `core/untrusted.ts`, `core/format.ts`, `core/errors.ts`, `core/cache.ts` and
 `core/venue-policy.ts`.

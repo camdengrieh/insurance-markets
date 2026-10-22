@@ -11,14 +11,14 @@ import type { VenueId } from "../../core/ports";
 import { venueState, type BuildKind, type VenueSwitches } from "../../core/venue-policy";
 import type { VenueReadOutcome } from "./types";
 
-export type Resolution = "direct" | "derived_kernel" | "profile_lookup";
+export type Resolution = "direct" | "derived_kernel";
 
 export type PlannedRead =
   | {
       readonly kind: "run";
       readonly venue: VenueId;
       readonly binding: AddressBinding;
-      // The address given to the venue (for "profile_lookup" it is the owner: the venue's own lookup names the wallet).
+      // The address whose holdings are read.
       readonly address: string;
       readonly resolution: Resolution;
     }
@@ -28,8 +28,12 @@ export const XO_CHAIN = "eip155:3223";
 export const BASE_CHAIN = "eip155:8453";
 
 // Venues that have a position reader in this build. Hyperliquid's and Manifold's adapters read no positions
-// (their caps say so), and Limitless, SX and the restricted venues have no adapter yet.
-export const POSITION_READERS: ReadonlySet<VenueId> = new Set<VenueId>(["xo", "polymarket", "trueo", "pascal"]);
+// (their caps say so), and SX and the restricted venues have no reader yet.
+export const POSITION_READERS: ReadonlySet<VenueId> = new Set<VenueId>(["xo", "polymarket", "limitless", "trueo", "pascal"]);
+
+// Venues whose positions are read from the chain alone (chain-reads.ts). Their reads go to a public RPC the page may
+// call directly, so a venue whose own API needs the Cockpit is still read in the standalone build.
+export const CHAIN_READERS: ReadonlySet<VenueId> = new Set<VenueId>(["xo", "polymarket", "limitless"]);
 
 function skip(venue: VenueId, binding: AddressBinding, kind: "unsupported" | "unresolved", why: string): PlannedRead {
   return { kind: "skip", venue, binding, outcome: { kind, venue, bindingId: binding.id, bindingLabel: binding.label, why } };
@@ -55,9 +59,15 @@ function target(venue: VenueId, binding: AddressBinding): PlannedRead {
       return skip(venue, binding, "unsupported", "XO positions are looked up for a PayBox address, which owns the account, or for the account itself.");
     }
     case "polymarket":
-      if (binding.kind === "venue_proxy") return { kind: "run", venue, binding, address, resolution: "direct" };
-      if (binding.kind === "eoa") return { kind: "run", venue, binding, address, resolution: "profile_lookup" };
-      return skip(venue, binding, "unsupported", "Polymarket positions are looked up for a PayBox address or for the Polymarket wallet itself.");
+      // Read on Polygon for the address itself. No profile lookup: that is a venue API call. Polymarket usually holds
+      // positions in a wallet it creates for an owner; that wallet is read when it is pasted as its own entry.
+      if (binding.kind === "venue_proxy" || binding.kind === "eoa") return { kind: "run", venue, binding, address, resolution: "direct" };
+      return skip(venue, binding, "unsupported", "Polymarket positions are read on Polygon for an ordinary address or for the Polymarket wallet itself.");
+    case "limitless":
+      if (binding.kind === "eoa" || binding.kind === "venue_proxy" || (binding.kind === "kernel" && binding.chain === BASE_CHAIN)) {
+        return { kind: "run", venue, binding, address, resolution: "direct" };
+      }
+      return skip(venue, binding, "unsupported", "Limitless holdings are read on Base for an ordinary address.");
     case "trueo":
       if (binding.kind === "eoa" || binding.kind === "venue_proxy" || (binding.kind === "kernel" && binding.chain === BASE_CHAIN)) {
         return { kind: "run", venue, binding, address, resolution: "direct" };
@@ -76,7 +86,8 @@ export function planReads(bindings: readonly AddressBinding[], switches: VenueSw
   for (const binding of bindings) {
     for (const venue of binding.venues) {
       const state = venueState(venue, switches, build);
-      if (!state.enabled) {
+      // A chain reader asks a public RPC, never the venue's API, so the Cockpit is not needed for it.
+      if (!state.enabled && !(state.reason === "needs_cockpit" && CHAIN_READERS.has(venue))) {
         const base = { venue, bindingId: binding.id, bindingLabel: binding.label };
         planned.push({
           kind: "skip",

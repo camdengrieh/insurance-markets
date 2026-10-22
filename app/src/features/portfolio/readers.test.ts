@@ -6,8 +6,7 @@ import { toDec } from "../../core/money";
 import type { AdapterDeps, AdapterError, Book, Result, TokenRef } from "../../core/ports";
 import { DEFAULT_SWITCHES } from "../../core/venue-policy";
 import type { VenuePosition } from "@sdk/venues/pascal";
-import { recorded, SENATE_YES, type Json } from "@sdk/venues/polymarket/fixtures/load";
-import { fakeNetwork, manualClock, type FakeNetwork, type GetRoute } from "../wallet/testkit";
+import { fakeNetwork, manualClock, type FakeNetwork } from "../wallet/testkit";
 import { book as makeBook, must, NOW, prov } from "./fixtures";
 import { createPortfolioAdapters, markWithBids, MAX_MARKED_ROWS_PER_VENUE, readAll, type PortfolioAdapters, type ReadContext } from "./readers";
 import { planReads } from "./targets";
@@ -16,7 +15,6 @@ import type { VenueReadOk, VenueReadOutcome } from "./types";
 import { row as makeRowFixture } from "./fixtures";
 
 const OWNER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-const PROXY = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 const SOLANA = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
 
 function binding(overrides: Partial<AddressBinding> & { id: string }): AddressBinding {
@@ -28,56 +26,12 @@ const ok = (outcome: VenueReadOutcome | undefined): VenueReadOk => {
   return outcome;
 };
 
-// ---- Polymarket through the real adapter over a fake network ---------------------------------------------------------
-
-function positionsBody(rows: Json[], hasMore = false): Json {
-  return { data: rows, pagination: { limit: 100, offset: null, has_more: hasMore, next_cursor: hasMore ? "c3ludGhldGljLWN1cnNvcg" : null } };
-}
-
-function polymarketNet(overrides: { profile?: GetRoute; positions?: GetRoute; clob?: GetRoute } = {}): FakeNetwork {
-  // No populated positions answer and no public profile were ever captured (a funded wallet and a real person's
-  // profile), so the defaults are the empty cases: no profile for the address, an empty positions page.
-  return fakeNetwork({
-    get: {
-      "gamma-api.polymarket.com/public-profile": overrides.profile ?? (() => ({ status: 404 })),
-      "data-api.polymarket.com/v2/positions": overrides.positions ?? (() => ({ body: positionsBody([]) })),
-      "clob.polymarket.com/book": overrides.clob ?? ((url) => (url.searchParams.get("token_id") === SENATE_YES ? { body: recorded.senateBook() } : { status: 404 })),
-    },
-  });
-}
-
 function context(net: FakeNetwork, adapters?: Partial<PortfolioAdapters>, mode: "standalone" | "cockpit" = "cockpit"): ReadContext {
   const deps: AdapterDeps = { fetch: net.fetch, nowMs: manualClock(NOW).nowMs };
   return { deps, adapters: { ...createPortfolioAdapters(deps, mode), ...adapters }, mode };
 }
 
-describe("Polymarket (M2-5, M2-7)", () => {
-
-  it("M2-7: a pasted Polymarket wallet is used as it is, with no profile lookup", async () => {
-    const net = polymarketNet();
-    const planned = planReads([binding({ id: "w", kind: "venue_proxy", address: PROXY })], DEFAULT_SWITCHES, "cockpit");
-    const result = ok((await readAll(context(net), planned))[0]);
-    expect(result.resolution).toEqual({ source: "pasted", address: PROXY, candidate: null });
-    expect(net.calls.some((call) => call.url.pathname === "/public-profile")).toBe(false);
-  });
-
-  it("M2-7: no profile for the address is 'unresolved', says to paste a wallet, and reads no positions", async () => {
-    const net = polymarketNet({ profile: () => ({ status: 404, body: { error: "not found" } }) });
-    const planned = planReads([binding({ id: "a" })], DEFAULT_SWITCHES, "cockpit");
-    const [outcome] = await readAll(context(net), planned);
-    expect(outcome).toMatchObject({ kind: "unresolved", venue: "polymarket" });
-    expect(outcome?.kind === "unresolved" && outcome.why).toMatch(/paste your Polymarket wallet/);
-    expect(net.calls.some((call) => call.url.pathname === "/v2/positions")).toBe(false);
-  });
-
-  it("a profile whose wallet is not a valid address is drift, not a query", async () => {
-    const net = polymarketNet({ profile: () => ({ body: { proxyWallet: "0x123" } }) });
-    const [outcome] = await readAll(context(net), planReads([binding({ id: "a" })], DEFAULT_SWITCHES, "cockpit"));
-    expect(outcome?.kind === "failed" || outcome?.kind === "unresolved").toBe(true);
-    expect(net.calls.some((call) => call.url.pathname === "/v2/positions")).toBe(false);
-  });
-
-});
+// XO, Polymarket and Limitless are read from the chain alone: chain-reads.test.ts.
 
 // ---- isolation (M2-6) ----------------------------------------------------------------------------------------------------
 

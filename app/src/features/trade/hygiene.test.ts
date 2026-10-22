@@ -17,7 +17,13 @@ const TEST_ONLY = new Set(["test-support.tsx", "clob-test-support.ts"]);
 // The only file that may NAME a tool that sends. It builds fixed text for a person to give an agent; it calls nothing.
 const TEXT_ONLY_FILE = "handoff.ts";
 const SENDING_TOOLS = new Set(["xo_submit_userop", "xo_submit_order", "xo_cancel_order", "xo_withdraw", "xo_get_prepared"]);
-const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "xo/signing/amounts", "xo/signing/constants", "xo/signing/errors", "xo/signing/lines", "xo/chain/constants", "xo/funding/calldata", "guardrails/amount", "guardrails/untrusted", "clob/amounts", "clob/venues", "clob/polymarket/deposit-wallet"]);
+// The order builders, decoders and the prepared-item contract come from the SDK (@sdk/trade, docs/sdk-and-api-design.md
+// step 5) and the chain constants from @sdk/chain; what is left under @shared is the relay's route table and the
+// funding calldata.
+const ALLOWED_SHARED = new Set(["relay/contract", "xo/funding/calldata"]);
+// sdk/node holds the credentialed request signers: never imported by a page file, by alias or by relative path
+// (app/scripts/check-boundaries.ts enforces the same over the whole bundle).
+const SDK_NODE = /(?:^@sdk|(?:^|\/)sdk)\/node(?:\/|$)/;
 const FORBIDDEN_IDENTIFIER = /submit|signature|signTyped|signMessage|sendTransaction|sendRawTransaction|writeContract|privateKey|mnemonic|secret/i;
 // Names that are about display or the daemon's own states, not an action.
 // `signature_type` is a field of the decoded venue order the page reads to check the maker (vet.ts); it sends nothing.
@@ -44,6 +50,7 @@ export function scanSource(file: string, text: string): Finding[] {
       const specifier = node.moduleSpecifier.text;
       if (/(?:^|\/)(?:clob-)?test-support$/.test(specifier)) add("test-helper-import", specifier);
       if (specifier.startsWith("@shared/") && !ALLOWED_SHARED.has(specifier.slice("@shared/".length))) add("shared-import", specifier);
+      if (SDK_NODE.test(specifier)) add("sdk-node-import", specifier);
       if (specifier.startsWith("@bridge/") && specifier !== "@bridge/contract") add("bridge-import", specifier);
       if (/^node:|^(?:fs|path|child_process|http|https|net|crypto)$/.test(specifier)) add("node-import", specifier);
     }
@@ -124,6 +131,7 @@ describe("what the trade screens' source can reach (M4-4, M4-5)", () => {
     const bad = scanSource(
       "Seeded.tsx",
       `import { x } from "@shared/xo/signing/hmac";
+       import { y } from "@sdk/node/trade/clob/polymarket/l2";
        export function Bad() {
          const sig = signature;
          void fetch("/ui/inbox/sign");
@@ -131,7 +139,7 @@ describe("what the trade screens' source can reach (M4-4, M4-5)", () => {
        }`,
     );
     const rules = new Set(bad.map((finding) => finding.rule));
-    for (const rule of ["shared-import", "identifier", "network-global", "path-literal", "jsx-attribute", "callTool-argument", "sending-tool-name"]) expect(rules.has(rule), rule).toBe(true);
+    for (const rule of ["shared-import", "sdk-node-import", "identifier", "network-global", "path-literal", "jsx-attribute", "callTool-argument", "sending-tool-name"]) expect(rules.has(rule), rule).toBe(true);
   });
 
   it("has no string-to-HTML or string-to-code sink and no Web storage or clipboard", () => {

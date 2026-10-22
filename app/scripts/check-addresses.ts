@@ -8,7 +8,7 @@ import { REPO_DIR, SOURCE_FILE, isMain, lineOf, relPosix, report, walk, type Vio
 // Strict EIP-55 over every address the app and its shared sources pin (acceptance W0-5, docs/dapp-design.md
 // section 9 row 15: research note 28 printed the Kernel factory with a checksum that fails).
 //
-// 1. Every exported string of src/xo/chain/constants.ts that is an address must equal its own checksummed
+// 1. Every exported string of sdk/chain/xo/constants.ts that is an address must equal its own checksummed
 //    form (all-lowercase is not accepted for a pinned constant).
 // 2. Every 40-hex-digit literal in the app's source, the shared XO sources and bridge/contract.ts must pass
 //    viem's strict check: all-lowercase passes, anything with capitals needs the right checksum.
@@ -41,7 +41,7 @@ export function literalViolations(file: string, text: string): Violation[] {
 export interface AddressOptions {
   readonly repoRoot?: string;
   readonly appDir?: string;
-  // Replaces the import of src/xo/chain/constants.ts (tests).
+  // Replaces the import of sdk/chain/xo/constants.ts (tests).
   readonly constants?: Readonly<Record<string, unknown>>;
 }
 
@@ -49,8 +49,10 @@ export async function checkAddresses(options: AddressOptions = {}): Promise<Viol
   const repoRoot = options.repoRoot ?? REPO_DIR;
   const appDir = options.appDir ?? resolve(repoRoot, "app");
   const violations: Violation[] = [];
-  const constants = options.constants ?? ((await import(resolve(repoRoot, "src/xo/chain/constants.ts"))) as Record<string, unknown>);
-  violations.push(...pinnedAddressViolations("src/xo/chain/constants.ts", constants));
+  // The constants live in sdk/chain/xo/constants.ts; src/xo/chain/constants.ts is a re-export whose .js specifier
+  // Node's type stripping cannot follow, so the SDK file is imported directly.
+  const constants = options.constants ?? ((await import(resolve(repoRoot, "sdk/chain/xo/constants.ts"))) as Record<string, unknown>);
+  violations.push(...pinnedAddressViolations("sdk/chain/xo/constants.ts", constants));
   const files = [
     ...(await walk(join(repoRoot, "src", "xo"), SKIP)),
     join(repoRoot, "src", "relay", "contract.ts"),

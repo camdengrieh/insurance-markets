@@ -1,0 +1,16 @@
+{
+  "name": "xo-ctf-exchange",
+  "address": "0x4bC5E872256D12E6017dfe466E04c867DC761B77",
+  "chain_id": 3223,
+  "address_source": "XO Market Docs /documentation/introduction, Contracts table (read 2026-10-22 through the xo-docs MCP)",
+  "size": 130,
+  "sha256": "18c64bfa3024d82c9f38976c8902f94ec43dd7ed267eb8e8dd3edc40c592d668",
+  "keccak256": "0xec8231b78f32f91186fdf98774cc7b2fc96759f22e90fa823f7b1e32f1bedd11",
+  "code_source": "eth_getCode over https://rpc-mainnet-2.xo.market/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": "0x24BB67503d92f3b2A36cf97c45E51FF2C0c452ED",
+  "sourcify_url": null,
+  "sourcify_match": null,
+  "sourcify_contract": null,
+  "sourcify_onchain_equals_rpc": null,
+  "captured_at": "2026-10-22"
+}

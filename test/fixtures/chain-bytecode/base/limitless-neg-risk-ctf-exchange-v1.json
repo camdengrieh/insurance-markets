@@ -1,0 +1,16 @@
+{
+  "name": "limitless-neg-risk-ctf-exchange-v1",
+  "address": "0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6",
+  "chain_id": 8453,
+  "address_source": "https://docs.limitless.exchange/user-guide/smart-contracts.md (read 2026-10-22)",
+  "size": 19366,
+  "sha256": "2d5b06ff078b5b4357c3ad568e6806fbfbd45bd2e703a9e6ce7678163b0a72c3",
+  "keccak256": "0x4201369660af926de36359e59d099429bd24703ca38e7ae597e671cc061539ca",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "NegRiskCtfExchange",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

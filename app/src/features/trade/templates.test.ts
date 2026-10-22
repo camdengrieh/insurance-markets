@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { DecodedCallBlock } from "@shared/relay/contract";
-import { CONDITIONAL_TOKENS, CTF_EXCHANGE, USDC_E_ADDRESS, XO_WARP_ROUTE } from "@shared/xo/chain/constants";
+import type { DecodedCallBlock } from "@sdk/trade/contract";
+import { CONDITIONAL_TOKENS, CTF_EXCHANGE, USDC_E_ADDRESS, XO_WARP_ROUTE } from "@sdk/chain/xo/constants";
 
 import { renderCalls, RENDERABLE_ACTIONS, type CallExpectations } from "./templates";
 import { OWNER, REDEEM_IDS, answer, copyOf } from "./test-support";

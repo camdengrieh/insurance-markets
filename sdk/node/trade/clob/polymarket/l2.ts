@@ -6,8 +6,8 @@ import { createHmac } from "node:crypto";
 // base64 WITH padding; the five headers are POLY_ADDRESS, POLY_SIGNATURE, POLY_TIMESTAMP, POLY_API_KEY and
 // POLY_PASSPHRASE; the timestamp is Unix seconds; "the query parameters are not part of the signed path".
 //
-// Node-only (node:crypto): the relay signs; the page never holds a secret. app/scripts/check-boundaries.ts lists this
-// file as never reachable from the bundle.
+// Node-only (node:crypto): the relay signs; the page never holds a secret. app/scripts/check-boundaries.ts keeps
+// all of sdk/node out of the bundle.
 
 export interface PolymarketCredentials {
   readonly apiKey: string;

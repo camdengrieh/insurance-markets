@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-ctf-collateral-adapter",
+  "address": "0xAdA100Db00Ca00073811820692005400218FcE1f",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 11096,
+  "sha256": "ec449de1c76bdfb37002c02a53e6caf5201602177dd9f45001c168b12fd3c115",
+  "keccak256": "0x93b965351d01c1a128821ac79fc98a18105daefb46bda0d1e5b52306d713aa4f",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xAdA100Db00Ca00073811820692005400218FcE1f?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "CtfCollateralAdapter",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

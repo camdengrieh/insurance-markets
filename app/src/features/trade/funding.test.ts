@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE_USDC, BASE_WARP_ROUTER } from "@shared/xo/chain/constants";
+import { BASE_USDC, BASE_WARP_ROUTER } from "@sdk/chain/xo/constants";
 
 import { PROPOSAL_KEY, vetFundingProposal } from "./funding";
 import { FUND_ANSWERS, OWNER, copyOf } from "./test-support";

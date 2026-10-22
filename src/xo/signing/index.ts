@@ -1,12 +1,4 @@
-export * from "./amounts.js";
-export * from "./clobauth.js";
-export * from "./constants.js";
-export * from "./errors.js";
-export * from "./expiry.js";
-export * from "./hmac.js";
-export * from "./kernel.js";
-export * from "./order.js";
-export * from "./prepare.js";
-export * from "./signature.js";
-export * from "./validate.js";
-export * from "./verify.js";
+// Moved to sdk/trade/xo/index.ts (docs/sdk-and-api-design.md step 5), with the L2 request signer in
+// sdk/node/trade/xo/hmac.ts. Kept as a re-export of both so the relay's and the tests' import paths stay stable.
+export * from "../../../sdk/trade/xo/index.js";
+export * from "../../../sdk/node/trade/xo/hmac.js";

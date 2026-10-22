@@ -32,7 +32,7 @@ import {
   type TradingEnabledRead,
 } from "../src/xo/chain/reads.js";
 import { buildClobAuthKernelTypedData, hashClobAuth } from "../src/xo/signing/clobauth.js";
-import { canonicalString, decodeHmacSecret, type HmacCanonicalMode } from "../src/xo/signing/hmac.js";
+import { canonicalString, decodeHmacSecret, type HmacCanonicalMode } from "../sdk/node/trade/xo/hmac.js";
 import { kernelWrapDigest } from "../src/xo/signing/kernel.js";
 import { formatMicro, parseMicroInteger } from "../src/xo/units.js";
 import { verifyDigestSignature } from "../src/xo/userop/verify.js";

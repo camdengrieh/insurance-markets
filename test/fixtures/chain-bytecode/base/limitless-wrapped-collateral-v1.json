@@ -1,0 +1,16 @@
+{
+  "name": "limitless-wrapped-collateral-v1",
+  "address": "0x5d6C6a4fEA600E0b1A3Ab3eF711060310E27886A",
+  "chain_id": 8453,
+  "address_source": "https://docs.limitless.exchange/user-guide/smart-contracts.md (read 2026-10-22)",
+  "size": 4914,
+  "sha256": "5bc88dd15f6ccae0b89203f509b2a06e8a946f2755ba43e2b9b170532c389c50",
+  "keccak256": "0xb6cd69801fcdc3044bcea5904b3e7ee8f4dd261a1e6b4f8f59228399660f3f70",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0x5d6C6a4fEA600E0b1A3Ab3eF711060310E27886A?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "WrappedCollateral",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

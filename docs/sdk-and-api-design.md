@@ -177,10 +177,10 @@ UMA's ancillary data does, it is a fallback title source and is still untrusted 
 
 | Venue | Chain | Easy to read on chain | Only off-chain | In the repo today |
 |---|---|---|---|---|
-| Trueo | Base 8453 | Everything: markets, prices, quotes from Uniswap v4 pools and the quoter | nothing | Chain-native reader in `sdk/venues/trueo`; the model for the rest |
-| XO | XO chain 3223 | Settlement, account state, fee rates, upgrades | Book | Account, nonce, fee and upgrade readers in `src/xo/chain`; fills and positions to add |
-| Polymarket | Polygon 137 | Positions, fills, resolution, payouts, UMA question data | Book | Exchange addresses pinned in `src/clob/venues.ts`; conditional-tokens and adapter addresses to pin |
-| Limitless | Base 8453 | Positions, fills, payouts; AMM markets fully | CLOB book | Per-market exchange from `venue.exchange`, allowlisted |
+| Trueo | Base 8453 | Everything: markets, prices, quotes from Uniswap v4 pools and the quoter | nothing | Chain-native reader in `sdk/venues/trueo`, over the one port in `sdk/chain/rpc.ts` |
+| XO | XO chain 3223 | Settlement, account state, fee rates, upgrades | Book | Account, nonce, fee and upgrade readers in `sdk/chain/xo` (reached through `src/xo/chain`); positions, fills and payouts in `sdk/chain`, pinned in `sdk/chain/xo/pins.ts`; the Holdings view reads positions on chain |
+| Polymarket | Polygon 137 | Positions, fills, resolution, payouts, UMA question data | Book | Conditional Tokens, both CTF exchanges, the Neg Risk adapter, two UMA CTF adapters and the Protocol V2 exchange, PositionManager and modules pinned with code hashes in `sdk/chain/polymarket`; positions, fills, payouts and V2 results read on chain; UMA question data not read yet |
+| Limitless | Base 8453 | Positions, fills, payouts; AMM markets fully | CLOB book | Conditional Tokens, all six exchanges, their NegRisk adapters and wrapped collateral pinned in `sdk/chain/limitless`; positions, fills and payouts read on chain; a market's `venue.exchange` is still only checked against the list; AMM markets not read |
 | Predict.fun | BNB 56 | Positions, fills, resolution (UMA for new markets since March 2026, per its help pages) | Book | Not built. Its API needs a key for every read, so the chain is the keyless path |
 | Opinion | BNB 56 | Positions, fills, payouts through its CTF Exchange and ConditionalTokens | Book; the resolution decision comes from its own AI oracle | Not built; `/quoteToken` returns the exchange address |
 | Myriad | BNB, Abstract, Linea, Celo | AMM markets fully; order-book fills | Order book | Not built; points-token markets must be filtered out |
@@ -293,9 +293,61 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    venue's equal-price entries and flags a crossed book) where the engine fails closed.
 5. **Move the unsigned order builders** from `src/xo/signing` and `src/clob` into `sdk/trade`; the credentialed
    signers go to `sdk/node/`. The boundary check keeps forbidding `sdk/node/` to the page.
+   *Done 2026-10-22.* `sdk/trade/xo` holds XO's order, ClobAuth and Kernel builders, the wire signature, the
+   verifiers, the expiry window, the amounts and caps, the CTF position ids, the summary lines and the decoded-block
+   rebuild; `sdk/trade/xo/account/derive.ts` the counterfactual account; `sdk/trade/xo/userop` the user-operation
+   calls, encoding, gas plan, nonce, packing, hash, the `Prepared.sign` block and the signature check (none signs: the
+   owner signs through PayBox). `sdk/trade/clob` holds the Polymarket and Limitless order and ClobAuth builders, the
+   Deposit Wallet derivation and wrapper, the CLOB amounts, venue facts and decoded blocks. The prepared-item part of
+   the relay's wire contract (scalar schemas, what PayBox signs, the decoded blocks, `Prepared` and `verifyPrepared`)
+   is `sdk/trade/contract.ts`; `src/relay/contract.ts` re-exports it and keeps the transport constants, the error
+   body, the routes and the client interface. The three credentialed request signers (XO L2, Polymarket L2,
+   Limitless; HMAC over `node:crypto`) are `sdk/node/trade`, imported by the relay directly; no file under `src/`
+   imports a `node:` module any more. The old `src/xo/signing`, `src/clob`, `src/xo/userop` and
+   `src/xo/account/derive.ts` paths are one-line re-exports for the plugin, relay, daemon and tests;
+   `src/xo/signing/index.ts` still re-exports the XO L2 signer. The dApp's trade screens import `@sdk/trade/...` and
+   `@sdk/chain/...`; their hygiene test now allows only the route table and the funding calldata from `@shared` and
+   refuses any `@sdk/node` import, and `check-boundaries` has a case for `sdk/node` reached by alias, by relative path
+   and through an sdk file. The code moved unchanged (imports and path comments aside), so every pinned vector, typed
+   data and hash is the same; the only additions are the exports of four schemas the relay's routes use.
 6. **Build `sdk/chain/`.** Merge the two RPC ports, then add position, fill and resolution readers for
    Polymarket, Limitless and XO, with addresses pinned and bytecode-checked. Done when the dApp's holdings view
    reads positions from the chain with no venue API call.
+   *Done 2026-10-22.* One JSON-RPC port, `sdk/chain/rpc.ts`, carries every chain read: the XO reads (`RpcReader`, the
+   explorer log reader and the tripwires, moved with the XO constants and ABI to `sdk/chain/xo/`; `src/xo/chain/*`
+   re-export them and `reads.ts` keeps `readAccountCode`), the funding preflight's Base reader (its two readers now
+   share one port and one key latch), the Trueo reader (`sdk/venues/trueo/rpc.ts` is a view of the port) and the
+   dApp's wallet balances (with `sdk/chain/multicall.ts`). The transport is an injected POST (`rpcPostFromFetch` builds
+   one from a FetchLike, with a body cap and a deadline on the injected clock). The port names its read methods,
+   latches on a key refusal, checks each answer's id and result shape, batches with a once-and-for-good fallback to
+   single requests, and refuses an eth_getLogs range that is open or wider than 10,000 blocks unless the caller opts
+   in (only the XO reader's existing log path does). Pins: `sdk/chain/polymarket/constants.ts`,
+   `sdk/chain/limitless/constants.ts` and `sdk/chain/xo/pins.ts`, each address from the venue's own contract list (or
+   a verified getter of a listed contract: Polymarket's USDC.e and wrapped collateral), each runtime code hash read
+   with eth_getCode on 2026-10-22 and found equal to Sourcify's verified on-chain code (`test/fixtures/chain-bytecode`,
+   re-hashed by `test/chain-pins.test.ts`); minimal proxies are pinned with the implementation their slot names. XO is
+   not on Sourcify: its exchange implementation is explorer-verified, and its Conditional Tokens is checked by code
+   hash, dispatcher selectors and XO's token ids deriving from their conditions. A reader checks a contract's pin
+   before reading from it. Readers: `ctf.ts` (the Conditional Tokens position-id derivation, checked against the
+   deployed `getCollectionId`/`getPositionId` and against all three venues' listed token ids; payouts; transfer and
+   resolution decoders), `positions.ts` (balanceOfBatch, payouts, Protocol V2 module results, bounded transfer scans),
+   `fills.ts` (OrderFilled of the three exchange shapes, bounded ranges only) and `exchange.ts` (the XO and Limitless
+   token registries, each answer confirmed by derivation), tested against one recording per venue
+   (`sdk/chain/<venue>/fixtures`, replayed by `sdk/chain/readers.test.ts`). The Holdings view reads XO, Polymarket and
+   Limitless from the chain alone (`app/src/features/portfolio/chain-reads.ts`): candidate token ids from the market
+   rows the page has loaded (used only where they derive from the market's condition) and from transfers to the
+   address in the newest 30,000 blocks (the range is printed), then balances and results on chain; titles and outcome
+   names are the page's own rows, a token the page has not loaded is listed by its id, and an open position has no
+   price. Behaviour changes, where merged copies disagreed and the stricter won: a 401 or 403 now latches the Trueo and
+   wallet reads too (Trueo reports a 401 as a pause, not drift); a server error, limit or transport failure on a batch is
+   thrown instead of retried one by one, and an endpoint that refuses arrays is asked singly from then on (the wallet
+   used to retry the batch every read); only code 3 or "execution reverted" counts as a revert; Trueo's single answers
+   are checked against their id, log rows that do not match the filter are dropped, and its RPC URL is checked like the
+   others (https, no credentials, query or fragment). In the Holdings view, XO and Polymarket are no longer read through their APIs (no profile lookup: an
+   owner's own address is read, and a Polymarket wallet is read when pasted), Limitless is read in the standalone build
+   too, their open positions are not priced from venue books, XO's cash line is the account's USDC on chain, and their
+   rows are labelled as recorded. Not done: UMA question data, Polymarket combinatorial results, nested CTF
+   collections and a recorded Limitless NegRisk market (its wrapped-collateral derivation is only checked in code).
 7. **Add venue state and field-level sources to the SDK**, with a fake venue for each state. Done when a blocked
    venue's rows show chain fields and a stated reason instead of an error.
 8. **Stand up `api/`**: the indexer and the free read endpoints on the existing container pattern under `deploy/` (AWS host, `deploy/aws`).

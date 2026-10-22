@@ -7,7 +7,7 @@ import { getAddress, hashTypedData, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 import { ECDSA_VALIDATOR } from "../src/xo/chain/constants.js";
-import { signL2 as referenceSignL2 } from "../src/xo/signing/hmac.js";
+import { signL2 as referenceSignL2 } from "../sdk/node/trade/xo/hmac.js";
 import {
   DEFAULT_L1_VARIANT,
   HmacTriplet,
@@ -245,7 +245,7 @@ describe("the HMAC, against the three-method vectors of docs/signing-vectors.md"
     assert.notEqual(l2Signature(S1, { key: "raw", pad: "padded" }, message), l2Signature(S1, padded, message));
   });
 
-  it("equals the reference signer (src/xo/signing/hmac.ts) for the default variant and the mock for all three of its decodings (fixed seed)", () => {
+  it("equals the reference signer (sdk/node/trade/xo/hmac.ts) for the default variant and the mock for all three of its decodings (fixed seed)", () => {
     const random = prng(0x1d5);
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     const mockForms: ReadonlyArray<readonly [string, { readonly key: L2Key; readonly pad: L2Pad }]> = [

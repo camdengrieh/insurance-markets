@@ -1,0 +1,16 @@
+{
+  "name": "limitless-ctf-exchange-v2",
+  "address": "0xF1De958F8641448A5ba78c01f434085385Af096D",
+  "chain_id": 8453,
+  "address_source": "https://docs.limitless.exchange/user-guide/smart-contracts.md (read 2026-10-22)",
+  "size": 17060,
+  "sha256": "331c943764760bc2c9f748f5ad8759bbed1d3008c5acd5de9b76c64ecf2ff47e",
+  "keccak256": "0x5c6a1ef30f05928d3085d46a276d6817915533ea48f8583f9715e38817eb147e",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0xF1De958F8641448A5ba78c01f434085385Af096D?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "CTFExchange",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

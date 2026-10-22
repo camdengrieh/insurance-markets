@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 
-import { formatAtomic, parseDecimalAtomic } from "@shared/guardrails/amount";
-import { USDC_E_DECIMALS } from "@shared/xo/chain/constants";
+import { formatAtomic, parseDecimalAtomic } from "@sdk/money/amount";
+import { USDC_E_DECIMALS } from "@sdk/chain/xo/constants";
 
 import { Badge, Button, Disclosure, Field, Tile, useAnnounce } from "../../ui";
 import { GateNote, KeyValues, Mono, ResultView, Working } from "./components";

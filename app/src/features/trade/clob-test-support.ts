@@ -2,11 +2,11 @@
 // code the relay runs (src/clob/decoded.ts), so a page test vets what a relay would really send. Nothing here is a
 // recording from a venue: the salt, the timestamp and the market ids are fixed test values, labelled as such.
 
-import { clobCapAmount, computeClobAmounts } from "@shared/clob/amounts";
-import { buildDecodedClobOrder, rebuildClobOrder } from "@shared/clob/decoded";
-import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
-import { LIMITLESS_EXCHANGES, POLYMARKET_EXCHANGES, type PolymarketBook } from "@shared/clob/venues";
-import { digestTag } from "@shared/relay/contract";
+import { clobCapAmount, computeClobAmounts } from "@sdk/trade/clob/amounts";
+import { buildDecodedClobOrder, rebuildClobOrder } from "@sdk/trade/clob/decoded";
+import { depositWalletAddress } from "@sdk/trade/clob/polymarket/deposit-wallet";
+import { LIMITLESS_EXCHANGES, POLYMARKET_EXCHANGES, type PolymarketBook } from "@sdk/trade/clob/venues";
+import { digestTag } from "@sdk/trade/contract";
 
 import type { ClobTicket } from "./clob-ticket";
 

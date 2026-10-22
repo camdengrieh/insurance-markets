@@ -1,0 +1,1518 @@
+{
+ "source": "Excerpts of the verified ABIs the chain readers' fragments were copied from: every event and view function the readers use, verbatim. Sourcify v2 API, read 2026-10-22 (fields=abi); the XO entry is the explorer-verified ABI already saved in the repository.",
+ "captured_at": "2026-10-22",
+ "contracts": [
+  {
+   "chain_id": 137,
+   "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+   "contract": "ConditionalTokens",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045?fields=abi",
+   "entries": [
+    {
+     "name": "balanceOf",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owner",
+       "type": "address"
+      },
+      {
+       "name": "id",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "payoutNumerators",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      },
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getPositionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "collateralToken",
+       "type": "address"
+      },
+      {
+       "name": "collectionId",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "pure"
+    },
+    {
+     "name": "balanceOfBatch",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owners",
+       "type": "address[]"
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256[]"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "oracle",
+       "type": "address"
+      },
+      {
+       "name": "questionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "outcomeSlotCount",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "pure"
+    },
+    {
+     "name": "getCollectionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "parentCollectionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "conditionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "indexSet",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getOutcomeSlotCount",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "payoutDenominator",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "ConditionResolution",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes32",
+       "indexed": true
+      },
+      {
+       "name": "oracle",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "questionId",
+       "type": "bytes32",
+       "indexed": true
+      },
+      {
+       "name": "outcomeSlotCount",
+       "type": "uint256",
+       "indexed": false
+      },
+      {
+       "name": "payoutNumerators",
+       "type": "uint256[]",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "TransferSingle",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "id",
+       "type": "uint256",
+       "indexed": false
+      },
+      {
+       "name": "value",
+       "type": "uint256",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "TransferBatch",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]",
+       "indexed": false
+      },
+      {
+       "name": "values",
+       "type": "uint256[]",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0xE111180000d2663C0091e4f400237545B87B996B",
+   "contract": "CTFExchange",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0xE111180000d2663C0091e4f400237545B87B996B?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "side",
+       "type": "uint8",
+       "indexed": false,
+       "internalType": "enum Side"
+      },
+      {
+       "name": "tokenId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "builder",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "metadata",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      }
+     ],
+     "anonymous": false
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0xe2222d279d744050d28e00520010520000310F59",
+   "contract": "CTFExchange",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0xe2222d279d744050d28e00520010520000310F59?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "side",
+       "type": "uint8",
+       "indexed": false,
+       "internalType": "enum Side"
+      },
+      {
+       "name": "tokenId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "builder",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "metadata",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      }
+     ],
+     "anonymous": false
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0x641b40ec414a076b9e79E703Fc7BF4EBEC248Bb7",
+   "contract": "Exchange",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0x641b40ec414a076b9e79E703Fc7BF4EBEC248Bb7?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "side",
+       "type": "uint8",
+       "indexed": false,
+       "internalType": "enum Side"
+      },
+      {
+       "name": "tokenId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "PositionId"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "builder",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "metadata",
+       "type": "bytes32",
+       "indexed": false,
+       "internalType": "bytes32"
+      }
+     ],
+     "anonymous": false
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0xCc5De1e9D14a7AB75E872E23FC9D605518Bac2D0",
+   "contract": "PositionManager",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0xCc5De1e9D14a7AB75E872E23FC9D605518Bac2D0?fields=abi",
+   "entries": [
+    {
+     "name": "TransferBatch",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]",
+       "indexed": false,
+       "internalType": "uint256[]"
+      },
+      {
+       "name": "amounts",
+       "type": "uint256[]",
+       "indexed": false,
+       "internalType": "uint256[]"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "TransferSingle",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "id",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "amount",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "balanceOf",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owner",
+       "type": "address",
+       "internalType": "address"
+      },
+      {
+       "name": "id",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "result",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "stateMutability": "view"
+    },
+    {
+     "name": "balanceOf",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "_owner",
+       "type": "address",
+       "internalType": "address"
+      },
+      {
+       "name": "_conditionId",
+       "type": "bytes31",
+       "internalType": "ConditionId"
+      },
+      {
+       "name": "_outcomeIndex",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "stateMutability": "view"
+    },
+    {
+     "name": "balanceOfBatch",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owners",
+       "type": "address[]",
+       "internalType": "address[]"
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]",
+       "internalType": "uint256[]"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "balances",
+       "type": "uint256[]",
+       "internalType": "uint256[]"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0xf6428c0B5fa9361c0708CDdb95468cf54C56e9A2",
+   "contract": "BinaryModule",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0xf6428c0B5fa9361c0708CDdb95468cf54C56e9A2?fields=abi",
+   "entries": [
+    {
+     "name": "ConditionResolved",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes31",
+       "indexed": true,
+       "internalType": "ConditionId"
+      },
+      {
+       "name": "result",
+       "type": "uint256[]",
+       "indexed": false,
+       "internalType": "uint256[]"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "_data",
+       "type": "bytes",
+       "internalType": "bytes"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes31",
+       "internalType": "ConditionId"
+      }
+     ],
+     "stateMutability": "view"
+    },
+    {
+     "name": "getResult",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "_conditionId",
+       "type": "bytes31",
+       "internalType": "ConditionId"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256[]",
+       "internalType": "uint256[]"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 137,
+   "address": "0x39a5B01a100edF811f2748aa37B1313715Ded70e",
+   "contract": "NegRiskModule",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/137/0x39a5B01a100edF811f2748aa37B1313715Ded70e?fields=abi",
+   "entries": [
+    {
+     "name": "ConditionResolved",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes31",
+       "indexed": true,
+       "internalType": "ConditionId"
+      },
+      {
+       "name": "result",
+       "type": "uint256[]",
+       "indexed": false,
+       "internalType": "uint256[]"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getResult",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "_conditionId",
+       "type": "bytes31",
+       "internalType": "ConditionId"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256[]",
+       "internalType": "uint256[]"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 8453,
+   "address": "0xC9c98965297Bc527861c898329Ee280632B76e18",
+   "contract": "ConditionalTokens",
+   "match": "match",
+   "source_url": "https://sourcify.dev/server/v2/contract/8453/0xC9c98965297Bc527861c898329Ee280632B76e18?fields=abi",
+   "entries": [
+    {
+     "name": "balanceOf",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owner",
+       "type": "address"
+      },
+      {
+       "name": "id",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "payoutNumerators",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      },
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getPositionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "collateralToken",
+       "type": "address"
+      },
+      {
+       "name": "collectionId",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "pure"
+    },
+    {
+     "name": "balanceOfBatch",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "owners",
+       "type": "address[]"
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256[]"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "oracle",
+       "type": "address"
+      },
+      {
+       "name": "questionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "outcomeSlotCount",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "pure"
+    },
+    {
+     "name": "getCollectionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "parentCollectionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "conditionId",
+       "type": "bytes32"
+      },
+      {
+       "name": "indexSet",
+       "type": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "getOutcomeSlotCount",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "payoutDenominator",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "uint256"
+      }
+     ],
+     "payable": false,
+     "constant": true,
+     "stateMutability": "view"
+    },
+    {
+     "name": "ConditionResolution",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "conditionId",
+       "type": "bytes32",
+       "indexed": true
+      },
+      {
+       "name": "oracle",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "questionId",
+       "type": "bytes32",
+       "indexed": true
+      },
+      {
+       "name": "outcomeSlotCount",
+       "type": "uint256",
+       "indexed": false
+      },
+      {
+       "name": "payoutNumerators",
+       "type": "uint256[]",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "TransferSingle",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "id",
+       "type": "uint256",
+       "indexed": false
+      },
+      {
+       "name": "value",
+       "type": "uint256",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "TransferBatch",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "operator",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "from",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "to",
+       "type": "address",
+       "indexed": true
+      },
+      {
+       "name": "ids",
+       "type": "uint256[]",
+       "indexed": false
+      },
+      {
+       "name": "values",
+       "type": "uint256[]",
+       "indexed": false
+      }
+     ],
+     "anonymous": false
+    }
+   ]
+  },
+  {
+   "chain_id": 8453,
+   "address": "0xa4409D988CA2218d956BeEFD3874100F444f0DC3",
+   "contract": "CTFExchange",
+   "match": "exact_match",
+   "source_url": "https://sourcify.dev/server/v2/contract/8453/0xa4409D988CA2218d956BeEFD3874100F444f0DC3?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "makerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "token",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32",
+       "internalType": "bytes32"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 8453,
+   "address": "0xF1De958F8641448A5ba78c01f434085385Af096D",
+   "contract": "CTFExchange",
+   "match": "exact_match",
+   "source_url": "https://sourcify.dev/server/v2/contract/8453/0xF1De958F8641448A5ba78c01f434085385Af096D?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "makerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "token",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32",
+       "internalType": "bytes32"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 8453,
+   "address": "0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5",
+   "contract": "CTFExchange",
+   "match": "exact_match",
+   "source_url": "https://sourcify.dev/server/v2/contract/8453/0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "makerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "token",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32",
+       "internalType": "bytes32"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 8453,
+   "address": "0xe3E00BA3a9888d1DE4834269f62ac008b4BB5C47",
+   "contract": "NegRiskCtfExchange",
+   "match": "exact_match",
+   "source_url": "https://sourcify.dev/server/v2/contract/8453/0xe3E00BA3a9888d1DE4834269f62ac008b4BB5C47?fields=abi",
+   "entries": [
+    {
+     "name": "OrderFilled",
+     "type": "event",
+     "inputs": [
+      {
+       "name": "orderHash",
+       "type": "bytes32",
+       "indexed": true,
+       "internalType": "bytes32"
+      },
+      {
+       "name": "maker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "taker",
+       "type": "address",
+       "indexed": true,
+       "internalType": "address"
+      },
+      {
+       "name": "makerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAssetId",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "makerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "takerAmountFilled",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      },
+      {
+       "name": "fee",
+       "type": "uint256",
+       "indexed": false,
+       "internalType": "uint256"
+      }
+     ],
+     "anonymous": false
+    },
+    {
+     "name": "getConditionId",
+     "type": "function",
+     "inputs": [
+      {
+       "name": "token",
+       "type": "uint256",
+       "internalType": "uint256"
+      }
+     ],
+     "outputs": [
+      {
+       "name": "",
+       "type": "bytes32",
+       "internalType": "bytes32"
+      }
+     ],
+     "stateMutability": "view"
+    }
+   ]
+  },
+  {
+   "chain_id": 3223,
+   "address": "0x24BB67503d92f3b2A36cf97c45E51FF2C0c452ED",
+   "contract": "CTFExchange",
+   "match": "verified on explorer-mainnet.xo.market (docs/research/22 section 1)",
+   "source_url": "docs/research/fixtures/gaps/userop-templates/abi/exchange_impl.abi.json",
+   "entries": [
+    {
+     "anonymous": false,
+     "inputs": [
+      {
+       "indexed": true,
+       "internalType": "bytes32",
+       "name": "orderHash",
+       "type": "bytes32"
+      },
+      {
+       "indexed": true,
+       "internalType": "address",
+       "name": "maker",
+       "type": "address"
+      },
+      {
+       "indexed": true,
+       "internalType": "address",
+       "name": "taker",
+       "type": "address"
+      },
+      {
+       "indexed": false,
+       "internalType": "uint256",
+       "name": "makerAssetId",
+       "type": "uint256"
+      },
+      {
+       "indexed": false,
+       "internalType": "uint256",
+       "name": "takerAssetId",
+       "type": "uint256"
+      },
+      {
+       "indexed": false,
+       "internalType": "uint256",
+       "name": "makerAmountFilled",
+       "type": "uint256"
+      },
+      {
+       "indexed": false,
+       "internalType": "uint256",
+       "name": "takerAmountFilled",
+       "type": "uint256"
+      },
+      {
+       "indexed": false,
+       "internalType": "uint256",
+       "name": "fee",
+       "type": "uint256"
+      },
+      {
+       "indexed": false,
+       "internalType": "address",
+       "name": "beneficiary",
+       "type": "address"
+      },
+      {
+       "indexed": false,
+       "internalType": "bytes16",
+       "name": "identifier",
+       "type": "bytes16"
+      },
+      {
+       "indexed": false,
+       "internalType": "bytes32",
+       "name": "metadata",
+       "type": "bytes32"
+      }
+     ],
+     "name": "OrderFilled",
+     "type": "event"
+    },
+    {
+     "inputs": [
+      {
+       "internalType": "uint256",
+       "name": "token",
+       "type": "uint256"
+      }
+     ],
+     "name": "getConditionId",
+     "outputs": [
+      {
+       "internalType": "bytes32",
+       "name": "",
+       "type": "bytes32"
+      }
+     ],
+     "stateMutability": "view",
+     "type": "function"
+    }
+   ]
+  }
+ ]
+}

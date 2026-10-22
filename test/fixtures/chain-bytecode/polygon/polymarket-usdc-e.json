@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-usdc-e",
+  "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+  "chain_id": 137,
+  "address_source": "USDCE() of the pinned, Sourcify exact-match CtfCollateralAdapter and col() of the pinned NegRiskAdapter, both read 2026-10-22",
+  "size": 2037,
+  "sha256": "edca5f058a3c0bc46ad3dd4073a7ff525338aad88cf2c502aa049432addad0ba",
+  "keccak256": "0xa97604bff5b11d790aca38bf9f6189369ea260f08365b428fc2ef73390fddcef",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "UChildERC20Proxy",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

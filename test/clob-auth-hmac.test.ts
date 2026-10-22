@@ -4,9 +4,9 @@ import { describe, it } from "node:test";
 
 import { hashTypedData, recoverTypedDataAddress } from "viem";
 
-import { buildLimitlessHeaders, limitlessSignMessage, limitlessSignature } from "../src/clob/limitless/hmac.js";
+import { buildLimitlessHeaders, limitlessSignMessage, limitlessSignature } from "../sdk/node/trade/clob/limitless/hmac.js";
 import { buildPolymarketClobAuthTypedData, buildPolymarketL1Headers, hashPolymarketClobAuth, polymarketClobAuthSignTypedData, POLYMARKET_CLOB_AUTH_DOMAIN, POLYMARKET_CLOB_AUTH_MESSAGE } from "../src/clob/polymarket/clobauth.js";
-import { buildPolymarketL2Headers, polymarketL2Message, polymarketL2Signature } from "../src/clob/polymarket/l2.js";
+import { buildPolymarketL2Headers, polymarketL2Message, polymarketL2Signature } from "../sdk/node/trade/clob/polymarket/l2.js";
 import { CLOB_AUTH_DOMAIN_NAME, CLOB_AUTH_DOMAIN_VERSION, CLOB_AUTH_MESSAGE, XO_CHAIN_ID } from "../src/xo/signing/constants.js";
 import { hashClobAuth } from "../src/xo/signing/clobauth.js";
 import { ANVIL_TEST_ACCOUNTS } from "./fixtures/userop/anvil-test-keys.js";

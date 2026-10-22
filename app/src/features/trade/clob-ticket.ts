@@ -10,8 +10,8 @@
 //   - the two signed amounts are exact: shares x price is a whole number of 6-decimal units or the ticket refuses.
 // Money is bigint micro units and exact decimal strings; there is no floating point here.
 
-import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "@shared/clob/amounts";
-import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
+import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "@sdk/trade/clob/amounts";
+import { depositWalletAddress } from "@sdk/trade/clob/polymarket/deposit-wallet";
 import {
   CLOB_CAP_FEE_BPS,
   LIMITLESS_PRICE_TICK,
@@ -24,9 +24,9 @@ import {
   polymarketTickRule,
   type ClobTif,
   type ClobVenue,
-} from "@shared/clob/venues";
-import { SIDE_BUY, SIDE_SELL } from "@shared/xo/signing/constants";
-import { SigningError } from "@shared/xo/signing/errors";
+} from "@sdk/trade/clob/venues";
+import { SIDE_BUY, SIDE_SELL } from "@sdk/trade/xo/constants";
+import { SigningError } from "@sdk/trade/xo/errors";
 
 import { decToAtomic } from "../../core/money";
 import type { Market } from "../../core/ports";

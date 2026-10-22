@@ -1,0 +1,16 @@
+{
+  "name": "xo-usdc-e",
+  "address": "0x80c12230ce677e6f304027a14780Edd2A829ab0c",
+  "chain_id": 3223,
+  "address_source": "XO Market Docs /documentation/introduction, Contracts table (read 2026-10-22 through the xo-docs MCP)",
+  "size": 1798,
+  "sha256": "bba62345c507b53a90beb5dadd2d9bb875a38642725d0dae83973ad8927d6271",
+  "keccak256": "0xc2059a483ceeca165dfcc9727922e7c8c7b99710e84eca06cf765c235b133893",
+  "code_source": "eth_getCode over https://rpc-mainnet-2.xo.market/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": null,
+  "sourcify_match": null,
+  "sourcify_contract": null,
+  "sourcify_onchain_equals_rpc": null,
+  "captured_at": "2026-10-22"
+}

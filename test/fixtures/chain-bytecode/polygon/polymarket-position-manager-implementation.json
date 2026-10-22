@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-position-manager-implementation",
+  "address": "0xCc5De1e9D14a7AB75E872E23FC9D605518Bac2D0",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 10235,
+  "sha256": "ed5b9bf407676271dab6750e1451078151c7247d3557bf0f7084c7d77fe04160",
+  "keccak256": "0x4f3ca1f933ee48546581d8ee28506e5c5b89d08e50900ff880603cedcde14c9e",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xCc5De1e9D14a7AB75E872E23FC9D605518Bac2D0?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "PositionManager",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

@@ -16,14 +16,15 @@
 // Nothing a failure prints comes from the item: the sentences are fixed here, and the one field path that is shown
 // is checked against a small alphabet first. A failed item renders nothing and offers nothing (M4-7).
 
-import { POST_ROUTES, SUMMARY_LINE_MAX_CHARS, type DecodedClobOrder, type DecodedOrder, type DecodedUserOp, type InnerHashKind } from "@shared/relay/contract";
-import { depositWalletProxyOf } from "@shared/clob/polymarket/deposit-wallet";
-import { isPinnedLimitlessExchange, polymarketBookOf } from "@shared/clob/venues";
-import { deriveAccount } from "@shared/xo/account/derive";
-import { CTF_EXCHANGE } from "@shared/xo/chain/constants";
-import { ACTION_TITLES } from "@shared/xo/signing/lines";
-import { verifyPreparedLocal } from "@shared/xo/signing/rebuild";
-import { ORDER_CAP_FEE_BPS } from "@shared/xo/signing/amounts";
+import { POST_ROUTES } from "@shared/relay/contract";
+import { SUMMARY_LINE_MAX_CHARS, type DecodedClobOrder, type DecodedOrder, type DecodedUserOp, type InnerHashKind } from "@sdk/trade/contract";
+import { depositWalletProxyOf } from "@sdk/trade/clob/polymarket/deposit-wallet";
+import { isPinnedLimitlessExchange, polymarketBookOf } from "@sdk/trade/clob/venues";
+import { deriveAccount } from "@sdk/trade/xo/account/derive";
+import { CTF_EXCHANGE } from "@sdk/chain/xo/constants";
+import { ACTION_TITLES } from "@sdk/trade/xo/lines";
+import { verifyPreparedLocal } from "@sdk/trade/xo/rebuild";
+import { ORDER_CAP_FEE_BPS } from "@sdk/trade/xo/amounts";
 
 import { expectedClobQuote, type ClobTicket } from "./clob-ticket";
 import { expectedQuote, type Ticket } from "./ticket";

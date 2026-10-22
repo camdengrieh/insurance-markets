@@ -1,0 +1,16 @@
+{
+  "name": "limitless-neg-risk-adapter-v1",
+  "address": "0xb8DAA4C8C9f690396f671BB601727A4c3741340C",
+  "chain_id": 8453,
+  "address_source": "https://docs.limitless.exchange/user-guide/smart-contracts.md (read 2026-10-22)",
+  "size": 17258,
+  "sha256": "d0d5a8a4a186c950b9c649c51bad74ba7cc50466b1b0fb60a209f086856e0fa3",
+  "keccak256": "0x55f104271b431363f9dfa6c4f7a5c0d15e23cf6fe020b5bcb5d4926e30c37b31",
+  "code_source": "eth_getCode over https://base-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/8453/0xb8DAA4C8C9f690396f671BB601727A4c3741340C?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "NegRiskAdapter",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

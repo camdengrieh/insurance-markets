@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-neg-risk-ctf-exchange",
+  "address": "0xe2222d279d744050d28e00520010520000310F59",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 21037,
+  "sha256": "49d7bc11d8ff890bb850d358f6dc36dd3ca63eac5f0cd6811b6033a2938f1646",
+  "keccak256": "0x04b857d48dcc38b3d484239569dc96a7a6c39bbb90ed2461227fc6e50ed5787d",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xe2222d279d744050d28e00520010520000310F59?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "CTFExchange",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

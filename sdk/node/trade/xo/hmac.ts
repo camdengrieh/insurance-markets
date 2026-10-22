@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 
-import { SigningError } from "./errors.js";
+import { SigningError } from "../../../trade/xo/errors.js";
 
 // Which request target goes into the canonical string. The docs say "path including the query
 // string"; one community client sends path only and labels that "Live XO compatibility". Nobody

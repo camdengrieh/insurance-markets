@@ -4,7 +4,8 @@ export { TotalsPanel, VenueSection, OutcomeTile, NoAddressWatched, NoVenueSelect
 export { useHoldings, type Holdings, type HoldingsState } from "./holdings";
 export { PortfolioAdaptersProvider, usePortfolio, type PortfolioQuery } from "./usePortfolio";
 export { createPortfolioAdapters, markWithBids, readAll, okOutcomes, type PortfolioAdapters, type ReadContext } from "./readers";
-export { planReads, POSITION_READERS, type PlannedRead, type Resolution } from "./targets";
+export { createChainSession, readChainHoldings, CHAIN_OF, SCAN_WINDOW_BLOCKS, SCAN_WINDOWS, type ChainSession, type ChainVenue } from "./chain-reads";
+export { planReads, CHAIN_READERS, POSITION_READERS, type PlannedRead, type Resolution } from "./targets";
 export { bidMark, summarize, MAX_BOOK_AGE_MS, type Mark, type PortfolioTotals, type SymbolTotal } from "./valuation";
 export { readXoAccount, portfolioUrl, orderbookUrl, FLAG_READS_DISAGREE, XO_PORTFOLIO_SCOPES, type XoRead } from "./xo-reads";
 export { SHAPE_EXPLANATION, SHAPE_LABEL_TEXT, shapeEvidenceOf } from "./shape";

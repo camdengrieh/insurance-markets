@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-neg-risk-adapter",
+  "address": "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 17258,
+  "sha256": "4394bc78c562c54025f0a94d3458899becd5e524ddd053b46c8e565547905f68",
+  "keccak256": "0x10798bfdebdc3b8727171551b1287ee4c87b486045ed51a6ddc94e34f66560a1",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "NegRiskAdapter",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

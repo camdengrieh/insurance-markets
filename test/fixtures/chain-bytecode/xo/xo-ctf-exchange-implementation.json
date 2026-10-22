@@ -1,0 +1,16 @@
+{
+  "name": "xo-ctf-exchange-implementation",
+  "address": "0x24BB67503d92f3b2A36cf97c45E51FF2C0c452ED",
+  "chain_id": 3223,
+  "address_source": "the EIP-1967 slot of the XO CTF Exchange proxy; verified CTFExchange source on explorer-mainnet.xo.market (docs/research/22 section 1)",
+  "size": 19173,
+  "sha256": "202d6a5c45c6aaf0039e08d300d7b2bb035dc541a034d127834cc027dbb86804",
+  "keccak256": "0x3eb576a95856be56229cd476c355789afa9f17f995fa7011dcb4aeb2d6675bc1",
+  "code_source": "eth_getCode over https://rpc-mainnet-2.xo.market/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": null,
+  "sourcify_match": null,
+  "sourcify_contract": null,
+  "sourcify_onchain_equals_rpc": null,
+  "captured_at": "2026-10-22"
+}

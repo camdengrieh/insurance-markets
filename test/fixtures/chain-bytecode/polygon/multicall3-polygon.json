@@ -1,0 +1,16 @@
+{
+  "name": "multicall3-polygon",
+  "address": "0xcA11bde05977b3631167028862bE2a173976CA11",
+  "chain_id": 137,
+  "address_source": "https://github.com/mds1/multicall3 README, Multicall3 Contract Addresses (the canonical deployment)",
+  "size": 3808,
+  "sha256": "2756d7c52baee85cacb504f6ee1df7aad6809ac8d94a4a111d76991f90d36d6e",
+  "keccak256": "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xcA11bde05977b3631167028862bE2a173976CA11?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "Multicall3",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

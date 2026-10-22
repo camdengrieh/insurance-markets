@@ -55,10 +55,17 @@ describe("planReads", () => {
     expect(plan).toHaveLength(1);
   });
 
-  it("Polymarket: an owner goes through the venue's profile lookup, a pasted wallet is used as it is", () => {
+  it("Polymarket: an owner and a pasted wallet are both read directly on Polygon (no profile lookup, which is a venue API call)", () => {
     const plan = planReads([binding({ id: "a", venues: ["polymarket"] }), binding({ id: "w", kind: "venue_proxy", address: "0x" + "ab".repeat(20), venues: ["polymarket"] })], DEFAULT_SWITCHES, "cockpit");
-    expect(plan[0]).toMatchObject({ resolution: "profile_lookup", address: EOA });
-    expect(plan[1]).toMatchObject({ resolution: "direct" });
+    expect(plan[0]).toMatchObject({ kind: "run", resolution: "direct", address: EOA });
+    expect(plan[1]).toMatchObject({ kind: "run", resolution: "direct" });
+  });
+
+  it("Limitless is read on Base for an ordinary address, and not for a kernel account on another chain", () => {
+    expect(POSITION_READERS.has("limitless")).toBe(true);
+    const plan = planReads([binding({ id: "a", venues: ["limitless"] }), binding({ id: "k", kind: "kernel", chain: "eip155:3223", venues: ["limitless"] })], DEFAULT_SWITCHES, "cockpit");
+    expect(plan[0]).toMatchObject({ kind: "run", resolution: "direct", address: EOA });
+    expect(plan[1]).toMatchObject({ kind: "skip", outcome: { kind: "unsupported" } });
   });
 
   it("a Solana address goes to Pascal only, and an EVM address is not offered to Pascal", () => {
@@ -79,7 +86,7 @@ describe("planReads", () => {
   });
 
   it("M0-2 style states: restricted venues are 'off', Cockpit-only venues need the Cockpit, switched-off venues are off", () => {
-    const standalone = planReads([binding({ id: "a", venues: ["kalshi", "limitless", "trueo"] })], switches({ trueo: false }), "standalone");
+    const standalone = planReads([binding({ id: "a", venues: ["kalshi", "sx", "trueo"] })], switches({ trueo: false, sx: true }), "standalone");
     expect(standalone.map((item) => (item.kind === "skip" ? item.outcome.kind : "run"))).toEqual(["off", "needs_cockpit", "off"]);
     const kalshi = standalone[0];
     expect(kalshi?.kind === "skip" && kalshi.outcome.kind === "off" && kalshi.outcome.reason).toBe("restricted_off");
@@ -92,6 +99,11 @@ describe("planReads", () => {
     expect(plan[0]).toMatchObject({ kind: "skip", outcome: { kind: "off", reason: "restricted_off" } });
     const accepted = planReads([binding({ id: "a", venues: ["kalshi"] })], switches({ kalshi: true }, { kalshi: DISCLOSURE_VERSION }), "cockpit");
     expect(accepted[0]).toMatchObject({ kind: "skip", outcome: { kind: "unsupported" } });
+  });
+
+  it("a venue read from the chain does not need the Cockpit, even when its own API does", () => {
+    const plan = planReads([binding({ id: "a", venues: ["limitless"] })], DEFAULT_SWITCHES, "standalone");
+    expect(plan[0]).toMatchObject({ kind: "run", venue: "limitless" });
   });
 
   it("an entry with no address is not read", () => {

@@ -15,9 +15,9 @@
 // It runs on the decoded block's call list; `verifyPreparedLocal` (vet.ts) then proves that list is what the
 // hashed call data says, so a block cannot show one thing and hash another.
 
-import { formatAtomic } from "@shared/guardrails/amount";
-import type { DecodedCallBlock, UserOpAction } from "@shared/relay/contract";
-import { CONDITIONAL_TOKENS, CTF_EXCHANGE, HYPERLANE_DOMAIN_BASE, USDC_E_ADDRESS, USDC_E_DECIMALS, XO_WARP_ROUTE } from "@shared/xo/chain/constants";
+import { formatAtomic } from "@sdk/money/amount";
+import type { DecodedCallBlock, UserOpAction } from "@sdk/trade/contract";
+import { CONDITIONAL_TOKENS, CTF_EXCHANGE, HYPERLANE_DOMAIN_BASE, USDC_E_ADDRESS, USDC_E_DECIMALS, XO_WARP_ROUTE } from "@sdk/chain/xo/constants";
 
 // The actions the trade screens know how to show. create_market, respond_update and cancel_market are the market
 // creation family: the creation UI is not shipped (O5), so they are not here and an item of that kind never renders.

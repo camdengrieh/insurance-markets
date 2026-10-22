@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-binary-module-implementation",
+  "address": "0xf6428c0B5fa9361c0708CDdb95468cf54C56e9A2",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 23189,
+  "sha256": "59ae2aac06cce108f5b4cf7f8887315986e0a0cc329328a6f0b59932362fe06f",
+  "keccak256": "0xe378ba6d5142d89ab97c857f762043f2a388b9d2049fe1b79b5694881a3d445a",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xf6428c0B5fa9361c0708CDdb95468cf54C56e9A2?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "BinaryModule",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

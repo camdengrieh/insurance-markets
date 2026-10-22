@@ -1,13 +1,14 @@
-import * as z from "zod/v4";
-
+import { isAdapterException } from "../errors.js";
 import type { AdapterDeps } from "../../model.js";
-import { TRUEO_MAX_BATCH, TRUEO_SINGLE_CONCURRENCY } from "./constants.js";
+import { createRpcPort, isRpcError, rpcPostFromFetch, type RpcError, type RpcLog as PortLog, type RpcPort } from "../../chain/rpc.js";
+import { TRUEO_MAX_BATCH, TRUEO_MAX_BODY_CHARS, TRUEO_SINGLE_CONCURRENCY } from "./constants.js";
 import { AdapterFailure } from "./errors.js";
-import { postJson } from "./http.js";
+import { FORBIDDEN_PAUSE_MS } from "./http.js";
 
-// A JSON-RPC client over the injected fetch that can send exactly two methods: eth_call and eth_getLogs. There
-// is no generic `request(method, params)`, so no transaction, signature or state-changing method can be
-// sent through it, and the Cockpit's read proxy sees nothing outside its JSON-RPC read allowlist.
+// The Trueo reader's view of the one JSON-RPC port (sdk/chain/rpc.ts): a client that can send exactly two methods,
+// eth_call and eth_getLogs. There is no generic `request(method, params)` here, so no transaction, signature or
+// state-changing method can be sent through it, and the Cockpit's read proxy sees nothing outside its JSON-RPC read
+// allowlist. Failures are the port's, mapped onto the reader's closed AdapterError set.
 //
 // Many reads are sent as one JSON-RPC batch. If the endpoint or the daemon's proxy refuses an array body, the
 // client falls back, once and for good, to single requests (bounded concurrency).
@@ -34,14 +35,7 @@ export interface LogFilter {
   readonly toBlock: bigint | "latest";
 }
 
-export interface RpcLog {
-  readonly address: Address;
-  readonly topics: readonly Hex[];
-  readonly data: Hex;
-  readonly blockNumber: bigint;
-  readonly transactionHash: Hex;
-  readonly logIndex: number;
-}
+export type RpcLog = PortLog;
 
 export interface Rpc {
   callMany(calls: readonly RpcCall[], deadlineAtMs: number): Promise<RpcResult[]>;
@@ -57,108 +51,74 @@ export interface RpcOptions {
   readonly concurrency?: number;
 }
 
-const hexSchema = z.string().regex(/^0x(?:[0-9a-fA-F]{2})*$/).max(1_000_000);
-const itemSchema = z.looseObject({
-  id: z.union([z.number(), z.string(), z.null()]).optional(),
-  result: z.unknown().optional(),
-  error: z.looseObject({ code: z.number().optional(), message: z.string().max(500).optional() }).optional(),
-});
-type Item = z.infer<typeof itemSchema>;
+// The widest eth_getLogs range the port accepts for this reader: the history scan's own cap (logs.ts MAX_BLOCK_SPAN,
+// an exclusive difference of 100,000) as an inclusive block count.
+const MAX_LOG_BLOCKS = 100_001n;
 
-const logSchema = z.object({
-  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  topics: z.array(z.string().regex(/^0x[0-9a-fA-F]{64}$/)).max(4),
-  data: hexSchema,
-  blockNumber: z.string().regex(/^0x[0-9a-fA-F]{1,16}$/),
-  transactionHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-  logIndex: z.string().regex(/^0x[0-9a-fA-F]{1,8}$/),
-});
-
-// 429-like text in an error object. -32005 is the usual "limit exceeded" code of hosted nodes.
-const LIMIT_TEXT = /\b(rate.?limit|too many requests|request limit)\b/i;
-const REVERT_TEXT = /revert/i;
-
-function classify(item: Item): RpcResult {
-  if (item.error !== undefined) {
-    const code = item.error.code;
-    const message = item.error.message ?? "";
-    if (code === -32005 || LIMIT_TEXT.test(message)) throw new AdapterFailure("trueo", "RATE_LIMITED", "rpc_limited");
-    if (code === 3 || REVERT_TEXT.test(message)) return { ok: false, kind: "revert" };
-    return { ok: false, kind: "error" };
+// A port error as the reader's AdapterFailure. The details are the ones this reader always used.
+function failureOf(error: unknown): unknown {
+  if (!isRpcError(error)) return error;
+  const e: RpcError = error;
+  switch (e.code) {
+    case "rate_limited":
+      return new AdapterFailure("trueo", "RATE_LIMITED", e.detail, e.retryAfterMs);
+    case "requires_key":
+      // A key refusal latches the port; the venue pauses as a 403 always paused it.
+      return new AdapterFailure("trueo", "VENUE_PAUSED", e.detail === "requires_key_latched" ? "http_403" : e.detail, e.retryAfterMs ?? FORBIDDEN_PAUSE_MS);
+    case "timeout":
+      return new AdapterFailure("trueo", "TIMEOUT", e.detail);
+    case "unreachable":
+      // A fetch layer that already speaks AdapterException (the Cockpit's proxy mapper) is passed through.
+      return isAdapterException(e.cause) ? e.cause : new AdapterFailure("trueo", "TIMEOUT", "no_response");
+    case "http_status": {
+      const status = e.status ?? 0;
+      if (status === 404) return new AdapterFailure("trueo", "NOT_FOUND", "http_404");
+      if (status >= 500) return new AdapterFailure("trueo", "VENUE_PAUSED", `http_${status}`, e.retryAfterMs);
+      return new AdapterFailure("trueo", "SCHEMA_DRIFT", `http_${status}`);
+    }
+    case "too_large":
+      return new AdapterFailure("trueo", "SCHEMA_DRIFT", e.detail);
+    case "invalid_response":
+      return new AdapterFailure("trueo", "SCHEMA_DRIFT", e.detail === "result_shape" ? "rpc_envelope" : e.detail);
+    case "upstream_error":
+      // A range or result-size refusal: the caller must ask for less.
+      return new AdapterFailure("trueo", "NOT_SUPPORTED", e.detail === "logs_range_refused" ? e.detail : "rpc_error");
+    case "invalid_input":
+    case "unsupported_method":
+    case "reverted":
+      return new AdapterFailure("trueo", "NOT_SUPPORTED", e.detail);
   }
-  const result = hexSchema.safeParse(item.result);
-  return result.success ? { ok: true, data: result.data as Hex } : { ok: false, kind: "error" };
-}
-
-function callBody(id: number, call: RpcCall): unknown {
-  return { jsonrpc: "2.0", id, method: "eth_call", params: [{ to: call.to, data: call.data }, "latest"] };
 }
 
 export function createRpc(deps: AdapterDeps, options: RpcOptions): Rpc {
-  const maxBatch = Math.max(1, Math.min(options.maxBatch ?? TRUEO_MAX_BATCH, 100));
-  const concurrency = Math.max(1, Math.min(options.concurrency ?? TRUEO_SINGLE_CONCURRENCY, 8));
-  let nextId = 1;
-  let batching = options.batch !== "never";
-  let lastMode: "batch" | "single" = batching ? "batch" : "single";
-
-  async function single(call: RpcCall, deadlineAtMs: number): Promise<RpcResult> {
-    const body = await postJson(deps, options.url, callBody(nextId++, call), deadlineAtMs);
-    const item = itemSchema.safeParse(body);
-    return item.success ? classify(item.data) : { ok: false, kind: "error" };
-  }
-
-  async function singles(calls: readonly RpcCall[], deadlineAtMs: number): Promise<RpcResult[]> {
-    const results: RpcResult[] = new Array<RpcResult>(calls.length);
-    let cursor = 0;
-    const worker = async (): Promise<void> => {
-      for (;;) {
-        const index = cursor;
-        cursor += 1;
-        const call = calls[index];
-        if (call === undefined) return;
-        results[index] = await single(call, deadlineAtMs);
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(concurrency, calls.length) }, worker));
-    return results;
-  }
-
-  // null: the endpoint did not answer the array form; the caller falls back.
-  async function batch(calls: readonly RpcCall[], deadlineAtMs: number): Promise<RpcResult[] | null> {
-    const firstId = nextId;
-    nextId += calls.length;
-    let body: unknown;
-    try {
-      body = await postJson(deps, options.url, calls.map((call, index) => callBody(firstId + index, call)), deadlineAtMs);
-    } catch (error) {
-      // A limit or a deadline is not a reason to change mode.
-      if (error instanceof AdapterFailure && (error.code === "RATE_LIMITED" || error.code === "TIMEOUT" || error.code === "STALE")) throw error;
-      return null;
-    }
-    if (!Array.isArray(body)) return null;
-    const byId = new Map<string, Item>();
-    for (const raw of body) {
-      const item = itemSchema.safeParse(raw);
-      if (item.success && (typeof item.data.id === "number" || typeof item.data.id === "string")) byId.set(String(item.data.id), item.data);
-    }
-    // Some nodes answer a batch with fewer or no ids; a missing answer is an error for that call only.
-    return calls.map((_, index) => {
-      const item = byId.get(String(firstId + index));
-      return item === undefined ? { ok: false as const, kind: "error" as const } : classify(item);
+  let port: RpcPort | null = null;
+  let refused: AdapterFailure | null = null;
+  try {
+    port = createRpcPort({
+      url: options.url,
+      post: rpcPostFromFetch(deps.fetch, { maxBodyChars: TRUEO_MAX_BODY_CHARS, nowMs: deps.nowMs }),
+      methods: ["eth_call", "eth_getLogs"],
+      batch: options.batch ?? "auto",
+      maxBatch: options.maxBatch ?? TRUEO_MAX_BATCH,
+      concurrency: options.concurrency ?? TRUEO_SINGLE_CONCURRENCY,
+      maxLogBlockRange: MAX_LOG_BLOCKS,
+      allowLatestLogs: true,
     });
+  } catch {
+    // A URL the port refuses (not https, credentials or a query string) fails every read, not the adapter's creation.
+    refused = new AdapterFailure("trueo", "NOT_SUPPORTED", "rpc_url_refused");
   }
+  const ready = (): RpcPort => {
+    if (port === null) throw refused ?? new AdapterFailure("trueo", "NOT_SUPPORTED", "rpc_url_refused");
+    return port;
+  };
 
   async function callMany(calls: readonly RpcCall[], deadlineAtMs: number): Promise<RpcResult[]> {
-    const out: RpcResult[] = [];
-    for (let from = 0; from < calls.length; from += maxBatch) {
-      const chunk = calls.slice(from, from + maxBatch);
-      let results: RpcResult[] | null = null;
-      if (batching && chunk.length > 1) {
-        results = await batch(chunk, deadlineAtMs);
-        if (results === null) batching = false;
-      }
-      lastMode = results === null ? "single" : "batch";
-      out.push(...(results ?? (await singles(chunk, deadlineAtMs))));
+    let out: RpcResult[];
+    try {
+      out = await ready().callMany(calls, { deadlineAtMs });
+    } catch (error) {
+      throw failureOf(error);
     }
     // Every call failing for a reason other than a revert means the endpoint is not serving reads.
     if (out.length > 0 && out.every((result) => !result.ok && result.kind === "error")) throw new AdapterFailure("trueo", "VENUE_PAUSED", "rpc_errors");
@@ -166,36 +126,22 @@ export function createRpc(deps: AdapterDeps, options: RpcOptions): Rpc {
   }
 
   async function logs(filter: LogFilter, deadlineAtMs: number): Promise<RpcLog[]> {
-    const params = {
-      address: filter.address,
-      topics: filter.topics,
-      fromBlock: `0x${filter.fromBlock.toString(16)}`,
-      toBlock: filter.toBlock === "latest" ? "latest" : `0x${filter.toBlock.toString(16)}`,
-    };
-    const body = await postJson(deps, options.url, { jsonrpc: "2.0", id: nextId++, method: "eth_getLogs", params: [params] }, deadlineAtMs);
-    const item = itemSchema.safeParse(body);
-    if (!item.success) throw new AdapterFailure("trueo", "SCHEMA_DRIFT", "rpc_envelope");
-    if (item.data.error !== undefined) {
-      const message = item.data.error.message ?? "";
-      if (item.data.error.code === -32005 || LIMIT_TEXT.test(message)) throw new AdapterFailure("trueo", "RATE_LIMITED", "rpc_limited");
-      // A range or result-size refusal: the caller must ask for less.
-      throw new AdapterFailure("trueo", "NOT_SUPPORTED", "logs_range_refused");
+    let read;
+    try {
+      read = await ready().getLogs({ address: filter.address, topics: filter.topics, fromBlock: filter.fromBlock, toBlock: filter.toBlock }, { deadlineAtMs });
+    } catch (error) {
+      throw failureOf(error);
     }
-    const list = z.array(z.unknown()).max(10_000).safeParse(item.data.result);
-    if (!list.success) throw new AdapterFailure("trueo", "SCHEMA_DRIFT", "logs_not_a_list");
-    return list.data.map((raw) => {
-      const log = logSchema.safeParse(raw);
-      if (!log.success) throw new AdapterFailure("trueo", "SCHEMA_DRIFT", "log_shape");
-      return {
-        address: log.data.address as Address,
-        topics: log.data.topics as Hex[],
-        data: log.data.data as Hex,
-        blockNumber: BigInt(log.data.blockNumber),
-        transactionHash: log.data.transactionHash as Hex,
-        logIndex: Number(BigInt(log.data.logIndex)),
-      };
-    });
+    // A pending or malformed row is drift; a row for an address or topic nobody asked about was already dropped.
+    if (read.droppedMalformed > 0 || read.droppedPending > 0) throw new AdapterFailure("trueo", "SCHEMA_DRIFT", "log_shape");
+    return [...read.logs];
   }
 
-  return { callMany, logs, mode: () => lastMode };
+  const mode = (): "batch" | "single" => {
+    const current = port?.mode() ?? "none";
+    if (current !== "none") return current;
+    return options.batch === "never" ? "single" : "batch";
+  };
+
+  return { callMany, logs, mode };
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import type { ClobVenue } from "@shared/clob/venues";
+import type { ClobVenue } from "@sdk/trade/clob/venues";
 
 import { Badge, Button, Disclosure, Field, Num, Tile, UnprovenTile, formatAge, useAnnounce, venueName } from "../../ui";
 import { CompactPrepare, type PanelLayout } from "./ActionPanels";

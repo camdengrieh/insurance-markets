@@ -215,26 +215,25 @@ describe("the Holdings view's library", () => {
   it("a venue that needs the Cockpit says so, and a venue with no reader says that instead of showing an empty table", async () => {
     const net = network();
     const h = harness({ net, mode: "standalone" });
-    await seed(h, ["limitless", "hyperliquid"]);
+    await seed(h, ["hyperliquid"]);
     const view = render(h.wrap(<HoldingsHost />));
-    await eventually(() => expect(view.container.querySelector('[data-outcome="needs_cockpit"]')).not.toBeNull(), act);
-    expect(must(view.container, '[data-outcome="needs_cockpit"]').textContent).toMatch(/needs the Cockpit/);
+    await eventually(() => expect(view.container.querySelector('[data-outcome="unsupported"]')).not.toBeNull(), act);
     expect(must(view.container, '[data-outcome="unsupported"]').textContent).toMatch(/no position reader/);
     expect(view.container.querySelector("table")).toBeNull();
     expect(must(view.container, '[data-testid="held-keys"]').textContent).toBe("0");
+    expect(net.calls).toHaveLength(0);
+    // A venue whose reads go through the Cockpit only (SX, when switched on) gets its own tile.
+    const tile = render(h.wrap(<OutcomeTile outcome={{ kind: "needs_cockpit", venue: "sx", bindingId: "b", bindingLabel: "Mine", what: "positions for this address" }} onRetry={() => undefined} />));
+    expect(must(tile.container, '[data-outcome="needs_cockpit"]').textContent).toMatch(/needs the Cockpit/);
   });
 
   it("a Cockpit page that is not paired says so, in words, instead of a venue error", async () => {
     const adapters: PortfolioAdapters = {
-      xo: () => ({ getBooks: async () => [] }),
-      polymarket: () => ({
-        getPositionsByAddress: async () => {
+      trueo: () => ({
+        positionsByAddress: async () => {
           throw new FetchError("unauthorized", "x");
         },
-        lookupProxyWallet: async () => ({ ok: false, error: "NOT_FOUND" }),
-        getBooks: async () => [],
       }),
-      trueo: () => ({ positionsByAddress: async () => ({ positions: [], unmarked: 0, claims: [], scanned: 0, skipped: [] }) }),
       pascal: () => ({
         positionsByAddress: async () => {
           throw new Error("unused");
@@ -243,7 +242,7 @@ describe("the Holdings view's library", () => {
     };
     const h = harness({ net: network(), mode: "cockpit", adapters });
     await h.bindings.add({ address: OWNER, kind: "venue_proxy", label: "Wallet" }).then(async (added) => {
-      if (added.ok) await h.bindings.setVenues(added.binding.id, ["polymarket"]);
+      if (added.ok) await h.bindings.setVenues(added.binding.id, ["trueo"]);
     });
     const view = render(h.wrap(<HoldingsHost />));
     await eventually(() => expect(view.container.querySelector('[data-outcome="not_paired"]')).not.toBeNull(), act);

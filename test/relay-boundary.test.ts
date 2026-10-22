@@ -26,14 +26,11 @@ const forbidden = (specifier: string): boolean => {
   return FORBIDDEN.includes(root) && (specifier.startsWith("node:") || !specifier.startsWith("."));
 };
 
-// Files under src/ that may import a node: module, and which ones. Anything not listed fails.
-const ALLOWED_NODE_IMPORTS: Readonly<Record<string, readonly string[]>> = {
-  // L2 request signing is HMAC-SHA256; node:crypto is how Node does it and it touches no I/O.
-  "src/xo/signing/hmac.ts": ["node:crypto"],
-  // The CLOB venue request signers (relay/clob.ts): the same HMAC-SHA256, no I/O. Never reachable from the page.
-  "src/clob/polymarket/l2.ts": ["node:crypto"],
-  "src/clob/limitless/hmac.ts": ["node:crypto"],
-};
+// Files under src/ that may import a node: module, and which ones. Anything not listed fails. None does since the
+// credentialed request signers (XO L2, Polymarket L2, Limitless; HMAC-SHA256 over node:crypto, no I/O) moved to
+// sdk/node/trade (docs/sdk-and-api-design.md step 5), which is never reachable from the page
+// (app/scripts/check-boundaries.ts).
+const ALLOWED_NODE_IMPORTS: Readonly<Record<string, readonly string[]>> = {};
 
 // Portable by contract: no node: import, no Node-only global.
 const PORTABLE = [
@@ -77,7 +74,7 @@ const files = [...walk(SRC)]
 describe("import boundary: src/ stays portable", () => {
   it("scans the files it is supposed to (the scan is not vacuous)", () => {
     assert.ok(files.length >= 30, `only ${files.length} files`);
-    for (const must of ["src/plugin.ts", "src/relay/contract.ts", "src/config.ts", "src/xo/signing/hmac.ts"]) {
+    for (const must of ["src/plugin.ts", "src/relay/contract.ts", "src/config.ts", "src/xo/signing/index.ts"]) {
       assert.ok(files.some((file) => file.name === must), must);
     }
     assert.ok(specifiersOf('import { a } from "node:crypto";\nconst b = await import("node:fs");').join() === "node:crypto,node:fs");

@@ -16,8 +16,8 @@
 import * as z from "zod/v4";
 
 import { FundingCalldataError, buildFundingCalls, decodeFundingData, parseFundingAmount, verifyFundingCall, type FundingCallKind } from "@shared/xo/funding/calldata";
-import { BASE_USDC, BASE_USDC_DECIMALS, BASE_WARP_ROUTER, HYPERLANE_DOMAIN_XO } from "@shared/xo/chain/constants";
-import { formatAtomic } from "@shared/guardrails/amount";
+import { BASE_USDC, BASE_USDC_DECIMALS, BASE_WARP_ROUTER, HYPERLANE_DOMAIN_XO } from "@sdk/chain/xo/constants";
+import { formatAtomic } from "@sdk/money/amount";
 
 export const PROPOSAL_KEY = "io.paybox/transactionProposal";
 
