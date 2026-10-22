@@ -171,11 +171,25 @@ describe("the answer", () => {
 
   it("answers a non-JSON 2xx with upstream_not_json and a non-JSON 500 the same way", async () => {
     for (const status of [200, 500, 502, 404]) {
-      const proxy = createReadProxy({ fetch: scriptedUpstream(() => textResponse("<html>nope</html>", { status })).fetch });
+      const proxy = createReadProxy({ fetch: scriptedUpstream(() => textResponse("nope", { status, headers: { "content-type": "text/plain" } })).fetch });
       const failure = failureOf(await proxy.handle(book()));
       assert.equal(failure.code, "upstream_not_json");
       assert.equal(failure.details?.["upstream_status"], status);
     }
+  });
+
+  it("treats a web page served with 200 as a block: venue_paused (block_page), and nothing is sent meanwhile", async () => {
+    const stderr = captureStderr();
+    const upstream = scriptedUpstream(() => textResponse("<!DOCTYPE html><html><body>challenge</body></html>"));
+    const proxy = createReadProxy({ fetch: upstream.fetch, stderr });
+    const first = failureOf(await proxy.handle(book()));
+    assert.equal(first.code, "venue_paused");
+    assert.equal(first.details?.["reason"], "block_page");
+    assert.equal(first.retryAfterS, VENUE_PAUSE_MS / 1000);
+    assert.equal(failureOf(await proxy.handle(book())).details?.["reason"], "block_page");
+    assert.equal(upstream.calls.length, 1);
+    assert.match(stderr.text(), /xo_orderbook are paused for 10 minutes \(block_page\)/);
+    assert.doesNotMatch(JSON.stringify(first), /challenge/);
   });
 
   it("passes a 401, 403 or 429 with a non-JSON body as an envelope with a null body, so the adapter sees the status", async () => {
@@ -330,11 +344,19 @@ describe("R9 pauses", () => {
     assert.equal(envelopeOf(await proxy.handle(book())).upstream_status, 200);
   });
 
-  it("caps an absurd Retry-After cool-down at one hour", async () => {
+  it("honours a long Retry-After, capped at a day (the shared rule, sdk/venues/state.ts)", async () => {
     const clock = fakeClock();
-    const proxy = createReadProxy({ fetch: scriptedUpstream(() => jsonResponse({}, { status: 429, headers: { "retry-after": "86400" } })).fetch, now: clock });
+    const proxy = createReadProxy({ fetch: scriptedUpstream(() => jsonResponse({}, { status: 429, headers: { "retry-after": "9999999" } })).fetch, now: clock });
     await proxy.handle(book());
-    assert.equal(failureOf(await proxy.handle(book())).retryAfterS, 3600);
+    assert.equal(failureOf(await proxy.handle(book())).retryAfterS, 86_400);
+  });
+
+  it("blocks on the third 401 in a row", async () => {
+    const proxy = createReadProxy({ fetch: scriptedUpstream(() => jsonResponse({}, { status: 401 })).fetch, limits: { xo_orderbook: { perSecond: 1000, burst: 1000 } } });
+    for (let i = 0; i < 3; i += 1) assert.equal((await proxy.handle(book())).ok, true);
+    const failure = failureOf(await proxy.handle(book()));
+    assert.equal(failure.code, "venue_paused");
+    assert.equal(failure.details?.["reason"], "http_401_repeated");
   });
 
   it("is per service: pausing one venue leaves the others working", async () => {

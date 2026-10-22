@@ -14,7 +14,7 @@ import type { BindingsState } from "./services";
 // The venues that have a position reader in this build, and the kinds of address each one understands.
 const VENUE_CHOICES: ReadonlyArray<{ readonly venue: VenueId; readonly kinds: readonly BindingKind[]; readonly asks: string }> = [
   { venue: "xo", kinds: ["eoa", "kernel"], asks: "asks XO about the account derived from this address" },
-  { venue: "polymarket", kinds: ["eoa", "venue_proxy"], asks: "asks Polymarket's profile lookup, then its data API, about the wallet it names" },
+  { venue: "polymarket", kinds: ["eoa", "venue_proxy"], asks: "asks a public Polygon RPC for the token balances of this address and of the Polymarket wallets derived from it" },
   { venue: "trueo", kinds: ["eoa", "venue_proxy", "kernel"], asks: "asks a public Base RPC for the token balances" },
   { venue: "pascal", kinds: ["solana"], asks: "asks Pascal's data API about this Solana address" },
 ];

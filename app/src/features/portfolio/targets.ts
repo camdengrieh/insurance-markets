@@ -60,7 +60,8 @@ function target(venue: VenueId, binding: AddressBinding): PlannedRead {
     }
     case "polymarket":
       // Read on Polygon for the address itself. No profile lookup: that is a venue API call. Polymarket usually holds
-      // positions in a wallet it creates for an owner; that wallet is read when it is pasted as its own entry.
+      // positions in a wallet it creates for a signer; for an owner's address the readers also derive those wallets and
+      // read each one confirmed on chain (readers.ts). A wallet pasted as its own entry is read directly.
       if (binding.kind === "venue_proxy" || binding.kind === "eoa") return { kind: "run", venue, binding, address, resolution: "direct" };
       return skip(venue, binding, "unsupported", "Polymarket positions are read on Polygon for an ordinary address or for the Polymarket wallet itself.");
     case "limitless":

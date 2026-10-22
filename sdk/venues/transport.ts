@@ -24,6 +24,7 @@ export const FETCH_ERROR_CODES = [
   "redirect", // the upstream answered with a redirect; never followed
   "too_large", // response over the size cap
   "not_json",
+  "blocked", // a JSON endpoint answered with a web page (a block or challenge page served with a 2xx): a block, not drift
   "paused", // R9 pause or Retry-After cooldown for this host
   "throttled", // the local token bucket would make the caller wait too long
   "unauthorized", // Cockpit fetch without a token
@@ -38,13 +39,16 @@ export class FetchError extends Error {
   // The daemon's BridgeErrorCode when code is "bridge".
   readonly bridgeCode: string | null;
   readonly retryAfterMs: number | null;
-  constructor(code: FetchErrorCode, message: string, extra: { service?: ReadService | null; bridgeCode?: string | null; retryAfterMs?: number | null } = {}) {
+  // For "paused" and "blocked": the closed token of what tripped the pause (sdk/venues/state.ts PauseSignal), when known.
+  readonly signal: string | null;
+  constructor(code: FetchErrorCode, message: string, extra: { service?: ReadService | null; bridgeCode?: string | null; retryAfterMs?: number | null; signal?: string | null } = {}) {
     super(message);
     this.name = "FetchError";
     this.code = code;
     this.service = extra.service ?? null;
     this.bridgeCode = extra.bridgeCode ?? null;
     this.retryAfterMs = extra.retryAfterMs ?? null;
+    this.signal = extra.signal ?? null;
   }
 }
 
@@ -69,6 +73,7 @@ export function adapterErrorOfFetch(error: unknown): AdapterError | null {
     case "throttled":
       return "RATE_LIMITED";
     case "paused":
+    case "blocked":
       return "VENUE_PAUSED";
     case "needs_cockpit":
     case "origin_not_allowed":
@@ -101,6 +106,19 @@ export function adapterErrorOfStatus(status: number): AdapterError {
   if (status === 401 || status === 403) return "VENUE_PAUSED";
   if (status >= 500) return "TIMEOUT";
   return "SCHEMA_DRIFT";
+}
+
+// ---- block pages ----------------------------------------------------------------------------------------------------------
+
+// Whether an answer from a JSON endpoint is a web page instead of data: an HTML content type, or a body that starts like
+// an HTML document. A CDN or bot wall that blocks a client often answers 200 with such a page; that is a block signal
+// (sdk/venues/state.ts), never schema drift and never something to retry around. Every endpoint a reader names answers
+// JSON (or plain text for a status check), so a web page is never the expected answer. Only the head of the body is read.
+export function isBlockPage(contentType: string | null | undefined, body: string): boolean {
+  const type = (contentType ?? "").toLowerCase();
+  if (type.includes("text/html") || type.includes("application/xhtml")) return true;
+  const head = body.slice(0, 512).replace(/^\uFEFF/, "").trimStart().slice(0, 64).toLowerCase();
+  return head.startsWith("<!doctype html") || head.startsWith("<html") || head.startsWith("<head") || head.startsWith("<body");
 }
 
 // The Retry-After header: delay-seconds or an HTTP date. Anything else is null. Capped at 24 hours.

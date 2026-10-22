@@ -149,6 +149,29 @@ describe("the Holdings view's library", () => {
     expect(text).toContain("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC");
   });
 
+  it("a Polymarket wallet derived from a signer names its kind and the signer it came from", () => {
+    const outcome: VenueReadOk = {
+      kind: "ok",
+      venue: "polymarket",
+      bindingId: "b",
+      bindingLabel: "Mine",
+      holder: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      rows: [],
+      rejected: 0,
+      notListed: [],
+      notes: [],
+      prov,
+      partial: false,
+      facts: [],
+      resolution: { source: "derived", address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", candidate: null, wallet: { kind: "Polymarket Safe wallet", signer: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" } },
+    };
+    const h = harness({ net: network(), mode: "standalone" });
+    const view = render(h.wrap(<VenueSection outcome={outcome} />));
+    const text = must(view.container, '[data-testid="resolution"]').textContent ?? "";
+    expect(text).toMatch(/your Polymarket Safe wallet: derived from the signer 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 and confirmed on chain/);
+    expect(text).not.toMatch(/candidate/i);
+  });
+
   // Rows below are inline unit inputs for the rendering code (the venue answers are not involved).
   const okOutcome = (rows: VenueReadOk["rows"]): VenueReadOk => ({
     kind: "ok",

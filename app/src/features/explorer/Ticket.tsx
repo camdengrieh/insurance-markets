@@ -15,12 +15,14 @@ import { useState } from "react";
 import { notional, parseQty, toDec } from "../../core/money";
 import type { Market, MarketRef, VenueId } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
-import { Button, Field, Missing, Num, Tile, UntrustedText, useAppMode, venueName } from "../../ui";
+import { Button, Field, Missing, Num, Tile, UntrustedText, useAppMode, useNow, venueName } from "../../ui";
 import { usePairing } from "../terminal/usePairing";
 import { useTradeServices } from "../trade/services";
 import { TradeDesk, clobMarketFacts, type TokenChoice } from "../trade";
 import { priceText } from "./display";
 import { isSafeMarketId } from "./ids";
+import { useExplorerServices } from "./services";
+import { VenueStateTile } from "./venue-state";
 
 // Fixed app words only: "Yes", "No" or "Outcome 3", never the creator's label. `short` is what the ticket's side
 // toggle shows after the side ("Buy Yes").
@@ -157,9 +159,16 @@ export function Worksheet({ market }: { readonly market: Market }) {
 
 export function Ticket({ market }: { readonly market: Market }) {
   const mode = useAppMode();
+  const services = useExplorerServices();
+  const nowMs = useNow(10_000);
   const venue = market.ref.venue;
   if (!hasTicket(venue)) return <Worksheet market={market} />;
   const name = venueName(venue);
+  // A venue that cannot be asked now has no book to quote: it drops out of order preparation and says why.
+  const readState = services.venueState(venue, nowMs);
+  if (readState.kind !== "ok") {
+    return <VenueStateTile venue={venue} state={readState} nowMs={nowMs} heading="h4" kept="No order is prepared while this lasts: there is no book to quote." />;
+  }
   if (mode !== "cockpit") {
     return (
       <Tile tone="info" title="Prepare order: needs the Cockpit" heading="h4" dataKind="ticket" dataCode="needs-cockpit">

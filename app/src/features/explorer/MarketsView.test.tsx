@@ -223,12 +223,14 @@ describe("one venue failing leaves the others rendering", () => {
     const original = pm.list.bind(pm);
     const flaky = { ...pm, list: async (q: Parameters<typeof pm.list>[0]) => (fail ? Promise.reject(new FakeError("RATE_LIMITED")) : original(q)) };
     const { container } = await mount(<MarketsView />, fakeServices([flaky]));
-    expect(tile(container, "error", "RATE_LIMITED")).not.toBeNull();
+    // A throttle is the venue's state with its reason, not an error panel; with no end time given, it may be asked again.
+    expect(tile(container, "venue-state", "throttled")).not.toBeNull();
+    expect(tile(container, "error")).toBeNull();
     fail = false;
-    click(must(container, '[data-kind="error"] button'));
+    click(must(container, '[data-kind="venue-state"] button'));
     await flush();
     expect(allText(container)).toContain("Back again");
-    expect(tile(container, "error")).toBeNull();
+    expect(tile(container, "venue-state")).toBeNull();
   });
 
   it("reports rows the reader refused", async () => {

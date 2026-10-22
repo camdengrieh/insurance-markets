@@ -118,43 +118,43 @@ describe("R9 pauses", () => {
   it("pauses a host for ten minutes after any 403", () => {
     const pauses = new VenuePauses();
     expect(pauses.check(HOST, 0)).toEqual({ paused: false });
-    pauses.record(HOST, 403, 1000, null);
-    expect(pauses.check(HOST, 1001)).toEqual({ paused: true, untilMs: 1000 + 600_000, reason: "forbidden" });
+    pauses.record(HOST, { status: 403, retryAfterMs: null }, 1000);
+    expect(pauses.check(HOST, 1001)).toEqual({ paused: true, untilMs: 1000 + 600_000, reason: "forbidden", signal: "http_403" });
     expect(pauses.check(HOST, 1000 + 599_999).paused).toBe(true);
     expect(pauses.check(HOST, 1000 + 600_000)).toEqual({ paused: false });
   });
 
   it("pauses after three consecutive 429s, and a success in between resets the count", () => {
     const pauses = new VenuePauses();
-    pauses.record(HOST, 429, 0, null);
-    pauses.record(HOST, 429, 1, null);
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 0);
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 1);
     expect(pauses.check(HOST, 2).paused).toBe(false);
-    pauses.record(HOST, 200, 3, null);
-    pauses.record(HOST, 429, 4, null);
-    pauses.record(HOST, 429, 5, null);
+    pauses.record(HOST, { status: 200, retryAfterMs: null }, 3);
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 4);
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 5);
     expect(pauses.check(HOST, 6).paused).toBe(false);
-    pauses.record(HOST, 429, 7, null);
-    expect(pauses.check(HOST, 8)).toEqual({ paused: true, untilMs: 7 + 600_000, reason: "rate_limited" });
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 7);
+    expect(pauses.check(HOST, 8)).toEqual({ paused: true, untilMs: 7 + 600_000, reason: "rate_limited", signal: "http_429_repeated" });
   });
 
   it("caps a Retry-After handed straight to record(), not only one read by the parser (TM-11)", () => {
     const pauses = new VenuePauses();
-    pauses.record(HOST, 429, 0, MAX_RETRY_AFTER_MS * 40);
-    expect(pauses.check(HOST, 1)).toEqual({ paused: true, untilMs: MAX_RETRY_AFTER_MS, reason: "retry_after" });
+    pauses.record(HOST, { status: 429, retryAfterMs: MAX_RETRY_AFTER_MS * 40 }, 0);
+    expect(pauses.check(HOST, 1)).toEqual({ paused: true, untilMs: MAX_RETRY_AFTER_MS, reason: "retry_after", signal: "retry_after" });
   });
 
   it("honours Retry-After as a cooldown, and a longer pause is never shortened", () => {
     const pauses = new VenuePauses();
-    pauses.record(HOST, 429, 0, 30_000);
-    expect(pauses.check(HOST, 10_000)).toEqual({ paused: true, untilMs: 30_000, reason: "retry_after" });
-    pauses.record(HOST, 403, 10_000, null);
-    pauses.record(HOST, 429, 11_000, 1000);
-    expect(pauses.check(HOST, 20_000)).toEqual({ paused: true, untilMs: 10_000 + 600_000, reason: "forbidden" });
+    pauses.record(HOST, { status: 429, retryAfterMs: 30_000 }, 0);
+    expect(pauses.check(HOST, 10_000)).toEqual({ paused: true, untilMs: 30_000, reason: "retry_after", signal: "retry_after" });
+    pauses.record(HOST, { status: 403, retryAfterMs: null }, 10_000);
+    pauses.record(HOST, { status: 429, retryAfterMs: 1000 }, 11_000);
+    expect(pauses.check(HOST, 20_000)).toEqual({ paused: true, untilMs: 10_000 + 600_000, reason: "forbidden", signal: "http_403" });
   });
 
   it("keeps hosts apart and reset clears everything", () => {
     const pauses = new VenuePauses();
-    pauses.record(HOST, 403, 0, null);
+    pauses.record(HOST, { status: 403, retryAfterMs: null }, 0);
     expect(pauses.check("api.novig.com", 1).paused).toBe(false);
     pauses.reset();
     expect(pauses.check(HOST, 1).paused).toBe(false);
@@ -162,7 +162,7 @@ describe("R9 pauses", () => {
 
   it("takes custom thresholds", () => {
     const pauses = new VenuePauses({ after429: 1, pauseMs: 5000 });
-    pauses.record(HOST, 429, 0, null);
+    pauses.record(HOST, { status: 429, retryAfterMs: null }, 0);
     expect(pauses.check(HOST, 4999).paused).toBe(true);
     expect(pauses.check(HOST, 5000).paused).toBe(false);
   });

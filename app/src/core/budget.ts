@@ -1,7 +1,8 @@
 // Request discipline (docs/dapp-design.md 4.8 R9 and R10, research 26 section 11, 28 section 5.3):
 //   - one token bucket per upstream HOST, so ten adapters (or a 100-search burst) cannot exceed what the
 //     venue publishes (M0-6);
-//   - a pause after three 429 answers or any 403, and a cooldown that honours Retry-After (R9);
+//   - a pause after three 429 answers or any 403, and a cooldown that honours Retry-After (R9), by the SDK's venue
+//     state rule (sdk/venues/state.ts);
 //   - jittered exponential backoff with an injected random source;
 //   - nothing here retries around a block (R10): a paused host stays paused.
 //
@@ -11,7 +12,6 @@
 // figure the default is deliberately low.
 
 import { BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS, type ReadService } from "../../headers.config";
-import { VENUE_PAUSE_AFTER_429, VENUE_PAUSE_MS } from "@bridge/contract";
 
 export type Clock = () => number;
 
@@ -162,76 +162,19 @@ export class HostBudgets {
 
 // ---- R9: pause after repeated 429 or any 403, honour Retry-After ------------------------------------------------
 
-export type PauseReason = "forbidden" | "rate_limited" | "retry_after";
-export type PauseState = { readonly paused: false } | { readonly paused: true; readonly untilMs: number; readonly reason: PauseReason };
-
+// The rule lives in the SDK (sdk/venues/state.ts) so the page, the Cockpit daemon and the API share one
+// implementation: a 403, three 401s in a row or a web page served where JSON was expected block a host; a 429 with
+// Retry-After cools it down and three 429s in a row pause it; a paused host stays paused for its window. The page keys
+// it by upstream host.
+export {
+  VenueStateTracker as VenuePauses,
+  venueReadState,
+  type PauseReason,
+  type PauseState,
+  type VenueReadState,
+  type VenueStateOptions as PauseOptions,
+} from "@sdk/venues/state";
 export { MAX_RETRY_AFTER_MS, parseRetryAfterMs } from "@sdk/venues/transport";
-import { MAX_RETRY_AFTER_MS } from "@sdk/venues/transport";
-
-export interface PauseOptions {
-  readonly after429?: number;
-  readonly pauseMs?: number;
-}
-
-export class VenuePauses {
-  readonly #after429: number;
-  readonly #pauseMs: number;
-  readonly #strikes = new Map<string, number>();
-  readonly #until = new Map<string, { untilMs: number; reason: PauseReason }>();
-
-  constructor(options: PauseOptions = {}) {
-    this.#after429 = options.after429 ?? VENUE_PAUSE_AFTER_429;
-    this.#pauseMs = options.pauseMs ?? VENUE_PAUSE_MS;
-  }
-
-  check(host: string, nowMs: number): PauseState {
-    const entry = this.#until.get(host.toLowerCase());
-    if (entry === undefined) return { paused: false };
-    if (nowMs >= entry.untilMs) {
-      this.#until.delete(host.toLowerCase());
-      return { paused: false };
-    }
-    return { paused: true, untilMs: entry.untilMs, reason: entry.reason };
-  }
-
-  // Feed every upstream status. A 2xx or 3xx clears the strikes. A 403 pauses at once (R9). A 429 adds a
-  // strike and, when the venue named a Retry-After, a cooldown for that long; three strikes pause for the
-  // full window.
-  record(host: string, status: number, nowMs: number, retryAfterMs: number | null): void {
-    const key = host.toLowerCase();
-    if (status === 403) {
-      this.#pause(key, nowMs + this.#pauseMs, "forbidden");
-      this.#strikes.delete(key);
-      return;
-    }
-    if (status === 429) {
-      const strikes = (this.#strikes.get(key) ?? 0) + 1;
-      if (strikes >= this.#after429) {
-        this.#pause(key, nowMs + this.#pauseMs, "rate_limited");
-        this.#strikes.delete(key);
-        return;
-      }
-      this.#strikes.set(key, strikes);
-      if (retryAfterMs !== null && retryAfterMs > 0) {
-        this.#pause(key, nowMs + Math.min(retryAfterMs, MAX_RETRY_AFTER_MS), "retry_after");
-      }
-      return;
-    }
-    if (status >= 200 && status < 400) this.#strikes.delete(key);
-  }
-
-  #pause(key: string, untilMs: number, reason: PauseReason): void {
-    const current = this.#until.get(key);
-    // A longer pause is never shortened by a later, shorter one.
-    if (current !== undefined && current.untilMs >= untilMs) return;
-    this.#until.set(key, { untilMs, reason });
-  }
-
-  reset(): void {
-    this.#strikes.clear();
-    this.#until.clear();
-  }
-}
 
 // ---- backoff and Retry-After ----------------------------------------------------------------------------------------------
 

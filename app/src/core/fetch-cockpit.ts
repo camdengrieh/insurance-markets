@@ -66,10 +66,13 @@ export function createCockpitFetch(options: CockpitFetchOptions): FetchLike {
         const failure = bridgeErrorResponseSchema.safeParse(json);
         if (!failure.success) throw new FetchError("bad_envelope", "the daemon's error answer is not the contract's shape", { service: target.service });
         const retryS = failure.data.error.retry_after_s;
+        // A daemon pause names what tripped it (sdk/venues/state.ts PauseSignal); the guarded fetch holds the same pause.
+        const reason = failure.data.error.details?.["reason"];
         throw new FetchError("bridge", "the daemon refused the read", {
           service: target.service,
           bridgeCode: failure.data.error.code,
           retryAfterMs: retryS === undefined ? null : retryS * 1000,
+          signal: typeof reason === "string" ? reason : null,
         });
       }
       const envelope = readProxyResponseSchema.safeParse(json);

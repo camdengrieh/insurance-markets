@@ -49,6 +49,16 @@ export const POLYMARKET_BINARY_MODULE_IMPLEMENTATION = "0xf6428c0B5fa9361c0708CD
 export const POLYMARKET_NEG_RISK_MODULE = "0x200000900045e3B6259600682756002200028933" as const;
 export const POLYMARKET_NEG_RISK_MODULE_IMPLEMENTATION = "0x39a5B01a100edF811f2748aa37B1313715Ded70e" as const;
 
+// ---- Wallet factories (the list's "Wallet Factory Contracts") ----
+// An owner's positions are usually held by a wallet one of these created for the owner by CREATE2
+// (sdk/chain/polymarket/wallets.ts). The Deposit Wallet factory is in sdk/chain/xo/constants.ts with its derivation.
+export const POLYMARKET_PROXY_WALLET_FACTORY = "0xaB45c5A4B0c941a2F231C04C3f49182e1A254052" as const;
+// The proxy wallet every Proxy Factory clone delegates to: getImplementation() of the factory, read 2026-10-22.
+export const POLYMARKET_PROXY_WALLET_IMPLEMENTATION = "0x44e999d5c2F66Ef0861317f9A4805AC2e90aEB4f" as const;
+export const POLYMARKET_SAFE_FACTORY = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b" as const;
+// The GnosisSafeL2 singleton every Safe from that factory starts with: masterCopy() of the factory, read 2026-10-22.
+export const POLYMARKET_SAFE_SINGLETON = "0xE51abdf814f8854941b9Fe8e3A4F65CAB4e7A4a8" as const;
+
 // Position ids of the CTF system, like every Conditional Tokens id, carry 6-decimal collateral units.
 export const POLYMARKET_SHARE_DECIMALS = 6;
 
@@ -104,5 +114,28 @@ export const POLYMARKET_PINS = Object.freeze({
     MINIMAL_PROXY,
     LIST,
     pin("Polymarket NegRiskModule implementation", POLYMARKET_NEG_RISK_MODULE_IMPLEMENTATION, "0xd4e04b562d38982ce9e51ecffaa1b7260cac7c9cce782a7d4bb3ae0512ee061a", 28479, SOURCIFY("match", "NegRiskModule")),
+  ),
+});
+
+// The wallet factories and what they clone. Nothing reads balances from these; the pins record that the derivation in
+// wallets.ts names the deployed contracts (a reader checks the Safe singleton before trusting a Safe's getOwners()).
+export const POLYMARKET_WALLET_PINS = Object.freeze({
+  proxyWalletFactory: pin("Polymarket Proxy Wallet Factory", POLYMARKET_PROXY_WALLET_FACTORY, "0xd579937f4dc6c50eeae2c1d57d0fb90dea1fa7b4ea9e88ecee5b583663d5d96d", 6945, SOURCIFY("match", "ProxyWalletFactory")),
+  proxyWalletImplementation: pin(
+    "Polymarket ProxyWallet implementation",
+    POLYMARKET_PROXY_WALLET_IMPLEMENTATION,
+    "0x10466d9ee1a9fb08c319382725675f441d59b77a8307edfa8b7167817b8a76f7",
+    3265,
+    SOURCIFY("match", "ProxyWallet"),
+    "getImplementation() of the Proxy Wallet Factory, read 2026-10-22",
+  ),
+  safeFactory: pin("Polymarket Safe Proxy Factory", POLYMARKET_SAFE_FACTORY, "0x7a423db1d467bbd092e48044242a9c1f003442a83ca8109f0f7c07a50782e23d", 3188, SOURCIFY("exact_match", "SafeProxyFactory")),
+  safeSingleton: pin(
+    "Polymarket Safe singleton (GnosisSafeL2)",
+    POLYMARKET_SAFE_SINGLETON,
+    "0xf4b625c76701938f75938880a926414b5f91471d32e21c0cbb37566b62495ca7",
+    24170,
+    SOURCIFY("match", "GnosisSafeL2"),
+    "masterCopy() of the Safe Proxy Factory, read 2026-10-22",
   ),
 });

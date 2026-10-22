@@ -10,12 +10,17 @@
 // Polymarket's V2 modules, each contract checked against its pinned code first. A market title and outcome label
 // come from the page's own market rows; a token the page has not loaded is listed by its id, because the chain does
 // not name it. The chain holds no prices, so an open position has no value here.
+//
+// Polymarket keeps most owners' positions in a wallet it creates for the signer. For a signer's address the readers
+// (readers.ts) derive those wallets on chain terms (sdk/chain/polymarket/wallets.ts: proxy wallet, Safe, Deposit
+// Wallet), read each one that is deployed and the signer's, and say so when none is.
 
 import { MAX_TARGETS, readPositions, scanTransfersTo, type PositionRead, type PositionTarget, type TransferScan } from "@sdk/chain/positions";
 import { createPinGuard, pinFailureText, type ContractPin, type PinGuard } from "@sdk/chain/pins";
 import { createRpcPort, isRpcError, rpcPostFromFetch, type Address, type RpcPort } from "@sdk/chain/rpc";
 import { POLYMARKET_PINS } from "@sdk/chain/polymarket/constants";
 import { polymarketScannedTarget, polymarketTargets, type PolymarketLedger } from "@sdk/chain/polymarket/reads";
+import { POLYMARKET_WALLET_KIND_TEXT, type PolymarketWalletKind } from "@sdk/chain/polymarket/wallets";
 import { LIMITLESS_PINS } from "@sdk/chain/limitless/constants";
 import { limitlessTargets } from "@sdk/chain/limitless/reads";
 import { XO_PINS } from "@sdk/chain/xo/pins";
@@ -178,12 +183,19 @@ function scanNote(venue: ChainVenue, scans: readonly TransferScan[]): string {
     : `Transfers to this address in the newest ${blocks.toString()} blocks of ${venue === "polymarket" ? "Polygon" : venue === "limitless" ? "Base" : "XO's chain"}${range} were scanned for tokens. Tokens received earlier are found only through the markets this page has loaded.`;
 }
 
+// A Polymarket wallet derived from a signer and confirmed on chain (readers.ts), read in place of a saved address.
+export interface DerivedWallet {
+  readonly kind: PolymarketWalletKind;
+  readonly signer: string;
+}
+
 export async function readChainHoldings(
   deps: AdapterDeps,
   session: ChainSession,
   venue: ChainVenue,
   plan: Extract<PlannedRead, { kind: "run" }>,
   known: readonly MarketSummary[],
+  wallet: DerivedWallet | null = null,
 ): Promise<VenueReadOutcome> {
   const { port, guard } = session;
   const holder = plan.address as Address;
@@ -271,14 +283,21 @@ export async function readChainHoldings(
   notes.push(`Read from the chain only, with no venue API: balances from ${ledgersOf(venue).map(({ pin }) => pin.name).join(" and ")}, each checked against the code pinned on ${ledgersOf(venue)[0]?.pin.readOn ?? ""}, and results from the contracts that settle them.`);
   notes.push(`Token ids came from the ${candidates.markets.toString()} ${venue === "xo" ? "XO" : venue === "limitless" ? "Limitless" : "Polymarket"} markets this page has loaded and from a scan of transfers. ${scanNote(venue, scans)}`);
   notes.push("The chain holds no prices, so open positions have no value here; a settled position shows what the contract pays. Market titles and outcome names are the page's own market rows.");
-  if (venue === "polymarket" && plan.binding.kind === "eoa") {
-    notes.push("Polymarket usually holds an owner's positions in a wallet it creates for them (a proxy, Safe or deposit wallet), not in the owner's address. This read is of the address itself; paste the Polymarket wallet as its own entry to read that one.");
+  if (venue === "polymarket" && wallet !== null) {
+    notes.push(
+      `This is the signer's ${POLYMARKET_WALLET_KIND_TEXT[wallet.kind]}: its address follows from the signer by its factory's CREATE2 rule, and the chain confirmed it holds that factory's wallet code${wallet.kind === "proxy" ? "" : " and names the signer as an owner"}. No Polymarket API was asked.`,
+    );
+  } else if (venue === "polymarket" && plan.binding.kind === "eoa") {
+    notes.push("This read is of the signer's own address. Polymarket usually holds an owner's positions in a wallet it creates for the signer (a proxy wallet, Safe or Deposit Wallet); those are derived from this address and checked on chain, and each one found is read in its own section.");
   }
   notes.push(...refusedText);
   if (candidates.refused > 0) notListed.push(`${candidates.refused.toString()} loaded markets were not read: their listed token ids do not derive from their condition.`);
   if (unreadable > 0) notListed.push(`${unreadable.toString()} token balances could not be read.`);
   if (capped) notListed.push(`Only the first ${MAX_TARGETS.toString()} candidate tokens were read.`);
-  const resolution: AddressResolution = { source: plan.resolution === "derived_kernel" ? "derived" : "pasted", address: plan.address, candidate: null };
+  const resolution: AddressResolution =
+    wallet === null
+      ? { source: plan.resolution === "derived_kernel" ? "derived" : "pasted", address: plan.address, candidate: null }
+      : { source: "derived", address: plan.address, candidate: null, wallet: { kind: POLYMARKET_WALLET_KIND_TEXT[wallet.kind], signer: wallet.signer } };
   const outcome: VenueReadOk = {
     kind: "ok",
     venue,

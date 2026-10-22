@@ -18,6 +18,7 @@ import { statusInfo, utcText, volumeText } from "./display";
 import { DisplayPrices, type ExplorerRow } from "./MarketTable";
 import { QuotientLine, type QuotientState } from "./QuotientPanel";
 import { SameQuestion } from "./SameQuestion";
+import { FieldSourcesList, mixedSources, originText } from "./sources";
 import { hasTicket, PREPARE_NEEDS_COCKPIT, PREPARE_NO_PATH, PrepareOrderAction } from "./Ticket";
 import { provForMode } from "./VenuePanel";
 import { quotientCovers } from "./views";
@@ -40,10 +41,12 @@ export interface InspectorProps {
 export const INSPECTOR_LABEL = "Inspector";
 export const INSPECTOR_EMPTY = "No row is shown, so there is nothing to inspect. When the table has rows, the first one is inspected here and any row can be picked.";
 export const WATCH_LABEL = "Watch this market";
+export const PREPARE_VENUE_NOT_READ = "Prepare order: this venue cannot be asked now";
 export const WATCH_NOTE = "Watch marks the row in this tab's memory only; it sends nothing and is dropped when you close the tab.";
 
 // The short note on the right of the "Order book" heading.
 function bookNote(row: ExplorerRow, book: BookEntry | undefined): string {
+  if (row.withheld !== null) return "venue not read now";
   switch (row.adapter.books.state) {
     case "needs_cockpit":
       return "read by the Cockpit";
@@ -104,8 +107,14 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
             <p className="explorer-title">
               <UntrustedText value={row.summary.title} field="title" />
             </p>
+            {row.withheld === null ? null : (
+              <p className="explorer-note" data-inspector-state="">
+                {`${row.withheld}.`}
+              </p>
+            )}
             <p className="explorer-sub">
               <Badge tone={statusInfo(row.summary.status).tone}>{statusInfo(row.summary.status).text}</Badge>
+              {row.fields === null || row.fields.status.source === "venue_api" ? null : <span className="explorer-caption">{originText(row.fields.status, nowMs)}</span>}
               <span>
                 closes {utcText(row.summary.closesAtUtc) === null ? <Missing label="not stated" /> : <Num>{utcText(row.summary.closesAtUtc)}</Num>}
               </span>
@@ -132,8 +141,22 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
           <div className="explorer-inspector-more" id={moreId}>
             <section className="explorer-inspector-section" aria-labelledby={`${ids}-book`}>
               <SectionHead id={`${ids}-book`} title="Order book" note={bookNote(row, book)} />
-              <BookPanel venue={row.summary.ref.venue} availability={row.adapter.books} entry={book} nowMs={nowMs} onLoad={row.adapter.books.state === "available" ? () => onLoadBook(row) : undefined} loading={book?.state === "loading"} />
+              <BookPanel
+                venue={row.summary.ref.venue}
+                availability={row.adapter.books}
+                entry={book}
+                nowMs={nowMs}
+                onLoad={row.adapter.books.state === "available" && row.withheld === null ? () => onLoadBook(row) : undefined}
+                loading={book?.state === "loading"}
+                withheld={row.withheld}
+              />
             </section>
+            {row.fields === null || !mixedSources(row.fields) ? null : (
+              <section className="explorer-inspector-section" aria-labelledby={`${ids}-sources`}>
+                <SectionHead id={`${ids}-sources`} title="Sources" note="per field, with its age" />
+                <FieldSourcesList fields={row.fields} resolution={row.resolution} outcomes={row.summary.outcomes} nowMs={nowMs} />
+              </section>
+            )}
             <section className="explorer-inspector-section explorer-inspector-same" aria-labelledby={`${ids}-same`}>
               <SectionHead id={`${ids}-same`} title="Same question elsewhere" note="candidates, not proof" />
               <SameQuestion market={row.summary.ref} load={linkLoad} readLeg={readLeg} nowMs={clock} variant="compact" />
@@ -147,7 +170,12 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
             <Button variant="primary" onClick={() => onOpenMarket(row)}>
               Open market
             </Button>
-            {mode === "cockpit" ? (
+            {row.withheld !== null && hasTicket(row.summary.ref.venue) ? (
+              // No book, nothing to quote: a venue that cannot be asked now drops out of order preparation.
+              <Button disabled data-prepare="venue-not-read">
+                {PREPARE_VENUE_NOT_READ}
+              </Button>
+            ) : mode === "cockpit" ? (
               <PrepareOrderAction venue={row.summary.ref.venue} onPrepare={() => onPrepare(row)} />
             ) : (
               <Button disabled data-prepare={hasTicket(row.summary.ref.venue) ? "needs-cockpit" : "no-path"}>

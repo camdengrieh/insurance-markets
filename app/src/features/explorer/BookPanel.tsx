@@ -4,7 +4,7 @@
 // its own provenance line (the row's line above describes the market list, not the book).
 
 import { useAppMode } from "../../ui";
-import { Button, NeedsCockpitTile, Num, ProvenanceLine, Tile, ErrorTile } from "../../ui";
+import { Button, NeedsCockpitTile, Num, ProvenanceLine, Tile } from "../../ui";
 import { ttlFor } from "../../core/cache";
 import type { Book, VenueId } from "../../core/ports";
 import { makeProv } from "../../core/venue-policy";
@@ -12,6 +12,7 @@ import type { BookAvailability } from "./adapters";
 import type { BookEntry } from "./books";
 import { SPREAD_LABEL, viewBook } from "./display";
 import { LevelRows } from "./levels";
+import { VenueErrorTile } from "./venue-state";
 import { provForMode } from "./VenuePanel";
 
 const TOP_LEVELS = 3;
@@ -31,10 +32,19 @@ export interface BookPanelProps {
   // Asks the venue for this one row's book. Absent when the row cannot have one.
   readonly onLoad?: () => void;
   readonly loading?: boolean;
+  // Why the venue cannot be asked for a book now (throttled, blocked or chain only), or null.
+  readonly withheld?: string | null;
 }
 
-export function BookPanel({ venue, availability, entry, nowMs, onLoad, loading = false }: BookPanelProps) {
+export function BookPanel({ venue, availability, entry, nowMs, onLoad, loading = false, withheld = null }: BookPanelProps) {
   if (availability.state === "needs_cockpit") return <NeedsCockpitTile venue={venue} what={availability.what.toLowerCase()} heading="h4" />;
+  if (withheld !== null) {
+    return (
+      <Tile tone="warn" title="Order book not asked" heading="h4" dataKind="book-withheld" dataCode={venue}>
+        <p>{`${withheld}. No book is shown and none is asked for until reads may be sent again; an earlier book is never shown as live.`}</p>
+      </Tile>
+    );
+  }
   if (availability.state === "none") {
     return (
       <Tile tone="neutral" title="No order book" heading="h4" dataKind="no-book">
@@ -56,7 +66,7 @@ export function BookPanel({ venue, availability, entry, nowMs, onLoad, loading =
   }
   if (entry.state === "loading") return <p role="status">Loading the order book.</p>;
   if (entry.state === "error") {
-    return entry.error.code === "NEEDS_COCKPIT" ? <NeedsCockpitTile venue={venue} what="order books" heading="h4" /> : <ErrorTile code={entry.error.code} venue={venue} heading="h4" onRetry={onLoad} />;
+    return <VenueErrorTile venue={venue} error={entry.error} what="order books" heading="h4" {...(onLoad === undefined ? {} : { onRetry: onLoad })} />;
   }
   const view = viewBook(venue, entry.book, nowMs);
   return (

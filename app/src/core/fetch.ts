@@ -9,14 +9,18 @@
 //   createDirectFetch(...)     the standalone build: straight to a CORS-open host, no credentials, no cookies,
 //                              no referrer, no redirect, a header allowlist (no User-Agent: a custom one makes
 //                              every cross-origin GET a preflight), a timeout and a response size cap;
-//   createGuardedFetch(...)    wraps either one with the per-host token bucket (M0-6), the R9 pause after three
-//                              429 or any 403, and Retry-After. It never retries around a block (R10).
+//   createGuardedFetch(...)    wraps either one with the per-host token bucket (M0-6) and the venue state rule of
+//                              sdk/venues/state.ts (the R9 pause after three 429s or any 403, Retry-After, and a block
+//                              page served as success). It never retries around a block (R10).
 //
 // Every refusal is a FetchError with a stable code; adapterErrorOfFetch maps it onto the closed AdapterError set.
 
 import { JSON_RPC_READ_METHODS, isSafeUpstreamPath, isSafeUpstreamQuery } from "@bridge/contract";
 
 import { BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS, type ReadService } from "../../headers.config";
+import { isPauseSignal } from "@sdk/venues/state";
+import { isBlockPage } from "@sdk/venues/transport";
+
 import { HostBudgets, VenuePauses, parseRetryAfterMs, type Clock } from "./budget";
 import type { TimerApi } from "./cache";
 import type { AdapterError, FetchLike, FetchResponseLike } from "./ports";
@@ -334,6 +338,10 @@ export function createDirectFetch(options: DirectFetchOptions): FetchLike {
       );
       if (isRedirect(response)) throw new FetchError("redirect", "the upstream redirected; redirects are never followed", { service: target.service });
       const text = await readCapped(response, maxBytes, deadline, target.service);
+      // A JSON endpoint that answers success with a web page is a block (a bot wall or challenge page), not drift.
+      if (response.status >= 200 && response.status < 300 && isBlockPage(response.headers.get("content-type"), text)) {
+        throw new FetchError("blocked", "the venue answered with a web page instead of data", { service: target.service, signal: "block_page" });
+      }
       return toFetchResponse(response, text);
     } catch (error) {
       throw translateTransportError(error, deadline, target.service);
@@ -372,7 +380,7 @@ export function createGuardedFetch(options: GuardOptions): GuardedFetch {
     const target = resolveUpstream(input);
     const pause = pauses.check(target.host, options.nowMs());
     if (pause.paused) {
-      throw new FetchError("paused", `this host is paused (${pause.reason})`, { service: target.service, retryAfterMs: Math.max(0, pause.untilMs - options.nowMs()) });
+      throw new FetchError("paused", `this host is paused (${pause.reason})`, { service: target.service, retryAfterMs: Math.max(0, pause.untilMs - options.nowMs()), signal: pause.signal });
     }
     const slot = budgets.reserve(target.host, maxWaitMs);
     if (!slot.ok) {
@@ -383,12 +391,24 @@ export function createGuardedFetch(options: GuardOptions): GuardedFetch {
       // A 403 or a third 429 may have landed while this call waited: honour it, do not send.
       const again = pauses.check(target.host, options.nowMs());
       if (again.paused) {
-        throw new FetchError("paused", `this host is paused (${again.reason})`, { service: target.service, retryAfterMs: Math.max(0, again.untilMs - options.nowMs()) });
+        throw new FetchError("paused", `this host is paused (${again.reason})`, { service: target.service, retryAfterMs: Math.max(0, again.untilMs - options.nowMs()), signal: again.signal });
       }
     }
-    const response = await options.inner(input, init);
+    let response: FetchResponseLike;
+    try {
+      response = await options.inner(input, init);
+    } catch (error) {
+      const at = options.nowMs();
+      if (isFetchError(error) && error.code === "blocked") pauses.record(target.host, { status: 200, retryAfterMs: null, blockPage: true }, at);
+      // The daemon paused this venue itself (a block page it saw, or its own count): hold the same pause here, so
+      // the page refuses before sending and can say why.
+      else if (isFetchError(error) && error.code === "bridge" && error.bridgeCode === "venue_paused" && isPauseSignal(error.signal)) {
+        pauses.hold(target.host, error.signal, at, error.retryAfterMs === null ? null : at + error.retryAfterMs);
+      }
+      throw error;
+    }
     const now = options.nowMs();
-    pauses.record(target.host, response.status, now, parseRetryAfterMs(response.headers.get("retry-after"), now));
+    pauses.record(target.host, { status: response.status, retryAfterMs: parseRetryAfterMs(response.headers.get("retry-after"), now) }, now);
     return response;
   };
   return Object.assign(guarded, { pauses, budgets });

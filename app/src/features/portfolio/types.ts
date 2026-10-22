@@ -102,12 +102,15 @@ export interface VenueReadOk {
 }
 
 // "profile_lookup": the venue's own profile lookup named the wallet. "pasted": the user gave this wallet.
-// "derived": a pure function of the owner (the XO Kernel account). A Polymarket "candidate" is a derived guess that
-// is displayed with that word and never used to query anything.
+// "derived": a pure function of the owner (the XO Kernel account, or a Polymarket wallet derived from its signer and
+// confirmed on chain, which `wallet` names). A "candidate" is a derived guess that is displayed with that word and
+// never used to query anything.
 export interface AddressResolution {
   readonly source: "profile_lookup" | "pasted" | "derived";
   readonly address: string;
   readonly candidate: string | null;
+  // A Polymarket wallet: its kind in fixed words and the signer it was derived from.
+  readonly wallet?: { readonly kind: string; readonly signer: string };
 }
 
 export type VenueReadOutcome =
@@ -122,6 +125,7 @@ export type VenueReadOutcome =
   // This build has no position reader for the venue, or the binding is the wrong kind of address for it. Said in
   // words; never an empty table.
   | { readonly kind: "unsupported"; readonly venue: VenueId; readonly bindingId: string; readonly bindingLabel: string; readonly why: string }
-  // An address that could not be turned into the one the venue is asked about (Polymarket: no profile found).
+  // An address that could not be turned into the one the venue is asked about (Polymarket: no wallet of the signer's
+  // was found on chain).
   | { readonly kind: "unresolved"; readonly venue: VenueId; readonly bindingId: string; readonly bindingLabel: string; readonly why: string };
 

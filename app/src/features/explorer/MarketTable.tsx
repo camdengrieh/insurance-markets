@@ -13,8 +13,8 @@ import { useId } from "react";
 import { Link } from "wouter";
 
 import { addQty, toDec, type Qty } from "../../core/money";
-import type { MarketSummary, OutcomeSummary } from "../../core/ports";
-import { formatQty } from "../../core/format";
+import type { ChainResolution, FieldSources, MarketSummary, OutcomeSummary, SourcedSummary } from "../../core/ports";
+import { formatAge, formatQty } from "../../core/format";
 import { Badge, DitherBar, Mark, Missing, Num, UntrustedText, VenueMark, VisuallyHidden, errorText, renderableUntrusted, venueName } from "../../ui";
 import type { ExplorerAdapter } from "./adapters";
 import { rowKey, type BookEntry } from "./books";
@@ -28,10 +28,25 @@ export interface ExplorerRow {
   readonly summary: MarketSummary;
   readonly adapter: ExplorerAdapter;
   readonly marks: RowMarks;
+  // Where each field came from and when (sdk/model.ts FieldSources); null for a row built without them.
+  readonly fields: FieldSources | null;
+  // The settlement read from the venue's contracts, when it was.
+  readonly resolution: ChainResolution | null;
+  // Why this row's order book is not asked now (its venue is throttled, blocked or chain only), or null when it may be.
+  readonly withheld: string | null;
 }
 
-export function toRow(summary: MarketSummary, adapter: ExplorerAdapter, marks: RowMarks = NO_MARKS): ExplorerRow {
-  return { key: rowKey(summary.ref.venue, summary.ref.marketId), summary, adapter, marks };
+export function toRow(summary: MarketSummary | SourcedSummary, adapter: ExplorerAdapter, marks: RowMarks = NO_MARKS, withheld: string | null = null): ExplorerRow {
+  const sourced = "fields" in summary ? summary : null;
+  const shown = sourced === null ? (summary as MarketSummary) : sourced.summary;
+  return { key: rowKey(shown.ref.venue, shown.ref.marketId), summary: shown, adapter, marks, fields: sourced?.fields ?? null, resolution: sourced?.resolution ?? null, withheld };
+}
+
+// A kept row's age in a few words, or null for a row read just now.
+export function keptAge(row: ExplorerRow, nowMs: number): string | null {
+  const title = row.fields?.title;
+  if (title === undefined || title.source !== "cache") return null;
+  return `cached ${formatAge(nowMs, title.asOfMs)}`;
 }
 
 // Roles name the two sides of a binary market in fixed words; the creator's own label follows in the untrusted slot
@@ -78,13 +93,25 @@ export function DisplayPrices({ summary }: { readonly summary: MarketSummary }) 
 // What a row with no loaded book says in its price cell: one short phrase, never an empty book.
 export const NO_BOOK_WORDS = Object.freeze({ needs_cockpit: "book via Cockpit", none: "no order book", available: "no book loaded" });
 
+// A venue that cannot be asked now has no book to show, and says why in one word; the full reason is read out.
+export const WITHHELD_WORDS = "venue not read now";
+
 function noBookWord(row: ExplorerRow): string {
-  return NO_BOOK_WORDS[row.adapter.books.state];
+  return row.withheld === null ? NO_BOOK_WORDS[row.adapter.books.state] : WITHHELD_WORDS;
 }
 
 // One value per cell (Main.dc.html): "50.0c / 54.0c" for the headline outcome's best bid and ask, or one short phrase.
 function PriceCell({ row, book, nowMs }: { readonly row: ExplorerRow; readonly book: BookEntry | undefined; readonly nowMs: number }) {
   const { summary } = row;
+  // A throttled, blocked or chain-only venue drops out of books: its reason, never an old book shown as live.
+  if (row.withheld !== null) {
+    return (
+      <span className="explorer-price-word" data-book="withheld">
+        {WITHHELD_WORDS}
+        <VisuallyHidden>{`: ${row.withheld}`}</VisuallyHidden>
+      </span>
+    );
+  }
   if (book?.state === "loading") return <span role="status">loading book</span>;
   if (book?.state === "error") return <Badge tone="warn">{`book: ${errorText(book.error.code).title}`}</Badge>;
   if (book?.state === "ok") {
@@ -134,7 +161,7 @@ export function depthRatio(depth: Qty | null, deepest: Qty | null): number {
 
 // One combined figure (bids and asks within five cents, summed exactly) beside its bar; the split is in the inspector.
 function DepthCell({ row, book, deepest }: { readonly row: ExplorerRow; readonly book: BookEntry | undefined; readonly deepest: Qty | null }) {
-  if (book?.state !== "ok") return <Missing label={noBookWord(row)} />;
+  if (row.withheld !== null || book?.state !== "ok") return <Missing label={noBookWord(row)} />;
   const depth = depthOf(book);
   if (depth === null) return <Missing label="no orders within five cents" />;
   return (
@@ -147,14 +174,31 @@ function DepthCell({ row, book, deepest }: { readonly row: ExplorerRow; readonly
 
 // The inks follow System.dc.html: "held" is outlined in the ink, "link" in the Yes blue, "Q" in the No rust. A row
 // with no mark is blank to the eye and says "none" to a screen reader.
-function Marks({ marks }: { readonly marks: RowMarks }) {
-  if (!marks.held && !marks.linked && !marks.signal && !marks.watched) return <VisuallyHidden>none</VisuallyHidden>;
+// A kept row says "cached" with its age, and a settlement read from the chain says "chain", so a last-known row is never
+// taken for a live one.
+function Marks({ row, nowMs }: { readonly row: ExplorerRow; readonly nowMs: number }) {
+  const { marks } = row;
+  const age = keptAge(row, nowMs);
+  const chain = row.fields?.resolution.source === "chain";
+  if (!marks.held && !marks.linked && !marks.signal && !marks.watched && age === null && !chain) return <VisuallyHidden>none</VisuallyHidden>;
   return (
     <span className="ui-marks">
       {marks.held ? <Mark tone="ink">held</Mark> : null}
       {marks.linked ? <Mark tone="yes">link</Mark> : null}
       {marks.signal ? <Mark tone="no">Q</Mark> : null}
       {marks.watched ? <Mark tone="ink">watch</Mark> : null}
+      {age === null ? null : (
+        <span data-source="cache">
+          <Mark tone="ink">cache</Mark>
+          <VisuallyHidden>{` ${age}`}</VisuallyHidden>
+        </span>
+      )}
+      {chain ? (
+        <span data-source="chain">
+          <Mark tone="yes">chain</Mark>
+          <VisuallyHidden> settlement read from the chain</VisuallyHidden>
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -263,7 +307,7 @@ export function marketColumns(context: TableContext, deepest: Qty | null): reado
       align: "end",
       render: (row) => {
         const book = bookOf(row);
-        if (book?.state !== "ok") return <Missing label={noBookWord(row)} />;
+        if (row.withheld !== null || book?.state !== "ok") return <Missing label={noBookWord(row)} />;
         const view = viewBook(row.summary.ref.venue, book.book, context.nowMs);
         // One figure; its meaning is said in words for a screen reader here and in full in the inspector. A spread that
         // is not the venue's own fresh book carries a visible "indicative" mark beside the figure.
@@ -294,7 +338,7 @@ export function marketColumns(context: TableContext, deepest: Qty | null): reado
         return text === null ? null : <Num>{text.replace(/ UTC$/, "")}</Num>;
       },
     },
-    { key: "marks", header: "Marks", render: (row) => <Marks marks={row.marks} /> },
+    { key: "marks", header: "Marks", render: (row) => <Marks row={row} nowMs={context.nowMs} /> },
   ];
 }
 

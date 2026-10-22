@@ -3,10 +3,16 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
+import { createPinGuard } from "@sdk/chain/pins";
+import { createRpcPort, rpcPostFromFetch } from "@sdk/chain/rpc";
+import { venueReadState, type VenueReadState } from "@sdk/venues/state";
+import { CHAIN_OF_VENUE, type ChainReadVenue, type ChainSessionLike } from "@sdk/venues/state-fields";
+
+import { BROWSER_DIRECT_ORIGINS } from "../../../headers.config";
 import { openStores } from "../../core/bindings";
 import { createAdapterDeps, type Env } from "../../core/env";
 import { pageToken } from "../../core/page-token";
-import type { MarketSummary, VenueId } from "../../core/ports";
+import type { AdapterDeps, MarketSummary, VenueId } from "../../core/ports";
 import { loadVenueSwitches } from "../../core/settings";
 import { DEFAULT_SWITCHES, type VenueSwitches } from "../../core/venue-policy";
 import { useAppMode, type AppMode } from "../../ui";
@@ -61,6 +67,32 @@ export interface ExplorerServices {
   readonly memory: MarketMemory;
   // Poll books while the tab is visible (cache class book_foreground). Tests turn it off.
   readonly pollBooks: boolean;
+  // Whether a venue's own API can be asked now, and if not why (sdk/venues/state.ts): the page's guarded fetch keeps
+  // the rule per upstream host, and a venue is the worst of its hosts.
+  readonly venueState: (venue: VenueId, nowMs: number) => VenueReadState;
+  // The JSON-RPC port and pin guard for the chain a venue settles on, for the fields the chain can supply while the
+  // venue cannot be asked. null when this build names no RPC for it.
+  readonly chainSession: (venue: ChainReadVenue) => ChainSessionLike | null;
+}
+
+// The read methods a settlement read sends: eth_call for the results and registries, eth_getCode and eth_getStorageAt for
+// the pin checks. Nothing that writes or signs.
+const CHAIN_METHODS = ["eth_call", "eth_getCode", "eth_getStorageAt"] as const;
+
+// One port and pin guard per chain venue, built on first use from the page's own fetch and the public RPC the CSP lists.
+export function chainSessions(deps: AdapterDeps): (venue: ChainReadVenue) => ChainSessionLike | null {
+  const sessions = new Map<ChainReadVenue, ChainSessionLike | null>();
+  return (venue) => {
+    if (sessions.has(venue)) return sessions.get(venue) ?? null;
+    const row = BROWSER_DIRECT_ORIGINS.find((entry) => entry.service === CHAIN_OF_VENUE[venue].rpcService && entry.transport === "T0-RPC");
+    let session: ChainSessionLike | null = null;
+    if (row !== undefined) {
+      const port = createRpcPort({ url: `${row.origin}/`, post: rpcPostFromFetch(deps.fetch, { nowMs: deps.nowMs }), methods: CHAIN_METHODS });
+      session = { port, guard: createPinGuard(port) };
+    }
+    sessions.set(venue, session);
+    return session;
+  };
 }
 
 let counter = 0;
@@ -98,6 +130,8 @@ export function createExplorerServices(options: ExplorerServicesOptions): Explor
     },
     memory: new MarketMemory(),
     pollBooks: true,
+    venueState: (venue, nowMs) => venueReadState(deps.guarded.pauses, venue, nowMs, "host"),
+    chainSession: chainSessions(deps),
   };
 }
 

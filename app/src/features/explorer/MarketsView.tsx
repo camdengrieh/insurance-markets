@@ -32,6 +32,7 @@ import { quotientStateOf, useQuotientSnapshot, type QuotientState } from "./Quot
 import { useExplorerServices, type ExplorerServices } from "./services";
 import { VenuePanel, type VenueRowState } from "./VenuePanel";
 import { ViewChips } from "./ViewChips";
+import { bookWithheldReason } from "./venue-state";
 import { DEFAULT_VIEW, VIEW_LABELS, countsByView, filterByView, inView, marksOf, rowKeyOf, type MarkContext, type ViewId } from "./views";
 
 export type SortKey = "closing" | "venue";
@@ -45,7 +46,7 @@ export const TABLE_CAPTION = "Markets across the venues that are on";
 
 // Under the table, beside the books button (Main.dc.html's footer bar).
 export const TABLE_FOOT_NOTE =
-  "Rows are the venues' own public answers, shown as published apart from length limits; an unknown figure is \"no data\", never zero. Books load only when you press the button, one request per venue; rows whose venue needs the Cockpit or has no book are skipped.";
+  "Rows are the venues' own public answers, shown as published apart from length limits; an unknown figure is \"no data\", never zero. Books load only when you press the button, one request per venue; rows whose venue needs the Cockpit, has no book or cannot be asked now (throttled, blocked or chain only) are skipped. A row marked \"cache\" is kept from an earlier read in this visit and shows its age.";
 
 export const SEARCH_NOTE = "Typing in the search field narrows the markets already loaded and sends nothing. \"Ask the venues\" sends the text to the venues that can search by it.";
 
@@ -208,24 +209,26 @@ export interface CategoryCounts {
 // Owns the queries for one selection. The parent re-mounts it (by key) when the selection changes, so extra pages and
 // loaded books never leak from one selection into another.
 function Feed({ services, selection, venueStates, filterText, sort, view, category, markContext, holdings, linkLoad, quotient, selectedKey, onSelect, onToggle, onWatch, onOpenMarket, onCounts, onCategoryCounts, onStatus, onOpenQuotientSettings }: FeedProps) {
-  const { feeds, loadMore, retry } = useMarketFeed(services, selection);
-  const signals = useSignalsServices();
   const nowMs = useNow(10_000);
+  const { feeds, loadMore, retry } = useMarketFeed(services, selection, nowMs);
+  const signals = useSignalsServices();
   const announce = useAnnounce();
   const [books, setBooks] = useState<ReadonlyMap<string, BookEntry>>(new Map());
   const [booksBusy, setBooksBusy] = useState(false);
 
   const panelRows: VenueRowState[] = venueStates.map((state) => ({ ...state, feed: feeds.find((feed) => feed.venue === state.venue) }));
 
+  // A venue that cannot be asked now keeps its rows, with the reason its book is not asked (graceful loss).
   const all = useMemo(() => {
     const out: ExplorerRow[] = [];
     for (const feed of feeds) {
       const adapter = services.adapters[feed.venue];
       if (adapter === undefined) continue;
-      for (const item of feed.items) out.push(toRow(item, adapter, marksOf(item, markContext)));
+      const withheld = bookWithheldReason(feed.readState, feed.venue, nowMs);
+      for (const row of feed.rows) out.push(toRow(row, adapter, marksOf(row.summary, markContext), withheld));
     }
     return out;
-  }, [feeds, services.adapters, markContext]);
+  }, [feeds, services.adapters, markContext, nowMs]);
 
   // The view narrows first, then the category chip, then the search text; the sort comes last.
   const viewRows = useMemo(() => filterByView(all, view), [all, view]);
@@ -236,6 +239,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
   const loading = feeds.some((feed) => feed.state === "loading");
   const okCount = feeds.filter((feed) => feed.state === "ok").length;
   const failed = panelRows.filter((row) => row.selected && row.feed?.state === "error").length;
+  const degraded = panelRows.filter((row) => row.selected && row.feed?.state === "degraded").length;
   useReportVenueCount({ read: okCount, total: EXPLORER_VENUES.length });
 
   const announced = useRef("");
@@ -265,7 +269,8 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
     onCategoryCounts({ byCategory: categoryCounts, total: viewRows.length });
   }, [categoryCounts, viewRows.length, onCategoryCounts]);
 
-  const targets = useMemo(() => bookTargets(rows.map((row) => row.summary), services.adapters), [rows, services.adapters]);
+  // Rows whose venue cannot be asked now are not asked for a book.
+  const targets = useMemo(() => bookTargets(rows.filter((row) => row.withheld === null).map((row) => row.summary), services.adapters), [rows, services.adapters]);
 
   const load = useCallback(
     (which: readonly BookTarget[], message: string): void => {
@@ -283,6 +288,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
   const onLoadBooks = useCallback(() => load(targets, "Order books loaded for the visible markets."), [load, targets]);
   const onLoadOne = useCallback(
     (row: ExplorerRow) => {
+      if (row.withheld !== null) return;
       const target = bookTargets([row.summary], services.adapters)[0];
       if (target !== undefined) load([target], "Order book loaded for the inspected market.");
     },
@@ -294,7 +300,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
   const selected = (selectedKey === null ? undefined : rows.find((row) => row.key === selectedKey)) ?? rows[0] ?? null;
   // A category that empties a view with rows gets the category's words; an empty view keeps its own.
   const empty = rows.length === 0 ? (category !== "all" && viewRows.length > 0 ? categoryEmptyWords(category) : emptyWords(view, holdings)) : null;
-  const venuesSummary = `Venues: ${okCount} of ${feeds.length} selected read${failed > 0 ? `, ${failed} could not be read` : ""}, ${panelRows.length - feeds.length} not read in this build or switched off`;
+  const venuesSummary = `Venues: ${okCount} of ${feeds.length} selected read${degraded > 0 ? `, ${degraded} throttled, blocked or chain only` : ""}${failed > 0 ? `, ${failed} could not be read` : ""}, ${panelRows.length - feeds.length} not read in this build or switched off`;
 
   const shownCount = rows.length;
   const loadedCount = all.length;
@@ -304,7 +310,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
   }, [shownCount, loadedCount, venueCount, loading, view, category, onStatus]);
 
   // "the first 10" when the cap leaves some rows that could have a book unasked.
-  const capped = targets.length === BOOK_ROW_CAP && rows.filter((row) => row.adapter.books.state === "available").length > BOOK_ROW_CAP;
+  const capped = targets.length === BOOK_ROW_CAP && rows.filter((row) => row.adapter.books.state === "available" && row.withheld === null).length > BOOK_ROW_CAP;
   const booksLabel = targets.length === 0 ? "Load books (none of these rows can)" : `Load books for ${capped ? "the first " : "the "}${targets.length} visible ${targets.length === 1 ? "row" : "rows"}`;
 
   return (
@@ -350,7 +356,7 @@ function Feed({ services, selection, venueStates, filterText, sort, view, catego
       </section>
       {view === "held" ? <HoldingsPanels holdings={holdings} /> : null}
       <div className="explorer-venues-fold">
-        <Disclosure summary={venuesSummary} defaultOpen={failed > 0 || okCount === 0}>
+        <Disclosure summary={venuesSummary} defaultOpen={failed > 0 || degraded > 0 || okCount === 0}>
           <VenuePanel rows={panelRows} mode={services.mode} nowMs={nowMs} query={selection.query} onToggle={onToggle} onRetry={retry} onLoadMore={loadMore} />
         </Disclosure>
       </div>
@@ -381,8 +387,8 @@ function HoldingsPanels({ holdings }: { readonly holdings: Holdings }) {
           {state.ok.map((outcome) => (
             <VenueSection key={`${outcome.venue}:${outcome.bindingId}:${outcome.holder}`} outcome={outcome} heading="h3" />
           ))}
-          {state.others.map((outcome) => (
-            <OutcomeTile key={`${outcome.kind}:${outcome.venue}:${outcome.bindingId}`} outcome={outcome} onRetry={holdings.refresh} heading="h3" />
+          {state.others.map((outcome, index) => (
+            <OutcomeTile key={`${outcome.kind}:${outcome.venue}:${outcome.bindingId}:${index}`} outcome={outcome} onRetry={holdings.refresh} heading="h3" />
           ))}
         </>
       ) : null}

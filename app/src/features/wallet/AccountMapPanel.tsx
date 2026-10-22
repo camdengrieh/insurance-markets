@@ -125,7 +125,7 @@ export function AccountMapPanel({ owner, chainIds }: { readonly owner: string; r
         Read from each chain's public RPC at <time dateTime={toIso(map.fetchedAtMs)}>{formatUtc(map.fetchedAtMs)}</time> ({formatAge(map.fetchedAtMs, now)}). Every chain is read on its own.
       </p>
       <p data-testid="polymarket-wallet-note">
-        Polymarket wallet: this screen does not compute a Polymarket wallet address. The Portfolio asks Polymarket's own profile lookup for it, or you can save the wallet address you see on Polymarket yourself.
+        Polymarket wallet: this screen does not compute a Polymarket wallet address. The Holdings view derives the signer's Polymarket proxy wallet, Safe and Deposit Wallet from the address, confirms each on Polygon and reads the ones it finds, with no Polymarket API; you can also save the wallet address you see on Polymarket yourself.
       </p>
       <DataTable caption="Derived account on each chain" columns={columns(map)} rows={map.rows} rowKey={(row) => row.chain.caip2} />
       {map.notes.map((note) => (

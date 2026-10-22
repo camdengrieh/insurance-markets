@@ -204,7 +204,7 @@ describe("refusals through the daemon (M1-3)", () => {
   });
 
   it("answers a body that is not JSON with 502 upstream_not_json, without quoting it", async () => {
-    const daemon = await start({ proxy: { fetch: scriptedUpstream(() => textResponse("<html>MARKER-TEXT</html>")).fetch } });
+    const daemon = await start({ proxy: { fetch: scriptedUpstream(() => textResponse("MARKER-TEXT", { headers: { "content-type": "text/plain" } })).fetch } });
     const reply = await daemon.get("xo_orderbook", "/time");
     expectError(reply, "upstream_not_json");
     assert.doesNotMatch(reply.text, /MARKER-TEXT/);

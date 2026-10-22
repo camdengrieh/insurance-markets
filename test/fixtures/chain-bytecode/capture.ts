@@ -4,6 +4,7 @@
 //
 //   pnpm exec tsx test/fixtures/chain-bytecode/capture.ts            (prints the plan, makes no request)
 //   pnpm exec tsx test/fixtures/chain-bytecode/capture.ts --run      (makes the requests)
+//   ... --run --only name,name                                         (captures only the named targets)
 //
 // For each contract it reads eth_getCode from the chain's public RPC (the hosts sdk/venues/origins.ts lists:
 // rpc_polygon, rpc_base, xo_rpc) and, where Sourcify has the contract, Sourcify's recorded on-chain runtime code and
@@ -83,6 +84,25 @@ export const TARGETS: readonly Target[] = [
     chainId: 137,
     address: "0x3A3BD7bb9528E159577F7C2e685CC81A765002E2",
     addressSource: "wcol() of the pinned, Sourcify exact-match NegRiskAdapter, read 2026-10-22",
+    sourcify: true,
+  },
+  // Polymarket's wallet factories (the contract list's "Wallet Factory Contracts") and what each clones: the proxy
+  // wallet implementation (getImplementation() of the Proxy Factory) and the Safe singleton (masterCopy() of the Safe
+  // Factory), both read 2026-10-22. sdk/chain/polymarket/wallets.ts derives an owner's wallets from them.
+  { name: "polymarket-proxy-wallet-factory", chainId: 137, address: "0xaB45c5A4B0c941a2F231C04C3f49182e1A254052", addressSource: PM_CONTRACTS, sourcify: true },
+  {
+    name: "polymarket-proxy-wallet-implementation",
+    chainId: 137,
+    address: "0x44e999d5c2F66Ef0861317f9A4805AC2e90aEB4f",
+    addressSource: "getImplementation() of the pinned, Sourcify-verified Polymarket Proxy Factory, read 2026-10-22",
+    sourcify: true,
+  },
+  { name: "polymarket-safe-proxy-factory", chainId: 137, address: "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b", addressSource: PM_CONTRACTS, sourcify: true },
+  {
+    name: "polymarket-safe-singleton",
+    chainId: 137,
+    address: "0xE51abdf814f8854941b9Fe8e3A4F65CAB4e7A4a8",
+    addressSource: "masterCopy() of the pinned, Sourcify exact-match Polymarket Safe Factory, read 2026-10-22",
     sourcify: true,
   },
   { name: "multicall3-polygon", chainId: 137, address: "0xcA11bde05977b3631167028862bE2a173976CA11", addressSource: MULTICALL3, sourcify: true },
@@ -171,15 +191,19 @@ async function sourcify(chainId: number, address: string): Promise<SourcifyView>
 
 async function main(): Promise<void> {
   const run = process.argv.includes("--run");
+  const onlyAt = process.argv.indexOf("--only");
+  const only = onlyAt === -1 ? null : new Set((process.argv[onlyAt + 1] ?? "").split(","));
+  if (only !== null && [...only].some((name) => !TARGETS.some((target) => target.name === name))) throw new Error("--only names a target that does not exist");
+  const chosen = only === null ? TARGETS : TARGETS.filter((target) => only.has(target.name));
   for (const target of TARGETS) {
     if (getAddress(target.address) !== target.address) throw new Error(`${target.name}: not the checksummed form`);
   }
   if (!run) {
-    const planned = TARGETS.length + TARGETS.filter((t) => t.sourcify).length + TARGETS.filter((t) => t.implementation !== undefined).length;
-    console.log(`${String(planned)} requests planned for ${String(TARGETS.length)} contracts, cap ${String(MAX_REQUESTS)}. Pass --run to make them.`);
+    const planned = chosen.length + chosen.filter((t) => t.sourcify).length + chosen.filter((t) => t.implementation !== undefined).length;
+    console.log(`${String(planned)} requests planned for ${String(chosen.length)} contracts, cap ${String(MAX_REQUESTS)}. Pass --run to make them.`);
     return;
   }
-  for (const target of TARGETS) {
+  for (const target of chosen) {
     const code = (await rpc(target.chainId, "eth_getCode", [target.address, "latest"])) as Hex;
     if (code === "0x") throw new Error(`${target.name}: no code at ${target.address}`);
     const bytes = hexToBytes(code);

@@ -10,7 +10,7 @@ import { CTF_ABI } from "../sdk/chain/ctf.js";
 import { LIMITLESS_PINS } from "../sdk/chain/limitless/constants.js";
 import { MULTICALL3_PINS } from "../sdk/chain/multicall.js";
 import type { ContractPin } from "../sdk/chain/pins.js";
-import { POLYMARKET_PINS } from "../sdk/chain/polymarket/constants.js";
+import { POLYMARKET_PINS, POLYMARKET_WALLET_PINS } from "../sdk/chain/polymarket/constants.js";
 import { XO_PINS } from "../sdk/chain/xo/pins.js";
 
 // The chain readers' pins (sdk/chain/<venue>) against the runtime code test/fixtures/chain-bytecode/capture.ts read on
@@ -41,7 +41,7 @@ const recorded = ["polygon", "base", "xo"].flatMap((folder) =>
     }),
 );
 
-const pins: ContractPin[] = [...Object.values(POLYMARKET_PINS), ...Object.values(LIMITLESS_PINS), ...Object.values(XO_PINS), ...Object.values(MULTICALL3_PINS)].flatMap((pin) =>
+const pins: ContractPin[] = [...Object.values(POLYMARKET_PINS), ...Object.values(POLYMARKET_WALLET_PINS), ...Object.values(LIMITLESS_PINS), ...Object.values(XO_PINS), ...Object.values(MULTICALL3_PINS)].flatMap((pin) =>
   pin.implementation === null ? [pin] : [pin, pin.implementation],
 );
 
@@ -51,7 +51,7 @@ function recordingOf(pin: ContractPin) {
 
 describe("chain reader pins", () => {
   it("every recording's code hashes to what its sidecar says", () => {
-    assert.ok(recorded.length >= 37, `only ${recorded.length} recordings`);
+    assert.ok(recorded.length >= 41, `only ${recorded.length} recordings`);
     for (const { sidecar, code } of recorded) {
       const bytes = hexToBytes(code);
       assert.equal(bytes.length, sidecar.size, sidecar.name);

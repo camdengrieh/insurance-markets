@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-safe-singleton",
+  "address": "0xE51abdf814f8854941b9Fe8e3A4F65CAB4e7A4a8",
+  "chain_id": 137,
+  "address_source": "masterCopy() of the pinned, Sourcify exact-match Polymarket Safe Factory, read 2026-10-22",
+  "size": 24170,
+  "sha256": "070bac5b323a067936deeabfc4063a4447e284a6d43ef5588c5548f121341c8a",
+  "keccak256": "0xf4b625c76701938f75938880a926414b5f91471d32e21c0cbb37566b62495ca7",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xE51abdf814f8854941b9Fe8e3A4F65CAB4e7A4a8?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "GnosisSafeL2",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

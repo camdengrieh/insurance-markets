@@ -346,10 +346,39 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    others (https, no credentials, query or fragment). In the Holdings view, XO and Polymarket are no longer read through their APIs (no profile lookup: an
    owner's own address is read, and a Polymarket wallet is read when pasted), Limitless is read in the standalone build
    too, their open positions are not priced from venue books, XO's cash line is the account's USDC on chain, and their
-   rows are labelled as recorded. Not done: UMA question data, Polymarket combinatorial results, nested CTF
+   rows are labelled as recorded. A signer's Polymarket wallets are then derived on chain too (`sdk/chain/polymarket/wallets.ts`: the proxy wallet and Safe by their factories' CREATE2 rules, checked against Polymarket's published vectors and init code hashes and the factories' pinned code, and the Deposit Wallet), and each one holding its factory's wallet code (and, for a Safe or Deposit Wallet, owned by the signer) is read in its own section, otherwise the view says no Polymarket wallet was found for the signer; pasting a wallet stays as a fallback. Not done: UMA question data, Polymarket combinatorial results, nested CTF
    collections and a recorded Limitless NegRisk market (its wrapped-collateral derivation is only checked in code).
 7. **Add venue state and field-level sources to the SDK**, with a fake venue for each state. Done when a blocked
    venue's rows show chain fields and a stated reason instead of an error.
+   *Done 2026-10-22.* `sdk/venues/state.ts` holds the one rule the dApp's guarded fetch and the daemon's read proxy now
+   share (`VenueStateTracker`, keyed by host in the page and by service in the daemon): `ok`, `throttled` (a 429 with
+   Retry-After cools a host down; the third 429 in a row pauses it for ten minutes), `blocked` (any 403, the third 401 in
+   a row, or a web page served where JSON was expected, whatever its status) and `chain_only` (declared by the host).
+   A paused host is refused before sending and nothing retries around it. A block page is caught at the transport
+   (content type or the head of the body, `isBlockPage` in `transport.ts`): the page's direct fetch and the daemon's
+   proxy turn it into a block (`FetchError` code `blocked`, the daemon's `venue_paused` with reason `block_page`, which
+   the page then holds too), mapped to `VENUE_PAUSED`, never `SCHEMA_DRIFT`. A venue is the worst of its hosts
+   (`venueReadState`, from the origin registry), and `venueStateReason` gives every client the same sentence ("Polymarket
+   blocked our reads at 2026-10-22 12:03 UTC: 403", "XO Market throttled our reads (429): retry after 30 s").
+   `app/src/core/budget.ts` re-exports the tracker as `VenuePauses`; `bridge/contract.ts` re-exports its constants.
+   Field sources: `sdk/model.ts` gains `FieldSource` (`venue_api`, `chain`, `cache`), `FieldOrigin` (a source and the time
+   it was read, or a reason), `FieldSources` over a list row's fields and `SourcedSummary`; `sdk/venues/state-fields.ts`
+   builds them (`sourceSummary`: a kept row is `cache` with its age and never "live"; a blocked or chain-only venue's
+   display prices and volume become null with the reason) and reads a row's settlement from its contracts
+   (`readChainResolutions`: Conditional Tokens payouts or Polymarket's V2 module results for XO, Polymarket and
+   Limitless rows, each contract pin-checked first). `sdk/venues/testkit` is a fake venue for each state (ok, throttled
+   with Retry-After, blocked by 403, blocked by a 200 web page, chain only); the Polymarket and XO readers are tested
+   against each, and the field rule against XO's recorded chain answers. In the dApp, a throttled, blocked or chain-only
+   venue is "degraded", not failed: the Markets view keeps the rows read earlier in this visit, marked "cache" with their
+   age, reads their settlement on chain (a "chain" mark; the inspector lists every field's source), says which venue is
+   missing and why in a state tile instead of an error panel, and leaves the venue out of book loading, the market
+   modal's books and order preparation; a chain-only venue's API is never asked. Behaviour changes, where the two copies
+   of the rule disagreed and the stricter won: the daemon honours a Retry-After up to a day (it capped cool-downs at an
+   hour), a 404 or a 5xx no longer clears its 429 count, three 401s in a row now block in both, and a 200 web page is a
+   block in both (it was schema drift in the page and `upstream_not_json` in the daemon). Not done: no host declares a
+   venue chain-only yet (the state, the tile and the tests exist; the API will declare it for key-only venues), the list
+   rows carry no fills-derived last trade (the fill reader needs a bounded block range per market, which a list does not
+   have), and pm's recorder and adapters keep their own transport and retry policy.
 8. **Stand up `api/`**: the indexer and the free read endpoints on the existing container pattern under `deploy/` (AWS host, `deploy/aws`).
 9. **Add quotes and route prepare**, then metering: subscription keys, x402 middleware, PayBox service listing.
 10. **Give the plugin its API mode.**

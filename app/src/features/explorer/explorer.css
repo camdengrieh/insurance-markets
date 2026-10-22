@@ -364,7 +364,8 @@
   color: var(--text-muted);
 }
 
-.explorer-price-word[data-book="needs_cockpit"] {
+.explorer-price-word[data-book="needs_cockpit"],
+.explorer-price-word[data-book="withheld"] {
   color: var(--caution);
 }
 
@@ -941,4 +942,31 @@
 
 .explorer-ticket .tr-section > h2 {
   font-size: 1rem;
+}
+
+/* Where each field of a row came from (sources.tsx): a field with no value shows its reason in the caution ink. */
+.explorer-sources {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.explorer-source {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, max-content) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.explorer-source dt {
+  color: var(--text-muted);
+}
+
+.explorer-source dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.explorer-source[data-source="none"] dd {
+  color: var(--caution);
 }

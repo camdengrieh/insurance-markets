@@ -102,6 +102,21 @@ describe("createDirectFetch", () => {
     expect(call?.init.body).toBeUndefined();
   });
 
+  it("a web page served with 200 where JSON was expected is a block, not drift (sdk/venues/state.ts)", async () => {
+    const page = "<!DOCTYPE html><html><head><title>t</title></head><body>test page</body></html>";
+    const typed = new FakeRaw(() => rawResponse({ body: page, headers: { "content-type": "text/html; charset=utf-8" } }));
+    const error = await direct(typed)("https://gamma-api.polymarket.com/markets").catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(FetchError);
+    expect((error as FetchError).code).toBe("blocked");
+    expect(adapterErrorOfFetch(error)).toBe("VENUE_PAUSED");
+    // Sniffed from the body when the content type says nothing.
+    const untyped = new FakeRaw(() => rawResponse({ body: page }));
+    expect(await codeOf(direct(untyped)("https://gamma-api.polymarket.com/markets"))).toBe("blocked");
+    // A 403 page is the 403's business: it reaches the caller as a status.
+    const forbidden = new FakeRaw(() => rawResponse({ status: 403, body: page, headers: { "content-type": "text/html" } }));
+    expect((await direct(forbidden)("https://gamma-api.polymarket.com/markets")).status).toBe(403);
+  });
+
   // FS-2 / A5: licence-restricted data is "memory only"; the browser's disk HTTP cache is not that.
   it("never lets the browser's HTTP cache keep an upstream answer (no-store for every service)", async () => {
     const raw = new FakeRaw();
@@ -368,6 +383,28 @@ describe("createGuardedFetch", () => {
     timers.advance(1000);
     expect(await second).toBe("paused");
     expect(calls).toHaveLength(1);
+  });
+
+  it("a block page pauses the host as blocked, and a daemon pause is held with its reason", async () => {
+    const timers = new FakeTimers();
+    const pauses = new VenuePauses();
+    let calls = 0;
+    const inner: FetchLike = async () => {
+      calls += 1;
+      throw new FetchError("blocked", "page", { signal: "block_page" });
+    };
+    const guarded = createGuardedFetch({ inner, nowMs: timers.clock, sleep: timers.sleep, pauses });
+    expect(await codeOf(guarded(XO_DATA))).toBe("blocked");
+    expect(pauses.state("api-mainnet.xo.market", timers.now)).toMatchObject({ kind: "blocked", signal: "block_page", status: 200 });
+    expect(await codeOf(guarded(XO_DATA))).toBe("paused");
+    expect(calls).toBe(1);
+
+    const daemon: FetchLike = async () => {
+      throw new FetchError("bridge", "x", { bridgeCode: "venue_paused", retryAfterMs: 120_000, signal: "http_403" });
+    };
+    const viaDaemon = createGuardedFetch({ inner: daemon, nowMs: timers.clock, sleep: timers.sleep, pauses });
+    expect(await codeOf(viaDaemon("https://api.manifold.markets/v0/markets"))).toBe("bridge");
+    expect(pauses.state("api.manifold.markets", timers.now)).toMatchObject({ kind: "blocked", signal: "http_403", untilMs: timers.now + 120_000 });
   });
 
   it("a request that would wait longer than the limit is refused locally and is not counted as a 429", async () => {

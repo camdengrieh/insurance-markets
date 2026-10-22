@@ -422,3 +422,42 @@ export interface AdapterDeps {
   // An injected clock, so tests are deterministic.
   readonly nowMs: () => number;
 }
+
+// ---- field-level sources (docs/sdk-and-api-design.md section 6) ---------------------------------------------------------
+//
+// A row's `Prov` says where the row as a whole came from. When a venue is throttled, blocked or read from the chain only,
+// one row mixes sources, so each field a row shows carries its own: the venue's API, the chain, or a value kept from an
+// earlier read (`cache`), with the time it was read. A field with no value carries the reason instead. A cached value is
+// never shown as live: its source says "cache" and its age is shown beside it.
+
+export const FIELD_SOURCES = ["venue_api", "chain", "cache"] as const;
+export type FieldSource = (typeof FIELD_SOURCES)[number];
+
+export type FieldOrigin =
+  // `asOfMs` is when the value was read (the fetch, the chain read, or the earlier read a cached value comes from).
+  // `via` names the chain or route in fixed words ("Polygon 137"), when the source alone does not.
+  | { readonly source: FieldSource; readonly asOfMs: number; readonly via?: string }
+  // No value: `reason` is a fixed sentence ("Polymarket blocked our reads at 2026-10-22 12:03 UTC: 403").
+  | { readonly source: null; readonly reason: string };
+
+// The fields a market list row shows. `resolution` is the settlement read from the venue's contracts, where the venue
+// settles on a public chain.
+export const SUMMARY_FIELDS = ["title", "outcomes", "status", "closesAt", "displayPrice", "volume", "resolution"] as const;
+export type SummaryField = (typeof SUMMARY_FIELDS)[number];
+
+export type FieldSources = Readonly<Record<SummaryField, FieldOrigin>>;
+
+// The settlement of a market as its contracts state it: unresolved, or resolved with the payout of each outcome in
+// order (numerators over one denominator, as decimal strings) and the winning outcome's index when exactly one pays.
+export type ChainResolution =
+  | { readonly state: "unresolved" }
+  | { readonly state: "resolved"; readonly payouts: readonly string[]; readonly denominator: string; readonly winningIndex: number | null };
+
+// A list row with the origin of every field it shows. A field the venue alone holds is null in `summary` (an outcome's
+// displayPrice, the volume amount) when its origin has no source.
+export interface SourcedSummary {
+  readonly summary: MarketSummary;
+  readonly fields: FieldSources;
+  // Present when `fields.resolution` has the chain as its source.
+  readonly resolution: ChainResolution | null;
+}

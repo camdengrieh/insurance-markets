@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-safe-proxy-factory",
+  "address": "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b",
+  "chain_id": 137,
+  "address_source": "https://docs.polymarket.com/resources/contracts.md (read 2026-10-22)",
+  "size": 3188,
+  "sha256": "75157662716622df17583812f018a6693029c001ae0802b4309bf3ffec92a189",
+  "keccak256": "0x7a423db1d467bbd092e48044242a9c1f003442a83ca8109f0f7c07a50782e23d",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b?fields=runtimeBytecode,compilation",
+  "sourcify_match": "exact_match",
+  "sourcify_contract": "SafeProxyFactory",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

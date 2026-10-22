@@ -110,11 +110,12 @@ describe("standalone build with the real readers", () => {
     const ceiling = spec.burst + Math.floor(spec.perSecond * 5);
     expect(xoCalls).toBeGreaterThan(0);
     expect(xoCalls).toBeLessThanOrEqual(ceiling);
-    // The searches that were refused locally are shown as a typed error for XO (the XO reader reports the local
-    // throttle as a pause, which is its own mapping), never as an empty market list.
-    const tile = container.querySelector('section[data-kind="error"][data-code="RATE_LIMITED"], section[data-kind="error"][data-code="VENUE_PAUSED"]');
+    // The searches that were refused locally are shown as XO's state with its reason (sdk/venues/state.ts), never as an
+    // error panel and never as an empty market list.
+    const tile = container.querySelector('section[data-kind="venue-state"][data-code="throttled"], section[data-kind="venue-state"][data-code="blocked"]');
     expect(tile).not.toBeNull();
-    expect(container.querySelector('li.explorer-venue[data-venue="xo"]')?.getAttribute("data-state")).toBe("error");
+    expect(allText(tile as Element)).toMatch(/XO Market/);
+    expect(container.querySelector('li.explorer-venue[data-venue="xo"]')?.getAttribute("data-state")).toBe("degraded");
     expect(container.querySelector('section[data-kind="empty"]')).toBeNull();
   });
 });

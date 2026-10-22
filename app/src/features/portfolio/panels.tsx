@@ -136,6 +136,13 @@ function ResolutionLine({ outcome }: { readonly outcome: VenueReadOk }) {
       : resolution.source === "derived"
         ? "the account derived from your address"
         : "the address you saved";
+  if (resolution.wallet !== undefined) {
+    return (
+      <p data-testid="resolution">
+        Asked about <code>{resolution.address}</code>, your {resolution.wallet.kind}: derived from the signer <code>{resolution.wallet.signer}</code> and confirmed on chain.
+      </p>
+    );
+  }
   return (
     <p data-testid="resolution">
       Asked about <code>{resolution.address}</code>, {how}.

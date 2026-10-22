@@ -13,8 +13,10 @@ import {
   POLYMARKET_CONDITIONAL_TOKENS,
   POLYMARKET_POSITION_MANAGER,
   POLYMARKET_POSITION_MANAGER_IMPLEMENTATION,
+  POLYMARKET_SAFE_SINGLETON,
 } from "@sdk/chain/polymarket/constants";
 import { v2PositionParts } from "@sdk/chain/polymarket/reads";
+import { polymarketWalletCandidates } from "@sdk/chain/polymarket/wallets";
 import { CONDITIONAL_TOKENS as XO_CONDITIONAL_TOKENS, CTF_EXCHANGE as XO_CTF_EXCHANGE, USDC_E_ADDRESS } from "@shared/xo/chain/constants";
 
 import { deriveKernelAccount } from "../../core/account";
@@ -35,13 +37,15 @@ import type { VenueReadOk, VenueReadOutcome } from "./types";
 // positions from the chain with no venue API call. The chain is an in-memory double (chain-testkit.ts) serving the
 // REAL runtime code of every pinned contract (the recordings in test/fixtures/chain-bytecode), so the pin checks run
 // as they do live; the balances, results and transfers are this test's inputs. The token and condition ids are real
-// ones from the venues' recorded market answers. HOLDER is a public test address.
+// ones from the venues' recorded market answers. HOLDER and STRANGER are public test addresses; HOLDER's Polymarket
+// wallets are derived by sdk/chain/polymarket/wallets.ts and given the factories' real wallet code.
 
 const BYTECODE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "test", "fixtures", "chain-bytecode");
 const codeOf = (folder: string, name: string): string => readFileSync(join(BYTECODE, folder, `${name}.hex`), "utf8").trim();
 const slotOf = (address: string): string => padHex(address.toLowerCase() as Hex, { size: 32 });
 
 const HOLDER = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+const STRANGER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 const POLYGON = "polygon-bor-rpc.publicnode.com";
 const BASE = "base-rpc.publicnode.com";
 const XO = "rpc-mainnet-2.xo.market";
@@ -171,12 +175,117 @@ describe("Polymarket holdings, from Polygon only", () => {
     expect(result.notes.join(" ")).toMatch(/not the code pinned/);
   });
 
-  it("an owner's own address is read as it is, with a note about the venue's wallets, and no profile lookup", async () => {
+  it("a signer's own address is read as it is, and with no wallet of its own on chain that is said in words, from Polygon only", async () => {
     const { net, outcomes } = await read({ [POLYGON]: polygon() }, [binding({ id: "o", kind: "eoa", venues: ["polymarket"] })], polymarketKnown);
-    const result = ok(outcomes[0]);
-    expect(result.resolution).toEqual({ source: "pasted", address: HOLDER, candidate: null });
-    expect(result.notes.join(" ")).toMatch(/paste the Polymarket wallet/);
-    expect(net.hosts.every((host) => host === POLYGON)).toBe(true);
+    expect(outcomes.map((outcome) => outcome.kind)).toEqual(["ok", "unresolved"]);
+    const own = ok(outcomes[0]);
+    expect(own.resolution).toEqual({ source: "pasted", address: HOLDER, candidate: null });
+    expect(own.rows).toHaveLength(5);
+    expect(own.notes.join(" ")).toMatch(/derived from this address and checked on chain/);
+    const missing = outcomes[1];
+    expect(missing?.kind === "unresolved" ? missing.why : "").toMatch(/^No Polymarket wallet found for this signer\./);
+    expect(missing?.kind === "unresolved" ? missing.why : "").toMatch(/no Polymarket API/);
+    // No profile lookup, no Gamma, no Data API: the Polygon RPC alone, read methods only.
+    expect(new Set(net.hosts)).toEqual(new Set([POLYGON]));
+    expect(new Set(net.methods)).toEqual(new Set(["eth_blockNumber", "eth_getCode", "eth_getStorageAt", "eth_getLogs", "eth_call"]));
+  });
+});
+
+// ---- Polymarket wallets derived from a signer ------------------------------------------------------------------------------
+
+describe("Polymarket wallets derived from a signer, confirmed on Polygon", () => {
+  const [proxy, safe, beacon, uups] = polymarketWalletCandidates(HOLDER);
+  if (proxy === undefined || safe === undefined || beacon === undefined || uups === undefined) throw new Error("candidates");
+  const ctf = POLYMARKET_CONDITIONAL_TOKENS.toLowerCase();
+  const tokenA = PLAIN.clobTokenIds[0] as string;
+  const tokenB = PLAIN.clobTokenIds[1] as string;
+  const safeOwners = (owners: readonly string[]): MemoryChain => {
+    const base = polygon();
+    return {
+      ...base,
+      code: {
+        ...base.code,
+        [proxy.address.toLowerCase()]: proxy.runtimeCode,
+        [safe.address.toLowerCase()]: safe.runtimeCode,
+        [beacon.address.toLowerCase()]: beacon.runtimeCode,
+        [POLYMARKET_SAFE_SINGLETON.toLowerCase()]: codeOf("polygon", "polymarket-safe-singleton"),
+      },
+      slots: { ...base.slots, [safe.address.toLowerCase()]: slotOf(POLYMARKET_SAFE_SINGLETON) },
+      owners: { [safe.address.toLowerCase()]: owners },
+      owner: { [beacon.address.toLowerCase()]: HOLDER },
+      balances: {
+        ...base.balances,
+        [ctf]: {
+          ...(base.balances?.[ctf] ?? {}),
+          [proxy.address.toLowerCase()]: { [tokenA]: 1_000_000n },
+          [safe.address.toLowerCase()]: { [tokenB]: 2_000_000n },
+          [beacon.address.toLowerCase()]: { [tokenA]: 3_000_000n },
+        },
+      },
+    };
+  };
+
+  it("reads each wallet found in its own section, labelled with its kind and the signer, and asks only the Polygon RPC", async () => {
+    const { net, outcomes } = await read({ [POLYGON]: safeOwners([HOLDER]) }, [binding({ id: "o", kind: "eoa", venues: ["polymarket"] })], polymarketKnown);
+    expect(outcomes.map((outcome) => outcome.kind)).toEqual(["ok", "ok", "ok", "ok"]);
+    const [own, ...wallets] = outcomes.map(ok);
+    expect(own?.holder).toBe(HOLDER);
+    expect(wallets.map((outcome) => [outcome.holder, outcome.resolution?.wallet?.kind])).toEqual([
+      [proxy.address, "Polymarket proxy wallet"],
+      [safe.address, "Polymarket Safe wallet"],
+      [beacon.address, "Polymarket Deposit Wallet"],
+    ]);
+    expect(wallets.every((outcome) => outcome.resolution?.source === "derived" && outcome.resolution.wallet?.signer === HOLDER)).toBe(true);
+    expect(wallets.map((outcome) => outcome.rows.map((row) => [row.tokenId, dec(row.qty), row.market.value]))).toEqual([
+      [[tokenA, "1", "Plain market"]],
+      [[tokenB, "2", "Plain market"]],
+      [[tokenA, "3", "Plain market"]],
+    ]);
+    expect(wallets[1]?.notes.join(" ")).toMatch(/names the signer as an owner/);
+    // The signer's own section lists what was checked, the Deposit Wallet's earlier form included.
+    const notes = own?.notes.join(" ") ?? "";
+    expect(notes).toContain(`${uups.address}: There is no contract at this derived address`);
+    expect(notes).toContain(`${safe.address}: found on chain and read in its own section`);
+    expect(new Set(net.hosts)).toEqual(new Set([POLYGON]));
+    expect(new Set(net.methods)).toEqual(new Set(["eth_blockNumber", "eth_getCode", "eth_getStorageAt", "eth_getLogs", "eth_call"]));
+  });
+
+  it("a Safe the signer is not an owner of is not read, and says so", async () => {
+    const { outcomes } = await read({ [POLYGON]: safeOwners([STRANGER]) }, [binding({ id: "o", kind: "eoa", venues: ["polymarket"] })], polymarketKnown);
+    const holders = outcomes.filter((outcome): outcome is VenueReadOk => outcome.kind === "ok").map((outcome) => outcome.holder);
+    expect(holders).toEqual([HOLDER, proxy.address, beacon.address]);
+    expect(ok(outcomes[0]).notes.join(" ")).toMatch(/this signer is not among its owners/);
+  });
+
+  it("a wallet also saved as its own entry is read once, under that entry", async () => {
+    const { outcomes } = await read(
+      { [POLYGON]: safeOwners([HOLDER]) },
+      [binding({ id: "o", kind: "eoa", venues: ["polymarket"] }), binding({ id: "w", kind: "venue_proxy", address: proxy.address, venues: ["polymarket"] })],
+      polymarketKnown,
+    );
+    const reads = outcomes.filter((outcome): outcome is VenueReadOk => outcome.kind === "ok").map((outcome) => [outcome.bindingId, outcome.holder]);
+    expect(reads.filter(([, holder]) => holder === proxy.address)).toEqual([["w", proxy.address]]);
+    expect(ok(outcomes[0]).notes.join(" ")).toMatch(/read under its own saved entry/);
+  });
+
+  it("a node that cannot be read during the wallet checks fails that part only; the signer's own read stands", async () => {
+    const chain = safeOwners([HOLDER]);
+    const net = chainNetwork({ [POLYGON]: chain });
+    let codeReads = 0;
+    const fetch: typeof net.fetch = async (input, init) => {
+      const body = init?.body ?? "";
+      // Fail the batch that asks for the four wallets' code at once.
+      if (body.includes(proxy.address.toLowerCase()) || body.includes(proxy.address)) {
+        codeReads += 1;
+        return { ok: false, status: 503, headers: { get: () => null }, json: async () => ({}), text: async () => "" };
+      }
+      return net.fetch(input, init);
+    };
+    const deps = { fetch, nowMs: manualClock(NOW).nowMs };
+    const outcomes = await readAll({ deps, adapters: createPortfolioAdapters(deps, "standalone"), mode: "standalone", known: polymarketKnown }, planReads([binding({ id: "o", kind: "eoa", venues: ["polymarket"] })], DEFAULT_SWITCHES, "standalone"));
+    expect(codeReads).toBeGreaterThan(0);
+    expect(outcomes.map((outcome) => outcome.kind)).toEqual(["ok", "failed"]);
+    expect(ok(outcomes[0]).holder).toBe(HOLDER);
   });
 });
 

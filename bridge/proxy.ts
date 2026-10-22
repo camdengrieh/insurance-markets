@@ -1,12 +1,12 @@
 import { READ_SERVICES, type ReadService } from "../app/headers.config.js";
 import { decide, isRestrictedService, RESTRICTED_SERVICES, type Allowed, type OriginMap } from "./allowlist.js";
+import { VenueStateTracker } from "../sdk/venues/state.js";
+import { isBlockPage } from "../sdk/venues/transport.js";
 import {
   BRIDGE_USER_AGENT,
   MAX_PROXY_RESPONSE_BYTES,
   PROXY_TIMEOUT_MS,
   READ_PROXY_PREFIX,
-  VENUE_PAUSE_AFTER_429,
-  VENUE_PAUSE_MS,
   readProxyResponseSchema,
   type BridgeErrorCode,
   type ReadProxyResponse,
@@ -30,8 +30,10 @@ import { defineRoute, fail, json, type BridgeModule, type BridgeModuleFactory, t
 //   2. A restricted-terms service (Kalshi, Quotient, Novig, Gemini) is refused with venue_disabled unless the
 //      operator turned it on (XO_COCKPIT_VENUES). Their data is memory-only: this module imports no file API and
 //      keeps no cache, so there is nothing to write (M1-6, and a test scans the source).
-//   3. R9: a service paused after any 403 or three 429s in a row (10 minutes), or cooling down after a 429 with
-//      Retry-After, is refused with venue_paused and says until when. The pause is announced once on stderr.
+//   3. R9: a service paused after any 403, three 401s or three 429s in a row, or a web page served where JSON was
+//      expected (10 minutes), or cooling down after a 429 with Retry-After, is refused with venue_paused and says until
+//      when and why (details.reason, a PauseSignal). The rule is the SDK's (sdk/venues/state.ts), the same one the page
+//      applies; the pause is announced once on stderr.
 //   4. A per-service token bucket and a global in-flight cap (rate_limited, with Retry-After), so a runaway
 //      page or agent cannot hammer a venue.
 //   5. One request upstream: https, redirect: manual, a timeout (PROXY_TIMEOUT_MS) that also covers reading the
@@ -41,7 +43,8 @@ import { defineRoute, fail, json, type BridgeModule, type BridgeModuleFactory, t
 //      for the adapter, not a daemon error). The upstream body is parsed and re-serialised by the daemon: no
 //      upstream header, cookie or raw byte reaches the page. A non-JSON body is upstream_not_json, except that a
 //      401, 403 or 429 with a non-JSON body (a Cloudflare block page, say) is passed as an envelope with
-//      `body: null` so the adapter still sees the status that drives its pause logic.
+//      `body: null` so the adapter still sees the status that drives its pause logic, and a web page served with a 2xx
+//      (a bot wall or challenge page) is a block: the service is paused and the answer is venue_paused (block_page).
 //
 // Error messages are fixed daemon text. Upstream text, a URL or a header value is never quoted back, logged or
 // stored.
@@ -135,7 +138,6 @@ export interface ReadProxy {
 // ---- helpers ---------------------------------------------------------------------------------------------------------------
 
 const CONTROL_STATUSES: ReadonlySet<number> = new Set([401, 403, 429]);
-const MAX_COOLDOWN_MS = 60 * 60 * 1000;
 const MAX_RETRY_AFTER_S = 86_400;
 const SAFE_HEADER_NAME = /^[a-z][a-z0-9-]{0,63}$/;
 // A header the credentials hook may never set: they would let it override what the proxy guarantees.
@@ -202,9 +204,8 @@ export function createReadProxy(options: ReadProxyOptions = {}): ReadProxy {
   const maxInFlight = options.maxInFlight ?? 16;
   const stderr = options.stderr;
   const enabled = new Set<ReadService>([...(options.enabled ?? [])].filter(isRestrictedService));
-  const pauses = new Map<ReadService, { untilMs: number; reason: string }>();
-  const cooldowns = new Map<ReadService, number>();
-  const strikes = new Map<ReadService, number>();
+  // The venue state rule, keyed by service id (sdk/venues/state.ts).
+  const states = new VenueStateTracker();
   const buckets = new Map<ReadService, Bucket>();
   let active = 0;
   let closed = false;
@@ -223,48 +224,23 @@ export function createReadProxy(options: ReadProxyOptions = {}): ReadProxy {
     return undefined;
   }
 
-  // Seconds left of a pause or a cooldown, or undefined.
+  // Seconds left of a pause or a cooldown, and what tripped it, or undefined.
   function blockedFor(service: ReadService): { readonly seconds: number; readonly reason: string } | undefined {
     const at = now();
-    const pause = pauses.get(service);
-    if (pause !== undefined) {
-      if (pause.untilMs > at) return { seconds: Math.ceil((pause.untilMs - at) / 1000), reason: pause.reason };
-      pauses.delete(service);
-    }
-    const cooldown = cooldowns.get(service);
-    if (cooldown !== undefined) {
-      if (cooldown > at) return { seconds: Math.ceil((cooldown - at) / 1000), reason: "retry_after" };
-      cooldowns.delete(service);
-    }
-    return undefined;
+    const pause = states.check(service, at);
+    return pause.paused ? { seconds: Math.ceil((pause.untilMs - at) / 1000), reason: pause.signal } : undefined;
   }
 
-  function pause(service: ReadService, reason: string, ms: number): void {
-    const untilMs = now() + ms;
-    const existing = pauses.get(service);
-    if (existing !== undefined && existing.untilMs >= untilMs) return;
-    pauses.set(service, { untilMs, reason });
+  // Feeds one answer to the rule, and announces a pause (not a Retry-After cooldown) once, when it begins or grows.
+  function record(service: ReadService, status: number, retryAfterS: number | null, blockPage = false): void {
+    const at = now();
+    const before = states.check(service, at);
+    states.record(service, { status, retryAfterMs: retryAfterS === null ? null : retryAfterS * 1000, blockPage }, at);
+    const after = states.check(service, at);
+    if (!after.paused || after.signal === "retry_after") return;
+    if (before.paused && before.signal === after.signal && before.untilMs === after.untilMs) return;
     // Fixed text and a service id from our own closed list: no upstream text.
-    stderr?.write(`xo-market cockpit: reads from ${service} are paused for ${Math.round(ms / 60_000)} minutes (${reason}). Nothing is retried around it.\n`);
-  }
-
-  // R9: any 403 pauses; the third 429 in a row pauses; a 429 with Retry-After also cools the service down.
-  function record(service: ReadService, status: number, retryAfterS: number | null): void {
-    if (status === 403) {
-      pause(service, "http_403", VENUE_PAUSE_MS);
-      return;
-    }
-    if (status === 429) {
-      const count = (strikes.get(service) ?? 0) + 1;
-      strikes.set(service, count);
-      if (retryAfterS !== null && retryAfterS > 0) cooldowns.set(service, now() + Math.min(retryAfterS * 1000, MAX_COOLDOWN_MS));
-      if (count >= VENUE_PAUSE_AFTER_429) {
-        strikes.set(service, 0);
-        pause(service, "http_429_repeated", VENUE_PAUSE_MS);
-      }
-      return;
-    }
-    strikes.set(service, 0);
+    stderr?.write(`xo-market cockpit: reads from ${service} are paused for ${Math.round((after.untilMs - at) / 60_000)} minutes (${after.signal}). Nothing is retried around it.\n`);
   }
 
   function headersFor(allowed: Allowed): Record<string, string> {
@@ -357,6 +333,15 @@ export function createReadProxy(options: ReadProxyOptions = {}): ReadProxy {
 
       let body: unknown;
       const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      // A web page where JSON was expected, served as success: a block, not a body to pass on.
+      if (status >= 200 && status < 300 && isBlockPage(response.headers.get("content-type"), text)) {
+        record(service, status, retryAfterS, true);
+        const blocked = blockedFor(service);
+        return failure("venue_paused", "Reads from this venue are paused: it answered with a web page instead of data.", {
+          details: { service, reason: "block_page" },
+          ...(blocked === undefined ? {} : { retryAfterS: blocked.seconds }),
+        });
+      }
       if (text.trim() === "") {
         if (status === 204 || CONTROL_STATUSES.has(status)) body = null;
         else return failure("upstream_not_json", "The upstream answer is not JSON.", { details: { service, upstream_status: status } });

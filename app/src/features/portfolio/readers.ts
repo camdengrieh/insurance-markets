@@ -4,7 +4,8 @@
 // Each reader turns one venue's answer into PortfolioRow[] and NEVER throws: a failure becomes a `failed` outcome
 // for that venue and that address only, so the other venues keep rendering (M2-6). XO, Polymarket and Limitless are
 // read from the chain alone (chain-reads.ts: pinned ledgers over the public RPCs, no venue API); Pascal and Trueo
-// through their venue adapters, which take the same injected fetch.
+// through their venue adapters, which take the same injected fetch. A Polymarket signer's address also yields the
+// wallets Polymarket created for it, derived and confirmed on chain (sdk/chain/polymarket/wallets.ts), one outcome each.
 
 import type { AdapterError, Book, MarketSummary, Prov, Result, TokenRef, Transport, VenueId } from "../../core/ports";
 import { qtyOfDec, type Qty } from "../../core/money";
@@ -16,6 +17,8 @@ import type { VenuePosition as SharedVenuePosition } from "@sdk/venues/pascal";
 import { makeProv } from "../../core/venue-policy";
 import { errorText } from "../../ui/Tiles";
 import { failureOf } from "../wallet/failure";
+import { findPolymarketWallets, POLYMARKET_WALLET_KIND_TEXT, type PolymarketWalletCheck } from "@sdk/chain/polymarket/wallets";
+import type { Address } from "@sdk/chain/rpc";
 import { CHAIN_OF, createChainSession, readChainHoldings, type ChainSession, type ChainVenue } from "./chain-reads";
 import { makeRow, qtyOf } from "./rows";
 import type { PlannedRead } from "./targets";
@@ -118,10 +121,67 @@ export async function markWithBids(
 
 // ---- XO, Polymarket and Limitless: the chain ---------------------------------------------------------------------------
 
+function sessionOf(ctx: ReadContext, venue: ChainVenue): ChainSession | null {
+  return ctx.adapters.chain?.(CHAIN_OF[venue]) ?? createChainSession(ctx.deps, CHAIN_OF[venue]);
+}
+
+function noRpc(plan: Extract<PlannedRead, { kind: "run" }>): VenueReadOutcome {
+  return { kind: "unsupported", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, why: "This build names no public RPC for the venue's chain." };
+}
+
 async function readChain(ctx: ReadContext, plan: Extract<PlannedRead, { kind: "run" }>, venue: ChainVenue): Promise<VenueReadOutcome> {
-  const session = ctx.adapters.chain?.(CHAIN_OF[venue]) ?? createChainSession(ctx.deps, CHAIN_OF[venue]);
-  if (session === null) return { kind: "unsupported", venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, why: "This build names no public RPC for the venue's chain." };
+  const session = sessionOf(ctx, venue);
+  if (session === null) return noRpc(plan);
   return readChainHoldings(ctx.deps, session, venue, plan, ctx.known ?? []);
+}
+
+// ---- Polymarket: a signer's own address and the wallets derived from it -------------------------------------------------
+
+const NO_WALLET = "No Polymarket wallet found for this signer.";
+
+function walletLine(check: PolymarketWalletCheck, readElsewhere: boolean): string {
+  const name = `${POLYMARKET_WALLET_KIND_TEXT[check.kind]} ${check.address}`;
+  if (check.state !== "found") return `${name}: ${check.why ?? "not read."}`;
+  return readElsewhere ? `${name}: found on chain; it is read under its own saved entry.` : `${name}: found on chain and read in its own section.`;
+}
+
+// The signer's own address is read as before; then its proxy wallet, Safe and Deposit Wallet are derived, each checked
+// on chain (deployed with its factory's code, and for a Safe or Deposit Wallet owned by the signer), and every one found
+// is read as its own outcome. None found is said in words, never shown as an empty table. `elsewhere` holds the
+// addresses already read under their own saved entry, which are not read twice.
+async function readPolymarketSigner(ctx: ReadContext, plan: Extract<PlannedRead, { kind: "run" }>, elsewhere: ReadonlySet<string>): Promise<VenueReadOutcome[]> {
+  const session = sessionOf(ctx, "polymarket");
+  if (session === null) return [noRpc(plan)];
+  const known = ctx.known ?? [];
+  const own = await settle(plan, () => readChainHoldings(ctx.deps, session, "polymarket", plan, known));
+  let checks: readonly PolymarketWalletCheck[];
+  try {
+    checks = await findPolymarketWallets(session.port, plan.address as Address, { guard: session.guard });
+  } catch (error) {
+    // The page draws one tile per kind of outcome for an entry, so a second failure of the same kind is not repeated.
+    const failed = failureOutcome(plan, error);
+    return own.kind === failed.kind ? [own] : [own, failed];
+  }
+  const found = checks.filter((check) => check.state === "found");
+  const lines = checks.map((check) => walletLine(check, elsewhere.has(check.address.toLowerCase())));
+  const outcomes: VenueReadOutcome[] = [own.kind === "ok" ? { ...own, notes: [...own.notes, ...lines] } : own];
+  const reads = found
+    .filter((check) => !elsewhere.has(check.address.toLowerCase()))
+    .map((check) => {
+      const walletPlan = { ...plan, address: check.address };
+      return settle(walletPlan, () => readChainHoldings(ctx.deps, session, "polymarket", walletPlan, known, { kind: check.kind, signer: plan.address }));
+    });
+  outcomes.push(...(await Promise.all(reads)));
+  if (found.length === 0) {
+    outcomes.push({
+      kind: "unresolved",
+      venue: "polymarket",
+      bindingId: plan.binding.id,
+      bindingLabel: plan.binding.label,
+      why: `${NO_WALLET} Its proxy wallet, Safe and Deposit Wallet were derived from the address and checked on Polygon, with no Polymarket API: ${lines.join(" ")} If Polymarket shows you a wallet address, save it as its own entry.`,
+    });
+  }
+  return outcomes;
 }
 
 // ---- Pascal and Trueo (positions come marked from the adapter) -----------------------------------------------------------
@@ -243,21 +303,34 @@ async function runOne(ctx: ReadContext, plan: Extract<PlannedRead, { kind: "run"
   }
 }
 
-// Every read in parallel, each isolated: one throwing never changes another's outcome (M2-6).
+// A thrown read, as the outcome of that venue and address only.
+function failureOutcome(plan: Extract<PlannedRead, { kind: "run" }>, error: unknown): VenueReadOutcome {
+  const failure = failureOf(error);
+  if (failure.unauthorized) return { kind: "not_paired", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label };
+  if (failure.needsCockpit) return { kind: "needs_cockpit", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, what: "positions for this address" };
+  return { kind: "failed", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, code: failure.code, retryAfterMs: failure.retryAfterMs };
+}
+
+async function settle(plan: Extract<PlannedRead, { kind: "run" }>, read: () => Promise<VenueReadOutcome>): Promise<VenueReadOutcome> {
+  try {
+    return await read();
+  } catch (error) {
+    return failureOutcome(plan, error);
+  }
+}
+
+// Every read in parallel, each isolated: one throwing never changes another's outcome (M2-6). A Polymarket signer's
+// read can give several outcomes (its own address and each wallet derived from it), in that order.
 export async function readAll(ctx: ReadContext, planned: readonly PlannedRead[]): Promise<VenueReadOutcome[]> {
-  return Promise.all(
-    planned.map(async (plan): Promise<VenueReadOutcome> => {
-      if (plan.kind === "skip") return plan.outcome;
-      try {
-        return await runOne(ctx, plan);
-      } catch (error) {
-        const failure = failureOf(error);
-        if (failure.unauthorized) return { kind: "not_paired", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label };
-        if (failure.needsCockpit) return { kind: "needs_cockpit", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, what: "positions for this address" };
-        return { kind: "failed", venue: plan.venue, bindingId: plan.binding.id, bindingLabel: plan.binding.label, code: failure.code, retryAfterMs: failure.retryAfterMs };
-      }
+  const elsewhere = new Set(planned.flatMap((plan) => (plan.kind === "run" && plan.venue === "polymarket" ? [plan.address.toLowerCase()] : [])));
+  const groups = await Promise.all(
+    planned.map(async (plan): Promise<VenueReadOutcome[]> => {
+      if (plan.kind === "skip") return [plan.outcome];
+      if (plan.venue === "polymarket" && plan.binding.kind === "eoa") return readPolymarketSigner(ctx, plan, elsewhere);
+      return [await settle(plan, () => runOne(ctx, plan))];
     }),
   );
+  return groups.flat();
 }
 
 export function okOutcomes(outcomes: readonly VenueReadOutcome[]): VenueReadOk[] {

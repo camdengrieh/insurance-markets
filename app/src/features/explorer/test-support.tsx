@@ -7,6 +7,8 @@ import type { ReactElement } from "react";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 
+import { READ_OK } from "@sdk/venues/state";
+
 import type { AdapterCaps, AdapterError, Book, FeeSpec, Level, Market, MarketRef, MarketSummary, Outcome, OutcomeSummary, Prov, Result, Status, VenueId, VenueReadAdapter } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
 import { DEFAULT_SWITCHES, type VenueSwitches } from "../../core/venue-policy";
@@ -167,7 +169,17 @@ export function fakeEntry(venue: VenueId, options: FakeOptions = {}): FakeEntry 
   };
 }
 
-export function fakeServices(entries: readonly ExplorerAdapter[], options: { readonly mode?: AppMode; readonly switches?: VenueSwitches; readonly nowMs?: () => number } = {}): ExplorerServices {
+export function fakeServices(
+  entries: readonly ExplorerAdapter[],
+  options: {
+    readonly mode?: AppMode;
+    readonly switches?: VenueSwitches;
+    readonly nowMs?: () => number;
+    // The venue state the page's guarded fetch would report (sdk/venues/state.ts); ok for every venue by default.
+    readonly venueState?: ExplorerServices["venueState"];
+    readonly chainSession?: ExplorerServices["chainSession"];
+  } = {},
+): ExplorerServices {
   const adapters: Partial<Record<VenueId, ExplorerAdapter>> = {};
   for (const entry of entries) adapters[entry.id] = entry;
   return {
@@ -178,6 +190,8 @@ export function fakeServices(entries: readonly ExplorerAdapter[], options: { rea
     loadSwitches: async () => options.switches ?? DEFAULT_SWITCHES,
     memory: new MarketMemory(),
     pollBooks: false,
+    venueState: options.venueState ?? (() => READ_OK),
+    chainSession: options.chainSession ?? (() => null),
   };
 }
 

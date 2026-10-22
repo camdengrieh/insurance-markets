@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-proxy-wallet-implementation",
+  "address": "0x44e999d5c2F66Ef0861317f9A4805AC2e90aEB4f",
+  "chain_id": 137,
+  "address_source": "getImplementation() of the pinned, Sourcify-verified Polymarket Proxy Factory, read 2026-10-22",
+  "size": 3265,
+  "sha256": "15f84415bce760495a4600c8ae8dad42157bbf2c8056cfdc0c9486b5915fa0fc",
+  "keccak256": "0x10466d9ee1a9fb08c319382725675f441d59b77a8307edfa8b7167817b8a76f7",
+  "code_source": "eth_getCode over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts)",
+  "eip1967_implementation": null,
+  "sourcify_url": "https://sourcify.dev/server/v2/contract/137/0x44e999d5c2F66Ef0861317f9A4805AC2e90aEB4f?fields=runtimeBytecode,compilation",
+  "sourcify_match": "match",
+  "sourcify_contract": "ProxyWallet",
+  "sourcify_onchain_equals_rpc": true,
+  "captured_at": "2026-10-22"
+}

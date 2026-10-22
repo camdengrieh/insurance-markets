@@ -21,7 +21,7 @@ import { parseIsoMs } from "../../core/format";
 import type { AdapterError, Book, Market, MarketRef, MarketSummary, Outcome, Prov, Result, VenueId } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
 import { makeProv, type VenueSwitches } from "../../core/venue-policy";
-import { Badge, Button, DataTable, Dialog, Disclosure, ErrorTile, Missing, NeedsCockpitTile, Num, ProvenanceLine, Tile, UntrustedText, VenueMark, renderableUntrusted, useNow, venueName } from "../../ui";
+import { Badge, Button, DataTable, Dialog, Disclosure, Missing, NeedsCockpitTile, Num, ProvenanceLine, Tile, UntrustedText, VenueMark, renderableUntrusted, useNow, venueName } from "../../ui";
 import { BookProvenance } from "./BookPanel";
 import { LevelRows } from "./levels";
 import type { LinkLoad } from "../signals/links/dataset";
@@ -31,6 +31,7 @@ import { venueStatusOf } from "./catalog";
 import { CUSTODY_TEXT, MECHANISM_TEXT, VOID_TEXT, feeView, safeDecimal, safeReasons, tickLines } from "./describe";
 import { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, impliedComplement, priceText, statusInfo, utcText, viewBook, volumeText, type BookView, type ImpliedSide } from "./display";
 import { FeedError, classifyError, type ClassifiedError } from "./feed";
+import { VenueErrorTile, VenueStateTile } from "./venue-state";
 import { BOOK_BUDGET_MS } from "./books";
 import type { MarketParams } from "./ids";
 import { OutcomeName } from "./MarketTable";
@@ -107,7 +108,7 @@ function BookBlock({ venue, outcome, result, view, implied, nowMs }: { readonly 
       ) : result === undefined ? (
         <p role="status">No book was returned for this outcome.</p>
       ) : !result.ok ? (
-        <ErrorTile code={result.error} venue={venue} heading="h4" />
+        <VenueErrorTile venue={venue} error={{ code: result.error, retryAfterMs: null }} what="order books" heading="h4" />
       ) : view === null ? null : (
         <>
           <div className="explorer-book-sides">
@@ -179,7 +180,9 @@ function FeeCaution({ market, entry }: { readonly market: Market; readonly entry
 
 function Books({ services, entry, market, summary }: { readonly services: ExplorerServices; readonly entry: ExplorerAdapter; readonly market: Market; readonly summary: MarketSummary | undefined }) {
   const nowMs = useNow(10_000);
-  const available = entry.books.state === "available";
+  // A venue that cannot be asked now (throttled, blocked or chain only) is not asked for books, and says why.
+  const readState = services.venueState(market.ref.venue, nowMs);
+  const available = entry.books.state === "available" && readState.kind === "ok";
   const query = useQuery({
     queryKey: ["explorer", "books", services.id, market.ref.venue, market.ref.marketId] as const,
     enabled: available,
@@ -205,16 +208,13 @@ function Books({ services, entry, market, summary }: { readonly services: Explor
         <p>{entry.books.why}. The only price shown for this market is the venue's display price.</p>
       </Tile>
     );
+  } else if (readState.kind !== "ok") {
+    body = <VenueStateTile venue={market.ref.venue} state={readState} nowMs={nowMs} heading="h4" kept="No book is shown and none is asked for until reads may be sent again; an earlier book is never shown as live." />;
   } else if (query.isPending) {
     body = <p role="status">Loading the order book.</p>;
   } else if (query.isError) {
     const error: ClassifiedError = query.error instanceof FeedError ? query.error.classified : classifyError(query.error);
-    body =
-      error.code === "NEEDS_COCKPIT" ? (
-        <NeedsCockpitTile venue={market.ref.venue} what="order books" heading="h4" />
-      ) : (
-        <ErrorTile code={error.code} venue={market.ref.venue} heading="h4" onRetry={() => void query.refetch()} />
-      );
+    body = <VenueErrorTile venue={market.ref.venue} error={error} what="order books" heading="h4" onRetry={() => void query.refetch()} />;
   } else {
     const volume = summary === undefined ? null : volumeText(summary.volume);
     body = (
@@ -521,7 +521,7 @@ function Loaded({ services, entry, marketRef: ref, summary, linkLoad, readLeg, o
   if (query.isPending) return <p role="status">Loading the market.</p>;
   if (query.isError) {
     const error: ClassifiedError = query.error instanceof FeedError ? query.error.classified : classifyError(query.error);
-    return error.code === "NEEDS_COCKPIT" ? <NeedsCockpitTile venue={ref.venue} what="this market" heading="h3" /> : <ErrorTile code={error.code} venue={ref.venue} heading="h3" onRetry={() => void query.refetch()} />;
+    return <VenueErrorTile venue={ref.venue} error={error} what="this market" heading="h3" onRetry={() => void query.refetch()} />;
   }
   const { market } = query.data;
   const counts = linkCountsText(linkLoad, market.ref);

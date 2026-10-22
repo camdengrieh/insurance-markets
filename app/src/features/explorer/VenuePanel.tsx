@@ -11,7 +11,6 @@ import {
   Button,
   Disclosure,
   EmptyTile,
-  ErrorTile,
   NeedsCockpitTile,
   ProvenanceStrip,
   RestrictedTermsTile,
@@ -22,6 +21,7 @@ import {
 import type { ExplorerAdapter } from "./adapters";
 import { UNREPORTED_VENUES, type VenueStatus } from "./catalog";
 import { MAX_PAGES_PER_VENUE, type VenueFeed } from "./feed";
+import { VenueErrorTile, VenueStateBadge, VenueStateTile } from "./venue-state";
 
 export interface VenueRowState {
   readonly venue: VenueId;
@@ -58,9 +58,17 @@ function stateBadge(feed: VenueFeed | undefined, selected: boolean, query: strin
       return <Badge tone="ok">{`${feed.items.length} loaded`}</Badge>;
     case "error":
       return <Badge tone="danger">could not be read</Badge>;
+    case "degraded":
+      return <VenueStateBadge state={feed.readState} />;
     case "search_unsupported":
       return <Badge tone="neutral">{query === "" ? "ready" : "no text search"}</Badge>;
   }
+}
+
+// What a degraded venue still shows, in fixed words.
+export function keptWords(name: string, count: number): string {
+  if (count === 0) return `No ${name} rows were read earlier in this visit, so none are shown; the chain cannot list its markets by name.`;
+  return `${count} ${name} ${count === 1 ? "row is" : "rows are"} kept from earlier reads in this visit, marked as cached with their age. Settlement comes from the chain where it can be read; prices, volume and books stay empty.`;
 }
 
 function ActiveVenue({ row, query, onToggle, onLoadMore, nowMs }: { readonly row: VenueRowState; readonly query: string; readonly nowMs: number; readonly onToggle: VenuePanelProps["onToggle"]; readonly onLoadMore: VenuePanelProps["onLoadMore"] }) {
@@ -79,6 +87,8 @@ function ActiveVenue({ row, query, onToggle, onLoadMore, nowMs }: { readonly row
       {feed !== undefined && feed.state === "ok" && feed.truncated ? <span className="explorer-note" data-truncated="true">{`${name} has more results than it returned for this search, and offers no way to page to them. Refine your search to narrow it.`}</span> : null}
       {feed !== undefined && feed.state === "search_unsupported" ? <span className="explorer-note">{`${name} cannot search by text, so it was not asked. Clear the search to list it again.`}</span> : null}
       {feed !== undefined && feed.state === "ok" && feed.fetchedAtMs !== null ? <span className="explorer-note">{`read ${formatAge(nowMs, feed.fetchedAtMs)}`}</span> : null}
+      {feed !== undefined && feed.state === "degraded" ? <span className="explorer-note" data-kept={feed.items.length}>{keptWords(name, feed.items.length)}</span> : null}
+      {feed !== undefined && feed.state === "ok" && feed.readState.kind !== "ok" ? <VenueStateBadge state={feed.readState} /> : null}
       {more ? (
         <Button busy={feed.loadingMore} disabled={pageLimit} onClick={() => onLoadMore(venue)}>
           {pageLimit ? "Page limit reached" : `Load more from ${name}`}
@@ -135,11 +145,13 @@ export function VenuePanel({ rows, mode, nowMs, query, onToggle, onRetry, onLoad
       {active.map((row) => (
         <Fragment key={row.venue}>
           {row.selected && row.feed?.state === "error" && row.feed.error !== null ? (
-            row.feed.error.code === "NEEDS_COCKPIT" ? (
-              <NeedsCockpitTile venue={row.venue} what="this venue's markets" heading="h3" />
-            ) : (
-              <ErrorTile code={row.feed.error.code} venue={row.venue} heading="h3" onRetry={() => onRetry(row.venue)} />
-            )
+            <VenueErrorTile venue={row.venue} error={row.feed.error} what="this venue's markets" heading="h3" onRetry={() => onRetry(row.venue)} />
+          ) : null}
+          {row.selected && row.feed?.state === "degraded" ? (
+            <VenueStateTile venue={row.venue} state={row.feed.readState} nowMs={nowMs} heading="h3" kept={keptWords(venueName(row.venue), row.feed.items.length)} onRetry={() => onRetry(row.venue)} />
+          ) : null}
+          {row.selected && row.feed?.state === "ok" && row.feed.readState.kind !== "ok" ? (
+            <VenueStateTile venue={row.venue} state={row.feed.readState} nowMs={nowMs} heading="h3" kept="Its market list was read; its order books are not asked while this lasts." />
           ) : null}
           {row.selected && row.feed?.state === "ok" && row.feed.items.length === 0 ? (
             <EmptyTile title={`${venueName(row.venue)}: no markets match`} heading="h3">

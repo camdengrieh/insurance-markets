@@ -47,9 +47,9 @@ export const MAX_REQUEST_BODY_BYTES = 256 * 1024;
 // Pascal's market list alone is about 5.9 MB, so the response cap is above that and below "swallow anything".
 export const MAX_PROXY_RESPONSE_BYTES = 8 * 1024 * 1024;
 export const PROXY_TIMEOUT_MS = 15_000;
-// R9: three 429s or any 403 from a venue pause that venue for ten minutes.
-export const VENUE_PAUSE_AFTER_429 = 3;
-export const VENUE_PAUSE_MS = 10 * 60 * 1000;
+// R9: three 429s or any 403 from a venue pause that venue for ten minutes. One rule for the page, the daemon and the
+// API: sdk/venues/state.ts.
+export { VENUE_PAUSE_AFTER_429, VENUE_PAUSE_MS } from "../sdk/venues/state.js";
 export const PAIR_CODE_TTL_S = 120;
 export const ARM_MAX_MINUTES = 10;
 export const ARM_CODE_TTL_S = 120;

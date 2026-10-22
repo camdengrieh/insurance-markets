@@ -332,6 +332,7 @@ describe("account map, balances and funding steps", () => {
     const map = must(view.container, '[data-testid="account-map"]');
     expect(must(map, '[data-testid="account-map-read"]').textContent).toMatch(/UTC/);
     expect(must(map, '[data-testid="polymarket-wallet-note"]').textContent).toMatch(/does not compute a Polymarket wallet/);
+    expect(must(map, '[data-testid="polymarket-wallet-note"]').textContent).toMatch(/derives the signer's Polymarket proxy wallet, Safe and Deposit Wallet .* with no Polymarket API/);
     expect(map.textContent).toMatch(/XO Market: needs the Cockpit/);
   });
 

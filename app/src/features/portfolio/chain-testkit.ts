@@ -2,7 +2,8 @@
 // (polygon-bor-rpc.publicnode.com, base-rpc.publicnode.com, rpc-mainnet-2.xo.market). It answers the read methods the
 // readers send, with contract code the test supplies (the real pinned runtime code, loaded by the test from the
 // recordings in test/fixtures/chain-bytecode), ERC-1155 balances, Conditional Tokens payouts, Polymarket module
-// results, exchange token registries and TransferSingle logs. Any request to another host is recorded and refused,
+// results, exchange token registries, TransferSingle logs, and the owner reads of Polymarket's Safe (getOwners) and
+// Deposit Wallet (owner). Any request to another host is recorded and refused,
 // so a test can prove that no venue API was asked. Only tests import it.
 
 import { decodeFunctionData, encodeAbiParameters, encodeEventTopics, encodeFunctionResult, padHex, parseAbi, type Hex } from "viem";
@@ -14,6 +15,7 @@ import { POLYMARKET_MODULE_ABI } from "@sdk/chain/polymarket/abi";
 import type { FetchLike, FetchResponseLike } from "../../core/ports";
 
 const ERC20 = parseAbi(["function balanceOf(address account) view returns (uint256)"]);
+const WALLET_OWNERS = parseAbi(["function getOwners() view returns (address[])", "function owner() view returns (address)"]);
 
 export interface TransferFixture {
   readonly ledger: string;
@@ -27,7 +29,7 @@ export interface MemoryChain {
   readonly head: bigint;
   // Lower-case address -> runtime code.
   readonly code: Readonly<Record<string, string>>;
-  // Lower-case proxy -> the 32-byte word in its EIP-1967 implementation slot.
+  // Lower-case proxy -> the 32-byte word in its EIP-1967 implementation slot (a Safe: in its singleton slot 0).
   readonly slots?: Readonly<Record<string, string>>;
   // ledger -> holder -> token id (decimal) -> balance; all lower-case.
   readonly balances?: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, bigint>>>>>>;
@@ -39,6 +41,9 @@ export interface MemoryChain {
   readonly registry?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   readonly erc20?: Readonly<Record<string, Readonly<Record<string, bigint>>>>;
   readonly transfers?: readonly TransferFixture[];
+  // Lower-case Safe -> getOwners(); lower-case Deposit Wallet -> owner().
+  readonly owners?: Readonly<Record<string, readonly string[]>>;
+  readonly owner?: Readonly<Record<string, string>>;
 }
 
 export interface ChainNetwork {
@@ -56,7 +61,7 @@ const ZERO32 = `0x${"00".repeat(32)}`;
 
 function call(chain: MemoryChain, to: string, data: Hex): Hex | null {
   const target = to.toLowerCase();
-  const abi = [...CTF_ABI, ...POLYMARKET_MODULE_ABI, ...EXCHANGE_REGISTRY_ABI, ...ERC20];
+  const abi = [...CTF_ABI, ...POLYMARKET_MODULE_ABI, ...EXCHANGE_REGISTRY_ABI, ...ERC20, ...WALLET_OWNERS];
   let decoded;
   try {
     decoded = decodeFunctionData({ abi, data });
@@ -95,6 +100,14 @@ function call(chain: MemoryChain, to: string, data: Hex): Hex | null {
       const holders = chain.erc20?.[target];
       if (holders === undefined) return null;
       return encodeAbiParameters([{ type: "uint256" }], [holders[String(args[0]).toLowerCase()] ?? 0n]);
+    }
+    case "getOwners": {
+      const owners = chain.owners?.[target];
+      return owners === undefined ? null : encodeFunctionResult({ abi: WALLET_OWNERS, functionName: "getOwners", result: owners as Hex[] });
+    }
+    case "owner": {
+      const owner = chain.owner?.[target];
+      return owner === undefined ? null : encodeFunctionResult({ abi: WALLET_OWNERS, functionName: "owner", result: owner as Hex });
     }
     default:
       return null;
