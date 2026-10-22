@@ -1,0 +1,27 @@
+# Same rules as Dockerfile.dockerignore. Docker reads ".dockerignore" from the build CONTEXT root, so
+# for a build with the repository root as context BuildKit uses Dockerfile.dockerignore next to the
+# Dockerfile; this copy is for builds that use deploy/api as the context.
+.git
+.tools
+.claude
+.playwright
+.playwright-browsers
+node_modules
+**/node_modules
+dist
+**/dist
+app
+bridge
+relay
+docs
+scripts
+test
+pm
+src
+**/data
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+**/*.lock
+.env
+.env.*

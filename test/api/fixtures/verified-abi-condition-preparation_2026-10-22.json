@@ -1,0 +1,78 @@
+{
+  "source": "The ConditionPreparation entry of the verified ABI Sourcify serves for each Conditional Tokens deployment the API indexes on a Sourcify-verified chain, verbatim. Sourcify v2 API, read 2026-10-22 (fields=abi).",
+  "captured_at": "2026-10-22",
+  "contracts": [
+    {
+      "chain_id": 137,
+      "address": "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+      "contract": "ConditionalTokens",
+      "match": "match",
+      "source_url": "https://sourcify.dev/server/v2/contract/137/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045?fields=abi",
+      "entries": [
+        {
+          "name": "ConditionPreparation",
+          "type": "event",
+          "inputs": [
+            {
+              "name": "conditionId",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "name": "oracle",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "name": "questionId",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "name": "outcomeSlotCount",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "anonymous": false
+        }
+      ]
+    },
+    {
+      "chain_id": 8453,
+      "address": "0xC9c98965297Bc527861c898329Ee280632B76e18",
+      "contract": "ConditionalTokens",
+      "match": "match",
+      "source_url": "https://sourcify.dev/server/v2/contract/8453/0xC9c98965297Bc527861c898329Ee280632B76e18?fields=abi",
+      "entries": [
+        {
+          "name": "ConditionPreparation",
+          "type": "event",
+          "inputs": [
+            {
+              "name": "conditionId",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "name": "oracle",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "name": "questionId",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "name": "outcomeSlotCount",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "anonymous": false
+        }
+      ]
+    }
+  ]
+}

@@ -380,6 +380,37 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    rows carry no fills-derived last trade (the fill reader needs a bounded block range per market, which a list does not
    have), and pm's recorder and adapters keep their own transport and retry policy.
 8. **Stand up `api/`**: the indexer and the free read endpoints on the existing container pattern under `deploy/` (AWS host, `deploy/aws`).
+   *Done 2026-10-22.* `api/` is built from `sdk/` and its own code only (`api/README.md`); the image is `deploy/api`
+   (`deploy/api/README.md`: the run and environment table; built and tested, deployed nowhere; the AWS layout in
+   `deploy/aws` can host it beside the recorder). Free endpoints: `GET /v1/health`, `/v1/venues` (every venue's licence
+   class, data terms, served or not and why, reader capabilities, read state from `sdk/venues/state.ts`, chain and indexer
+   progress), `/v1/markets?category=&venue=&q=` (served venues only, every field with its source and age),
+   `/v1/markets/:venue/:id` (one market, its `rules-v2` fingerprint, its books) and `/v1/groups` (links a person approved,
+   and linker candidates always "proposed" with their band, from the hash-pinned bundles). Section 5 is enforced in one
+   place: `sdk/venues/licence.ts` `apiServability` (a recorded `open` or `attribution` licence, no restriction, and the
+   registry's data terms `none_found`; the registry's persistence table moved there and `pm/registry` re-exports it),
+   applied before any read by `api/serving.ts`, which also walks every answer and refuses one that names an unserved venue;
+   `test/api/serving.test.ts` walks every endpoint against every venue class with the real policy and the served venue in
+   each fake state. As recorded today that serves Trueo alone: XO, Polymarket and Limitless have no licence class, so
+   `/v1/markets?venue=polymarket` answers `venue_not_served` without contacting Polymarket. Reads use the SDK readers over
+   one honest fetch (User-Agent `insurance-markets-api/0.1`, no proxy, no redirect) behind the shared state rule, at most
+   one list read a minute per venue, kept in memory only and served as `cache` with its age; a blocked venue keeps its
+   rows with chain fields and the stated reason. The indexer (`api/indexer`) reads Polygon (Polymarket's two CTF
+   exchanges, the Protocol V2 exchange, Conditional Tokens and the two V2 modules), Base (Limitless's six exchanges and
+   Conditional Tokens) and the XO chain (its exchange and Conditional Tokens): fills, condition resolutions and module
+   results, and condition preparations, from SDK pins only, each code-checked before the first log; one bounded
+   `eth_getLogs` per range (adaptive span, never more than 10,000 blocks), only blocks 64 (configurable) below the head,
+   the last block's hash re-checked each pass with a rewind by the depth on a reorg, several RPC URLs per chain with
+   failover, a persisted cursor per chain. `api/chain-fields.ts` turns the index into fields: an outcome's last trade
+   (exact price from the fill's amounts where the decimals are pinned, the block and the time window of its range) and a
+   market's settlement (only for XO and Polymarket rows whose token ids derive from their condition). Tests replay one
+   recorded pass per chain (`test/api/fixtures`, public RPC answers of 2026-10-22). Decision forced: the index is SQLite
+   (`node:sqlite`) behind `IndexStore`, not Postgres or Ponder, because neither can be added without a dependency; a
+   Postgres store can implement the same interface. Not done: no served venue sits on an indexed chain yet, so index
+   fields reach no live answer until a licence class is recorded for XO, Polymarket or Limitless; no historical backfill
+   (the index starts at the safe head or a configured block, and every "not seen" answer names its range); Limitless rows
+   name no condition, so their settlement is not placed from the index; Protocol V2 fills carry no price; each list
+   covers at most three pages of a venue's own order.
 9. **Add quotes and route prepare**, then metering: subscription keys, x402 middleware, PayBox service listing.
 10. **Give the plugin its API mode.**
 
@@ -391,7 +422,10 @@ surface beyond the holdings view. Steps 8 to 10 are new product.
 - Hosting and region for `api/`, and whether the dApp's standalone build calls it by default or only with a key.
 - Pricing per call and per subscription tier.
 - Whether the API ever holds venue credentials to submit on a user's behalf (section 4 says not now).
-- Which `unknown`-licence venues to clear first so the API can serve them.
+- Which `unknown`-licence venues to clear first so the API can serve them. Until one is cleared the API serves Trueo
+  alone, and the chain index's fields reach no answer (step 8).
+- Decided by step 8 (forced): the index is SQLite behind `api/store.ts` `IndexStore` until a Postgres dependency can be
+  added; when, and whether Ponder replaces the indexer, stays open.
 - RPC providers per chain, and whether to run our own nodes from the start or only once a provider refuses us.
 - Which chain-settled venues to add after Polymarket and Limitless. Predict.fun and Opinion carry the most volume
   outside Polymarket, Kalshi and XO, and Predict.fun's API is unreadable without a key.

@@ -21,6 +21,8 @@
     "typecheck:relay": "tsc --noEmit -p tsconfig.relay.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
     "relay": "tsx relay/main.ts",
+    "api": "tsx api/main.ts",
+    "build:api": "node deploy/api/build.mjs",
     "unit": "tsx --test \"test/**/*.test.ts\"",
     "unit:bridge": "tsx --test \"bridge/test/**/*.test.ts\""
   },

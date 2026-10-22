@@ -1,0 +1,27 @@
+# Used by BuildKit when the Dockerfile is deploy/api/Dockerfile and the context is the repo root.
+# The Dockerfile copies only package.json, the lockfile, tsconfig.json, sdk/, api/ and the build script;
+# this keeps everything else (toolchain, dependencies, data, docs, other apps) out of the context upload.
+.git
+.tools
+.claude
+.playwright
+.playwright-browsers
+node_modules
+**/node_modules
+dist
+**/dist
+app
+bridge
+relay
+docs
+scripts
+test
+pm
+src
+**/data
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+**/*.lock
+.env
+.env.*
