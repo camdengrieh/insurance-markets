@@ -264,7 +264,7 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
    reads positions from the chain with no venue API call.
 7. **Add venue state and field-level sources to the SDK**, with a fake venue for each state. Done when a blocked
    venue's rows show chain fields and a stated reason instead of an error.
-8. **Stand up `api/`**: the indexer and the free read endpoints on the existing Railway pattern under `deploy/`.
+8. **Stand up `api/`**: the indexer and the free read endpoints on the existing container pattern under `deploy/` (AWS host, `deploy/aws`).
 9. **Add quotes and route prepare**, then metering: subscription keys, x402 middleware, PayBox service listing.
 10. **Give the plugin its API mode.**
 

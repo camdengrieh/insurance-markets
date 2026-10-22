@@ -23,7 +23,8 @@ function sources(dir: string, out: string[] = []): string[] {
 
 test("the deploy folder mirrors the recorder's and the Dockerfile keeps its promises", () => {
   const files = sources(DEPLOY).map((f) => relative(DEPLOY, f));
-  for (const f of ["Dockerfile", "build.mjs", "railway.json", ".dockerignore", "Dockerfile.dockerignore", "README.md", "entrypoint.sh"]) assert.ok(files.includes(f), f);
+  for (const f of ["Dockerfile", "build.mjs", ".dockerignore", "Dockerfile.dockerignore", "README.md", "entrypoint.sh"]) assert.ok(files.includes(f), f);
+  assert.equal(files.includes("railway.json"), false, "the Railway config was retired with the move to AWS");
   const d = read("Dockerfile");
   assert.match(d, /^FROM node:24-slim AS build$/m);
   assert.match(d, /^FROM node:24-slim AS runtime$/m);
@@ -35,10 +36,6 @@ test("the deploy folder mirrors the recorder's and the Dockerfile keeps its prom
   assert.equal(/\b(pnpm|npm) (add|update|install(?! --frozen-lockfile))/.test(d), false);
   const runtime = d.slice(d.indexOf("AS runtime"));
   assert.equal(/COPY (?!--from=build|deploy\/linker\/entrypoint\.sh)/.test(runtime), false);
-  const rj = JSON.parse(read("railway.json")) as { build: Record<string, string>; deploy: Record<string, unknown> };
-  assert.equal(rj.build["builder"], "DOCKERFILE");
-  assert.equal(rj.deploy["cronSchedule"], "0 */2 * * *");
-  assert.equal("healthcheckPath" in rj.deploy, false);
   const e = read("entrypoint.sh");
   assert.match(e, /exec setpriv --reuid=node/);
   assert.match(e, /exec node \/app\/linker\.mjs/);

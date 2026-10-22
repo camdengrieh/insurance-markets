@@ -31,13 +31,13 @@ RUN chmod 0555 /app/entrypoint.sh && chmod 0444 /app/linker.mjs && mkdir -p /dat
 
 # Everything the linker writes lives under DATA_DIR: the working registry it adds candidates to,
 # the state file, candidates.bundle.json and its pin, structure-groups.json. Mount a volume here.
-# No VOLUME instruction: Railway rejects it. Attach a Railway volume at /data instead.
+# No VOLUME instruction: some platforms reject it. Mount the persistent disk at /data (deploy/aws).
 ENV DATA_DIR=/data \
     LINKER_REGISTRY=/data/registry.json \
     LINKER_OUT=/data/out \
     NODE_ENV=production
 
 # The entrypoint starts as root only to make the mounted volume writable, then runs node as the
-# unprivileged user "node". As a Railway cron service the container runs `once` and exits 0.
+# unprivileged user "node". Started on a schedule (the systemd timer in deploy/aws), the container runs `once` and exits 0.
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["once"]

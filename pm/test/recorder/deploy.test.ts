@@ -23,11 +23,12 @@ function sources(dir: string, out: string[] = []): string[] {
 
 test("the deploy folder has the expected files and the Dockerfile keeps its promises", () => {
   const files = sources(DEPLOY).map((f) => relative(DEPLOY, f));
-  for (const f of ["Dockerfile", "build.mjs", "railway.json", ".dockerignore", "README.md", "entrypoint.sh"]) assert.ok(files.includes(f), f);
+  for (const f of ["Dockerfile", "build.mjs", ".dockerignore", "README.md", "entrypoint.sh"]) assert.ok(files.includes(f), f);
+  assert.equal(files.includes("railway.json"), false, "the Railway config was retired with the move to AWS");
   const d = read("Dockerfile");
   assert.match(d, /^FROM node:24-slim AS build$/m);
   assert.match(d, /^FROM node:24-slim AS runtime$/m);
-  // Railway rejects a VOLUME instruction ("use Railway Volumes"), so the data dir is only declared, not a docker volume.
+  // Some platforms reject a VOLUME instruction, so the data dir is only declared, not a docker volume.
   assert.doesNotMatch(d, /^VOLUME\b/m);
   assert.match(d, /DATA_DIR=\/data/);
   assert.match(d, /RECORDER_DB=\/data\/recorder\.sqlite/);
@@ -38,10 +39,6 @@ test("the deploy folder has the expected files and the Dockerfile keeps its prom
   // The runtime stage holds exactly one bundled file, not the sources.
   const runtime = d.slice(d.indexOf("AS runtime"));
   assert.equal(/COPY (?!--from=build|deploy\/recorder\/entrypoint\.sh)/.test(runtime), false);
-  const rj = JSON.parse(read("railway.json")) as { build: Record<string, string>; deploy: Record<string, unknown> };
-  assert.equal(rj.build["builder"], "DOCKERFILE");
-  assert.equal(rj.deploy["restartPolicyType"], "ON_FAILURE");
-  assert.equal("healthcheckPath" in rj.deploy, false);
   const e = read("entrypoint.sh");
   assert.match(e, /exec setpriv --reuid=node/);
   assert.match(e, /exec node \/app\/recorder\.mjs/);

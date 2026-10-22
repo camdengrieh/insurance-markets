@@ -9,7 +9,7 @@ DATA_DIR="${DATA_DIR:-/data}"
 # A container killed hard (out of memory, node crash, platform kill) leaves its lock file in the
 # volume, and the recorder would refuse to start for two hours. Only one container ever owns the
 # volume, so when this script is the container's main process (PID 1) the old lock is removed.
-# A shell opened later (railway ssh ... /app/entrypoint.sh status) is not PID 1 and leaves it alone.
+# A shell opened later (docker exec ... /app/entrypoint.sh status) is not PID 1 and leaves it alone.
 if [ "$$" = "1" ] && [ -n "${RECORDER_DB:-}" ]; then
   rm -f "${RECORDER_DB}.lock"
 fi

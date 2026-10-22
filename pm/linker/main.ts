@@ -49,7 +49,7 @@ const HELP = `pm-linker: proposes same-question links across venues; a person ap
 usage: tsx pm/linker/main.ts <command> --registry <file> --out <dir> [options]
 
 commands
-  once        one pass now, then exit (for cron, Railway cron, a scheduled routine)
+  once        one pass now, then exit (for cron, a container scheduler, a scheduled routine)
   run         loop every --interval (default 2h) until SIGINT or SIGTERM
   dry-run     print the requests a pass would make; no network, no writes
   report      counts per venue, category and block, and the top candidates (ids and hashes only)

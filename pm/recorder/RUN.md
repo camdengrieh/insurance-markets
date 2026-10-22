@@ -267,7 +267,7 @@ systemd timer: a `Type=oneshot` service with the same `ExecStart` (verb `once`) 
 ### Container
 
 `deploy/recorder/` builds one image from one bundled file (`node:24-slim`, a volume at `/data`, discovery
-on, SIGTERM handled) and explains how to run it on Railway; see `deploy/recorder/README.md`.
+on, SIGTERM handled) and explains the container; `deploy/aws/README.md` is where it runs.
 
 ### Scheduler (Kubernetes CronJob, cloud scheduler)
 

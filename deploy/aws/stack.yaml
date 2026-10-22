@@ -1,0 +1,323 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  insurance-markets research workers: one Graviton EC2 host running pm-recorder (continuous, one
+  EBS data volume) and pm-linker (systemd timer every two hours). No inbound ports; shell access
+  through SSM Session Manager. Images live in two ECR repositories; container logs go to CloudWatch.
+
+Parameters:
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public subnet (needs a route to the internet so the host can reach the venues, ECR and SSM).
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Must be the subnet's availability zone (deploy/aws/up.sh resolves it).
+  InstanceType:
+    Type: String
+    Default: t4g.small
+    AllowedPattern: "^(t4g|m7g|c7g|m6g|c6g)\\..+"
+    Description: Graviton (arm64) only; the images are built for linux/arm64.
+  DataVolumeGiB:
+    Type: Number
+    Default: 10
+    MinValue: 4
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+Resources:
+  RecorderRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AWS::StackName}/pm-recorder"
+      ImageTagMutability: MUTABLE
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep last 10","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
+  LinkerRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AWS::StackName}/pm-linker"
+      ImageTagMutability: MUTABLE
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep last 10","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
+  # Scratch bucket for moving the Railway volume contents onto the host (deploy/aws/migrate-volume.sh)
+  # and for copying reports back out. Private; objects expire after 14 days.
+  TransferBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-transfer-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire
+            Status: Enabled
+            ExpirationInDays: 14
+
+  RecorderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/pm-recorder"
+      RetentionInDays: !Ref LogRetentionDays
+
+  LinkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/pm-linker"
+      RetentionInDays: !Ref LogRetentionDays
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Policies:
+        - PolicyName: host
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents, logs:DescribeLogStreams]
+                Resource:
+                  - !GetAtt RecorderLogGroup.Arn
+                  - !GetAtt LinkerLogGroup.Arn
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
+                Resource: !Sub "${TransferBucket.Arn}/*"
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt TransferBucket.Arn
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: pm workers host; no inbound, all outbound
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+  # The data volume is a separate resource so a stack update that replaces the instance (new AMI,
+  # new instance type family) re-attaches the same data. Deleting the stack keeps the volume.
+  DataVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      Size: !Ref DataVolumeGiB
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-data" }
+
+  DataVolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref Host
+      VolumeId: !Ref DataVolume
+      Device: /dev/xvdf
+
+  Host:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
+      AvailabilityZone: !Ref AvailabilityZone
+      SecurityGroupIds: [!Ref SecurityGroup]
+      IamInstanceProfile: !Ref InstanceProfile
+      MetadataOptions:
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: 16, VolumeType: gp3, Encrypted: true, DeleteOnTermination: true }
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-host" }
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            # First-boot setup for the pm workers host. Idempotent: safe to re-run with
+            #   sudo bash /var/lib/cloud/instance/scripts/part-001
+            set -euo pipefail
+            exec > >(tee -a /var/log/pm-setup.log) 2>&1
+            echo "pm-setup start $(date -u +%FT%TZ)"
+
+            REGION="${AWS::Region}"
+            ACCOUNT="${AWS::AccountId}"
+            RECORDER_IMAGE="${RecorderRepo.RepositoryUri}:latest"
+            LINKER_IMAGE="${LinkerRepo.RepositoryUri}:latest"
+            RECORDER_LOGS="${RecorderLogGroup}"
+            LINKER_LOGS="${LinkerLogGroup}"
+            VOLID="$(echo '${DataVolume}' | tr -d '-')"
+
+            dnf install -y docker
+            systemctl enable --now docker
+
+            # Wait for the data volume (attached after the instance exists), format it once, mount by label.
+            DEV="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$VOLID"
+            for i in $(seq 1 120); do [ -e "$DEV" ] && break; sleep 5; done
+            [ -e "$DEV" ] || { echo "data volume $DEV never appeared"; exit 1; }
+            if ! blkid "$DEV" >/dev/null 2>&1; then mkfs.xfs -L pmdata "$DEV"; fi
+            mkdir -p /data
+            grep -q 'LABEL=pmdata' /etc/fstab || echo 'LABEL=pmdata /data xfs defaults,nofail 0 2' >> /etc/fstab
+            mountpoint -q /data || mount /data
+            mkdir -p /data/recorder /data/linker
+            chown 1000:1000 /data/recorder /data/linker
+
+            cat > /etc/pm-workers.env <<ENV
+            AWS_REGION=$REGION
+            RECORDER_IMAGE=$RECORDER_IMAGE
+            LINKER_IMAGE=$LINKER_IMAGE
+            RECORDER_LOGS=$RECORDER_LOGS
+            LINKER_LOGS=$LINKER_LOGS
+            ENV
+
+            cat > /usr/local/bin/pm-pull <<'SH'
+            #!/bin/bash
+            # Log in to ECR with the instance role and pull both images. Prints "changed" if the recorder image moved.
+            set -euo pipefail
+            . /etc/pm-workers.env
+            REGISTRY="$(echo "$RECORDER_IMAGE" | cut -d/ -f1)"
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
+            before="$(docker image inspect --format '{{.Id}}' "$RECORDER_IMAGE" 2>/dev/null || true)"
+            docker pull -q "$RECORDER_IMAGE"
+            docker pull -q "$LINKER_IMAGE" || echo "linker image not pushed yet"
+            after="$(docker image inspect --format '{{.Id}}' "$RECORDER_IMAGE")"
+            [ "$before" != "$after" ] && echo changed || echo unchanged
+            SH
+
+            cat > /usr/local/bin/pm-deploy <<'SH'
+            #!/bin/bash
+            # Pull the latest images and restart the recorder only if its image changed. The linker
+            # picks up a new image on its next timer run. Run by deploy/aws/push.sh through SSM.
+            set -euo pipefail
+            if [ "$(/usr/local/bin/pm-pull | tail -1)" = changed ] || ! systemctl is-active --quiet pm-recorder; then
+              systemctl reset-failed pm-recorder || true
+              systemctl restart pm-recorder
+              echo "pm-recorder restarted"
+            else
+              echo "pm-recorder unchanged"
+            fi
+            systemctl enable --now pm-linker.timer
+            docker image prune -f >/dev/null
+            systemctl --no-pager status pm-recorder | head -5
+            SH
+
+            cat > /usr/local/bin/pm-recorder-cmd <<'SH'
+            #!/bin/bash
+            # Run a recorder read command against the live volume: pm-recorder-cmd status | verify | gaps | report ...
+            set -euo pipefail
+            . /etc/pm-workers.env
+            exec docker run --rm -v /data/recorder:/data "$RECORDER_IMAGE" "$@"
+            SH
+            chmod 0755 /usr/local/bin/pm-pull /usr/local/bin/pm-deploy /usr/local/bin/pm-recorder-cmd
+
+            cat > /etc/systemd/system/pm-recorder.service <<'UNIT'
+            [Unit]
+            Description=pm-recorder (continuous order-book recorder)
+            After=docker.service data.mount
+            Requires=docker.service
+            RequiresMountsFor=/data
+            StartLimitIntervalSec=3600
+            StartLimitBurst=10
+
+            [Service]
+            EnvironmentFile=/etc/pm-workers.env
+            ExecStartPre=-/usr/bin/docker rm -f pm-recorder
+            ExecStart=/usr/bin/docker run --rm --name pm-recorder --stop-timeout 60 --memory 768m \
+              --log-driver awslogs --log-opt awslogs-region=${!AWS_REGION} --log-opt awslogs-group=${!RECORDER_LOGS} --log-opt awslogs-stream=recorder \
+              -v /data/recorder:/data ${!RECORDER_IMAGE}
+            ExecStop=/usr/bin/docker stop -t 60 pm-recorder
+            TimeoutStopSec=90
+            Restart=on-failure
+            RestartSec=15
+
+            [Install]
+            WantedBy=multi-user.target
+            UNIT
+
+            cat > /etc/systemd/system/pm-linker.service <<'UNIT'
+            [Unit]
+            Description=pm-linker one pass (candidates only; a person approves)
+            After=docker.service data.mount
+            Requires=docker.service
+            RequiresMountsFor=/data
+
+            [Service]
+            Type=oneshot
+            EnvironmentFile=/etc/pm-workers.env
+            ExecStartPre=/usr/bin/docker image inspect ${!LINKER_IMAGE}
+            ExecStart=/usr/bin/docker run --rm --name pm-linker --memory 768m \
+              --log-driver awslogs --log-opt awslogs-region=${!AWS_REGION} --log-opt awslogs-group=${!LINKER_LOGS} --log-opt awslogs-stream=linker \
+              -v /data/linker:/data ${!LINKER_IMAGE} once
+            UNIT
+
+            cat > /etc/systemd/system/pm-linker.timer <<'UNIT'
+            [Unit]
+            Description=run pm-linker every two hours (UTC, on the hour)
+
+            [Timer]
+            OnCalendar=*-*-* 00/2:00:00
+            RandomizedDelaySec=120
+            Persistent=false
+
+            [Install]
+            WantedBy=timers.target
+            UNIT
+
+            systemctl daemon-reload
+            systemctl enable pm-recorder pm-linker.timer
+            # Nothing is started here: the images do not exist until deploy/aws/push.sh runs, and it
+            # finishes by running pm-deploy on this host.
+            echo "pm-setup done $(date -u +%FT%TZ)"
+          - {}
+
+Outputs:
+  InstanceId:
+    Value: !Ref Host
+  RecorderRepositoryUri:
+    Value: !GetAtt RecorderRepo.RepositoryUri
+  LinkerRepositoryUri:
+    Value: !GetAtt LinkerRepo.RepositoryUri
+  TransferBucket:
+    Value: !Ref TransferBucket
+  DataVolumeId:
+    Value: !Ref DataVolume
+  RecorderLogGroup:
+    Value: !Ref RecorderLogGroup
+  LinkerLogGroup:
+    Value: !Ref LinkerLogGroup
+  Shell:
+    Value: !Sub "aws ssm start-session --region ${AWS::Region} --target ${Host}"

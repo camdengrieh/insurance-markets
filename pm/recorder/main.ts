@@ -468,7 +468,7 @@ async function readCommand(
   return 0;
 }
 
-// Wire process signals only when run as a script. SIGTERM (container stop, Railway redeploy) and
+// Wire process signals only when run as a script. SIGTERM (container stop, redeploy) and
 // SIGINT end the loop cleanly: the run is closed and the lock released. If that takes more than
 // 25 s (a request stuck beyond its timeout), the process exits non-zero instead of waiting to be killed.
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {

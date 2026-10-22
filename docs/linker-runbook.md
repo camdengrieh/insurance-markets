@@ -189,9 +189,9 @@ reason; it never runs `approve`, and the CLI would refuse it if it tried. Do not
 routine: it has no paid body and the stdout report is not a place Quotient data should be redistributed from.
 Keep the routine's prompt free of names, emails and home paths (the privacy rule).
 
-**B. A Railway cron service** (`deploy/linker`): the container runs `once` on `0 */2 * * *` against a
+**B. The scheduled container on AWS** (`deploy/linker`, `deploy/aws`): a systemd timer runs `once` every two hours against a
 registry on its volume; a person copies the registry out to review it. Steps and limits in
-`deploy/linker/README.md`. Not verified on Railway.
+`deploy/linker/README.md`. First real run due 2026-10-22 06:00 UTC.
 
 ## 8. The dApp
 
