@@ -18,7 +18,7 @@ import { assembleCore, type CoreServices } from "./main.js";
 import { confirmFundingAbsent } from "./funding.js";
 import { DEFAULT_HTTP, RELAY_ENV, type RelayConfig, type RelayHttpConfig } from "./config.js";
 import type { AccountDirectory } from "./health.js";
-import { withDecodedBlock } from "./prepared.js";
+import { keepPreparedAnswer, withDecodedBlock } from "./prepared.js";
 import { routes as defaultRoutes } from "./routes.js";
 import { READ_ROUTE_KEYS, WRITE_ROUTE_KEYS } from "./server.js";
 import type { FsLike } from "./store.js";
@@ -26,7 +26,7 @@ import type { KdfParams } from "./crypto.js";
 import type { RelayContext, RelayServices, RouteTable } from "./types.js";
 import type { UserOpExtensions, UserOpOptions } from "./userops.js";
 import { credentialL2Auth, healAtStart, prepareWiring, runUpkeep } from "./wiring.js";
-import { OWNER_WRITE_ROUTES, OwnerPolicy, SUBMIT_ROUTES, type OwnerGate, type OwnerMode, type OwnerPolicyView } from "./owners.js";
+import { checkOwnerScopedRead, OWNER_WRITE_ROUTES, OwnerPolicy, SUBMIT_ROUTES, type OwnerGate, type OwnerMode, type OwnerPolicyView } from "./owners.js";
 import { NAMESPACES, type Json } from "./store.js";
 
 export { ALLOW_ANY_OWNER_ENV, OWNER_ENV, type OwnerMode, type OwnerPolicyView } from "./owners.js";
@@ -252,6 +252,10 @@ class OwnerConfirmation implements OwnerGate {
     this.#policy.checkRoute(route, owner);
   }
 
+  serves(owner: string): boolean {
+    return this.#policy.serves(owner);
+  }
+
   async bindAfterSubmit(preparedId: string): Promise<void> {
     await this.#policy.bindAfterSubmit(preparedId);
     if (this.#policy.view().owners.length > 0 && readConfirmation(this.#services.state.get<Json>(NAMESPACES.meta, CONFIRM_KEY)) !== undefined) {
@@ -397,7 +401,7 @@ export async function createEmbeddedRelay(options: EmbeddedRelayOptions): Promis
       input = parsed.data;
     }
 
-    // Which owners this process serves.
+    // Which owners this process serves: for a write, the owner it names; for a read of a stored item, the item's owner.
     if (OWNER_WRITE_ROUTES.has(routeKey)) {
       try {
         const wanted = (input as { owner: string }).owner;
@@ -406,6 +410,11 @@ export async function createEmbeddedRelay(options: EmbeddedRelayOptions): Promis
       } catch (error) {
         return refuse(replyFromError(error));
       }
+    }
+    try {
+      checkOwnerScopedRead(owners, routeKey, input, core.services);
+    } catch (error) {
+      return refuse(replyFromError(error));
     }
 
     // The handler, with the answer-by budget. The caller's cancel reaches the handler only until the
@@ -436,6 +445,8 @@ export async function createEmbeddedRelay(options: EmbeddedRelayOptions): Promis
           void audit.write({ ev: "error", rid: requestId, route: routeKey, code: "response_invalid", outcome: "error" });
           return errorReply("internal", "The relay produced an answer that does not match its contract. Nothing was sent.");
         }
+        // R9: a prepared item is kept as it is sent, so GET /v1/prepared/{id} can return exactly this answer.
+        await keepPreparedAnswer(routeKey, checked.data, core.services);
         if (submitted !== undefined) await (confirmation ?? owners).bindAfterSubmit(submitted).catch(() => undefined);
         return { status: 200, body: checked.data };
       } catch (error) {

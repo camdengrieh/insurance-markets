@@ -151,9 +151,6 @@ export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 export const FORECAST_STATES = ["warning", "caution", "converged", "converging", "sideways", "diverging"] as const;
 export type ForecastState = (typeof FORECAST_STATES)[number];
 
-export const QUOTE_METHODS = ["midpoint", "bid", "ask", "last", "fresh_last", "graph_snapshot"] as const;
-export type QuoteMethod = (typeof QUOTE_METHODS)[number];
-
 export const RETIRED_REASONS = ["resolved", "flipped", "fading_q", "expired", "under_review"] as const;
 export type RetiredReason = (typeof RETIRED_REASONS)[number];
 

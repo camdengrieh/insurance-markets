@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { clobCapAmount, computeClobAmounts, decodeClobAmounts, formatMicro, parseClobPriceMicro, parseClobSharesMicro, parseTickMicro } from "../src/clob/amounts.js";
-import { CLOB_CAP_FEE_BPS, POLYMARKET_TICK_RULES, polymarketTickRule } from "../src/clob/venues.js";
+import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, decodeClobAmounts, formatMicro, parseClobPriceMicro, parseClobSharesMicro, parseTickMicro } from "../src/clob/amounts.js";
+import { CLOB_CAP_FEE_BPS, LIMITLESS_MIN_MAKER_AMOUNT, LIMITLESS_PRICE_TICK, POLYMARKET_TICK_RULES, polymarketTickRule } from "../src/clob/venues.js";
 import { SigningError } from "../src/xo/signing/errors.js";
 
 // Exact integer amounts for the CLOB venues. The one documented example (place-orders.md: "BUY 10 shares at 0.52 gives
@@ -96,5 +96,35 @@ describe("the cap with the policy fee ceiling", () => {
     assert.equal(sell.capAtomic, 10_000_000n, "face value of 10 shares beats proceeds of 0.10");
     assert.equal(sell.minProceedsAtomic, 90_000n);
     assert.equal(sell.maxOutlayAtomic, null);
+  });
+});
+
+describe("Limitless amount rules (OpenAPI Order.price and makerAmount, create-order.md, @limitless-exchange/sdk 1.3.0)", () => {
+  it("pins the venue-wide 0.001 tick and the 100 raw-unit makerAmount floor", () => {
+    assert.equal(LIMITLESS_PRICE_TICK, "0.001");
+    assert.equal(parseTickMicro(LIMITLESS_PRICE_TICK), 1_000n);
+    assert.equal(LIMITLESS_MIN_MAKER_AMOUNT, 100n);
+  });
+
+  it("requires shares on the SDK's sharesStep (priceScale / tickInt = 1,000 raw units) and makerAmount of at least 100", () => {
+    assert.equal(code(() => checkLimitlessAmounts({ sharesMicro: 10_000n, makerAmount: 100n })), "ok");
+    assert.equal(code(() => checkLimitlessAmounts({ sharesMicro: 1_000n, makerAmount: 100n })), "ok");
+    assert.equal(code(() => checkLimitlessAmounts({ sharesMicro: 1_500n, makerAmount: 100n })), "invalid_size");
+    assert.equal(code(() => checkLimitlessAmounts({ sharesMicro: 10_000n, makerAmount: 99n })), "below_minimum");
+    // A BUY of 0.01 shares at 0.001 has makerAmount 10: on the grid, under the floor.
+    const tiny = computeClobAmounts({ side: 0, price: "0.001", shares: "0.01", grid: { tick: LIMITLESS_PRICE_TICK, priceDecimals: 3 }, sizeDecimals: 2, minSharesMicro: 0n });
+    assert.equal(tiny.makerAmount, 10n);
+    assert.equal(code(() => checkLimitlessAmounts(tiny)), "below_minimum");
+    // A SELL's makerAmount is its contracts: 0.01 shares is 10,000 raw units, over the floor.
+    const sell = computeClobAmounts({ side: 1, price: "0.001", shares: "0.01", grid: { tick: LIMITLESS_PRICE_TICK, priceDecimals: 3 }, sizeDecimals: 2, minSharesMicro: 0n });
+    assert.equal(code(() => checkLimitlessAmounts(sell)), "ok");
+  });
+
+  it("every price on the 0.001 grid times any two-decimal size is an exact integer of raw units (price x contracts exact)", () => {
+    for (const price of ["0.001", "0.123", "0.5", "0.999"]) {
+      for (const shares of ["0.01", "0.37", "1", "123.45"]) {
+        assert.equal(code(() => computeClobAmounts({ side: 0, price, shares, grid: { tick: LIMITLESS_PRICE_TICK, priceDecimals: 3 }, sizeDecimals: 2, minSharesMicro: 0n })), "ok", `${shares} at ${price}`);
+      }
+    }
   });
 });

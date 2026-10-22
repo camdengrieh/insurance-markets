@@ -439,6 +439,41 @@ describe("what is dropped", () => {
     }
   });
 
+  it("while PayBox waits for approval, the client is told to stop (stillAllowed) after a kill, a disarm or a rejected card, and the kill also aborts its signal", async () => {
+    const cases: Array<[string, (s: Setup) => Promise<void> | void, string, boolean]> = [
+      ["kill", async (s) => void (await postJson(s.rig.d.port, "/ui/kill", {}, bearer(s.rig.ui))), "kill_switch", true],
+      ["disarm", async (s) => void (await postJson(s.rig.d.port, "/ui/disarm", {}, bearer(s.rig.ui))), "precondition_failed", false],
+      ["reject", (s) => void s.rig.inbox.reject(ID_ORDER), "precondition_failed", false],
+    ];
+    for (const [name, act, code, aborts] of cases) {
+      const s = await setup();
+      const gate = deferred<void>();
+      const seen: { before?: boolean; after?: boolean; aborted?: boolean } = {};
+      // A client that behaves like the CLI client between its steps: it asks stillAllowed before the key signs.
+      s.client.signer = async (call, signal) => {
+        seen.before = call.stillAllowed?.();
+        await gate.promise;
+        seen.after = call.stillAllowed?.();
+        seen.aborted = signal.aborted;
+        return seen.after === true ? { ok: true, signature: await signWith(OWNER_KEY_ACCOUNT, digestOfIntent(call.intent)) } : { ok: false, code: "aborted" };
+      };
+      s.rig.show(orderItem());
+      await s.rig.armed();
+      const pending = s.rig.sign(ID_ORDER);
+      await waitUntil(() => s.client.signCalls.length === 1);
+      await act(s);
+      gate.resolve();
+      const reply = await pending;
+      assert.equal(seen.before, true, name);
+      assert.equal(seen.after, false, name);
+      assert.equal(seen.aborted, aborts, name);
+      assert.equal(errorOf(reply).code, code, name);
+      if (code === "precondition_failed") assert.equal(errorOf(reply).details?.["reason"], "aborted", name);
+      assert.equal(s.rig.submit.requests.length, 0, name);
+      assert.notEqual(s.rig.inbox.get(ID_ORDER)?.state, "signed", name);
+    }
+  });
+
   it("the wait itself is limited to the item's remaining life less the submit margin", async () => {
     const s = await setup();
     s.rig.show(orderItem());

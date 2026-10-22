@@ -9,7 +9,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const A = "0x" + "a".repeat(64);
 const B = "0x" + "b".repeat(64);
 const candidate = { linkId: "lnk_" + "1".repeat(32), legs: [{ venue: "polymarket" as const, marketId: A }, { venue: "polymarket" as const, marketId: B }] };
-const row = (id: string, q: number) => ({ venue: "polymarket", marketKey: `polymarket:${id}`, condition_id: id, question: "synthetic", quotient_odds: q, market_odds: 0.5, q_coverage: "forecasting", forecast: { created_at: "2026-10-20T11:00:00Z" }, venue_quote: { quote_method: "midpoint", freshness: "fresh", observed_at: "2026-10-20T11:55:00Z" } });
+// A synthetic mispriced row carrying every field the shared validator (sdk/signals/quotient) requires; not Quotient data.
+const row = (id: string, q: number) => ({ venue: "polymarket", marketKey: `polymarket:${id}`, nativeMarketId: id, condition_id: id, question: "synthetic", quotient_odds: q, market_odds: 0.5, spread: Number((q - 0.5).toFixed(2)), spread_direction: "q_higher", q_coverage: "forecasting", forecast: { created_at: "2026-10-20T11:00:00Z", probability: q }, venue_quote: { quote_method: "midpoint", freshness: "fresh", observed_at: "2026-10-20T11:55:00Z" } });
 const NOW = Date.parse("2026-10-20T12:00:00Z");
 
 test("off by default, with the clause; on without a body reads nothing", () => {

@@ -1,19 +1,32 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, describe, it } from "node:test";
 
+import { getAddress } from "viem";
+
+import { clobCapAmount, computeClobAmounts } from "../src/clob/amounts.js";
+import { buildDecodedClobOrder, rebuildClobOrder } from "../src/clob/decoded.js";
+import { depositWalletAddress } from "../src/clob/polymarket/deposit-wallet.js";
+import { POLYMARKET_EXCHANGES } from "../src/clob/venues.js";
 import { loadConfig } from "../src/config.js";
 import { createRelayClientFromConfig } from "../src/relay/client.js";
-import { SAFETY_NOTICES, marketTitleSlot, type RelayCallOptions } from "../src/relay/contract.js";
-import { GET_PREPARED_TOOL, preparedPath, registerPreparedTools } from "../src/tools/prepared.js";
-import { UNVERIFIED_WARNING, WITHHELD_LINE, cleanDecodedForOutput } from "../src/tools/relay-tool-kit.js";
+import { PREPARED_GET_SINCE_RELAY_VERSION, SAFETY_NOTICES, digestTag, marketTitleSlot, toPayboxIntent, type PreparedSign, type RelayCallOptions, type RelayClient } from "../src/relay/contract.js";
+import { GET_PREPARED_TOOL, preparedPath, registerPreparedTools, relayVersionPredatesPreparedGet } from "../src/tools/prepared.js";
+import { UNVERIFIED_WARNING, WITHHELD_LINE, cleanDecodedForOutput, type RelayToolDeps } from "../src/tools/relay-tool-kit.js";
+import { RELAY_VERSION } from "../relay/config.js";
+import { routes as preparedRoutes } from "../relay/prepared.js";
+import { startEmbedded } from "./local-helpers.js";
+import { TEST_RELAY_KEY } from "./relay-core-helpers.js";
+import { cleanup, orderBody, startRig, submitOk, type Rig } from "./relay-orders-helpers.js";
 import { verifiedDeployItem } from "./tools-decoded-helpers.js";
-import { ACCOUNT, ENV_ON, NOW, OWNER, StubRelay, asObj, closeAll, connect, fail, makeDeps, must, ok, orderPrepared, validateAgainstTool } from "./tools-helpers.js";
+import { ACCOUNT, ENV_ON, NOW, OWNER, StubRelay, allFlags, asObj, closeAll, connect, fail, isoSecond, makeDeps, must, ok, orderPrepared, validateAgainstTool } from "./tools-helpers.js";
 
 afterEach(closeAll);
+const rigs: Rig[] = [];
+after(() => cleanup(rigs));
 
 const ID = "00112233445566778899aabbccddeeff";
 
-// The stub answers GET /v1/prepared/{id} (a path the relay contract does not list yet) from a table.
+// The stub answers GET /v1/prepared/{id} from a table, like a relay holding those items.
 class PreparedRelay extends StubRelay {
   readonly stored = new Map<string, unknown>();
   override async get(path: string, options?: RelayCallOptions): Promise<never> {
@@ -143,6 +156,54 @@ describe("xo_get_prepared: a stored item", () => {
     assert.equal(out["sign_with_paybox"], undefined);
   });
 
+  it("passes on a Polymarket Deposit Wallet order whose account is the wallet derived from the owner, and refuses another owner's wallet", async () => {
+    const owner = getAddress(OWNER);
+    const wallet = depositWalletAddress(owner, "beacon");
+    const amounts = computeClobAmounts({ side: 0, price: "0.52", shares: "10", grid: { tick: "0.01", priceDecimals: 2 }, sizeDecimals: 2, minSharesMicro: 0n });
+    const cap = clobCapAmount(amounts);
+    const decoded = buildDecodedClobOrder({
+      owner,
+      amounts,
+      feeBps: cap.feeBps,
+      tif: "GTC",
+      postOnly: false,
+      ttlS: null,
+      marketId: "0x99b2ff7bfebd5e3dd1bd4d0d3d632e09e52b4451653d52eb3be5df917b936cc5",
+      tick: "0.01",
+      minSize: "5",
+      order: {
+        venue: "polymarket",
+        expiration: 0n,
+        domain: { version: POLYMARKET_EXCHANGES.v2.version, verifyingContract: POLYMARKET_EXCHANGES.v2.verifyingContract },
+        order: { salt: 778n, maker: wallet, signer: wallet, tokenId: 1n, makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side: 0, signatureType: 3, timestamp: 1792411200000n, metadata: `0x${"00".repeat(32)}`, builder: `0x${"00".repeat(32)}` },
+      },
+    });
+    const rebuilt = rebuildClobOrder(decoded);
+    if (!rebuilt.ok) throw new Error(rebuilt.reason);
+    const item = {
+      prepared_id: ID,
+      kind: "clob_order",
+      owner,
+      account: wallet,
+      expires_at: isoSecond(NOW + 240_000),
+      sign: { intent: { op: "typedData", typedData: rebuilt.typed_data }, expected_digest: rebuilt.digest, digest_form: "eip712OrderHash" },
+      summary: { lines: rebuilt.lines, digest_tag: digestTag(rebuilt.digest), inner_hash_tag: digestTag(rebuilt.inner_hash), inner_hash_kind: "typed_data_hash" },
+      caps: { reserved_usd: decoded.terms.cap_usd, day_remaining_usd: "44.28" },
+      capabilities: { PM1: "unknown", PM2: "unknown", PB3: "unknown" },
+      warnings: [],
+      decoded,
+      quote: { venue: "polymarket", price: decoded.terms.price, shares: decoded.terms.shares, max_outlay_usd: decoded.terms.max_outlay_usd ?? "0", fee_bound_bps: decoded.terms.fee_bound_bps, expires_at: null },
+    };
+    const clobOn = { env: { ...ENV_ON, ENABLE_CLOB_POLYMARKET: "1", ENABLE_CLOB_LIMITLESS: "1" } };
+    const good = must((await (await rig(item, clobOn)).harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+    assert.equal(good["outcome"], "prepared");
+    assert.equal(good["account"], wallet);
+    assert.equal(asObj(good["verification"])["status"], "verified");
+    const stranger = depositWalletAddress(getAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"), "beacon");
+    const bad = must((await (await rig({ ...item, account: stranger }, clobOn)).harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+    assert.equal(bad["code"], "account_mismatch");
+  });
+
   it("refuses an answer for another id, an answer that is not a prepared item, and an account that is not the derived one", async () => {
     const other = await rig(verifiedDeployItem({ preparedId: "ffeeddccbbaa99887766554433221100" }));
     assert.equal(must((await other.harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured)["code"], "internal");
@@ -178,29 +239,65 @@ describe("xo_get_prepared: a stored item", () => {
   });
 });
 
-describe("xo_get_prepared: a relay that cannot do it", () => {
-  it("says so when the relay answers not_implemented or not_found", async () => {
-    const plain = await rig(undefined, { relay: new StubRelay() });
-    const first = must((await plain.harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
-    assert.equal(first["code"], "not_implemented");
-    const missing = await rig();
-    const second = must((await missing.harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
-    assert.equal(second["code"], "not_found");
-    assert.match(String(second["next_action"]), /expire|again/);
-  });
+function health(version: string) {
+  return { status: "ok", version, time: "2026-10-19T12:00:00Z", kill: false, flags: allFlags(), tripwires: { ok: true, tripped: [] }, upstream: {} };
+}
 
-  it("maps the real client's refusal of a path that is not in the contract to not_implemented, without sending anything", async () => {
-    // The real client checks the path against the relay contract before it connects; this URL is never reached.
-    const env = { XO_RELAY_URL: "http://127.0.0.1:1", XO_RELAY_KEY: "test-relay-key-AbCdEf0123456789-XYZ" };
-    const loaded = loadConfig(env);
-    const built = makeDeps({ env });
-    const deps = { ...built.deps, relay: () => createRelayClientFromConfig(loaded.config) };
-    const harness = await connect((server) => registerPreparedTools(server, deps));
+describe("xo_get_prepared: what the relay says instead of an item", () => {
+  it("refuses an older relay that has no such route as a version mismatch, naming the relay's version", async () => {
+    const relay = new StubRelay().on("GET /v1/prepared/:id", fail("not_found", "No such route.")).on("GET /v1/health", health("0.2.0"));
+    const { harness } = await rig(undefined, { relay });
     const result = await harness.call(GET_PREPARED_TOOL, { prepared_id: ID });
     assert.equal(result.isError, true);
     const out = must(result.structured);
     assert.equal(out["code"], "not_implemented");
-    assert.match(result.text, /cannot return a prepared item by id/);
+    assert.match(String(out["message"]), /reports version 0\.2\.0/);
+    assert.ok(String(out["message"]).includes(PREPARED_GET_SINCE_RELAY_VERSION));
+    assert.match(String(out["next_action"]), /update the relay/);
+    assert.equal(out["sign_with_paybox"], undefined);
+    assert.deepEqual(relay.calls.map((call) => call.path), [`/v1/prepared/${ID}`, "/v1/health"]);
+  });
+
+  it("keeps a current relay's not_found, and says not to sign anything for the id", async () => {
+    const relay = new StubRelay().on("GET /v1/prepared/:id", fail("not_found", "No such prepared item (it may have expired or never existed).")).on("GET /v1/health", health(PREPARED_GET_SINCE_RELAY_VERSION));
+    const { harness } = await rig(undefined, { relay });
+    const out = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+    assert.equal(out["code"], "not_found");
+    assert.match(String(out["next_action"]), /Do not sign anything for this id/);
+  });
+
+  it("lets the relay's own answer stand when its version cannot be read", async () => {
+    const missing = await rig();
+    const out = must((await missing.harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+    assert.equal(out["code"], "not_found");
+    const plain = await rig(undefined, { relay: new StubRelay() });
+    assert.equal(must((await plain.harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured)["code"], "not_implemented");
+  });
+
+  it("passes on expired and prepared_used, and says never to resend an item whose send is ambiguous", async () => {
+    const cases = [
+      { error: fail("expired", "This prepared item expired. Prepare it again.", { state: "expired" }), code: "expired", next: /Prepare again/ },
+      { error: fail("prepared_used", "This prepared item was already submitted and accepted.", { state: "accepted" }), code: "prepared_used", next: /single use/ },
+      { error: fail("prepared_used", "A send for this prepared item was started and its outcome is unknown.", { state: "ambiguous", reason: "interrupted_by_restart" }), code: "prepared_used", next: /Do NOT sign or submit it again.*xo_order_status/ },
+    ] as const;
+    for (const entry of cases) {
+      const { harness } = await rig(undefined, { relay: new StubRelay().on("GET /v1/prepared/:id", entry.error) });
+      const out = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+      assert.equal(out["code"], entry.code);
+      assert.match(String(out["next_action"]), entry.next);
+      assert.equal(out["sign_with_paybox"], undefined);
+      assert.equal(out["prepared"], undefined);
+    }
+  });
+
+  it("compares relay versions numerically", () => {
+    assert.equal(relayVersionPredatesPreparedGet("0.2.0"), true);
+    assert.equal(relayVersionPredatesPreparedGet("0.2.9"), true);
+    assert.equal(relayVersionPredatesPreparedGet("0.3.0"), false);
+    assert.equal(relayVersionPredatesPreparedGet("0.10.0"), false);
+    assert.equal(relayVersionPredatesPreparedGet("1.0.0-rc.1"), false);
+    assert.equal(relayVersionPredatesPreparedGet("dev"), undefined);
+    assert.equal(relayVersionPredatesPreparedGet(RELAY_VERSION), false, "this repository's relay serves the route");
   });
 
   it("reports a relay that is not configured like every other tool", async () => {
@@ -211,6 +308,69 @@ describe("xo_get_prepared: a relay that cannot do it", () => {
     const harness = await connect((server) => registerPreparedTools(server, deps));
     const out = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
     assert.equal(out["code"], "relay_not_configured");
+  });
+});
+
+describe("xo_get_prepared: against the real relay", () => {
+  async function overHttp(): Promise<{ readonly r: Rig; readonly deps: RelayToolDeps }> {
+    const r = await startRig({ extraRoutes: preparedRoutes });
+    rigs.push(r);
+    const env = { ...ENV_ON, XO_RELAY_URL: r.relay.url, XO_RELAY_KEY: TEST_RELAY_KEY };
+    const loaded = loadConfig(env);
+    const built = makeDeps({ env });
+    return { r, deps: { ...built.deps, relay: () => createRelayClientFromConfig(loaded.config) } };
+  }
+
+  it("fetches an order the relay prepared by its id over HTTP, rebuilds it to verified, and hands out the item's own intent", async () => {
+    const { r, deps } = await overHttp();
+    const prepared = await r.post("/v1/order/prepare", orderBody(r));
+    assert.ok(prepared.ok, JSON.stringify(prepared));
+    if (!prepared.ok) return;
+    const harness = await connect((server) => registerPreparedTools(server, deps));
+    const result = await harness.call(GET_PREPARED_TOOL, { prepared_id: prepared.data.prepared_id });
+    assert.equal(result.isError, false, result.text);
+    const out = must(result.structured);
+    assert.equal(out["outcome"], "prepared");
+    assert.equal(asObj(out["verification"])["status"], "verified");
+    assert.equal(asObj(out["prepared"])["prepared_id"], prepared.data.prepared_id);
+    assert.deepEqual(asObj(out["prepared"])["decoded"], prepared.data.decoded);
+    assert.deepEqual(out["sign_with_paybox"], toPayboxIntent(prepared.data.sign as PreparedSign));
+    assert.match(String(out["next_action"]), /xo_submit_order/);
+    assert.equal(await validateAgainstTool(harness, GET_PREPARED_TOOL, out), undefined);
+    // Reading it reserved nothing and spent nothing: the item can still be submitted.
+    assert.equal((await submitOk(r, prepared.data)).state, "accepted");
+    const used = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: prepared.data.prepared_id })).structured);
+    assert.equal(used["code"], "prepared_used");
+    assert.equal(used["sign_with_paybox"], undefined);
+  });
+
+  it("refuses an id the relay does not hold with not_found", async () => {
+    const { deps } = await overHttp();
+    const harness = await connect((server) => registerPreparedTools(server, deps));
+    const out = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: ID })).structured);
+    assert.equal(out["code"], "not_found");
+  });
+
+  it("fetches an item from the in-process relay, and finds nothing once that relay serves only another owner", async () => {
+    const started = await startEmbedded({ env: { XO_OWNER: OWNER } });
+    const item = verifiedDeployItem();
+    const store = started.relay.services.prepared;
+    const sign = item["sign"] as PreparedSign;
+    const record = await store.create({ kind: "userop", owner: OWNER, account: ACCOUNT, digest: sign.expected_digest as `0x${string}`, digestForm: "userOpHash", payload: null });
+    assert.deepEqual(await store.keepAnswer({ ...item, prepared_id: record.id }), { kept: true });
+    const embeddedDeps = (client: RelayClient): RelayToolDeps => ({ ...makeDeps().deps, relay: () => client });
+    const harness = await connect((server) => registerPreparedTools(server, embeddedDeps(started.relay.client)));
+    const out = must((await harness.call(GET_PREPARED_TOOL, { prepared_id: record.id })).structured);
+    assert.equal(out["outcome"], "prepared");
+    assert.equal(asObj(out["verification"])["status"], "verified");
+    assert.match(String(out["next_action"]), /xo_submit_userop/);
+
+    await started.relay.close();
+    const other = await startEmbedded({ dir: started.dir, env: { XO_OWNER: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" } });
+    const hidden = await connect((server) => registerPreparedTools(server, embeddedDeps(other.relay.client)));
+    const refused = must((await hidden.call(GET_PREPARED_TOOL, { prepared_id: record.id })).structured);
+    assert.equal(refused["code"], "not_found");
+    assert.equal(refused["prepared"], undefined);
   });
 });
 

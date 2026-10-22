@@ -23,7 +23,8 @@ export type SigningErrorCode =
   | "invalid_secret"
   | "invalid_credential"
   | "invalid_canonical_mode"
-  // A typed, failing-closed case this build does not implement (a Deposit Wallet order on Polymarket).
+  // A typed, failing-closed case this build does not implement. No builder raises it today (the Polymarket Deposit
+  // Wallet order it was added for is built since 2026-10-21); kept so a future unbuilt case has a stable code.
   | "not_implemented";
 
 export class SigningError extends Error {

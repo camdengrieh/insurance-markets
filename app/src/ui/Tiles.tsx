@@ -5,7 +5,7 @@ import { Badge, Button, type Tone } from "./primitives";
 import { UntrustedText } from "./UntrustedText";
 import { venueName } from "./venue-names";
 
-// Placeholder tiles for everything a screen cannot show as data. The rule behind all of them: a missing,
+// State tiles for everything a screen cannot show as data. The rule behind all of them: a missing,
 // blocked, off or unproven thing is SAID, in words, in the place the data would be. It is never an empty
 // table, a zero, or a blank that looks like "no liquidity" (dapp-design 4.1 principle 4).
 //

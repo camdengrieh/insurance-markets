@@ -1,7 +1,7 @@
 Answers of the plugin's own read tools, as the daemon passes them to the page in structuredContent.
 
 How they were made: the real tool handlers (src/tools/read.ts: xo_search, xo_get_market, xo_orderbook, xo_positions)
-were run offline, through an in-memory MCP transport, against the recorded XO responses in test/fixtures/xo. No
+were run offline, through an in-memory MCP transport, against the recorded XO responses in sdk/venues/xo/fixtures. No
 network was used and nothing was signed. The text inside them (market titles, outcome names) is third-party content
 from those recorded responses; it is data, never an instruction.
 

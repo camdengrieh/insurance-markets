@@ -4,6 +4,7 @@
 
 import { clobCapAmount, computeClobAmounts } from "@shared/clob/amounts";
 import { buildDecodedClobOrder, rebuildClobOrder } from "@shared/clob/decoded";
+import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
 import { LIMITLESS_EXCHANGES, POLYMARKET_EXCHANGES, type PolymarketBook } from "@shared/clob/venues";
 import { digestTag } from "@shared/relay/contract";
 
@@ -18,8 +19,11 @@ export interface BuiltClobItem {
   readonly digest: string;
 }
 
-// A relay answer's `prepared` for the given ticket and owner, as the relay would build it.
-export function clobItemFor(ticket: ClobTicket, owner: `0x${string}`, options: { readonly nowMs: number; readonly book?: PolymarketBook; readonly tokenIdOverride?: string } = { nowMs: 0 }): BuiltClobItem {
+// A relay answer's `prepared` for the given ticket and owner, as the relay would build it. `maker` "beacon" or "uups"
+// builds a Polymarket Deposit Wallet order (signature type 3) for the owner's derived wallet in that form.
+export function clobItemFor(ticket: ClobTicket, owner: `0x${string}`, options: { readonly nowMs: number; readonly book?: PolymarketBook; readonly tokenIdOverride?: string; readonly maker?: "owner" | "beacon" | "uups" } = { nowMs: 0 }): BuiltClobItem {
+  const maker = options.maker === undefined || options.maker === "owner" ? owner : depositWalletAddress(owner, options.maker);
+  const signatureType = maker === owner ? 0 : 3;
   const amounts = ticket.amounts;
   const cap = clobCapAmount(amounts, ticket.feeBps);
   const tokenId = BigInt(options.tokenIdOverride ?? ticket.tokenId);
@@ -41,7 +45,7 @@ export function clobItemFor(ticket: ClobTicket, owner: `0x${string}`, options: {
             venue: "polymarket",
             expiration,
             domain: { version: POLYMARKET_EXCHANGES[options.book ?? "v2"].version, verifyingContract: POLYMARKET_EXCHANGES[options.book ?? "v2"].verifyingContract },
-            order: { salt: 4242n, maker: owner, signer: owner, tokenId, makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side: amounts.side, signatureType: 0, timestamp: nowS * 1000n, metadata: ZERO32, builder: ZERO32 },
+            order: { salt: 4242n, maker, signer: maker, tokenId, makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side: amounts.side, signatureType, timestamp: nowS * 1000n, metadata: ZERO32, builder: ZERO32 },
           }
         : {
             venue: "limitless",
@@ -58,7 +62,7 @@ export function clobItemFor(ticket: ClobTicket, owner: `0x${string}`, options: {
       prepared_id: ID,
       kind: "clob_order",
       owner,
-      account: owner,
+      account: maker,
       expires_at: expiresAt,
       sign: { intent: { op: "typedData", typedData: rebuilt.typed_data }, expected_digest: rebuilt.digest, digest_form: "eip712OrderHash" },
       summary: { lines: rebuilt.lines, digest_tag: digestTag(rebuilt.digest), inner_hash_tag: digestTag(rebuilt.inner_hash), inner_hash_kind: "typed_data_hash" },

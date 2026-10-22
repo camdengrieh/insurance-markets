@@ -323,7 +323,8 @@ export function udxRuleFields(market: { readonly description?: unknown; readonly
   return { description: market.description, expires_at: market.expires_at };
 }
 
-// The shape of an XO market detail as src/xo/client.ts decodes it (structural, so the SDK imports nothing).
+// The shape of an XO market detail as sdk/venues/xo/api/client.ts decodes it (structural, so this module does not
+// depend on the venue reader).
 export interface XoRuleDetail {
   readonly rules: {
     readonly description: string | null;

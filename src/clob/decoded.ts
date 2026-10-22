@@ -1,5 +1,6 @@
 // Building and rebuilding the decoded block of a CLOB venue item (Polymarket, Limitless), the counterpart of
-// src/xo/signing/rebuild.ts for the two EOA venues. The relay builds the block from the order it just made; the
+// src/xo/signing/rebuild.ts for the two CLOB venues. The maker is the owner EOA (signature type 0) or, on Polymarket,
+// the owner's Deposit Wallet (signature type 3), which is re-derived from the owner here and never taken on trust. The relay builds the block from the order it just made; the
 // checker (the plugin, the daemon's inbox, the Signature Card) rebuilds the digest, the typed data, the terms and
 // every summary line from the block alone with this same code and compares. Nothing here reads a clock, the network
 // or a key.
@@ -27,10 +28,12 @@ import type { OrderCapAmount } from "../xo/signing/amounts.js";
 import { clobCapAmount, decodeClobAmounts, formatMicro, parseTickMicro, MICRO, type ClobAmounts } from "./amounts.js";
 import { hashLimitlessOrder, limitlessOrderSignTypedData, type LimitlessOrder } from "./limitless/order.js";
 import { hashPolymarketClobAuth, polymarketClobAuthSignTypedData, POLYMARKET_CLOB_AUTH_MESSAGE } from "./polymarket/clobauth.js";
-import { hashPolymarketOrder, polymarketOrderSignTypedData, type PolymarketOrder } from "./polymarket/order.js";
+import { depositWalletProxyOf } from "./polymarket/deposit-wallet.js";
+import { hashPolymarketOrder, polymarketOrderSignTypedData, polymarketSigningDigest, type PolymarketOrder } from "./polymarket/order.js";
 import {
   CLOB_CHAIN_IDS,
   CLOB_COLLATERAL_DECIMALS,
+  POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET,
   LIMITLESS_ORDER_DOMAIN_NAME,
   LIMITLESS_ORDER_DOMAIN_VERSION,
   POLYMARKET_ORDER_DOMAIN_NAME,
@@ -91,7 +94,8 @@ export function buildDecodedClobOrder(input: BuildDecodedClobOrderInput): Decode
     chain_id: chainId,
     action: "place_order" as const,
     owner: input.owner,
-    account: input.owner,
+    // The maker: the owner itself, or (Polymarket, type 3) the owner's Deposit Wallet the order names.
+    account: input.order.venue === "polymarket" ? input.order.order.maker : input.owner,
     params: { tif: input.tif, post_only: input.postOnly, ttl_s: input.ttlS, market_id: input.marketId, tick: input.tick, min_size: input.minSize },
   };
   if (input.order.venue === "polymarket") {
@@ -108,7 +112,7 @@ export function buildDecodedClobOrder(input: BuildDecodedClobOrderInput): Decode
         maker_amount: o.makerAmount.toString(),
         taker_amount: o.takerAmount.toString(),
         side: o.side,
-        signature_type: 0,
+        signature_type: o.signatureType === POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET ? 3 : 0,
         timestamp_ms: o.timestamp.toString(),
         metadata: o.metadata,
         builder: o.builder,
@@ -143,9 +147,12 @@ export function buildDecodedClobOrder(input: BuildDecodedClobOrderInput): Decode
 
 // ---- the summary lines (a pure function of the block) -------------------------------------------------------------------
 
-export function clobOrderSummaryLines(d: DecodedClobOrder, digest: Hex): string[] {
+// `digest` is what the owner signs; `orderHash` the venue's order id (the same value for an EOA order, the order inside
+// the TypedDataSign wrapper for a Deposit Wallet order).
+export function clobOrderSummaryLines(d: DecodedClobOrder, digest: Hex, orderHash: Hex = digest): string[] {
   const name = venueDisplayName(d.venue);
   const t = d.terms;
+  const depositWallet = d.order.venue === "polymarket" && d.order.signature_type === 3;
   const cash =
     t.max_outlay_usd === null
       ? [
@@ -164,9 +171,19 @@ export function clobOrderSummaryLines(d: DecodedClobOrder, digest: Hex): string[
     ...cash,
     `Counts ${t.cap_usd} USD against the per-order and daily caps.`,
     life,
-    `Maker and signer: your wallet ${d.account} (EOA, signature type 0). Chain ${d.chain_id}, exchange ${d.domain.verifying_contract} (${d.domain.name} version ${d.domain.version}).`,
-    `Market ${d.params.market_id}, tick ${d.params.tick}, minimum size ${d.params.min_size}.`,
-    `Order hash ${digest}.`,
+    ...(depositWallet
+      ? [
+          `Maker and signer: your Polymarket Deposit Wallet ${d.account} (signature type 3, checked through its ERC-1271), owned by your wallet ${d.owner}, which signs.`,
+          `Chain ${d.chain_id}, exchange ${d.domain.verifying_contract} (${d.domain.name} version ${d.domain.version}).`,
+          `Market ${d.params.market_id}, tick ${d.params.tick}, minimum size ${d.params.min_size}.`,
+          `Order hash ${orderHash} (the venue's order id).`,
+          `You sign the Deposit Wallet's TypedDataSign wrapper of that order (ERC-7739, wallet domain DepositWallet version 1): digest ${digest}.`,
+        ]
+      : [
+          `Maker and signer: your wallet ${d.account} (EOA, signature type 0). Chain ${d.chain_id}, exchange ${d.domain.verifying_contract} (${d.domain.name} version ${d.domain.version}).`,
+          `Market ${d.params.market_id}, tick ${d.params.tick}, minimum size ${d.params.min_size}.`,
+          `Order hash ${digest}.`,
+        ]),
     `Compare digest_tag ${digestTag(digest)} with what PayBox shows.`,
   ];
 }
@@ -186,10 +203,17 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
     if (error instanceof AccountError) return fail("decoded.owner", error.message);
     throw error;
   }
-  if (lower(d.account) !== lower(owner)) return fail("decoded.account", "the maker of a venue order is the owner itself");
-  if (lower(d.order.maker) !== lower(owner) || lower(d.order.signer) !== lower(owner)) return fail("decoded.order.maker", "the order's maker or signer is not the owner");
-  if (d.chain_id !== CLOB_CHAIN_IDS[d.venue]) return fail("decoded.chain_id", "the chain is not the venue's");
   if (d.order.venue !== d.venue) return fail("decoded.order.venue", "the order fields are for another venue");
+  if (d.order.venue === "polymarket" && d.order.signature_type === 3) {
+    // A Deposit Wallet order: the account must be one of the two addresses derived from the owner, and the order's
+    // maker and signer that account. Whether it is deployed and still owned by the owner is the relay's chain read.
+    if (depositWalletProxyOf(owner, d.account) === null) return fail("decoded.account", "the account is not a Polymarket Deposit Wallet derived from the owner");
+    if (lower(d.order.maker) !== lower(d.account) || lower(d.order.signer) !== lower(d.account)) return fail("decoded.order.maker", "a Deposit Wallet order's maker and signer must both be the wallet");
+  } else {
+    if (lower(d.account) !== lower(owner)) return fail("decoded.account", "the maker of an EOA venue order is the owner itself");
+    if (lower(d.order.maker) !== lower(owner) || lower(d.order.signer) !== lower(owner)) return fail("decoded.order.maker", "the order's maker or signer is not the owner");
+  }
+  if (d.chain_id !== CLOB_CHAIN_IDS[d.venue]) return fail("decoded.chain_id", "the chain is not the venue's");
 
   // The amounts and the terms derived from them.
   let amounts: ClobAmounts;
@@ -211,6 +235,7 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
 
   // The venue's order struct, hashed under its pinned domain.
   let digest: Hex;
+  let orderHash: Hex;
   let typed: TypedData;
   let expiresAt: string | null;
   try {
@@ -225,12 +250,13 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
         makerAmount: amounts.makerAmount,
         takerAmount: amounts.takerAmount,
         side: d.order.side,
-        signatureType: 0,
+        signatureType: d.order.signature_type,
         timestamp: parseUint(d.order.timestamp_ms, "timestamp_ms"),
         metadata: d.order.metadata as Hex,
         builder: d.order.builder as Hex,
       };
-      digest = hashPolymarketOrder(order, book);
+      orderHash = hashPolymarketOrder(order, book);
+      digest = polymarketSigningDigest(order, book);
       typed = plainJson(polymarketOrderSignTypedData(order, book));
       const expiration = parseUint(d.order.expiration, "expiration");
       expiresAt = expiration === 0n ? null : isoSecond(Number(expiration) * 1000);
@@ -256,6 +282,7 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
         signatureType: 0,
       };
       digest = hashLimitlessOrder(order, d.domain.verifying_contract as Address);
+      orderHash = digest;
       typed = plainJson(limitlessOrderSignTypedData(order, d.domain.verifying_contract as Address));
       expiresAt = null;
     }
@@ -274,8 +301,10 @@ export function rebuildClobOrder(d: DecodedClobOrder): RebuildOutcome {
   return {
     ok: true,
     digest,
+    // The digest the owner signs (for a Deposit Wallet order, the TypedDataSign digest); the venue's order id is in the
+    // summary lines. The contract's inner-hash rule for non-Kernel typed data is the signed digest itself.
     inner_hash: digest,
-    lines: clobOrderSummaryLines(d, digest),
+    lines: clobOrderSummaryLines(d, digest, orderHash),
     covered: ["order", "domain", "terms.side", "terms.price", "terms.shares", "terms.principal_usd"],
     unbound: ["params", "terms.fee_bound_bps", "terms.cap_usd", ...(d.venue === "polymarket" ? ["terms.expires_at", "order.expiration"] : [])],
     typed_data: typed,

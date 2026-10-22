@@ -124,7 +124,7 @@ export function DecodedView({ decoded, covered, unbound }: { readonly decoded: P
       <Row label="Owner">
         <code className="signing-code">{decoded.owner}</code>
       </Row>
-      <Row label={decoded.kind === "clob_order" || decoded.kind === "clob_auth" ? "Maker (the owner wallet itself)" : "XO account"}>
+      <Row label={decoded.kind === "clob_order" || decoded.kind === "clob_auth" ? (decoded.account.toLowerCase() === decoded.owner.toLowerCase() ? "Maker (the owner wallet itself)" : "Maker (the owner's Polymarket Deposit Wallet, derived from the owner)") : "XO account"}>
         <code className="signing-code">{decoded.account}</code>
       </Row>
     </>
@@ -147,7 +147,10 @@ export function DecodedView({ decoded, covered, unbound }: { readonly decoded: P
         <Row label="Outcome token id" covered><code className="signing-code">{order.token_id}</code></Row>
         <Row label="Exchange (domain)" covered><code className="signing-code">{domain.verifying_contract}</code> ({domain.name} version {domain.version})</Row>
         <Row label="Maker and signer" covered><code className="signing-code">{order.maker}</code></Row>
-        <Row label="Salt" covered><code className="signing-code">{order.salt}</code> (the wallet signs as an EOA, type 0)</Row>
+        <Row label="Salt" covered>
+          <code className="signing-code">{order.salt}</code>{" "}
+          {decoded.account.toLowerCase() === decoded.owner.toLowerCase() ? "(the wallet signs as an EOA, type 0)" : "(type 3: the owner signs a TypedDataSign wrapper of this order for its Deposit Wallet)"}
+        </Row>
         {order.venue === "polymarket" ? (
           <>
             <Row label="Timestamp (ms)" covered><code>{order.timestamp_ms}</code></Row>

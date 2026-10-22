@@ -1,9 +1,0 @@
-{
- "note": "Identical 401 body returned by GET /orders-v3/odds/best, GET /orderbook-v3/snapshot/market and GET /orders-v3/public without x-sx-api-key (2026-10-19)",
- "http_status": 401,
- "body": {
-  "message": "BAD_AUTH",
-  "error": "Unauthorized",
-  "statusCode": 401
- }
-}

@@ -1,15 +1,12 @@
-// Defensive helpers shared by the venue parsers. Third-party JSON is untrusted: every field is
-// type-checked, strings are reduced to fixed vocabularies or validated decimals before storage,
-// and no free text (titles, descriptions, rules) is ever kept.
+// What the recorder does with values the shared venue parsers (sdk/venues/<venue>) have already read: reduce them to
+// its own stored vocabulary (canonical decimal strings, fixed status codes, sorted and truncated book sides) before
+// storage. Venue payloads themselves are never read here; no free text (titles, descriptions, rules) is ever kept.
 
+import type { Status } from "../../../sdk/model.js";
 import type { BookFlag, BookLevelPair, MarketStatusCode } from "../types.js";
 
 export function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-export function field(o: unknown, key: string): unknown {
-  return isRecord(o) ? o[key] : undefined;
 }
 
 // Canonical non-negative decimal: no sign, no exponent, no leading or trailing zeros. null if the
@@ -44,35 +41,11 @@ export function cmpDec(a: string, b: string): -1 | 0 | 1 {
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
-// Raw integer count in base units to a decimal share count (Limitless sizes are 6-decimal).
-export function fromBaseUnits(input: unknown, decimals: number): string | null {
-  let n: bigint;
-  if (typeof input === "number") {
-    if (!Number.isSafeInteger(input) || input < 0) return null;
-    n = BigInt(input);
-  } else if (typeof input === "string" && /^\d{1,40}$/.test(input.trim())) {
-    n = BigInt(input.trim());
-  } else return null;
-  const s = n.toString().padStart(decimals + 1, "0");
-  return canonDec(`${s.slice(0, s.length - decimals)}.${s.slice(s.length - decimals)}`);
-}
-
-export function msFromUnknown(input: unknown): number | null {
-  const n = typeof input === "string" && /^\d{10,16}$/.test(input.trim()) ? Number(input.trim()) : typeof input === "number" ? input : NaN;
-  if (!Number.isSafeInteger(n) || n <= 0) return null;
-  // Seconds versus milliseconds: anything below 1e11 is a Unix time in seconds.
-  return n < 100_000_000_000 ? n * 1000 : n;
-}
-
 export function isoToMs(input: unknown): number | null {
   if (typeof input !== "string") return null;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(input)) return null;
   const t = Date.parse(input);
   return Number.isFinite(t) ? t : null;
-}
-
-export function safeToken(input: unknown): string | null {
-  return typeof input === "string" && /^[0-9A-Za-z_.:-]{1,100}$/.test(input) ? input : null;
 }
 
 export function safeHash(input: unknown): string | null {
@@ -82,6 +55,35 @@ export function safeHash(input: unknown): string | null {
 export function safeTick(input: unknown): string | null {
   const d = canonDec(input);
   return d !== null && /^0\.\d+$/.test(d) ? d : null;
+}
+
+// The shared status table (sdk/model.ts Status, as each venue's parser decides it) in the recorder's stored
+// vocabulary. "closed" and "resolved" retire a target; "expired" (open past its close time) keeps it for the
+// post-close grace period. A provisional result ("determined": XO RESOLVED, a Polymarket UMA proposal) retires the
+// target once the market has stopped trading; while the venue still says it accepts orders (a Polymarket proposal
+// on a market whose flags are still open) the book is live, so it is recorded like an open market and the grace
+// period applies. A dispute is not a state the recorder models, so it is "unknown", as is everything the shared
+// table does not know.
+export function recorderStatus(status: Status, closeMs: number | null, nowMs: number, acceptingOrders: boolean | null = null): MarketStatusCode {
+  switch (status) {
+    case "active":
+      return closeMs !== null && closeMs <= nowMs ? "expired" : "active";
+    case "pending":
+      return "pending";
+    case "paused":
+      return "paused";
+    case "closed":
+    case "voided":
+      return "closed";
+    case "determined":
+      if (acceptingOrders === true) return closeMs !== null && closeMs <= nowMs ? "expired" : "active";
+      return "resolved";
+    case "resolved":
+      return "resolved";
+    case "disputed":
+    case "unknown":
+      return "unknown";
+  }
 }
 
 export type SidedInput = readonly { readonly price: unknown; readonly size: unknown }[];
@@ -95,8 +97,10 @@ export interface ParsedSides {
 }
 
 // Validates, sorts (bids high to low, asks low to high), truncates and flags. The input order is
-// compared with the venue's declared convention only to raise `unsorted_input`; the stored order
+// compared with the declared convention only to raise `unsorted_input`; the stored order
 // is always canonical. Levels are not merged or dropped silently: bad ones are counted in a flag.
+// The collectors hand it levels the shared parsers have already validated and sorted best first, so for them only
+// the empty, duplicate and truncation flags can still arise.
 export function parseSides(
   rawBids: SidedInput,
   rawAsks: SidedInput,
@@ -135,8 +139,4 @@ export function parseSides(
   if (b !== undefined && a !== undefined && cmpDec(b[0], a[0]) >= 0) flags.add("crossed");
   if (bids.length > depth || asks.length > depth) flags.add("truncated");
   return { bids: bids.slice(0, depth), asks: asks.slice(0, depth), flags: [...flags].sort(), nBids: bids.length, nAsks: asks.length };
-}
-
-export function statusFromWords(word: unknown, table: Readonly<Record<string, MarketStatusCode>>): MarketStatusCode {
-  return typeof word === "string" ? (table[word.toUpperCase()] ?? "unknown") : "unknown";
 }

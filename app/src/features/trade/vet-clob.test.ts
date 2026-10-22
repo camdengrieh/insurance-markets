@@ -6,7 +6,7 @@ import { vetPrepared, type VetResult } from "./vet";
 import { OWNER } from "./test-support";
 
 // A venue order item is shown only after the page rebuilds it and matches it against the ticket (M4-6, M4-8), with the
-// maker required to be the owner wallet itself. The items are built with the repository's own builders (clob-items.ts).
+// maker required to be the owner wallet itself or, on Polymarket, the owner's derived Deposit Wallet. The items are built with the repository's own builders (clob-items.ts).
 
 const NOW = Date.parse("2026-10-19T12:00:00Z");
 const PM: ClobMarketFacts = { venue: "polymarket", marketId: "0x" + "99".repeat(32), tick: "0.01", minSize: "5", polymarketBook: "v2", fetchedAtMs: NOW };
@@ -74,6 +74,33 @@ describe("vetting a venue order", () => {
     const item = clobItemFor(ticket, owner, { nowMs: NOW });
     fails(vetPrepared({ ...item.prepared, account: stranger }, { kind: "clob_order", owner, ticket }, NOW), "account", "account");
     fails(vetPrepared(item.prepared, { kind: "clob_order", owner: stranger, ticket }, NOW), "owner", "owner");
+  });
+
+  it("accepts a Polymarket Deposit Wallet item (either form) whose account is the wallet derived from the owner, and shows it as the maker", () => {
+    const ticket = ticketFor(PM, { tif: "GTD", ttlS: "300" });
+    for (const form of ["beacon", "uups"] as const) {
+      const item = clobItemFor(ticket, owner, { nowMs: NOW, maker: form });
+      const result = vetPrepared(item.prepared, { kind: "clob_order", owner, ticket }, NOW + 5_000);
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (!result.ok) continue;
+      expect(result.account).toBe(item.prepared["account"]);
+      expect(result.account.toLowerCase()).not.toBe(owner.toLowerCase());
+      expect(result.order?.makerKind).toBe("deposit_wallet");
+      expect(result.order?.maker).toBe(item.prepared["account"]);
+    }
+    const eoa = vetPrepared(clobItemFor(ticket, owner, { nowMs: NOW }).prepared, { kind: "clob_order", owner, ticket }, NOW + 5_000);
+    expect(eoa.ok && eoa.order?.makerKind).toBe("owner");
+  });
+
+  it("refuses another owner's Deposit Wallet, a Deposit Wallet on a Limitless ticket, and a type-0 order claiming the wallet as its account", () => {
+    const ticket = ticketFor(PM);
+    const stranger = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" as `0x${string}`;
+    const theirs = clobItemFor(ticket, stranger, { nowMs: NOW, maker: "beacon" });
+    fails(vetPrepared({ ...theirs.prepared, owner }, { kind: "clob_order", owner, ticket }, NOW), "account", "account");
+    const mine = clobItemFor(ticket, owner, { nowMs: NOW, maker: "beacon" });
+    fails(vetPrepared(mine.prepared, { kind: "clob_order", owner, ticket: ticketFor(LM) }, NOW), "account", "account");
+    const eoa = clobItemFor(ticket, owner, { nowMs: NOW });
+    fails(vetPrepared({ ...eoa.prepared, account: mine.prepared["account"] }, { kind: "clob_order", owner, ticket }, NOW), "account", "decoded.account");
   });
 
   it("refuses a changed digit anywhere in the signed fields (the rebuild catches it) and a tampered summary line", () => {

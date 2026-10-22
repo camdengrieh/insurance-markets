@@ -4,13 +4,13 @@
 // in the standalone build (direct to CORS-open hosts) and the Cockpit build (through the daemon's read proxy). This
 // file only adapts their differently shaped extras (skipped-row counts, XO settlement, shape status) to one record.
 
-import { createLimitlessAdapter } from "../../venues/limitless";
-import { createHyperliquidAdapter, HYPERLIQUID_EXCLUDED_PERSONS_CLAUSE, HYPERLIQUID_SHAPE_STATUS } from "../../venues/hyperliquid";
-import { createManifoldAdapter } from "../../venues/manifold";
-import { createPascalAdapter } from "../../venues/pascal";
-import { createPolymarketAdapter } from "../../venues/polymarket";
-import { createTrueoAdapter } from "../../venues/trueo";
-import { createXoAdapter, xoBookAvailability, XO_FEE_STATUS, xoVariantForMode } from "../../venues/xo";
+import { createLimitlessAdapter } from "@sdk/venues/limitless";
+import { createHyperliquidAdapter, HYPERLIQUID_EXCLUDED_PERSONS_CLAUSE, HYPERLIQUID_SHAPE_STATUS } from "@sdk/venues/hyperliquid";
+import { createManifoldAdapter } from "@sdk/venues/manifold";
+import { createPascalAdapter } from "@sdk/venues/pascal";
+import { createPolymarketAdapter } from "@sdk/venues/polymarket";
+import { createTrueoAdapter } from "@sdk/venues/trueo";
+import { createXoAdapter, xoBookAvailability, XO_FEE_STATUS, xoVariantForMode } from "@sdk/venues/xo";
 import type { AdapterDeps, ListMarketsQuery, Market, MarketRef, MarketSummary, Page, VenueId, VenueReadAdapter } from "../../core/ports";
 import type { AppMode } from "../../ui";
 

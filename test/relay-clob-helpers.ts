@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 
-import { type Address, type Hex } from "viem";
+import { encodeAbiParameters, encodeFunctionResult, getAddress, type Address, type Hex } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
 
 import { Secret } from "../src/config.js";
 import { hashLimitlessOrder, type LimitlessOrder } from "../src/clob/limitless/order.js";
+import { DEPOSIT_WALLET_DOMAIN_CALL, DEPOSIT_WALLET_OWNER_CALL, DEPOSIT_WALLET_READ_ABI, depositWalletAddress, depositWalletRuntimeCode, type DepositWalletProxy } from "../src/clob/polymarket/deposit-wallet.js";
 import { hashPolymarketOrder, type PolymarketOrder } from "../src/clob/polymarket/order.js";
 import { LIMITLESS_EXCHANGES, type PolymarketBook } from "../src/clob/venues.js";
 import { createRelayClient } from "../src/relay/client.js";
@@ -14,7 +15,8 @@ import { deriveAccount } from "../src/xo/account/derive.js";
 import { createRelay, type Relay } from "../relay/main.js";
 import { createClobRoutes, type ClobRouteDeps, type ClobRoutes } from "../relay/clob.js";
 import type { AccountDirectory } from "../relay/health.js";
-import type { RelayContext } from "../relay/types.js";
+import { mergeRoutes } from "../relay/routes.js";
+import type { RelayContext, RouteTable } from "../relay/types.js";
 import { ANVIL_TEST_ACCOUNTS } from "./fixtures/userop/anvil-test-keys.js";
 import { FakeClock, TEST_KDF, TEST_MASTER_SECRET, TEST_RELAY_KEY, tempDir, type TempDir } from "./relay-core-helpers.js";
 import { checkDecoded } from "./relay-decoded-check.js";
@@ -40,6 +42,18 @@ export const LM_EXCHANGE = LIMITLESS_EXCHANGES[0] as Address;
 // A made-up credential, labelled as such; never a real one.
 export const FAKE_TRIPLET = Object.freeze({ apiKey: "fake-api-key-0001", secret: Buffer.from("fake-secret-not-a-real-credential-01", "utf8").toString("base64"), passphrase: "fake-passphrase" });
 export const FAKE_TOKEN = Object.freeze({ tokenId: "fake-token-0001", secret: Buffer.from("fake-token-secret-not-real-01", "utf8").toString("base64") });
+
+// The owner's Deposit Wallet as the Polygon fake reports it. Each field left out answers what a real, healthy wallet
+// derived for the rig's owner would answer (its exact proxy code, owner() = the owner, the DepositWallet domain).
+export interface FakeDepositWallet {
+  readonly proxy: DepositWalletProxy;
+  readonly code?: Hex;
+  readonly owner?: Address;
+  readonly domainName?: string;
+  readonly revert?: boolean;
+}
+
+export const POLYGON_RPC_HOST = "polygon-bor-rpc.publicnode.com";
 
 export type PostBehavior =
   | { readonly kind: "accept" }
@@ -82,6 +96,10 @@ export class FakeVenues {
   derivable = false;
   loginRefused = false;
   readonly logins: Array<{ readonly path: string; readonly headers: Record<string, string> }> = [];
+  // Polygon (eth_getCode / eth_call only): no Deposit Wallet by default, so a Polymarket order is an EOA order.
+  pmWallets: FakeDepositWallet[] = [];
+  rpcDown = false;
+  readonly rpcCalls: string[] = [];
   private hangs: Array<() => void> = [];
 
   constructor(clock: FakeClock) {
@@ -111,8 +129,44 @@ export class FakeVenues {
     if (url.host === "clob.polymarket.com") return this.polymarket(method, url, headers, body);
     if (url.host === "gamma-api.polymarket.com") return this.gamma(url);
     if (url.host === "api.limitless.exchange") return this.limitless(method, url, headers, body);
+    if (url.host === POLYGON_RPC_HOST && method === "POST") return this.polygon(body);
     return json(404, { error: "unknown host" });
   };
+
+  // A wallet for the rig's owner in the given form.
+  walletAddress(proxy: DepositWalletProxy): Address {
+    return depositWalletAddress(OWNER_KEY.address, proxy);
+  }
+
+  private polygon(body: string): Response {
+    if (this.rpcDown) return new Response("unavailable", { status: 503 });
+    const request = JSON.parse(body) as { id: number; method: string; params: unknown[] };
+    const reply = (result: unknown): Response => json(200, { jsonrpc: "2.0", id: request.id, result });
+    const revert = (): Response => json(200, { jsonrpc: "2.0", id: request.id, error: { code: 3, message: "execution reverted" } });
+    const walletAt = (address: unknown): FakeDepositWallet | undefined => this.pmWallets.find((wallet) => typeof address === "string" && this.walletAddress(wallet.proxy).toLowerCase() === address.toLowerCase());
+    if (request.method === "eth_getCode") {
+      this.rpcCalls.push(`eth_getCode ${String(request.params[0])}`);
+      const wallet = walletAt(request.params[0]);
+      return reply(wallet === undefined ? "0x" : (wallet.code ?? depositWalletRuntimeCode(OWNER_KEY.address, wallet.proxy)));
+    }
+    if (request.method === "eth_call") {
+      const call = request.params[0] as { to: string; data: string };
+      this.rpcCalls.push(`eth_call ${call.to} ${call.data.slice(0, 10)}`);
+      const wallet = walletAt(call.to);
+      if (wallet === undefined || wallet.revert === true) return revert();
+      if (call.data === DEPOSIT_WALLET_OWNER_CALL) return reply(encodeFunctionResult({ abi: DEPOSIT_WALLET_READ_ABI, functionName: "owner", result: getAddress(wallet.owner ?? OWNER_KEY.address) }));
+      if (call.data === DEPOSIT_WALLET_DOMAIN_CALL) {
+        return reply(
+          encodeAbiParameters(
+            [{ type: "bytes1" }, { type: "string" }, { type: "string" }, { type: "uint256" }, { type: "address" }, { type: "bytes32" }, { type: "uint256[]" }],
+            ["0x0f", wallet.domainName ?? "DepositWallet", "1", 137n, this.walletAddress(wallet.proxy), "0x0000000000000000000000000000000000000000000000000000000000000000", []],
+          ),
+        );
+      }
+      return revert();
+    }
+    return json(200, { jsonrpc: "2.0", id: request.id, error: { code: -32601, message: "method not found" } });
+  }
 
   private polymarket(method: string, url: URL, headers: Record<string, string>, body: string): Response | Promise<Response> {
     if (method === "GET" && url.pathname === "/time") return new Response(String(this.nowS), { status: 200 });
@@ -236,6 +290,8 @@ export interface ClobRigOptions {
   readonly dir?: TempDir;
   // Which credentials to seed in the vault (default: both fakes).
   readonly credentials?: { readonly polymarket?: boolean; readonly limitless?: boolean };
+  // Served next to the CLOB routes (GET /v1/prepared/:id, for example).
+  readonly extraRoutes?: RouteTable;
 }
 
 export interface ClobRig {
@@ -280,7 +336,7 @@ export async function startClobRig(options: ClobRigOptions = {}): Promise<ClobRi
     now: clock.now,
     sleep: clock.sleep,
     maintenance: false,
-    routes: clob.routes,
+    routes: options.extraRoutes === undefined ? clob.routes : mergeRoutes(clob.routes, options.extraRoutes),
     accounts,
     fetch: venues.fetch,
     http: BIG_RATES,

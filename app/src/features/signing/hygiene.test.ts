@@ -21,7 +21,7 @@ const TEST_ONLY = new Set(["testkit.ts", "test-support.tsx"]);
 // The only paths the page names. Everything else comes from the contract's own path builders.
 const ALLOWED_PATH_LITERALS: ReadonlySet<string> = new Set(["/ui/inbox", "/ui/inbox/decision"]);
 // What may be imported from the shared modules.
-const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild"]);
+const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "clob/polymarket/deposit-wallet"]);
 const FORBIDDEN_IMPORTED_NAME = /submit|inboxSign|PREPARE_ROUTES|UI_POST|INBOX_POST|TOOL_POST|SESSION_POST|toolCall|toPayboxSignArgs|POST_ROUTES(?!$)/i;
 const FORBIDDEN_IDENTIFIER = /submit|signature/i;
 // "submitted" is a state the daemon reports (an inbox state), not an action this page takes. The card and its

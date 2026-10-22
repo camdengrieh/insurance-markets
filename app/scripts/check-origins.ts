@@ -6,7 +6,8 @@ import { htmlViolations, originViolations } from "./policy.ts";
 
 // No third-party origins in the app's source (docs/dapp-design.md section 7.2 W0, note 28 section 8.2).
 //
-// Scans index.html, app/src (not tests or recorded fixtures) and bridge/contract.ts for any URL host that is
+// Scans index.html, app/src and sdk/ (the venue readers the page bundles; not tests or recorded fixtures) and
+// bridge/contract.ts for any URL host that is
 // not an origin listed in headers.config.ts or a documented inert host, for any NEVER host, and applies the
 // HTML rules (no inline script or style, no external subresource, a no-referrer policy). The built output is
 // checked separately by check-bundle.ts, which sees what the libraries bring in.
@@ -33,7 +34,7 @@ export async function checkOrigins(options: OriginOptions = {}): Promise<Violati
   const files = [
     join(appDir, "index.html"),
     join(repoRoot, "bridge", "contract.ts"),
-    ...(await walk(join(appDir, "src"), SKIP)).filter((file) => TEXT_FILE.test(file) && !TEST_FILE.test(file)),
+    ...[...(await walk(join(appDir, "src"), SKIP)), ...(await walk(join(repoRoot, "sdk"), SKIP))].filter((file) => TEXT_FILE.test(file) && !TEST_FILE.test(file)),
   ];
   for (const file of files) {
     let text: string;

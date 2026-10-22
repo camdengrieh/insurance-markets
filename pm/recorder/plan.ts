@@ -139,8 +139,9 @@ export function buildDryRun(cfg: RecorderConfig, targets: readonly Target[], now
       lines.push(`    every ${resolveEvery / 1000}s  GET ${urlOf(spec)}`);
       bump(spec.host, per(resolveEvery), per(cfg.shortResolveIntervalSec * 1000));
     }
-    const book = col.bookPlan(t.marketId, null);
-    lines.push(`    every ${bookEvery / 1000}s  GET ${urlOf(book).replace("%3Cyes_token_id%3E", "<yes_token_id from the state call>")}`);
+    const book = col.bookTarget(t.marketId);
+    const tokenNote = book.tokenParam === null ? "" : `  (${book.tokenParam} = the outcome-0 token id the state call returns)`;
+    lines.push(`    every ${bookEvery / 1000}s  GET https://${book.host}${book.path}${tokenNote}`);
     bump(book.host, per(bookEvery), per(cfg.shortIntervalSec * 1000));
   }
 

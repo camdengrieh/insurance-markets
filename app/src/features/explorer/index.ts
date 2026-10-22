@@ -22,4 +22,4 @@ export { classifyError, FeedError, MAX_PAGES_PER_VENUE, PAGE_SIZE, STATUS_FILTER
 export { BOOK_ROW_CAP, bookTargets, loadBooks, type BookEntry } from "./books";
 export { DISPLAY_PRICE_CAPTION, SPREAD_LABEL, STATUS_TEXT, depthWithin, headlineOutcome, impliedComplement, priceText, statusInfo, utcText, viewBook, volumeText, type BookView, type ImpliedSide, type SpreadTier } from "./display";
 export { isSafeMarketId, marketHref, parseMarketParams, type MarketParams } from "./ids";
-export { APPROVED_LINK_DATASET, LinkBadge, LinkGroupPlaceholder, candidatesFor, linkedRowKeys, linksFor, type CandidateLookup, type LinkCandidate } from "./links";
+export { LinkGroupEmpty, candidatesFor, linkedRowKeys, type CandidateLookup, type LinkCandidate } from "./links";

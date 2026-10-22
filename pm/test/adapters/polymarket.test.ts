@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { AdapterFailure, createPolymarketAdapter, polymarketStatus } from "../../adapters/index.js";
@@ -6,24 +7,23 @@ import type { PmVenueAdapter } from "../../adapters/types.js";
 import { checkFeeSpec, feePerShare } from "../../core/fees.js";
 import { dec } from "../../core/rational.js";
 import { canonicalizeRecord } from "../../links/hash.js";
-import { NOW, fast, nowMs, researchFixture, route, stubFetch, type Route } from "./helpers.js";
+import { NOW, fast, nowMs, route, stubFetch, type Route } from "./helpers.js";
 
 const GAMMA = "gamma-api.polymarket.com";
 const CLOB = "clob.polymarket.com";
 
-// The base of every test below is a REAL capture of the Senate-control market (docs/research/fixtures/polymarket,
-// 2026-10-18): the Gamma row, the CLOB market record and the CLOB book. A test that needs another state replaces one
-// or two fields of the captured row with an inline value (an override is a test input, not venue data). When the
-// captured files are absent (a checkout without the research notes) every test here is skipped, not failed.
+// The base of every test below is a REAL capture of the Senate-control market (2026-10-18), read from the one
+// Polymarket fixture set, sdk/venues/polymarket/fixtures (the SDK reader's tests read the same files): the Gamma row,
+// the CLOB market record and the CLOB book. A test that needs another state replaces one or two fields of the
+// captured row with an inline value (an override is a test input, not venue data).
 type Obj = Record<string, unknown>;
-const REAL_GAMMA = researchFixture("polymarket", "gamma_market_by_slug.json") as Obj | null;
-const REAL_INFO = researchFixture("polymarket", "clob_market_info.json") as Obj | null;
-const REAL_BOOK = researchFixture("polymarket", "clob_book.json") as Obj | null;
-const HAVE_REAL = REAL_GAMMA !== null && REAL_INFO !== null && REAL_BOOK !== null;
-const realGamma = (REAL_GAMMA ?? {}) as Obj;
-const realInfo = (REAL_INFO ?? {}) as Obj;
-const realBook = (REAL_BOOK ?? {}) as Obj;
-const suite = (name: string, fn: () => void): unknown => describe(name, { skip: !HAVE_REAL }, fn);
+function recorded(name: string): unknown {
+  return JSON.parse(readFileSync(new URL(`../../../sdk/venues/polymarket/fixtures/${name}_recorded_2026-10-18.json`, import.meta.url), "utf8")) as unknown;
+}
+const realGamma = recorded("gamma_market_by_slug") as Obj;
+const realInfo = recorded("clob_market_info") as Obj;
+const realBook = recorded("clob_book") as Obj;
+const suite = (name: string, fn: () => void): unknown => describe(name, fn);
 
 const CID = String(realGamma["conditionId"]);
 const [YES, NO] = JSON.parse(String(realGamma["clobTokenIds"] ?? "[]")) as [string, string];
@@ -85,10 +85,11 @@ suite("polymarket adapter: getMarket", () => {
     assert.deepEqual(m.outcomes.map((o) => [o.index, o.role, o.tokenId]), [[0, "yes", YES], [1, "no", NO]]);
     assert.equal(m.tick, "0.01");
     assert.equal(m.minSize, "5");
-    assert.deepEqual(m.collateral, { symbol: "pUSD", chain: "eip155:137", decimals: 6, custody: "self" });
+    // The shared parser's collateral: positions sit in the user's own proxy or deposit wallet, a contract wallet.
+    assert.deepEqual(m.collateral, { symbol: "pUSD", chain: "eip155:137", decimals: 6, custody: "smart_account" });
     assert.equal(m.status, "active");
     assert.deepEqual(m.tradable, { ok: true, reasons: [] });
-    assert.deepEqual(m.group, { key: NEG_RISK_MARKET, kind: "neg_risk", exhaustive: "unknown" });
+    assert.deepEqual(m.group, { key: `polymarket:neg_risk:${NEG_RISK_MARKET}`, kind: "neg_risk", exhaustive: "unknown" });
     assert.equal(m.rules.mechanism, "uma_oo");
     assert.deepEqual(m.rules.sources, []);
     assert.equal(m.rules.cutoffUtc, "2026-11-04T04:59:00.000Z");
@@ -181,14 +182,13 @@ suite("polymarket adapter: getMarket", () => {
     assert.ok(inactive.tradable.reasons.includes("market_not_active"));
     const noBook = await adapterFor(routes(gamma({ enableOrderBook: false }))).adapter.getMarket(ref);
     assert.equal(noBook.tradable.ok, false);
-    assert.ok(noBook.tradable.reasons.includes("orderbook_disabled"));
+    assert.ok(noBook.tradable.reasons.includes("order_book_disabled"));
     const fine = await adapterFor(routes(gamma())).adapter.getMarket(ref);
     assert.equal(fine.tradable.ok, true);
   });
 
   it("treats an unrecognised UMA value as unknown status, not as open", () => {
-    const g = { raw: gamma({ umaResolutionStatus: "frobnicated" }), active: true, closed: false, archived: false, acceptingOrders: true, enableOrderBook: true } as unknown as Parameters<typeof polymarketStatus>[0];
-    const s = polymarketStatus(g);
+    const s = polymarketStatus(gamma({ umaResolutionStatus: "frobnicated" }), NOW);
     assert.equal(s.status, "unknown");
     assert.ok(s.reasons.includes("uma_status_unrecognised"));
   });
@@ -201,12 +201,12 @@ suite("polymarket adapter: getMarket", () => {
     // Sports-style 0.03 read from the market, not from a category table.
     const sports = await adapterFor(routes(gamma({ feeType: "sports_fees_nfl_cfb_oct26", feeSchedule: { exponent: 1, rate: 0.03, takerOnly: true, rebateRate: 0.15 } }), clobInfo({ fd: { r: 0.03, e: 1, to: true } }))).adapter.getMarket(ref);
     assert.deepEqual(sports.fee.taker, { values: { rate: "0.03", exponent: "1" } });
-    // Exponent other than 1 passes through and pm/core refuses it.
+    // An exponent other than 1 is not the documented curve: the shared parser reads the fee as unknown, so pm/core
+    // has nothing to price.
     const exp2 = await adapterFor(routes(gamma({ feeSchedule: { exponent: 2, rate: 0.04, takerOnly: true } }), clobInfo({ fd: undefined }))).adapter.getMarket(ref);
-    assert.deepEqual(exp2.fee.taker, { values: { rate: "0.04", exponent: "2" } });
+    assert.equal(exp2.fee.modelId, "unknown");
     const priced = feePerShare(exp2.fee, "taker", "buy", dec("0.5"));
     assert.equal(priced.ok, false);
-    if (!priced.ok) assert.equal(priced.code, "EXPONENT_UNSUPPORTED");
     // Not taker-only, no schedule, or an unreadable rate: unknown.
     for (const bad of [
       routes(gamma({ feeSchedule: { exponent: 1, rate: 0.04, takerOnly: false } }), clobInfo({ fd: undefined })),
@@ -220,10 +220,17 @@ suite("polymarket adapter: getMarket", () => {
     }
   });
 
-  it("uses the larger rate when Gamma and the CLOB disagree and says so", async () => {
+  it("reads the fee as unknown when Gamma and the CLOB disagree, and says so", async () => {
     const m = await adapterFor(routes(gamma(), clobInfo({ fd: { r: 0.05, e: 1, to: true } }))).adapter.getMarket(ref);
-    assert.deepEqual(m.fee.taker, { values: { rate: "0.05", exponent: "1" } });
+    assert.equal(m.fee.modelId, "unknown");
+    assert.equal(checkFeeSpec(m.fee, NOW).ok, false);
     assert.ok(m.extras.warnings.some((w) => w.includes("differ")));
+    // Gamma with a rate while the engine sends no fee details cannot be checked either.
+    const noFd = await adapterFor(routes(gamma(), clobInfo({ fd: undefined }))).adapter.getMarket(ref);
+    assert.equal(noFd.fee.modelId, "unknown");
+    // With no CLOB record at all, Gamma's own schedule is the only source and is used.
+    const noClob = await adapterFor([route(GAMMA, `/markets/slug/${SLUG}`, gamma()), route(CLOB, `/clob-markets/${CID}`, { error: "x" }, { status: 404 })]).adapter.getMarket(ref);
+    assert.deepEqual(noClob.fee.taker, { values: { rate: "0.04", exponent: "1" } });
   });
 
   it("marks rules unavailable (non-hex sentinel, not tradable) when the description is missing", async () => {
@@ -432,13 +439,13 @@ suite("polymarket adapter: health, caps, transport", () => {
   });
 });
 
-suite("polymarket adapter: captured live shapes (docs/research/fixtures)", () => {
-  const live = researchFixture("polymarket", "gamma_market_by_slug.json");
-  const info = researchFixture("polymarket", "clob_market_info.json");
-  const rawBook = researchFixture("polymarket", "clob_book.json");
-  const list = researchFixture("polymarket", "gamma_markets_list.json");
+suite("polymarket adapter: captured live shapes (sdk/venues/polymarket/fixtures)", () => {
+  const live = recorded("gamma_market_by_slug");
+  const info = recorded("clob_market_info");
+  const rawBook = recorded("clob_book");
+  const list = recorded("gamma_markets_list");
 
-  it("reads the captured Senate market and its CLOB record", { skip: live === null || info === null }, async () => {
+  it("reads the captured Senate market and its CLOB record", async () => {
     const slug = String((live as Record<string, unknown>)["slug"]);
     const cid = String((live as Record<string, unknown>)["conditionId"]);
     const stub = stubFetch([route(GAMMA, `/markets/slug/${slug}`, live), route(CLOB, `/clob-markets/${cid}`, info)]);
@@ -453,7 +460,7 @@ suite("polymarket adapter: captured live shapes (docs/research/fixtures)", () =>
     assert.equal(checkFeeSpec(m.fee, NOW).ok, true);
   });
 
-  it("reads the captured book: best level is last, sorted output is best first", { skip: rawBook === null }, async () => {
+  it("reads the captured book: best level is last, sorted output is best first", async () => {
     const b = rawBook as Record<string, unknown>;
     const token = String(b["asset_id"]);
     const stub = stubFetch([route(CLOB, "/book", b, { query: { token_id: token } })]);
@@ -465,7 +472,7 @@ suite("polymarket adapter: captured live shapes (docs/research/fixtures)", () =>
     assert.equal(r.value.asks[0]?.price, "0.38");
   });
 
-  it("summarises every captured market row", { skip: list === null }, async () => {
+  it("summarises every captured market row", async () => {
     const stub = stubFetch([route(GAMMA, "/markets/keyset", { markets: list })]);
     const adapter = createPolymarketAdapter({ http: fast(stub.fetchImpl), nowMs });
     const page = await adapter.listMarkets({});

@@ -8,7 +8,7 @@ import { createChainReader, MULTICALL3_ADDRESS } from "../wallet/rpc";
 import { readExplorerBalances } from "../wallet/balances";
 import { loadAccountMap } from "../wallet/account-map";
 import { NO_FACTS } from "../../core/capabilities";
-import { createPolymarketAdapter } from "../../venues/polymarket";
+import { createPolymarketAdapter } from "@sdk/venues/polymarket";
 import { readXoAccount } from "./xo-reads";
 
 // Opt-in live drift suite for the wallet and portfolio reads (docs/dapp-design.md 7.5 DT8). Skipped unless

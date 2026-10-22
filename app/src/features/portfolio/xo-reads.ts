@@ -21,7 +21,7 @@ import { decFromNumber, fromMicro, negQty, notional, parseQty, signOf, subQty, t
 import type { AdapterDeps, Prov } from "../../core/ports";
 import { untrustedField } from "../../core/untrusted";
 import { makeProv } from "../../core/venue-policy";
-import { XO_DATA_ORIGIN, XO_ORDERBOOK_ORIGIN } from "../../venues/xo";
+import { XO_DATA_ORIGIN, XO_ORDERBOOK_ORIGIN } from "@sdk/venues/xo";
 import { getJson } from "./http";
 import { shapeEvidenceOf } from "./shape";
 import type { PortfolioRow, RowStatus } from "./types";

@@ -21,7 +21,7 @@ import {
   type Gate,
   type QuotientRow,
   type RouteId,
-} from "../../venues/quotient";
+} from "./quotient";
 import { LinkOverlay } from "./LinkOverlay";
 import { pointsText, probabilityText } from "./figures";
 import type { LinkLoad } from "./links/dataset";

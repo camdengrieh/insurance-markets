@@ -9,7 +9,7 @@ import { XO_PORTFOLIO_SCOPES, orderbookUrl, portfolioUrl, readXoAccount } from "
 // The XO reads. No populated XO answer was ever captured (a funded account is a real person's wallet, and none is
 // looked up), so the tests here use the recorded answers for an address with nothing and inline error cases.
 
-const FIXTURES = new URL("../../../../test/fixtures/xo/", import.meta.url);
+const FIXTURES = new URL("../../../../sdk/venues/xo/fixtures/", import.meta.url);
 const fixture = (name: string): Record<string, unknown> => JSON.parse(readFileSync(new URL(name, FIXTURES), "utf8")) as Record<string, unknown>;
 const ACCOUNT = "0xB3729F7e1Ab0B4a50E7De5599Ecc321B8775d30d";
 const DATA = "api-mainnet.xo.market/api/users/portfolio";

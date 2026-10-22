@@ -1,5 +1,5 @@
 // The orderbook's READ surface (orderbooks.xo.market). Bodies are shaped like the recordings in
-// test/fixtures/xo (orderbook-*.json, live-orderbook-*.json). Basis: recorded unless a comment says
+// sdk/venues/xo/fixtures (orderbook-*.json, live-orderbook-*.json). Basis: recorded unless a comment says
 // otherwise. The write surface (orders, cancels, L1 and L2 credentials) lives in orders.ts and auth.ts; a
 // route that is still not built answers 501 "TODO-for-mock-write" so a test can never pass by accident through it.
 //

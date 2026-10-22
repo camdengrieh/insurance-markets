@@ -1,8 +1,7 @@
 // Loading the bundled link dataset, and the lookups over it.
 //
-// The page ships no dataset today: no human-approved link set exists ([ML] and [AD] are design only). A build that
-// has `src/features/signals/data/links.json` bundles it; a build without one answers "absent" and every screen says
-// "no links". A file that is present but invalid, or whose content hash does not match, is REJECTED (never
+// The linker's export-app step writes `src/features/signals/data/links.json` (docs/linker-runbook.md); a build that
+// has the file bundles it, and a build without one answers "absent" and every screen says "no links". A file that is present but invalid, or whose content hash does not match, is REJECTED (never
 // partially used), and the screen says that too.
 
 import { sha256, toBytes } from "viem";
@@ -51,7 +50,9 @@ export function parseLinkDataset(raw: unknown): LinkLoad {
 }
 
 // Vite replaces this with the bundled module when the file exists and with an empty record when it does not.
-const bundled = import.meta.glob<unknown>("./data/links.json", { import: "default" });
+// The path is the one the linker's export-app step writes (BUNDLED_LINKS_PATH, pinned by a test against the runbook).
+export const BUNDLED_LINKS_PATH = "src/features/signals/data/links.json";
+const bundled = import.meta.glob<unknown>("../data/links.json", { import: "default" });
 
 export type DatasetLoaders = Readonly<Record<string, () => Promise<unknown>>>;
 

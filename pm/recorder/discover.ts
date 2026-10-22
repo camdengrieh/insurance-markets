@@ -5,15 +5,19 @@
 // hash of an upstream slug).
 //
 // XO (api-mainnet.xo.market): active CLOB markets (marketType=2, ACTIVE) from the Data API list,
-//   read with the src/xo decoders (strict per row; a malformed row is skipped, not trusted).
+//   read with the shared XO decoders (sdk/venues/xo: strict per row; a malformed row is skipped, not
+//   trusted).
 //   List rows carry no event id, so each market's `rootEventSlug` is read from the by-slug detail
 //   route (captured 2026-10-20: the list slug can be stale and 404 on that route; the by-contract
-//   route returns the current slug, so a 404 falls back to contract -> slug). Answers are checked
+//   route returns the current slug, so a 404 falls back to contract -> slug). Both detail answers are
+//   decoded by the same shared decoder (decodeMarketDetail, xoRootEventSlug). Answers are checked
 //   against the conditionId and cached beside the targets file, so a market costs at most three
 //   lookups once. Markets sharing a rootEventSlug become one same-venue group.
 // Polymarket (gamma-api.polymarket.com): active events by 24 h volume. A neg-risk event (event
 //   `negRisk` with a `negRiskMarketID`) becomes one group of its tradable markets; every other
-//   event contributes a few individual markets.
+//   event contributes a few individual markets. The events list and each nested market are read by
+//   the shared Polymarket parser (sdk/venues/polymarket: parseEventsList, parseGammaMarket, statusOf,
+//   tradableOf), so a market counts as tradable here exactly when the dApp would call it tradable.
 //
 // `exhaustive` is ALWAYS "unknown". The registry records exhaustiveFlag "no" for both venues
 // (pm/registry/records.ts), XO states mutual exclusivity only in rules prose and its `neg_risk`
@@ -31,7 +35,9 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { decodeMarketPage, lifecycleOf } from "../../src/xo/client.js";
+import { decodeMarketDetail, decodeMarketPage } from "../../sdk/venues/xo/api/client.js";
+import { statusOf as xoStatusOf, xoRootEventSlug } from "../../sdk/venues/xo/index.js";
+import { gammaVolume24h, parseEventsList, parseGammaMarket, statusOf as polyStatusOf, tradableOf, type GammaEventRow } from "../../sdk/venues/polymarket/index.js";
 import { canonicalJson, sha256Hex } from "../links/canonical.js";
 import type { Clock } from "./clock.js";
 import type { HostBudget, RecorderConfig } from "./config.js";
@@ -46,6 +52,7 @@ const XO_DATA = "api-mainnet.xo.market";
 const GAMMA = "gamma-api.polymarket.com";
 const XO_MAX_TAKE = 50;
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9-]{0,199}$/;
+const NEG_RISK_ID = /^0x[0-9a-fA-F]{64}$/;
 const CONDITION = /^0x[0-9a-fA-F]{64}$/;
 export const MAX_GROUP_SIZE = 64; // the targets file schema allows 2 to 64 members
 
@@ -103,7 +110,7 @@ export function projectLoad(cfg: RecorderConfig, targets: readonly Target[], now
     const resolveEvery = resolveIntervalMs(slice, cfg);
     const bookEvery = bookIntervalMs(slice, cfg);
     for (const spec of col.resolvePlan(t.marketId)) bump(spec.host, per(resolveEvery), per(cfg.shortResolveIntervalSec * 1000));
-    const book = col.bookPlan(t.marketId, null);
+    const book = col.bookTarget(t.marketId);
     bump(book.host, per(bookEvery), per(cfg.shortIntervalSec * 1000));
   }
   return [...rate].sort(([a], [b]) => (a < b ? -1 : 1)).map(([host, r]) => ({ host, perHour: Math.ceil(r.now), worstCasePerHour: Math.ceil(r.worst) }));
@@ -377,7 +384,7 @@ async function fetchXoActive(deps: DiscoverDeps, opts: DiscoverOptions, counter:
     }
     if (decoded.skipped.length > 0) notes.push(`xo list page ${page}: ${decoded.skipped.length} rows skipped by the decoder`);
     for (const m of decoded.markets) {
-      if (m.kind !== "clob" || lifecycleOf(m, now) !== "open" || !CONDITION.test(m.conditionId) || seen.has(m.conditionId)) continue;
+      if (m.kind !== "clob" || xoStatusOf(m, now) !== "active" || !CONDITION.test(m.conditionId) || seen.has(m.conditionId)) continue;
       seen.add(m.conditionId);
       rows.push({
         conditionId: m.conditionId,
@@ -394,6 +401,15 @@ async function fetchXoActive(deps: DiscoverDeps, opts: DiscoverOptions, counter:
 
 const rootKey = (root: string): string => sha256Hex(`xo-root:${root}`).slice(0, 16);
 
+// A by-slug or by-contract answer through the shared detail decoder; null when it does not decode.
+function decodeDetail(json: unknown): ReturnType<typeof decodeMarketDetail> | null {
+  try {
+    return decodeMarketDetail(json);
+  } catch {
+    return null;
+  }
+}
+
 // One by-slug read, checked against the conditionId it must describe.
 async function slugLookup(
   deps: DiscoverDeps,
@@ -406,10 +422,10 @@ async function slugLookup(
     if (r.status === 404) return { state: "not_found" };
     return { state: "failed", fatal: r.reason === "budget" || r.reason === "breaker_open" || r.reason === "refused_host" };
   }
-  const j = r.json;
-  if (!isRecord(j) || typeof j["conditionId"] !== "string" || j["conditionId"].toLowerCase() !== conditionId.toLowerCase()) return { state: "not_found" };
-  const root = j["rootEventSlug"];
-  return { state: "ok", key: typeof root === "string" && SLUG.test(root) ? rootKey(root) : null };
+  const detail = decodeDetail(r.json);
+  if (detail === null || detail.conditionId.toLowerCase() !== conditionId.toLowerCase()) return { state: "not_found" };
+  const root = xoRootEventSlug(r.json);
+  return { state: "ok", key: root === null ? null : rootKey(root) };
 }
 
 async function resolveRoot(deps: DiscoverDeps, row: XoRow, counter: Counter): Promise<{ state: "ok"; key: string | null } | { state: "pending"; fatal: boolean }> {
@@ -425,8 +441,9 @@ async function resolveRoot(deps: DiscoverDeps, row: XoRow, counter: Counter): Pr
     if (c.status === 404) return { state: "ok", key: null };
     return { state: "pending", fatal: c.reason === "budget" || c.reason === "breaker_open" || c.reason === "refused_host" };
   }
-  const current = isRecord(c.json) ? c.json["slug"] : undefined;
-  slugs = typeof current === "string" && SLUG.test(current) && current !== row.slug ? [current] : [];
+  const detail = decodeDetail(c.json);
+  const current = detail !== null && detail.conditionId.toLowerCase() === row.conditionId.toLowerCase() ? detail.slug : null;
+  slugs = current !== null && SLUG.test(current) && current !== row.slug ? [current] : [];
   if (slugs.length === 0) return { state: "ok", key: null };
   const b = await slugLookup(deps, slugs[0] as string, row.conditionId, counter);
   if (b.state === "ok") return b;
@@ -486,36 +503,30 @@ async function xoUnits(
 
 // ---- Polymarket ----
 
-function binaryYesNoFirst(raw: unknown): boolean {
-  let list: unknown = raw;
-  if (typeof raw === "string") {
-    try {
-      list = JSON.parse(raw) as unknown;
-    } catch {
-      return false;
-    }
-  }
-  if (!Array.isArray(list) || list.length !== 2 || !list.every((x) => typeof x === "string")) return false;
-  // The collector follows outcome 0 and refuses a market that lists No first.
-  return !((list[0] as string).toLowerCase() === "no" && (list[1] as string).toLowerCase() === "yes");
-}
-
 interface PolyMarket {
   readonly id: string;
   readonly closeMs: number | null;
   readonly volume: number;
+  readonly negRiskMarketID: string | null;
 }
 
-function polyMarket(m: unknown, eventEndMs: number | null): PolyMarket | null {
-  if (!isRecord(m)) return null;
-  const id = m["conditionId"];
-  if (typeof id !== "string" || !CONDITION.test(id) || !MARKET_ID.test(id)) return null;
-  if (m["active"] !== true || m["closed"] === true || m["archived"] === true || m["acceptingOrders"] !== true || m["enableOrderBook"] === false) return null;
-  if (m["version"] !== "v1" && m["version"] !== "v2") return null;
-  if (!binaryYesNoFirst(m["outcomes"])) return null;
-  const v = m["volume24hr"];
-  const end = isoToMs(m["endDate"]);
-  return { id: id.toLowerCase(), closeMs: end ?? eventEndMs, volume: typeof v === "number" && Number.isFinite(v) ? v : 0 };
+// One nested market through the shared parser: recordable when the dApp would call it tradable, its version names a
+// token ledger, and outcome 0 is not No (the collector follows outcome 0 and refuses a market that lists No first).
+function polyMarket(row: unknown, eventEndMs: number | null, nowMs: number): PolyMarket | null {
+  const parsed = parseGammaMarket(row);
+  if (!parsed.ok) return null;
+  const m = parsed.value;
+  const id = m.conditionId.toLowerCase();
+  if (!MARKET_ID.test(id)) return null;
+  if (!tradableOf(m, polyStatusOf(m, nowMs)).ok) return null;
+  if (m.version !== "v1" && m.version !== "v2") return null;
+  if (m.outcomes[0]?.toLowerCase() === "no" && m.outcomes[1]?.toLowerCase() === "yes") return null;
+  const end = isoToMs(m.endDate);
+  return { id, closeMs: end ?? eventEndMs, volume: gammaVolume24h(m) ?? 0, negRiskMarketID: m.negRisk === true && typeof m.negRiskMarketID === "string" ? m.negRiskMarketID : null };
+}
+
+function negRiskIdOf(e: GammaEventRow): string | null {
+  return e.negRisk === true && typeof e.negRiskMarketID === "string" && NEG_RISK_ID.test(e.negRiskMarketID) ? e.negRiskMarketID : null;
 }
 
 async function polyUnits(deps: DiscoverDeps, opts: DiscoverOptions, counter: Counter, notes: string[]): Promise<{ units: Unit[]; complete: boolean }> {
@@ -529,33 +540,35 @@ async function polyUnits(deps: DiscoverDeps, opts: DiscoverOptions, counter: Cou
       complete = false;
       break;
     }
-    if (!Array.isArray(r.json)) {
+    const list = parseEventsList(r.json);
+    if (!list.ok) {
       notes.push(`polymarket events page ${page + 1} is not a list`);
       complete = false;
       break;
     }
-    for (const e of r.json as unknown[]) {
-      if (!isRecord(e) || e["active"] !== true || e["closed"] === true || !Array.isArray(e["markets"])) continue;
-      const eventEnd = isoToMs(e["endDate"]);
-      const eventVolume = typeof e["volume24hr"] === "number" && Number.isFinite(e["volume24hr"]) ? e["volume24hr"] : 0;
-      const nrId = e["negRiskMarketID"];
-      const negRisk = e["negRisk"] === true && typeof nrId === "string" && /^0x[0-9a-fA-F]{64}$/.test(nrId);
+    if (list.rejected > 0) notes.push(`polymarket events page ${page + 1}: ${list.rejected} events skipped by the parser`);
+    const now = deps.clock.nowMs();
+    for (const e of list.events) {
+      if (e.active !== true || e.closed === true) continue;
+      const eventEnd = isoToMs(e.endDate);
+      const eventVolume = typeof e.volume24hr === "number" && Number.isFinite(e.volume24hr) ? e.volume24hr : 0;
+      const nrId = negRiskIdOf(e);
       const markets: PolyMarket[] = [];
-      for (const m of e["markets"] as unknown[]) {
-        const pm = polyMarket(m, eventEnd);
+      for (const m of e.markets) {
+        const pm = polyMarket(m, eventEnd, now);
         // In a neg-risk event only markets of that event's own neg-risk id are one exclusive set.
         if (pm === null) continue;
-        if (negRisk && !(isRecord(m) && m["negRisk"] === true && m["negRiskMarketID"] === nrId)) continue;
+        if (nrId !== null && pm.negRiskMarketID !== nrId) continue;
         markets.push(pm);
       }
-      if (negRisk && markets.length >= 2) {
+      if (nrId !== null && markets.length >= 2) {
         if (markets.length > MAX_GROUP_SIZE) {
           notes.push(`a neg-risk event with ${markets.length} tradable markets exceeds the group limit of ${MAX_GROUP_SIZE} and was skipped`);
           continue;
         }
         units.push({
           venue: "polymarket",
-          groupId: `pm-nr-${sha256Hex(`pm-negrisk:${(nrId as string).toLowerCase()}`).slice(0, 16)}`,
+          groupId: `pm-nr-${sha256Hex(`pm-negrisk:${nrId.toLowerCase()}`).slice(0, 16)}`,
           ids: markets.map((m) => m.id),
           closes: markets.map((m) => m.closeMs),
           volume: eventVolume,
@@ -570,7 +583,7 @@ async function polyUnits(deps: DiscoverDeps, opts: DiscoverOptions, counter: Cou
         units.push({ venue: "polymarket", groupId: null, ids: [m.id], closes: [m.closeMs], volume: m.volume, incumbent: false });
       }
     }
-    if ((r.json as unknown[]).length < opts.polyPageSize) break;
+    if (list.events.length + list.rejected < opts.polyPageSize) break;
   }
   return { units, complete };
 }

@@ -31,6 +31,7 @@ import {
   type PayboxSignIntent,
   type VerifyPreparedResult,
 } from "@shared/relay/contract";
+import { depositWalletProxyOf } from "@shared/clob/polymarket/deposit-wallet";
 import { deriveAccount } from "@shared/xo/account/derive";
 import { rebuildDecoded } from "@shared/xo/signing/rebuild";
 
@@ -271,10 +272,14 @@ export function evaluateCard(prepared: unknown, context: EvaluateContext): CardE
   }
 
   // 3. the account. On XO it is the Kernel account derived from the owner; on a CLOB venue (Polymarket, Limitless) the
-  // maker is the owner wallet itself, so the item's account must BE the owner.
+  // maker is the owner wallet itself, so the item's account must BE the owner, except for a Polymarket order made by the
+  // owner's Deposit Wallet, whose address is derived here from the owner (the rebuild then requires signature type 3).
   if (item !== null && (item.kind === "clob_order" || item.kind === "clob_auth")) {
+    const depositWallet = item.kind === "clob_order" && /^0x[0-9a-fA-F]{40}$/.test(item.owner) && depositWalletProxyOf(item.owner as `0x${string}`, item.account) !== null;
     if (item.account.toLowerCase() === item.owner.toLowerCase()) {
       add({ id: "account", label: "The maker is the owner wallet itself", status: "pass", detail: "On this venue there is no derived account: the item's account equals its owner, the wallet that signs." });
+    } else if (depositWallet) {
+      add({ id: "account", label: "The maker is the owner's Polymarket Deposit Wallet", status: "pass", detail: "Derived here from the owner address with the repo's own code (Polymarket's factory, CREATE2); it equals the item's account. The owner wallet signs for it." });
     } else {
       add({ id: "account", label: "The maker is the owner wallet itself", status: "fail", detail: "The account in the item is not the owner wallet. Do not sign." }, "account: not the owner");
     }

@@ -40,7 +40,8 @@ export interface CollectorDeps {
 const DAY_MS = 86_400_000;
 
 export function buildSnapshot(t: Target, tokenId: string, startMs: number, endMs: number, raw: RawBook, depth: number): SnapshotRow {
-  const sides = parseSides(raw.bids, raw.asks, raw.convention, depth, raw.sizeOf, raw.priceOf);
+  // The shared parser has already validated the levels and sorted each side best first.
+  const sides = parseSides(raw.bids, raw.asks, "best_first", depth);
   return {
     targetKey: t.key,
     venue: t.venue,
@@ -162,7 +163,7 @@ export class Collector {
       return out;
     }
     this.noteSkew(bookSpec.host, r);
-    const parsed = col.parseBook(r.json);
+    const parsed = col.parseBook(r.json, st.tokenId);
     if (!parsed.ok) {
       out.bookFailed = true;
       this.event("parse_error", null, t.key, `book: ${parsed.reason}`);

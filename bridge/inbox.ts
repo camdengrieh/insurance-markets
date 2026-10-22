@@ -1,6 +1,8 @@
 import type { PreparedState } from "../relay/prepared.js";
 import type { LocalRuntime } from "../src/local/runtime.js";
-import { preparedIdSchema } from "../src/relay/contract.js";
+import { clobAccountOf } from "../src/clob/polymarket/deposit-wallet.js";
+import { preparedIdSchema, type PreparedKind } from "../src/relay/contract.js";
+import { deriveAccount, parseOwner } from "../src/xo/account/derive.js";
 import { verifyPreparedLocal } from "../src/xo/signing/rebuild.js";
 import { attachAuditSink, auditAdapterOf } from "./audit-adapter.js";
 import {
@@ -29,6 +31,8 @@ import { defineRoute, fail, json, type BridgeModule, type BridgeModuleFactory, t
 // WHAT INGEST CHECKS (each refusal is audited and tested):
 //   - the item is at most MAX_ITEM_CHARS of JSON and matches the relay contract's strict prepared schemas
 //     (digest, tags and signing intent agree with each other and with the item's kind);
+//   - its owner is a usable wallet and its account is the one derived here from that owner (the owner itself for a
+//     CLOB venue item, whose maker is the owner): the same identity check the plugin's prepare tools make;
 //   - none of its strings holds a control, bidi, zero-width or tag character (the relay sanitises; the inbox
 //     refuses what a bad relay or a swapped tool result would let through);
 //   - it is not already out of time;
@@ -54,6 +58,13 @@ import { defineRoute, fail, json, type BridgeModule, type BridgeModuleFactory, t
 // POST /ui/inbox/sign (path S2) belongs to the signer module (bridge/paybox-signer.ts); it uses the service methods
 // below (`markSigned`, `verificationOf`).
 //
+// AFTER A RESTART. The items live in memory; what survives a restart is a short list of the in-flight ones (prepared,
+// shown, signed, submitted) that bridge/inbox-restore.ts keeps in <data dir>/cockpit/inbox-ids.json: per item its id,
+// owner, kind, who asked for it and when it entered the inbox. Never the item, a summary line, a signature or a key.
+// At start the daemon reads each one back from the relay (GET /v1/prepared/{id}) and passes it through `restore`,
+// which is `ingest` plus a comparison with what the list says. A restored item starts again at "prepared": a card
+// shown before the restart must be shown again, and a signature made before it was never kept.
+//
 // WIRING. `inboxOf(host)` is the host's one service. `attachPreparedSource(host, source)` connects it to the relay's
 // prepared records; `attachRelayRuntime(host, runtime)` does that and attaches the relay's audit log in one call.
 // bridge/main.ts (or Integrate) must make that call with `context.runtime`: this module cannot reach the runtime
@@ -65,6 +76,8 @@ export const RECONCILE_MS = 2_000;
 // Finished items are forgotten after a day (the relay keeps its own record for a week).
 export const TERMINAL_RETENTION_MS = 24 * 60 * 60 * 1000;
 const OPEN_STATES: ReadonlySet<InboxState> = new Set(["prepared", "shown", "signed"]);
+// The items whose ids survive a restart: still signable, or sent with no answer yet.
+const IN_FLIGHT_STATES: ReadonlySet<InboxState> = new Set(["prepared", "shown", "signed", "submitted"]);
 const FINAL_STATES: ReadonlySet<InboxState> = new Set(["accepted", "rejected", "expired"]);
 const DETAIL = /^[a-z][a-z0-9_]{0,47}$/;
 const HEX32 = /^[0-9a-f]{32}$/;
@@ -157,6 +170,20 @@ export function hostileTextPath(value: unknown): string | undefined {
 // ---- the service -------------------------------------------------------------------------------------------------------------------
 
 export type RequestedBy = InboxItem["requested_by"];
+
+// What the daemon keeps on disk about one in-flight item so that it can read it back from the relay after a restart.
+// Ids and labels only: nothing in it can be signed, and nothing in it is secret.
+export interface InboxJournalEntry {
+  readonly prepared_id: string;
+  // Lower case.
+  readonly owner: string;
+  readonly kind: PreparedKind;
+  readonly requested_by: RequestedBy;
+  readonly created_at: string;
+}
+export interface InboxJournalSink {
+  save(entries: readonly InboxJournalEntry[]): void;
+}
 export type Actor = { readonly tokenId?: string };
 
 export type IngestRefusal =
@@ -167,7 +194,9 @@ export type IngestRefusal =
   | "no_relay_record"
   | "record_mismatch"
   | "conflict"
-  | "inbox_full";
+  | "inbox_full"
+  // `restore` only: the relay's item is not the one the daemon's list names (id, owner or kind).
+  | "journal_mismatch";
 export type IngestResult =
   | { readonly ok: true; readonly item: InboxItem; readonly created: boolean }
   | { readonly ok: false; readonly reason: IngestRefusal; readonly field?: string };
@@ -207,6 +236,10 @@ export class Inbox {
   #maxItems: number = INBOX_MAX_ITEMS;
   #ticker: unknown;
   #closed = false;
+  #journal: InboxJournalSink | undefined;
+  // Ids read from the journal at start whose relay answer is still awaited: kept in every save until settled.
+  #pending = new Map<string, InboxJournalEntry>();
+  #lastSaved: string | undefined;
 
   constructor(host: DaemonHost, options: InboxOptions = {}) {
     this.#host = host;
@@ -227,6 +260,40 @@ export class Inbox {
 
   hasSource(): boolean {
     return this.#source !== undefined;
+  }
+
+  // Connects the list of in-flight ids that survives a restart. `pending` are the entries read back at start that
+  // are still being fetched from the relay; they stay in the list until `settlePending` is called for each.
+  // `absent`: there is no list on disk yet, so an empty one need not be written.
+  attachJournal(sink: InboxJournalSink | undefined, pending: readonly InboxJournalEntry[] = [], options: { readonly absent?: boolean } = {}): void {
+    this.#journal = sink;
+    this.#pending = new Map(pending.map((entry) => [entry.prepared_id, entry]));
+    this.#lastSaved = options.absent === true ? "[]" : undefined;
+    this.#persist();
+  }
+
+  settlePending(id: string): void {
+    if (this.#pending.delete(id)) this.#persist();
+  }
+
+  // The entries the journal holds now, in a stable order.
+  journalEntries(): InboxJournalEntry[] {
+    const out = new Map<string, InboxJournalEntry>(this.#pending);
+    for (const entry of this.#entries.values()) {
+      const item = entry.item;
+      if (!IN_FLIGHT_STATES.has(item.state)) continue;
+      out.set(item.prepared_id, { prepared_id: item.prepared_id, owner: item.prepared.owner.toLowerCase(), kind: item.prepared.kind, requested_by: item.requested_by, created_at: item.created_at });
+    }
+    return [...out.values()].sort((a, b) => (a.created_at === b.created_at ? (a.prepared_id < b.prepared_id ? -1 : 1) : a.created_at < b.created_at ? -1 : 1));
+  }
+
+  #persist(): void {
+    if (this.#journal === undefined) return;
+    const entries = this.journalEntries();
+    const text = JSON.stringify(entries);
+    if (text === this.#lastSaved) return;
+    this.#lastSaved = text;
+    this.#journal.save(entries);
   }
 
   // ---- reads ----
@@ -253,6 +320,27 @@ export class Inbox {
   // ---- ingest ----
 
   ingest(input: unknown, requestedBy: RequestedBy | string): IngestResult {
+    return this.#admit(input, requestedBy, undefined);
+  }
+
+  // An item read back from the relay after a restart, for an entry of the daemon's own list. It must be the item the
+  // list names (same id, owner and kind); then it goes through every check of `ingest` and keeps the requester and
+  // the time it first entered the inbox. A restored item starts at "prepared".
+  restore(input: unknown, entry: InboxJournalEntry): IngestResult {
+    const pid = idOf(input);
+    const item = typeof input === "object" && input !== null ? (input as { readonly owner?: unknown; readonly kind?: unknown }) : {};
+    let field: string | undefined;
+    if (pid !== entry.prepared_id) field = "prepared_id";
+    else if (typeof item.owner !== "string" || item.owner.toLowerCase() !== entry.owner) field = "owner";
+    else if (item.kind !== entry.kind) field = "kind";
+    if (field !== undefined) {
+      this.#mismatch(entry.prepared_id, `journal.${field}`);
+      return { ok: false, reason: "journal_mismatch", field };
+    }
+    return this.#admit(input, entry.requested_by, entry.created_at);
+  }
+
+  #admit(input: unknown, requestedBy: RequestedBy | string, createdAt: string | undefined): IngestResult {
     const by = requestedBySchema.safeParse(requestedBy);
     if (!by.success) return this.#refuse("invalid", undefined, "requested_by");
     const pid = idOf(input);
@@ -273,6 +361,11 @@ export class Inbox {
     const prepared = parsed.data;
     const hostile = hostileTextPath(prepared);
     if (hostile !== undefined) return this.#refuse("hostile_text", prepared.prepared_id, hostile === "too_big" ? "item" : fieldOf(hostile.split(".")));
+    const identity = identityDisagreement(prepared);
+    if (identity !== undefined) {
+      this.#mismatch(prepared.prepared_id, identity);
+      return { ok: false, reason: "record_mismatch", field: identity };
+    }
 
     const nowMs = this.#host.clock();
     const expiresAtMs = Date.parse(prepared.expires_at);
@@ -309,7 +402,7 @@ export class Inbox {
       prepared_id: prepared.prepared_id,
       state: "prepared",
       requested_by: by.data,
-      created_at: at,
+      created_at: createdAt ?? at,
       updated_at: at,
       expires_at: prepared.expires_at,
       prepared,
@@ -322,6 +415,7 @@ export class Inbox {
     // The relay may already be past `prepared` for an item it handed out a moment ago.
     this.#bus.publish({ type: "prepared", item: entry.item });
     this.#settle(entry, view);
+    this.#persist();
     this.#ensureTicker();
     return { ok: true, item: entry.item, created: true };
   }
@@ -467,6 +561,7 @@ export class Inbox {
     const result = hash === undefined && safeDetail === null ? null : { ...(hash === undefined ? {} : { user_op_hash: hash }), ...(safeDetail === null ? {} : { detail: safeDetail }) };
     entry.item = { ...entry.item, state: to, updated_at: isoSecond(this.#host.clock()), result };
     this.#bus.publish({ type: "prepared_state", prepared_id: entry.item.prepared_id, state: to, result });
+    this.#persist();
   }
 
   #evictOne(): boolean {
@@ -522,6 +617,20 @@ function idOf(input: unknown): string | undefined {
 function fieldOf(path: readonly (string | number | symbol)[]): string {
   const text = path.map(String).join(".");
   return /^[A-Za-z][A-Za-z0-9_.[\]]{0,79}$/.test(text) ? text : "item";
+}
+
+// The owner must be a usable wallet and the account the one derived from it (for a CLOB venue item, the owner itself:
+// its maker is the wallet; or for a Polymarket order, the owner's Deposit Wallet, re-derived from the owner here, the
+// rebuild then requiring signature type 3). The field that is wrong, or undefined.
+function identityDisagreement(item: InboxItem["prepared"]): string | undefined {
+  let expected: string;
+  try {
+    const owner = parseOwner(item.owner);
+    expected = item.kind === "clob_order" ? (clobAccountOf(owner, item.account) ?? owner) : item.kind === "clob_auth" ? owner : deriveAccount(owner);
+  } catch {
+    return "owner";
+  }
+  return item.account.toLowerCase() === expected.toLowerCase() ? undefined : "account";
 }
 
 // The first way the item and the relay's record disagree, or undefined when they agree.

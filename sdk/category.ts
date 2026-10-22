@@ -71,10 +71,10 @@ export function normaliseCategoryText(text: string): string {
 // ---- the native tables: exact matches of a venue's own category, tag or series name -----------------------------
 //
 // Keys are normalised strings (see normaliseCategoryText). "common" applies to every venue after its own table.
-// XO: the roots and children seen in the captured lists (test/fixtures/xo, pm/test/recorder/fixtures): TECH, PULSE,
+// XO: the roots and children seen in the captured lists (sdk/venues/xo/fixtures): TECH, PULSE,
 // CULTURE, SPORTS, FINANCE, CRYPTO, POLITICS and their children. PULSE is XO's short-horizon price-cycle family
 // (the docs' example and every captured row is a BTC window), so it reads as crypto.
-// Limitless: the captured active list (app/src/venues/limitless/fixtures) carries "Minutely", "5 min", "15 min",
+// Limitless: the captured active list (sdk/venues/limitless/fixtures) carries "Minutely", "5 min", "15 min",
 // "Crypto", "Bitcoin", "Ethereum" as categories and "Lumy", "Recurring", "Minutes 5", "Minutes 15" as tags. The
 // minute-window categories and the "Lumy" family are the venue's automated crypto price markets.
 // Polymarket: no category field reaches the read adapters (Gamma /markets carries series and event slugs, not

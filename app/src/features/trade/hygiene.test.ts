@@ -17,10 +17,11 @@ const TEST_ONLY = new Set(["test-support.tsx", "clob-test-support.ts"]);
 // The only file that may NAME a tool that sends. It builds fixed text for a person to give an agent; it calls nothing.
 const TEXT_ONLY_FILE = "handoff.ts";
 const SENDING_TOOLS = new Set(["xo_submit_userop", "xo_submit_order", "xo_cancel_order", "xo_withdraw", "xo_get_prepared"]);
-const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "xo/signing/amounts", "xo/signing/constants", "xo/signing/errors", "xo/signing/lines", "xo/chain/constants", "xo/funding/calldata", "guardrails/amount", "guardrails/untrusted", "clob/amounts", "clob/venues"]);
+const ALLOWED_SHARED = new Set(["relay/contract", "xo/account/derive", "xo/signing/rebuild", "xo/signing/amounts", "xo/signing/constants", "xo/signing/errors", "xo/signing/lines", "xo/chain/constants", "xo/funding/calldata", "guardrails/amount", "guardrails/untrusted", "clob/amounts", "clob/venues", "clob/polymarket/deposit-wallet"]);
 const FORBIDDEN_IDENTIFIER = /submit|signature|signTyped|signMessage|sendTransaction|sendRawTransaction|writeContract|privateKey|mnemonic|secret/i;
 // Names that are about display or the daemon's own states, not an action.
-const ALLOWED_IDENTIFIERS = new Set(["SUBMIT_USEROP_TOOL", "SUBMIT_ORDER_TOOL", "SUBMIT_CLOB_ORDER_CALL", "submitToolFor", "ENABLE_USEROP_SUBMIT", "submitted"]);
+// `signature_type` is a field of the decoded venue order the page reads to check the maker (vet.ts); it sends nothing.
+const ALLOWED_IDENTIFIERS = new Set(["SUBMIT_USEROP_TOOL", "SUBMIT_ORDER_TOOL", "SUBMIT_CLOB_ORDER_CALL", "submitToolFor", "ENABLE_USEROP_SUBMIT", "submitted", "signature_type"]);
 const NETWORK_GLOBALS = new Set(["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "postMessage", "BroadcastChannel", "Worker", "SharedWorker", "importScripts", "open"]);
 const PAGE_INPUT_GLOBALS = new Set(["location", "localStorage", "sessionStorage", "indexedDB", "history", "document", "window", "navigator", "URLSearchParams"]);
 const FORBIDDEN_JSX_ATTRIBUTES = new Set(["href", "src", "srcDoc", "style", "dangerouslySetInnerHTML", "action", "formAction", "ping", "target"]);

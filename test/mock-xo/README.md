@@ -66,7 +66,7 @@ chain works: L1 for a smart account, orders, UserOps). An `XoChain` from `startX
 
 ## What each listener serves
 
-Basis: **recorded** = a live GET saved in `test/fixtures/xo`; **docs** = XO docs or the research notes (the exact live
+Basis: **recorded** = a live GET saved in `sdk/venues/xo/fixtures`; **docs** = XO docs or the research notes (the exact live
 text is M); **synthetic** = invented because the live body was never seen (M). **M** marks every write-surface shape and
 error text: no order, key or UserOp was ever sent to the live service, so each comes from docs and OpenAPI examples.
 

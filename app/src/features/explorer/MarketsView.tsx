@@ -135,7 +135,7 @@ function ViewHeader({ view, holdings, linkLoad, quotient, onOpenQuotientSettings
       return (
         <p className="explorer-note" data-view-note="linked">
           {linkLoad === null || linkLoad.state === "absent"
-            ? "Rows named by an approved cross-venue link. No link dataset has been approved by a person yet, so no row is linked, and nothing guesses a link from similar titles."
+            ? "Rows named by an approved cross-venue link. This build bundles no link file, so no row is linked, and nothing guesses a link from similar titles."
             : linkLoad.state === "rejected"
               ? "Rows named by an approved cross-venue link. The bundled link file was refused whole, so no row is linked."
               : "Rows named by an approved cross-venue link, as candidates: a candidate is never proof, and no spread is drawn between candidates."}

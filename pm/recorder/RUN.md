@@ -92,7 +92,7 @@ reviewed bundle. A bundle requires its manifest hash: `--pin <sha256>` or `--pin
 }
 ```
 
-(Real ids from the public captures in `pm/test/recorder/fixtures/`.) You do not have to write this
+(Real ids from the public captures in `sdk/venues/xo/fixtures/` and `sdk/venues/polymarket/fixtures/`.) You do not have to write this
 file: `discover` builds it, see below.
 
 A group is a set of mutually exclusive markets on one venue (XO or Polymarket). `exhaustive` is
@@ -111,15 +111,16 @@ $RUN run --discover --db ... --targets ...                    # build it if miss
 
 Discovery uses the same client as collection (allowlist, budgets, User-Agent, backoff), GET only:
 
-* XO: active CLOB markets from the Data API (`marketType=2`, `ACTIVE`), read with the `src/xo`
-  decoders. List rows carry no event id, so each market's `rootEventSlug` comes from
+* XO: active CLOB markets from the Data API (`marketType=2`, `ACTIVE`), read with the shared XO
+  decoders (`sdk/venues/xo`). List rows carry no event id, so each market's `rootEventSlug` comes from
   `/api/markets/slug/{slug}` (answers are checked against the conditionId; the list slug can be stale
   and 404, in which case the by-contract route supplies the current slug). Results are cached beside
   the targets file (`<targets>.discover-cache.json`, ids and hashes only), so a market costs at most
   three lookups once. Markets with a common `rootEventSlug` form a same-venue group.
-* Polymarket: active events by 24 h volume from Gamma. A neg-risk event becomes a group of its
-  tradable markets; other events give up to five single markets each. A group over 64 members is
-  skipped, never truncated.
+* Polymarket: active events by 24 h volume from Gamma, read with the shared Polymarket parser
+  (`sdk/venues/polymarket`: a market is offered only when the dApp would call it tradable). A
+  neg-risk event becomes a group of its tradable markets; other events give up to five single
+  markets each. A group over 64 members is skipped, never truncated.
 * `exhaustive` is always `unknown`. A shared `rootEventSlug` or `negRisk` flag does not prove the set
   is exhaustive, nor (for `rootEventSlug`) even that it is mutually exclusive; read group results with
   that in mind. Group ids are hashes (`xo-evt-...`, `pm-nr-...`); no title or slug is written.

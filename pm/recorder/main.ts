@@ -10,7 +10,7 @@
 // runCli() takes its clock, fetch and output sinks as arguments so tests can drive every command
 // against fixtures and a loopback server.
 
-import { existsSync, readFileSync, writeFileSync, unlinkSync, statSync, openSync, closeSync, utimesSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
@@ -25,7 +25,12 @@ import { buildDryRun } from "./plan.js";
 import { buildReport, formatReport } from "./report.js";
 import { RecorderStore } from "./store.js";
 import { loadTargets, type TargetInputs } from "./targets.js";
+import { acquireLock, ensureWritableDir } from "./lock.js";
 import type { TargetSet } from "./types.js";
+
+// The lock and data-directory helpers live in lock.ts (the linker imports them from there, so its bundle never
+// carries this command line); re-exported for existing importers.
+export { LOCK_STALE_MS, acquireLock, ensureWritableDir, type Lock } from "./lock.js";
 
 export interface CliIo {
   readonly out: (line: string) => void;
@@ -87,46 +92,6 @@ function parseNum(v: string | undefined, name: string, errors: string[]): number
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-// Advisory lock so two copies (an overlapping cron run, a double start) cannot write one database.
-// File times are real wall-clock times, so staleness uses Date.now(), not the injected clock. A
-// running loop touches the file every tick; a lock untouched for two hours belongs to a dead process.
-export const LOCK_STALE_MS = 2 * 3600_000;
-
-export interface Lock {
-  readonly release: () => void;
-  readonly touch: () => void;
-}
-
-export function acquireLock(dbPath: string): Lock | string {
-  if (dbPath === ":memory:") return { release: () => undefined, touch: () => undefined };
-  const lock = `${dbPath}.lock`;
-  try {
-    if (existsSync(lock) && Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS) unlinkSync(lock);
-    const fd = openSync(lock, "wx");
-    writeFileSync(fd, `${process.pid}\n`);
-    closeSync(fd);
-  } catch {
-    return `another recorder holds ${lock} (remove it only if no recorder is running)`;
-  }
-  return {
-    release: () => {
-      try {
-        unlinkSync(lock);
-      } catch {
-        /* already gone */
-      }
-    },
-    touch: () => {
-      try {
-        const now = new Date();
-        utimesSync(lock, now, now);
-      } catch {
-        /* the lock was removed by hand; the next start will recreate it */
-      }
-    },
-  };
 }
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<number> {
@@ -435,19 +400,6 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
 
 function nonEmpty(v: string | undefined): string | undefined {
   return v === undefined || v.trim() === "" ? undefined : v;
-}
-
-// Creates the directory if needed and proves it can be written; returns an error message or null.
-export function ensureWritableDir(dir: string): string | null {
-  try {
-    mkdirSync(dir, { recursive: true });
-    const probe = join(dir, `.write-test-${process.pid}`);
-    writeFileSync(probe, "ok");
-    unlinkSync(probe);
-    return null;
-  } catch {
-    return "the data directory cannot be created or written; refusing to start (check that the volume is mounted and writable by the user running the recorder)";
-  }
 }
 
 async function readCommand(

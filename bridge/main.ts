@@ -6,7 +6,9 @@ import type { LocalStatus } from "../src/local/runtime.js";
 import { AGENT_TOKEN_PREFIX, AgentTokenStore, Auth, COCKPIT_DIR_NAME, DEFAULT_AGENT_SCOPES, ScopeListError, parseScopeList, type Clock, type InstanceRole, type RandomBytes } from "./auth.js";
 import { attachEffectiveFlags } from "./arming.js";
 import { MCP_PATH, type TokenScope } from "./contract.js";
+import { createEmbeddedRelayClient } from "../src/relay/client.js";
 import { attachRelayRuntime, inboxOf } from "./inbox.js";
+import { restoreInbox } from "./inbox-restore.js";
 import { killControllerOf } from "./kill.js";
 import { startDaemon, type BridgeModuleSource, type Daemon, type DaemonStartError } from "./server.js";
 import { createStaticSite, defaultAppDir, type StaticSite } from "./static.js";
@@ -299,6 +301,7 @@ function readOnlyReason(status: LocalStatus): string {
 //     bar shows KILLED without a refused write first;
 //   - a prepared item in a settled tool answer (any class except submit) is offered to the inbox, which checks it
 //     against the relay's record and rebuilds it before it is listed.
+// (After this, startCockpitDaemon restores the inbox items that were in flight before a restart.)
 // Each is a no-op on a read-only instance: there is no relay, so no record, no sink and no kill to learn of.
 function joinRelay(daemon: Daemon, context: CockpitContext): void {
   const host = daemon.host;
@@ -412,6 +415,14 @@ export async function startCockpitDaemon(context: CockpitContext, overrides: Coc
   }
 
   joinRelay(daemon, context);
+
+  // The inbox items that were in flight when the daemon last stopped: their ids are kept in <cockpit dir>/inbox-ids.json
+  // and each is read back from the relay (GET /v1/prepared/{id}) and checked like a freshly prepared item, or dropped
+  // with a reason on stderr (bridge/inbox-restore.ts). Only the writer keeps the list: a read-only instance has no
+  // relay to read back from and never writes to a directory it does not own.
+  if (role === "writer" && cockpitDir !== null) {
+    await restoreInbox(daemon.host, { dir: cockpitDir, relay: createEmbeddedRelayClient(context.runtime.handler) });
+  }
 
   let removeInfo: (() => Promise<void>) | undefined;
   if (role === "writer" && cockpitDir !== null) {

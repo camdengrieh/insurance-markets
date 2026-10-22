@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
+import { XO_FIXTURE_DIRECTORY } from "./fixtures/xo/load.js";
+
 // Guards the recorded XO fixtures: every file is accounted for in MANIFEST.json, every file is a recording of the
 // venue (nothing hand-written or synthetic is allowed), and none of them carries a third-party wallet, an email
 // address or a profile picture URL.
 
-const dir = new URL("./fixtures/xo/", import.meta.url);
+const dir = XO_FIXTURE_DIRECTORY;
 const files = readdirSync(dir).filter((name) => name.endsWith(".json") && name !== "MANIFEST.json");
 const manifest = JSON.parse(readFileSync(new URL("MANIFEST.json", dir), "utf8")) as Record<string, { source: string; note: string }>;
 
@@ -22,7 +24,8 @@ describe("XO fixtures", () => {
   it("lists every fixture in the manifest with a known source, and nothing else", () => {
     assert.deepEqual(Object.keys(manifest).sort(), [...files].sort());
     for (const [name, entry] of Object.entries(manifest)) {
-      assert.ok(["research-copy", "live-get", "live-observed"].includes(entry.source), `${name}: ${entry.source}`);
+      // live-get-trimmed: a live GET with third-party identities, links and free text removed (the note says what).
+      assert.ok(["research-copy", "live-get", "live-get-trimmed", "live-observed"].includes(entry.source), `${name}: ${entry.source}`);
     }
   });
 

@@ -5,6 +5,7 @@ import { routes as credentialsRoutes } from "./credentials.js";
 import { routes as fundingRoutes } from "./funding.js";
 import { routes as healthRoutes } from "./health.js";
 import { routes as ordersRoutes } from "./orders.js";
+import { routes as preparedRoutes } from "./prepared.js";
 import type { RouteTable } from "./types.js";
 import { routes as useropsRoutes } from "./userops.js";
 
@@ -17,6 +18,7 @@ import { routes as useropsRoutes } from "./userops.js";
 //   funding.ts      funding         POST /v1/funding/{check,report}
 //   creation.ts     creation        POST /v1/creation/track
 //   clob.ts         relay-trading   POST /v1/clob/{order,auth}/{prepare,submit} (Polymarket, Limitless)
+//   prepared.ts     relay-core      GET /v1/prepared/:id (the stored item by id, amendment R9)
 // A route in two tables is a bug, so merging throws.
 
 const KNOWN: ReadonlySet<string> = new Set(CONTRACT_ROUTE_KEYS);
@@ -45,6 +47,7 @@ export const routes: RouteTable = mergeRoutes(
   fundingRoutes,
   creationRoutes,
   clobRoutes,
+  preparedRoutes,
 );
 
 // Contract routes with no handler yet. The server answers these with not_implemented.

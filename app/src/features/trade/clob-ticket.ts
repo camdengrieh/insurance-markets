@@ -10,11 +10,13 @@
 //   - the two signed amounts are exact: shares x price is a whole number of 6-decimal units or the ticket refuses.
 // Money is bigint micro units and exact decimal strings; there is no floating point here.
 
-import { clobCapAmount, computeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "@shared/clob/amounts";
+import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, parseTickMicro, type ClobAmounts } from "@shared/clob/amounts";
+import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
 import {
   CLOB_CAP_FEE_BPS,
-  LIMITLESS_ASSUMED_TICK,
+  LIMITLESS_PRICE_TICK,
   LIMITLESS_ORDER_DOMAIN_NAME,
+  LIMITLESS_MIN_MAKER_AMOUNT,
   LIMITLESS_ORDER_DOMAIN_VERSION,
   LIMITLESS_TIFS,
   POLYMARKET_EXCHANGES,
@@ -62,7 +64,7 @@ export function clobMarketFacts(market: Market): ClobMarketFacts | null {
   const version = market.ref.native["version"];
   const negRisk = market.ref.native["negRisk"] === "true";
   const polymarketBook = venue === "polymarket" ? (version === "v2" ? "v2" : negRisk ? "neg_risk" : "ctf") : null;
-  return { venue, marketId: market.ref.marketId, tick: venue === "limitless" ? LIMITLESS_ASSUMED_TICK : tick, minSize, polymarketBook, fetchedAtMs: market.prov.fetchedAtMs };
+  return { venue, marketId: market.ref.marketId, tick: venue === "limitless" ? LIMITLESS_PRICE_TICK : tick, minSize, polymarketBook, fetchedAtMs: market.prov.fetchedAtMs };
 }
 
 export function tifsFor(venue: ClobVenue): readonly ClobTif[] {
@@ -152,6 +154,16 @@ export function buildClobTicket(input: ClobTicketInput, facts: ClobMarketFacts):
       })();
       amounts = computeClobAmounts({ side: input.side === "BUY" ? SIDE_BUY : SIDE_SELL, price: input.price, shares: input.shares, grid: { tick: facts.tick, priceDecimals: priceDecimalsOf(facts) }, sizeDecimals: CLOB_SIZE_DECIMALS, minSharesMicro: minMicro });
       cap = clobCapAmount(amounts, CLOB_CAP_FEE_BPS);
+      if (facts.venue === "limitless") {
+        // The venue's own floor and shares step (src/clob/venues.ts LIMITLESS_MIN_MAKER_AMOUNT, LIMITLESS_PRICE_TICK);
+        // the relay applies the same check.
+        try {
+          checkLimitlessAmounts(amounts);
+        } catch (error) {
+          if (!(error instanceof SigningError)) throw error;
+          issues.push(issue("shares", "below_venue_floor", `Limitless refuses an order whose maker amount is under ${LIMITLESS_MIN_MAKER_AMOUNT.toString()} raw units (${formatMicro(LIMITLESS_MIN_MAKER_AMOUNT)}); raise the size or the price.`));
+        }
+      }
     } catch (error) {
       if (!(error instanceof SigningError)) throw error;
       switch (error.code) {
@@ -235,22 +247,39 @@ export interface SignedFieldLine {
   readonly fromRelay?: boolean;
 }
 
+// Polymarket: which account makes the order is READ, not assumed. The relay reads Polygon at prepare: the owner's Deposit
+// Wallet (one of the two addresses derived here from the owner) when one is deployed with Polymarket's proxy code and
+// owned by the owner, signature type 3; the owner wallet itself, type 0, when neither address holds code; a refusal when
+// the read fails. The page shows both possibilities and the derived addresses; the prepared item says which it was.
+function depositWalletCandidatesText(owner: string | null): string | null {
+  if (owner === null || !/^0x[0-9a-fA-F]{40}$/.test(owner)) return null;
+  try {
+    const address = owner as `0x${string}`;
+    return `${depositWalletAddress(address, "beacon")} (beacon proxy) or ${depositWalletAddress(address, "uups")} (UUPS proxy), both derived from your wallet`;
+  } catch {
+    return null;
+  }
+}
+
 export function signedFieldsPreview(ticket: ClobTicket, facts: ClobMarketFacts, owner: string | null): SignedFieldLine[] {
   const maker = owner ?? "your wallet address";
-  const common: SignedFieldLine[] = [
-    { label: "maker and signer", value: maker },
+  const amounts: SignedFieldLine[] = [
     { label: "tokenId", value: ticket.tokenId },
     { label: "makerAmount", value: ticket.amounts.makerAmount.toString() },
     { label: "takerAmount", value: ticket.amounts.takerAmount.toString() },
     { label: "side", value: ticket.side === "BUY" ? "0 (BUY)" : "1 (SELL)" },
-    { label: "signatureType", value: "0 (EOA)" },
-    { label: "salt", value: "a fresh random value", fromRelay: true },
   ];
   if (ticket.venue === "polymarket") {
     const book = facts.polymarketBook ?? "ctf";
     const exchange = POLYMARKET_EXCHANGES[book];
+    const candidates = depositWalletCandidatesText(owner);
     return [
-      ...common,
+      { label: "maker and signer", value: "your Polymarket Deposit Wallet when the relay finds one deployed and owned by your wallet on Polygon, otherwise your wallet itself", fromRelay: true },
+      ...(candidates === null ? [] : [{ label: "your Deposit Wallet addresses", value: candidates }]),
+      ...amounts,
+      { label: "signatureType", value: "3 (Deposit Wallet) or 0 (EOA), from the same read", fromRelay: true },
+      { label: "what your wallet signs", value: "type 3: a TypedDataSign wrapper (ERC-7739) with this order nested as its contents; type 0: the order itself" },
+      { label: "salt", value: "a fresh random value", fromRelay: true },
       { label: "timestamp", value: "the venue's clock, in milliseconds", fromRelay: true },
       { label: "metadata, builder", value: "zero (no builder attribution)" },
       { label: "domain", value: `Polymarket CTF Exchange, version ${exchange.version}, chain 137, exchange ${exchange.verifyingContract} (${book === "v2" ? "Protocol V2 book" : book === "neg_risk" ? "neg-risk CTF book" : "CTF book"}; the relay decides from its own market read)` },
@@ -258,7 +287,10 @@ export function signedFieldsPreview(ticket: ClobTicket, facts: ClobMarketFacts, 
     ];
   }
   return [
-    ...common,
+    { label: "maker and signer", value: maker },
+    ...amounts,
+    { label: "signatureType", value: "0 (EOA)" },
+    { label: "salt", value: "a fresh random value", fromRelay: true },
     { label: "taker", value: "the zero address (open order)" },
     { label: "expiration, nonce", value: "0 and 0 (the venue's rule: no signed expiry)" },
     { label: "feeRateBps", value: "0 (COLLATERAL fee module; the relay refuses any other)" },
@@ -267,7 +299,7 @@ export function signedFieldsPreview(ticket: ClobTicket, facts: ClobMarketFacts, 
 }
 
 // The compact "What you sign" strip for a venue order: the domain the relay is expected to sign for (Polymarket's
-// from the market's book, decided again by the relay from its own read), the side and the EOA signature type, the two
+// from the market's book, decided again by the relay from its own read), the side and the signature type, the two
 // signed amounts worked out here, and the policy fee ceiling. Every value comes from the ticket or a pinned constant.
 export function clobSignCells(ticket: ClobTicket | null, facts: ClobMarketFacts, side: string): SignCell[] {
   const wire = isSide(side) ? side : null;
@@ -283,8 +315,9 @@ export function clobSignCells(ticket: ClobTicket | null, facts: ClobMarketFacts,
         : `${formatMicro(ticket.amounts.makerAmount)} shares → ${formatMicro(ticket.amounts.takerAmount)} USD`;
   return [
     { label: "domain", value: domain, note: facts.venue === "polymarket" ? "the relay confirms the book from its own read" : "the market's exchange, on the pinned list" },
-    // Both venues: an EOA order, type 0 (the same value the full preview below lists).
-    { label: "side · type", value: wire === null ? null : `${wire} · EOA, type 0`, missing: "choose a side" },
+    // Limitless: an EOA order, type 0. Polymarket: type 3 (Deposit Wallet) or 0 (EOA), read from Polygon at prepare
+    // (the same values the full preview below lists).
+    { label: "side · type", value: wire === null ? null : facts.venue === "polymarket" ? `${wire} · type 3 or 0, read at prepare` : `${wire} · EOA, type 0`, missing: "choose a side" },
     { label: "maker → taker", value: amounts, missing: "complete the ticket first" },
     { label: "fee ceiling", value: `${CLOB_CAP_FEE_BPS.toLocaleString("en-US")} bps`, note: "policy ceiling, not the venue's quote", caution: true },
   ];

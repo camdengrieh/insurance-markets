@@ -75,7 +75,7 @@ Each reader ships offline fixtures and an opt-in `live.test.ts` (`APP_LIVE=1`). 
 | D2 | `allowlist.ts`, `proxy.ts` | read proxy: closed per-service routes, JSON-RPC read methods only, no redirects, 8 MiB and 15 s caps, R9 pause, restricted venues off unless `XO_COCKPIT_VENUES` |
 | D3 | `tool-classes.ts`, `arming.ts`, `kill.ts` | closed tool and route class table, tool gate, ARM window, one-way kill |
 | D4 | `events.ts`, `inbox.ts`, `audit-adapter.ts` | SSE feed with resume, prepared inbox, audit feed and relay audit sink |
-| D5 | `paybox-signer.ts` | S2 signer adapter, flag OFF, never exercised against a real PayBox |
+| D5 | `paybox-signer.ts` | S2 signer adapter, flag OFF, never exercised against a real PayBox; its CLI flow and output shapes were rewritten on 2026-10-21 to the published `@paybox-sh/sdk` 2.2.0 source |
 | D6 | `shim.ts` | stdio MCP front for a running daemon |
 | Integration | `status.ts` | `GET /ui/status`; also the joins in `main.ts` between daemon and relay |
 | Tests | `bridge/test/{server,proxy,tools,events,signer,shim,integrate,e2e}/` | node:test |
@@ -202,7 +202,7 @@ Nine product findings remain as `todo` tests in `test/profile-matrix/core-findin
 - **M5 write commands beyond prepare.** The terminal grammar has prepare commands and refuses any flag or cap setter, raw call, `arm`, `kill` and `call`; nothing in the page sends, signs, cancels or withdraws. `ui.command` audit events are not emitted (no route for it).
 - **S2 enabled.** The signer adapter exists and is off (`S2_ENABLED_IN_THIS_BUILD = false` in the page, `ENABLE_PAYBOX_SIGNER` and an acknowledgement of DT1 and DT3 required in the daemon). Everything it assumes about the PayBox CLI (sign output shape, credential listing, decline shapes) is a guess that fails closed.
 - **`/mcp`.** The daemon has no MCP endpoint ("no MCP endpoint in this build"). Agents use `node dist/local.mjs shim`. `POST /ui/inbox/sign` is registered only by the signer module.
-- **The relay route `GET /v1/prepared/{id}`** (so `xo_get_prepared` is `not_implemented` against a real relay; the inbox cannot rebuild an item after a daemon restart).
+- **The relay route `GET /v1/prepared/{id}`** (so `xo_get_prepared` is `not_implemented` against a real relay; the inbox cannot rebuild an item after a daemon restart). Later: built in relay 0.3.0 (see docs/tool-contract.md, `xo_get_prepared`). The inbox now restores its in-flight items after a restart: the writer keeps their ids, owner, kind, requester and entry time (nothing signable, nothing secret) in `<data dir>/cockpit/inbox-ids.json`, reads each back with `GET /v1/prepared/{id}` at start, checks it like a fresh item and lists it again at `prepared`, or drops it with a reason on stderr and in the audit (expired, used, ambiguous, not found, answer not kept, relay too old, relay error, refused). See docs/dapp-runbook.md section 3.3 and bridge/inbox-restore.ts; tests in bridge/test/events/inbox-restore.test.ts and bridge/test/server/main.test.ts.
 - **The page does not read recorded capability facts**; every capability shows "unproven" and the trade screens stay closed. Wiring needs a mapping from the relay's fact ids to the page's (`setTradeFactsSource`).
 - **Market-creation UI** (decision O5), market making, bulk orders, non-XO trading.
 - **Page controls**: no kill button, no arm control, no session renewal after 12 hours, one event stream owned by the Terminal screen.
@@ -218,7 +218,7 @@ All live tests are opt-in real actions on third-party systems. None was run. A c
 |---|---|---|
 | DT1 (contains T0) | Does PayBox sign `raw` and `typedData` (chains 3223, 137, 1337, 4162), and what does its approval screen show | The whole XO write path through a user operation (deploy, enable trading, redeem, revoke); the two-tag wording on the Signature Card (M4-12); the meaning of `inner_hash_tag` for an approver; S1 end to end; the S2 enable condition |
 | DT2 | Does the PayBox address carry an EIP-7702 delegation | The wallet screen does not call the address a plain EOA; x402 payer assumptions |
-| DT3 | Does S2 (the daemon as a PayBox client) work end to end | S2 stays off; `parseSignOutput`, the credential-listing command and its parser |
+| DT3 | Does S2 (the daemon as a PayBox client) work end to end | S2 stays off. The commands, the approval flow (sign, read, `--complete-signature`) and the answer and listing shapes are read from `@paybox-sh/sdk` 2.2.0 (2026-10-21); what still needs the live run (the server returning the posted artifact unchanged, the raw scheme, low s, the signing window after approval, the failure shapes, the approval screen) is in `S2_ENABLE_CONDITIONS` and is refused until then |
 | DT4 | Are grants independent per client and revocable | Documentation claims about separate grants (no code depends on it) |
 | DT5 | Does the loopback UI work in Chromium, Firefox and Safari | Only one headless Chromium on macOS was tried; Local Network Access and Safari mixed-content behaviour unknown |
 | DT6 | Does one paid Quotient call work from a plain EOA | Quotient mode B2 (daemon pays through PayBox) is not built; paid calls use the user's own key or an import |

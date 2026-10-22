@@ -14,7 +14,8 @@ import { decodeOrderAmounts, formatMicro, formatTick, hashOrder, orderFromWire }
 import { createRelay, type CreateRelayOptions, type Relay } from "../relay/main.js";
 import { ORDER_FILLED_TOPIC, createOrderRoutes, type OrderRouteDeps, type OrderRoutes } from "../relay/orders.js";
 import type { AccountDirectory, AccountReading } from "../relay/health.js";
-import type { RelayContext, RelayServices } from "../relay/types.js";
+import { mergeRoutes } from "../relay/routes.js";
+import type { RelayContext, RelayServices, RouteTable } from "../relay/types.js";
 import { ANVIL_TEST_ACCOUNTS } from "./fixtures/userop/anvil-test-keys.js";
 import { FakeClock, TEST_KDF, TEST_MASTER_SECRET, TEST_RELAY_KEY, tempDir, type TempDir } from "./relay-core-helpers.js";
 import { checkDecoded } from "./relay-decoded-check.js";
@@ -389,6 +390,10 @@ export interface RigOptions {
   readonly dir?: TempDir;
   readonly fetch?: typeof fetch;
   readonly tripwireCheckers?: CreateRelayOptions["tripwireCheckers"];
+  // Served next to the order routes (GET /v1/prepared/:id, for example).
+  readonly extraRoutes?: RouteTable;
+  // Spread last into createRelay (an owner gate, an onCore hook).
+  readonly createOptions?: Partial<CreateRelayOptions>;
 }
 
 export interface Rig {
@@ -439,12 +444,13 @@ export async function startRig(options: RigOptions = {}): Promise<Rig> {
     now: clock.now,
     sleep: clock.sleep,
     maintenance: false,
-    routes: orders.routes,
+    routes: options.extraRoutes === undefined ? orders.routes : mergeRoutes(orders.routes, options.extraRoutes),
     accounts,
     fetch: options.fetch ?? xo.fetch,
     http: BIG_RATES,
     ...(options.extraServices === undefined ? {} : { extraServices: options.extraServices }),
     ...(options.tripwireCheckers === undefined ? {} : { tripwireCheckers: options.tripwireCheckers }),
+    ...options.createOptions,
   });
   const account = deriveAccount(OWNER_KEY.address);
   if (options.credentials !== false) {

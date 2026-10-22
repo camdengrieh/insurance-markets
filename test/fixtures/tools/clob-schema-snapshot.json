@@ -10,7 +10,7 @@
   "meta": {
    "anthropic/requiresUserInteraction": true
   },
-  "description_sha256": "cdcdd71191d6068b17fd3750687f69979caf54eb09ea342071a2a34d8f09f12e",
+  "description_sha256": "ed4a06ad2d364196b69e8add9e8e6c0b1b151955ad0a5346e1b1bb400f4c28e9",
   "input": {
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "additionalProperties": false,

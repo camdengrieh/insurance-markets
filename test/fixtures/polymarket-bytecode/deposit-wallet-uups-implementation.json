@@ -1,0 +1,16 @@
+{
+  "name": "deposit-wallet-uups-implementation",
+  "address": "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB",
+  "chain_id": 137,
+  "contract": "DepositWallet",
+  "size": 13804,
+  "sha256": "b43cf6c38aa71309e75f69461d8121b5fd5094330fe9c269d970f1ed280b149e",
+  "keccak256": "0xbabc418cce8628b3ddd4d7a68ece146f6ec8a8ea4171b6b453acbfc2a2c0bf77",
+  "source_url": "https://sourcify.dev/server/v2/contract/137/0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB?fields=runtimeBytecode",
+  "source_field": "runtimeBytecode.onchainBytecode",
+  "sourcify_match": "exact_match",
+  "cross_check": "equal to eth_getCode at the address over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts rpc_polygon)",
+  "captured_at": "2026-10-21",
+  "evm_version": "cancun",
+  "compiler": "solc 0.8.34+commit.80d5c536"
+}

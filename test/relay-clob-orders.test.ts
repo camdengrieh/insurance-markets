@@ -168,6 +168,22 @@ describe("prepare on Limitless (against the scripted fake)", () => {
     assert.equal(await code({}), "precondition_failed:not_clob");
   });
 
+  it("refuses an order whose makerAmount is under Limitless's 100 raw-unit floor (create-order.md), and takes one at the floor", async () => {
+    const r = await rig();
+    r.venues.lmMinSize = "0";
+    // 0.01 shares at 0.001 is 10 raw units of collateral; 0.1 shares at 0.001 is exactly 100.
+    const under = await r.post("/v1/clob/order/prepare", lmOrderBody({ price: "0.001", shares: "0.01", post_only: true }));
+    assert.equal(under.ok, false);
+    if (!under.ok) {
+      assert.equal(under.error.code, "invalid_request");
+      assert.equal(under.error.details?.["reason"], "below_minimum");
+      assert.match(under.error.message, /100 raw units/);
+    }
+    const atFloor = await r.post("/v1/clob/order/prepare", lmOrderBody({ price: "0.001", shares: "0.1", post_only: true }));
+    assert.ok(atFloor.ok, JSON.stringify(atFloor));
+    if (atFloor.ok && atFloor.data.decoded?.kind === "clob_order") assert.equal(atFloor.data.decoded.order.maker_amount, "100");
+  });
+
   it("checks a NO-token order against the complement of the YES book", async () => {
     const r = await rig();
     // YES best bid 0.500 implies a NO best ask of 0.500: a NO BUY at 0.52 is inside the band, at 0.99 it is not.

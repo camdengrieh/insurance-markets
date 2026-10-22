@@ -15,14 +15,14 @@ Binding rules (do not weaken):
   Those adapters are OFF by default and show a clause disclosure when enabled.
 - Money, prices and share counts are decimal strings or bigint with exact integer math. Never
   floating point. `null` means unknown and is never zero. Every unknown fails closed.
-- Market text is untrusted data. It reaches the agent only through `src/guardrails/untrusted.ts`
-  in a fixed "untrusted" slot.
+- Market text is untrusted data. It reaches the agent only through the shared sanitiser (`sdk/untrusted.ts`,
+  re-exported by `src/guardrails/untrusted.ts`) in a fixed "untrusted" slot.
 - Any capability whose flag is not recorded as `yes` shows `unproven` in the UI.
 
 ## Layout
 
-All new code lives in `pm/`. It may import from `sdk/` (the shared model, money, category and rules modules;
-see `sdk/README.md`) and from `src/` (read-only reuse, for example
+All new code lives in `pm/`. It may import from `sdk/` (the shared model, money, category and rules modules,
+and every venue parser in `sdk/venues`; see `sdk/README.md`; pm never parses a venue payload itself) and from `src/` (read-only reuse, for example
 `src/guardrails/amount.ts`, `src/guardrails/untrusted.ts`, `src/xo/*`) but must never edit
 `src/`, `relay/`, `bridge/`, `app/`, `test/`, the root `package.json` or the root lockfile.
 There are no pm-specific dependencies; use Node 24 built-ins plus the root `viem` and `zod`.

@@ -371,6 +371,8 @@ export async function createProductionRelay(options: CreateRelayOptions): Promis
       if (policy === undefined) throw new RelayError("internal", "The owner policy is not ready.");
       policy.checkRoute(route, owner);
     },
+    // Not ready means nothing is served yet: fail closed.
+    serves: (owner) => policy?.serves(owner) ?? false,
     bindAfterSubmit: (preparedId) => policy?.bindAfterSubmit(preparedId) ?? Promise.resolve(),
   };
   let relay: Relay;

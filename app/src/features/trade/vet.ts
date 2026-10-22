@@ -17,6 +17,7 @@
 // is checked against a small alphabet first. A failed item renders nothing and offers nothing (M4-7).
 
 import { POST_ROUTES, SUMMARY_LINE_MAX_CHARS, type DecodedClobOrder, type DecodedOrder, type DecodedUserOp, type InnerHashKind } from "@shared/relay/contract";
+import { depositWalletProxyOf } from "@shared/clob/polymarket/deposit-wallet";
 import { isPinnedLimitlessExchange, polymarketBookOf } from "@shared/clob/venues";
 import { deriveAccount } from "@shared/xo/account/derive";
 import { CTF_EXCHANGE } from "@shared/xo/chain/constants";
@@ -81,6 +82,9 @@ export interface OrderView {
   readonly capUsd: string;
   readonly feeBoundBps: number;
   readonly maker: string;
+  // A CLOB venue order's maker: the owner wallet itself (signature type 0) or the owner's Polymarket Deposit Wallet
+  // (signature type 3; derived from the owner and checked here). null for an XO order.
+  readonly makerKind: "owner" | "deposit_wallet" | null;
   readonly exchange: string;
 }
 
@@ -250,13 +254,16 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
   if (isClob ? item.kind !== "clob_order" : isOrder ? item.kind !== "order" : item.kind !== "userop") return failure("kind", "The item is a different kind from the one asked for.", "kind");
   const decoded = item.decoded;
 
-  // 3. owner and account. On a CLOB venue the maker is the owner itself; on XO it is the account derived from it.
+  // 3. owner and account. On a CLOB venue the maker is the owner itself, or on Polymarket the owner's Deposit Wallet,
+  // which must be one of the two addresses derived from the owner here; on XO it is the account derived from it.
   if (lower(item.owner) !== lower(expected.owner)) return failure("owner", "The item is for a different owner address than the one chosen.", "owner");
   let derived: string;
   if (isClob) {
     if (!/^0x[0-9a-fA-F]{40}$/.test(expected.owner)) return failure("owner", "The owner address cannot own an account.", "owner");
-    derived = expected.owner;
-    if (lower(item.account) !== lower(expected.owner)) return failure("account", "The item's account is not the owner wallet itself, which is the maker on this venue.", "account");
+    const isOwner = lower(item.account) === lower(expected.owner);
+    const isDepositWallet = expected.kind === "clob_order" && expected.ticket.venue === "polymarket" && depositWalletProxyOf(expected.owner as `0x${string}`, item.account) !== null;
+    if (!isOwner && !isDepositWallet) return failure("account", "The item's account is neither the owner wallet nor the Polymarket Deposit Wallet derived from it.", "account");
+    derived = item.account;
   } else {
     try {
       derived = deriveAccount(expected.owner);
@@ -311,6 +318,7 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
       capUsd: decoded.terms.cap_usd,
       feeBoundBps: decoded.terms.fee_bound_bps,
       maker: decoded.order.maker,
+      makerKind: null,
       exchange: decoded.exchange,
     };
     if (order.expiresAt === null || Date.parse(order.expiresAt) <= nowMs) return failure("expired", "The order's own expiry has passed. Prepare it again.", "decoded.terms.expires_at");
@@ -319,7 +327,10 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
     if (!("quote" in item) || !("venue" in item.quote)) return failure("schema", "The order carries no quote.", "quote");
     const ticketIssue = checkClobOrder(decoded, item.quote, item.caps.reserved_usd, expected.ticket);
     if (ticketIssue !== null) return ticketIssue;
-    if (lower(decoded.order.maker) !== lower(expected.owner) || lower(decoded.order.signer) !== lower(expected.owner)) return failure("account", "The order's maker or signer is not the owner wallet.", "decoded.order.maker");
+    if (lower(decoded.order.maker) !== lower(derived) || lower(decoded.order.signer) !== lower(derived)) return failure("account", "The order's maker or signer is not the item's account.", "decoded.order.maker");
+    // The signature type follows the maker: 0 for the owner wallet itself, 3 for its Deposit Wallet.
+    const makerKind = lower(derived) === lower(expected.owner) ? "owner" : "deposit_wallet";
+    if (decoded.order.signature_type !== (makerKind === "owner" ? 0 : 3)) return failure("account", "The order's signature type does not fit its maker.", "decoded.order.signature_type");
     order = {
       venue: decoded.venue,
       side: decoded.terms.side,
@@ -336,6 +347,7 @@ export function vetPrepared(raw: unknown, expected: Expected, nowMs: number): Ve
       capUsd: decoded.terms.cap_usd,
       feeBoundBps: decoded.terms.fee_bound_bps,
       maker: decoded.order.maker,
+      makerKind,
       exchange: decoded.domain.verifying_contract,
     };
     if (order.expiresAt !== null && Date.parse(order.expiresAt) <= nowMs) return failure("expired", "The order's own expiry has passed. Prepare it again.", "decoded.terms.expires_at");

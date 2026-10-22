@@ -144,8 +144,8 @@ describe("category: the fixed taxonomy", () => {
 
 describe("category: real captures", () => {
   it("XO: every captured row's categoryPath root maps to its category, with native confidence", () => {
-    // Every XO capture in the repo: list envelopes ({data, meta}) and single market objects alike.
-    const dirs = ["../../../test/fixtures/xo/", "../recorder/fixtures/"];
+    // Every XO capture in the repo (all under sdk/venues/xo/fixtures): list envelopes ({data, meta}) and single market objects alike.
+    const dirs = ["../../../sdk/venues/xo/fixtures/"];
     const files = dirs.flatMap((dir) => {
       const base = new URL(dir, import.meta.url);
       return readdirSync(base)
@@ -181,7 +181,7 @@ describe("category: real captures", () => {
   });
 
   it("Limitless: the captured 'Minutely' / '5 min' / '15 min' rows are crypto, from the venue's categories", () => {
-    const body = json("../../../app/src/venues/limitless/fixtures/markets_active_list_captured_2026-10-20.json") as Obj | null;
+    const body = json("../../../sdk/venues/limitless/fixtures/markets_active_list_captured_2026-10-20.json") as Obj | null;
     assert.ok(body !== null);
     const rows = body["data"] as Obj[];
     assert.ok(rows.length >= 3);
@@ -198,7 +198,7 @@ describe("category: real captures", () => {
   });
 
   it("Polymarket: series, event and market slug tokens; a slug that names nothing in the table is 'other'", () => {
-    const captured = json("../../../app/src/venues/polymarket/fixtures/gamma_markets_keyset_captured_2026-10-20.json") as Obj | null;
+    const captured = json("../../../sdk/venues/polymarket/fixtures/gamma_markets_keyset_captured_2026-10-20.json") as Obj | null;
     assert.ok(captured !== null);
     const markets = captured["markets"] as Obj[];
     assert.equal(markets.length, 2);
@@ -213,7 +213,7 @@ describe("category: real captures", () => {
     assert.deepEqual(first, NO_CATEGORY);
     assert.deepEqual(second, { category: "politics", confidence: "native", matched: ["keyword:democratic"] });
 
-    const recorded = json("../../../docs/research/fixtures/polymarket/gamma_market_by_slug.json") as Obj | null;
+    const recorded = json("../../../sdk/venues/polymarket/fixtures/gamma_market_by_slug_recorded_2026-10-18.json") as Obj | null;
     if (recorded === null) return;
     const verdict = categorise({ venue: "polymarket", native: nativeOf(recorded), title: String(recorded["question"]) });
     assert.equal(verdict.category, "politics");

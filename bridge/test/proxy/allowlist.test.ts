@@ -120,7 +120,7 @@ describe("what each adapter requests is allowed", () => {
     ["xo_orderbook", "GET", "/positions", `address=${ADDR}`],
     ["xo_explorer", "GET", "/api", `module=logs&action=getLogs&address=${ADDR}`],
     ["xo_explorer", "GET", `/api/v2/addresses/${ADDR}/token-balances`, ""],
-    // Polymarket (app/src/venues/polymarket/adapter.ts)
+    // Polymarket (sdk/venues/polymarket/adapter.ts)
     ["polymarket_gamma", "GET", "/public-search", "q=arsenal&limit_per_type=5"],
     ["polymarket_gamma", "GET", "/markets/keyset", "closed=false&limit=20&after_cursor=abc"],
     ["polymarket_gamma", "GET", "/markets/slug/will-it-rain-2026", ""],

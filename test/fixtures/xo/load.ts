@@ -4,9 +4,14 @@ import type { FetchLike, HttpOptions } from "../../../src/xo/http.js";
 
 // Test helpers for the XO client: fixture loading and a strict fetch stub. A request that no
 // route matches throws, so a test can never pass by accident through an unexpected call.
+//
+// The recorded XO responses (Data API and orderbook) are one set, kept with the shared parser in
+// sdk/venues/xo/fixtures (MANIFEST.json there says where each one came from). This file only reads them.
+
+export const XO_FIXTURE_DIRECTORY = new URL("../../../sdk/venues/xo/fixtures/", import.meta.url);
 
 export function fixture(name: string): unknown {
-  return JSON.parse(readFileSync(new URL(`./${name}`, import.meta.url), "utf8")) as unknown;
+  return JSON.parse(readFileSync(new URL(name, XO_FIXTURE_DIRECTORY), "utf8")) as unknown;
 }
 
 export function jsonResponse(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): Response {

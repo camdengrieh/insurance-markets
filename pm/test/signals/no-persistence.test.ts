@@ -21,12 +21,15 @@ describe("pm/signals has no persistence, network or signing surface", () => {
     }
   });
 
-  it("imports only pm modules, zod, node:crypto and two src guardrails", () => {
+  it("imports only pm modules, zod, node:crypto, two src guardrails and the pure sdk (never sdk/node)", () => {
     const allowedBare = new Set(["zod/v4", "node:crypto"]);
     const allowedSrc = new Set(["../../src/guardrails/amount.js", "../../src/guardrails/untrusted.js"]);
+    // sdk/ outside sdk/node is pure and isomorphic (no disk, network, process or env; test/sdk/boundary.test.ts).
+    // The Quotient body validator there is the one pm_signal_parse reads through.
+    const pureSdk = (spec: string): boolean => spec.startsWith("../../sdk/") && !spec.startsWith("../../sdk/node/");
     for (const f of FILES) {
       for (const spec of imports(readFileSync(join(DIR, f), "utf8"))) {
-        const ok = spec.startsWith("./") || spec.startsWith("../core/") || spec === "../types.js" || spec.startsWith("../links/") || allowedBare.has(spec) || allowedSrc.has(spec);
+        const ok = spec.startsWith("./") || spec.startsWith("../core/") || spec === "../types.js" || spec.startsWith("../links/") || allowedBare.has(spec) || allowedSrc.has(spec) || pureSdk(spec);
         assert.ok(ok, `${f} imports ${spec}`);
       }
     }

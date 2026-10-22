@@ -177,7 +177,7 @@ UMA's ancillary data does, it is a fallback title source and is still untrusted 
 
 | Venue | Chain | Easy to read on chain | Only off-chain | In the repo today |
 |---|---|---|---|---|
-| Trueo | Base 8453 | Everything: markets, prices, quotes from Uniswap v4 pools and the quoter | nothing | Chain-native reader in `app/src/venues/trueo`; the model for the rest |
+| Trueo | Base 8453 | Everything: markets, prices, quotes from Uniswap v4 pools and the quoter | nothing | Chain-native reader in `sdk/venues/trueo`; the model for the rest |
 | XO | XO chain 3223 | Settlement, account state, fee rates, upgrades | Book | Account, nonce, fee and upgrade readers in `src/xo/chain`; fills and positions to add |
 | Polymarket | Polygon 137 | Positions, fills, resolution, payouts, UMA question data | Book | Exchange addresses pinned in `src/clob/venues.ts`; conditional-tokens and adapter addresses to pin |
 | Limitless | Base 8453 | Positions, fills, payouts; AMM markets fully | CLOB book | Per-market exchange from `venue.exchange`, allowlisted |
@@ -241,6 +241,21 @@ Each step leaves every gate green (root, pm, bridge and app typechecks and tests
 3. **Move the venue readers.** `app/src/venues` becomes `sdk/venues` (they already take an injected fetch).
    `pm/adapters` and `pm/recorder/venues` become thin wrappers or go away. Done when each venue has one parser
    and one fixture set.
+   *Done 2026-10-21.* Every reader is in `sdk/venues/<venue>`: XO (with its Data API client, `sdk/venues/xo/api`,
+   whose fetch and clock are now injected; `src/xo/{client,http,types,units}.ts` re-export it and supply the
+   globals), Polymarket, Kalshi, Limitless, Trueo, Hyperliquid, Manifold, Pascal, Novig, OG, Gemini, SX, UDX and
+   DefiLlama. The rest of the read model (`Market`, `Book`, `Prov`, the adapter interface) is in `sdk/model.ts`; the
+   venue host registry is `sdk/venues/origins.ts`, from which the dApp's CSP and the Cockpit's read-proxy allowlist
+   are built; Quotient's body validation is `sdk/signals/quotient` and its paid client stays in the app.
+   `pm/adapters` (XO, Polymarket, Kalshi), the recorder's collectors and the linker's discovery keep their own
+   HTTP, budgets and data-terms policy but parse only through the SDK, converting with `pm/adapters/from-sdk.ts`;
+   a cross-check test pins that the rules hash a linker leg carries equals the dApp's for XO, Polymarket and
+   Limitless. Each venue's recordings live once, in `sdk/venues/<venue>/fixtures` (the byte-identical research
+   copies are gone; each research folder has a `MOVED.md`). Where two parsers disagreed the stricter one won, for
+   example: crossed books are refused everywhere; an XO cancelled market is "unknown", not "voided"; Polymarket needs
+   exactly two outcomes, reads its status from the last UMA entry and leaves the fee unknown when Gamma and the CLOB
+   disagree; Kalshi needs its full envelopes. Not merged yet: the money helpers (`qty.ts`, `rational.ts`, `dec.ts`
+   and pm's own) and pm's book, fee, tick and page shapes, which move with the books and fee engine in step 4.
 4. **Move books, fees, depth walk, links and linker scoring** from `pm/core` and `pm/links` into `sdk/`.
 5. **Move the unsigned order builders** from `src/xo/signing` and `src/clob` into `sdk/trade`; the credentialed
    signers go to `sdk/node/`. The boundary check keeps forbidding `sdk/node/` to the page.

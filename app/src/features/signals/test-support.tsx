@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 import { createMemoryRecordStore, type RecordStore, type StoredRecord } from "../../core/bindings";
 import { ClockProvider, ModeProvider, type AppMode } from "../../ui";
 import { act, render } from "../../ui/testing/dom";
-import { NOW, depsOf, fakeFetch, type FakeFetch, type FakeRoute } from "../../venues/quotient/fixtures/fake-fetch";
+import { NOW, depsOf, fakeFetch, type FakeFetch, type FakeRoute } from "./quotient/fixtures/fake-fetch";
 import type { LinkLoad } from "./links/dataset";
 import { SignalsServicesProvider, type LegReader, type SignalsServices } from "./services";
 import { SignalsSession } from "./session";

@@ -20,7 +20,7 @@ import { formatAtomic } from "../guardrails/amount.js";
 import { orderCapAmount, type OrderCapAmount } from "../xo/signing/amounts.js";
 import { SIDE_BUY, SIDE_SELL } from "../xo/signing/constants.js";
 import { SigningError } from "../xo/signing/errors.js";
-import { CLOB_CAP_FEE_BPS, CLOB_COLLATERAL_DECIMALS } from "./venues.js";
+import { CLOB_CAP_FEE_BPS, CLOB_COLLATERAL_DECIMALS, LIMITLESS_MIN_MAKER_AMOUNT, LIMITLESS_PRICE_TICK } from "./venues.js";
 
 export const MICRO = 1_000_000n;
 const MAX_INPUT_LENGTH = 40;
@@ -123,4 +123,15 @@ export function decodeClobAmounts(input: { readonly side: ClobSide; readonly mak
 // sizes are enforced by `minSharesMicro`, and a SELL that nets little is still a SELL of what the owner holds.
 export function clobCapAmount(amounts: Pick<ClobAmounts, "side" | "makerAmount" | "takerAmount">, feeBps = CLOB_CAP_FEE_BPS): OrderCapAmount {
   return orderCapAmount({ side: amounts.side, makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, feeBps, minProceedsFloorAtomic: 0n });
+}
+
+// The two Limitless venue rules on top of the shared grid (src/clob/venues.ts LIMITLESS_PRICE_TICK and
+// LIMITLESS_MIN_MAKER_AMOUNT, with their sources): shares a whole multiple of the SDK's sharesStep (priceScale / tickInt,
+// 1,000 raw units at the 0.001 tick), so price x contracts is an exact integer; and makerAmount at least 100 raw units.
+// The shared grid already gives the first (two size decimals); it is checked here anyway so the rule does not rest on
+// a grid choice made elsewhere.
+export function checkLimitlessAmounts(amounts: Pick<ClobAmounts, "sharesMicro" | "makerAmount">): void {
+  const sharesStep = MICRO / parseTickMicro(LIMITLESS_PRICE_TICK);
+  if (amounts.sharesMicro % sharesStep !== 0n) throw new SigningError("invalid_size", `shares must be a multiple of ${formatMicro(sharesStep)} on Limitless`);
+  if (amounts.makerAmount < LIMITLESS_MIN_MAKER_AMOUNT) throw new SigningError("below_minimum", `the order's makerAmount is below Limitless's floor of ${LIMITLESS_MIN_MAKER_AMOUNT.toString()} raw units (${formatMicro(LIMITLESS_MIN_MAKER_AMOUNT)})`);
 }

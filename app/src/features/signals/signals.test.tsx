@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { act, allText, click, cleanup, must } from "../../ui/testing/dom";
-import { PINNED_PAYMENT, QUOTIENT_ORIGIN } from "../../venues/quotient";
-import { challenge } from "../../venues/quotient/fixtures/pinned-challenge";
+import { PINNED_PAYMENT, QUOTIENT_ORIGIN } from "./quotient";
+import { challenge } from "./quotient/fixtures/pinned-challenge";
 import { SignalsView } from "./SignalsView";
 import { TEST_KEY, flush, makeRig, mountWith, until, type Rig, type RigOptions } from "./test-support";
 
@@ -80,7 +80,7 @@ describe("Quotient is off until the user reads the clause", () => {
     expect(stale.rig.session.getSnapshot().enabled).toBe(false);
     cleanup();
     const store2 = (await import("./test-support")).spyStore();
-    const { LICENCE_CLAUSE_SOURCE } = await import("../../venues/quotient");
+    const { LICENCE_CLAUSE_SOURCE } = await import("./quotient");
     await store2.put({ id: "quotient_gate", enabled: true, acknowledgedAtMs: 5, clause: LICENCE_CLAUSE_SOURCE });
     const fresh = await mountOn({ store: store2 }, { on: false });
     await until(() => fresh.rig.session.getSnapshot().loaded);

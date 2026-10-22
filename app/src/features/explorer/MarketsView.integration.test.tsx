@@ -10,7 +10,7 @@ import { SERVICE_BUDGETS } from "../../core/budget";
 import type { Env } from "../../core/env";
 import { FakeRaw, FakeTimers, rawResponse } from "../../core/fakes";
 import { act, allText, cleanup, must } from "../../ui/testing/dom";
-import { recorded, keysetEnvelope } from "../../venues/polymarket/fixtures/load";
+import { recorded, keysetEnvelope } from "@sdk/venues/polymarket/fixtures/load";
 import { MarketsView } from "./MarketsView";
 import { createExplorerServices } from "./services";
 import { flush, mount } from "./test-support";
@@ -20,7 +20,7 @@ import { flush, mount } from "./test-support";
 
 afterEach(cleanup);
 
-const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "test", "fixtures", "xo");
+const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "sdk", "venues", "xo", "fixtures");
 const xoList = readFileSync(join(FIXTURES, "live-data-list-active.json"), "utf8");
 const START = Date.parse("2026-10-19T12:00:00.000Z");
 

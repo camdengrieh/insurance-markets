@@ -57,7 +57,7 @@ Defects found by running the whole thing:
 ## Still not built or not proven (not hidden)
 
 - **No `/mcp` route.** An agent reaches the daemon through the shim. The daemon says "no MCP endpoint in this build".
-- **No relay route `GET /v1/prepared/{id}`**: `xo_get_prepared` answers `not_implemented` against a real relay.
+- **No relay route `GET /v1/prepared/{id}`**: `xo_get_prepared` answers `not_implemented` against a real relay. Later: built in relay 0.3.0 (see docs/tool-contract.md, `xo_get_prepared`); the Cockpit daemon now uses it to restore its inbox after a restart (docs/dapp-runbook.md section 3.3, bridge/inbox-restore.ts).
 - **The page reads no recorded capability facts**, so every capability reads "unproven" and the trade screens stay closed. That is the safe default; wiring it needs a mapping from the relay's fact ids to the page's.
 - **Hosts and routes**: SX Bet, UDX, OG and the Polymarket geoblock endpoint are not in `app/headers.config.ts`, so their readers refuse every call; the daemon's allowlist has no routes for them; there is no daemon-held Quotient key store; no screen switches a restricted-terms venue on. Seven readers (Kalshi, SX, UDX, Novig, Gemini, OG, DefiLlama) are therefore unreachable from any screen.
 - **One browser, one platform.** Firefox, Safari, Local Network Access prompts, Linux, Windows and screen readers were not tried. The external security review the design requires before release has not happened.

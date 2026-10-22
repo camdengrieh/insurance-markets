@@ -16,7 +16,7 @@ import { ANVIL_TEST_ACCOUNTS } from "../../../test/fixtures/userop/anvil-test-ke
 import { verifiedDeployItem } from "../../../test/tools-decoded-helpers.js";
 import type { Obj } from "../../../test/tools-helpers.js";
 import { ARMABLE_ENV } from "../tools/helpers.js";
-import type { ClientCredential, ClientFailure, ClientSigned, PayboxClient } from "../../paybox-signer.js";
+import type { ClientCredential, ClientFailure, ClientSignRequest, ClientSigned, PayboxClient } from "../../paybox-signer.js";
 
 // Items for the signer tests. Every one is built by the repo's own code for the public Anvil account 0 and really
 // rebuilds to its digest, tags and summary lines (verifyPreparedLocal says "verified"). Signatures are made with the
@@ -140,11 +140,7 @@ export async function signWith(account: typeof OWNER_KEY_ACCOUNT, hash: Hex): Pr
 
 // ---- a PayBox client that does what the test says -------------------------------------------------------------------------------
 
-export interface SignCall {
-  readonly credentialId: string;
-  readonly intent: PayboxSignIntent;
-  readonly timeoutMs: number;
-}
+export type SignCall = ClientSignRequest;
 
 export class FakeClient implements PayboxClient {
   approvalMode: string | null = "always_approve";
@@ -183,7 +179,8 @@ export function deferred<T>(): Deferred<T> {
 
 // A directory name that does not exist and is never created: the fake client never reads it.
 export const CONFIG_DIR = join(tmpdir(), "cockpit-signer-test-config-unused");
-export const CREDENTIAL = "cred-test-0001";
+// A credential id has the form the PayBox CLI requires (a UUID). This one is made up and names nothing.
+export const CREDENTIAL = "0b7e4c2a-5d1f-4a3b-8c9d-0e1f2a3b4c5d";
 
 export const S2_ENV: Readonly<Record<string, string>> = Object.freeze({
   ...ARMABLE_ENV,

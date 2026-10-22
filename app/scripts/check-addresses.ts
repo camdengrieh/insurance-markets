@@ -57,6 +57,8 @@ export async function checkAddresses(options: AddressOptions = {}): Promise<Viol
     join(repoRoot, "bridge", "contract.ts"),
     join(appDir, "headers.config.ts"),
     ...(await walk(join(appDir, "src"), SKIP)),
+    // The venue readers and the shared model the page bundles.
+    ...(await walk(join(repoRoot, "sdk"), SKIP)),
   ].filter((file) => SOURCE_FILE.test(file));
   for (const file of files) {
     let text: string;

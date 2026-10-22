@@ -8,21 +8,25 @@ import { describe, expect, it } from "vitest";
 // no prefilled example amounts or addresses, no demo mode. Test builders, fixtures and test kits are excluded.
 
 const src = join(dirname(fileURLToPath(import.meta.url)), "..");
+// The shared SDK ships in the page too (the venue readers, the model, the money code); its files are named "sdk/...".
+const sdk = join(src, "..", "..", "sdk");
 
 function production(): Array<{ readonly name: string; readonly text: string }> {
   const out: Array<{ name: string; text: string }> = [];
-  const walk = (dir: string): void => {
+  const walk = (root: string, prefix: string, dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name === "fixtures" || entry.name === "testing") continue;
-        walk(full);
+        // sdk/node is the Node-only part (credentialed signers); it never ships in the page.
+        if (entry.name === "fixtures" || entry.name === "testing" || (prefix === "sdk/" && dir === root && entry.name === "node")) continue;
+        walk(root, prefix, full);
       } else if (/\.(?:tsx?|css)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) && !/(?:test-support|testkit|view-harness)\./.test(entry.name) && entry.name !== "fixtures.ts" && entry.name !== "fakes.ts") {
-        out.push({ name: relative(src, full), text: readFileSync(full, "utf8") });
+        out.push({ name: `${prefix}${relative(root, full)}`, text: readFileSync(full, "utf8") });
       }
     }
   };
-  walk(src);
+  walk(src, "", src);
+  walk(sdk, "sdk/", sdk);
   return out;
 }
 
@@ -37,15 +41,15 @@ const PINNED_ADDRESS_FILES = new Set([
   "core/address.ts", // zero and burn sentinels used to refuse a destination
   "features/trade/vet.ts", // the zero address, to refuse an order that redirects proceeds
   "features/wallet/rpc.ts", // Multicall3, the same address on every chain
-  "venues/limitless/constants.ts", // Base USDC
-  "venues/quotient/constants.ts", // Base USDC and the pay-to address of the x402 route
-  "venues/trueo/constants.ts", // the Trueo contracts on Base
+  "sdk/venues/limitless/constants.ts", // Base USDC
+  "sdk/venues/trueo/constants.ts", // Trueo's pinned Base contracts (manager, token, pool reads) and Base USDC
+  "features/signals/quotient/constants.ts", // Base USDC and the pay-to address of the x402 route
 ]);
 
 describe("no invented data in shipped code", () => {
   it("scans the files it should", () => {
     const names = all.map((file) => file.name);
-    for (const expected of ["App.tsx", "features/wallet/FundingPanel.tsx", "features/trade/ActionPanels.tsx", "venues/trueo/constants.ts"]) expect(names).toContain(expected);
+    for (const expected of ["App.tsx", "features/wallet/FundingPanel.tsx", "features/trade/ActionPanels.tsx", "features/signals/quotient/constants.ts", "sdk/model.ts", "sdk/venues/xo/adapter.ts", "sdk/venues/polymarket/normalize.ts"]) expect(names).toContain(expected);
     expect(names.some((name) => name.includes("fixtures"))).toBe(false);
   });
 

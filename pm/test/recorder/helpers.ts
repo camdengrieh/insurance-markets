@@ -1,7 +1,11 @@
 // Test helpers for the recorder: local loopback servers that play the three venues, payload
 // factories, and a world that wires them to the recorder config. Everything is synthetic and
-// bound to 127.0.0.1 on a free port; nothing here can reach a real host.
+// bound to 127.0.0.1 on a free port; nothing here can reach a real host. The payloads have the
+// venues' real response shapes (the recorded fixtures under sdk/venues/<venue>/fixtures are the
+// templates), because the collectors read them with the shared venue parsers; ids and tokens are
+// derived from a label by hashing, so no real market is ever named.
 
+import { createHash } from "node:crypto";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -94,48 +98,102 @@ function lv(l: Lv): { price: string; size: string } {
   return { price: l[0], size: l[1] };
 }
 
+// A 32-byte condition id derived from a label (XO and Polymarket ids have this shape).
+export function cond(label: string): string {
+  return `0x${createHash("sha256").update(`SYNTHETIC:${label}`).digest("hex")}`;
+}
+
+// A decimal outcome-token id derived from a label (the venues' token ids are decimal 256-bit integers).
+export function tokenOf(label: string): string {
+  return BigInt(`0x${createHash("sha256").update(`SYNTHETIC-token:${label}`).digest("hex").slice(0, 40)}`).toString();
+}
+
+// The other outcome's token of a market.
+function noToken(m: MarketSpec): string {
+  return tokenOf(`${m.venue}:${m.id}:no`);
+}
+
+// XO Data API GET /api/markets/contract/{id}: the recorded detail shape (sdk/venues/xo/fixtures/data-market-by-slug.json).
 export function xoMarketBody(m: MarketSpec): unknown {
   return {
-    id: 1,
+    id: 70_001,
     conditionId: m.id,
-    title: m.title ?? "synthetic market",
+    title: m.title ?? "SYNTHETIC market",
+    slug: "synthetic-market-70001",
+    type: 2,
     status: m.status.toUpperCase(),
+    startsAt: "2026-10-01T00:00:00.000Z",
     expiresAt: m.closeIso,
+    rules: { description: m.title ?? "SYNTHETIC rules", outcomeRules: [] },
+    resolutionSources: [],
+    resolutionType: "MANUAL",
     outcomes: [
-      { index: 0, outcomeTokenId: m.token, title: "UP" },
-      { index: 1, outcomeTokenId: `${m.token}9`, title: "DOWN" },
+      { id: 700_010, index: 0, outcomeTokenId: m.token, title: "Yes", currentPrice: "500000" },
+      { id: 700_011, index: 1, outcomeTokenId: noToken(m), title: "No", currentPrice: "500000" },
     ],
+    reviewStatus: "APPROVE",
     effectiveFeeConfig: m.fee === undefined ? null : { eligible: true, curveModel: "FLAT_BPS", takerFeeBps: Number(m.fee), makerFeeBps: 0 },
   };
 }
+// XO orderbook GET /book: the recorded shape (sdk/venues/xo/fixtures/orderbook-book.json).
 export function xoBookBody(m: MarketSpec, ts: number): unknown {
-  return { market: m.id, asset_id: m.token, timestamp: String(ts), hash: "ce267f1cd3dc690b", bids: m.bids.map(lv), asks: m.asks.map(lv), tick_size: "0.001" };
+  return {
+    market: m.id,
+    asset_id: m.token,
+    timestamp: String(ts),
+    hash: "ce267f1cd3dc690b",
+    bids: m.bids.map(lv),
+    asks: m.asks.map(lv),
+    min_order_size: "1",
+    tick_size: "0.001",
+    neg_risk: false,
+    last_trade_price: "0.000",
+  };
 }
+// Gamma GET /markets?condition_ids=: a bare list of market rows (sdk/venues/polymarket/fixtures/gamma_markets_list_recorded_2026-10-18.json).
 export function gammaBody(m: MarketSpec): unknown {
   return [
     {
+      id: "700001",
+      question: m.title ?? "SYNTHETIC market",
       conditionId: m.id,
+      slug: "synthetic-market-700001",
       version: "v1",
       outcomes: JSON.stringify(["Yes", "No"]),
-      question: m.title ?? "synthetic market",
       endDate: m.closeIso,
       active: m.status === "active",
       closed: m.status === "closed",
+      archived: false,
       acceptingOrders: m.status === "active",
+      enableOrderBook: true,
       orderPriceMinTickSize: 0.001,
-      clobTokenIds: JSON.stringify([m.token, `${m.token}9`]),
+      clobTokenIds: JSON.stringify([m.token, noToken(m)]),
       feesEnabled: m.fee !== undefined,
       feeSchedule: m.fee === undefined ? undefined : { exponent: 1, rate: Number(m.fee), takerOnly: true, rebateRate: 0.25 },
     },
   ];
 }
+// CLOB GET /book (sdk/venues/polymarket/fixtures/clob_book_recorded_2026-10-18.json).
 export function clobBookBody(m: MarketSpec, ts: number): unknown {
   // Best level LAST on both sides.
   return { market: m.id, asset_id: m.token, timestamp: String(ts), hash: "9b4fcef2dd59843d", bids: [...m.bids].reverse().map(lv), asks: [...m.asks].reverse().map(lv), tick_size: "0.001" };
 }
+// Limitless GET /markets/{slug} (sdk/venues/limitless/fixtures/market_detail_recorded.json).
 export function limitlessMarketBody(m: MarketSpec): unknown {
-  return { slug: m.id, title: m.title ?? "synthetic", status: m.status === "active" ? "FUNDED" : "RESOLVED", tokens: { yes: m.token, no: `${m.token}9` }, expirationTimestamp: m.closeIso === null ? undefined : Date.parse(m.closeIso), metadata: { fee: true } };
+  return {
+    slug: m.id,
+    title: m.title ?? "SYNTHETIC market",
+    status: m.status === "active" ? "FUNDED" : "RESOLVED",
+    ...(m.status === "active" ? {} : { winningOutcomeIndex: 0 }),
+    tradeType: "clob",
+    marketType: "single",
+    collateralToken: { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals: 6, symbol: "USDC" },
+    tokens: { yes: m.token, no: noToken(m) },
+    expirationTimestamp: m.closeIso === null ? undefined : Date.parse(m.closeIso),
+    metadata: { fee: true },
+  };
 }
+// Limitless GET /markets/{slug}/orderbook (sdk/venues/limitless/fixtures/orderbook_recorded.json).
 export function limitlessBookBody(m: MarketSpec): unknown {
   const raw = (l: Lv, side: string): unknown => ({ price: Number(l[0]), size: Math.round(Number(l[1]) * 1_000_000), side });
   return { bids: m.bids.map((l) => raw(l, "BUY")), asks: m.asks.map((l) => raw(l, "SELL")), tokenId: m.token };
@@ -218,7 +276,7 @@ export function market(venue: MarketSpec["venue"], id: string, extra: Partial<Ma
   return {
     venue,
     id,
-    token: `${id}-yes-token`,
+    token: tokenOf(`${venue}:${id}`),
     closeIso: "2026-12-31T00:00:00Z",
     status: "active",
     bids: [["0.40", "100"], ["0.39", "200"]],

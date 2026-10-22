@@ -4,6 +4,7 @@ import type { FlagEnv } from "../src/relay/flags.js";
 import { parseOwner } from "../src/xo/account/derive.js";
 import { RelayConfigError } from "./config.js";
 import type { CoreServices } from "./main.js";
+import { preparedNotFound, preparedOwnerOf, type PreparedStore } from "./prepared.js";
 import { NAMESPACES, type Json } from "./store.js";
 
 // Which owners a relay process serves for writes (XO_OWNER, XO_ALLOW_ANY_OWNER, else the first owner whose
@@ -26,6 +27,22 @@ export const OWNER_WRITE_ROUTES: ReadonlySet<RouteKey> = new Set<RouteKey>([
   "POST /v1/funding/check",
   "POST /v1/funding/report",
 ]);
+// Reads about one owner's stored item. The pipelines find whose item it is BEFORE the handler runs and answer an
+// owner this process does not serve exactly as they answer an id that does not exist (relay/prepared.ts
+// preparedNotFound), so the caller learns neither that the item exists nor what state it is in. The relay key (or,
+// in-process, being the process) is the only caller identity there is; which owners that caller acts for is this
+// policy, the same one the write routes use.
+export const OWNER_SCOPED_READ_ROUTES: ReadonlySet<RouteKey> = new Set<RouteKey>(["GET /v1/prepared/:id"]);
+
+// Throws the not-found answer when the route reads an item of an owner the gate does not serve. A relay with no
+// gate (a bare test relay) serves every owner, as it does for writes.
+export function checkOwnerScopedRead(gate: Pick<OwnerGate, "serves"> | undefined, route: RouteKey, input: unknown, services: { readonly prepared?: PreparedStore }): void {
+  if (gate === undefined || !OWNER_SCOPED_READ_ROUTES.has(route)) return;
+  const id = typeof input === "object" && input !== null ? (input as { readonly id?: unknown }).id : undefined;
+  const owner = preparedOwnerOf(services.prepared, id);
+  if (owner !== undefined && !gate.serves(owner)) throw preparedNotFound();
+}
+
 // Routes whose success means a signature from the prepared item's owner was verified and used.
 export const SUBMIT_ROUTES: ReadonlySet<RouteKey> = new Set<RouteKey>(["POST /v1/auth/submit", "POST /v1/userop/submit", "POST /v1/order/submit"]);
 
@@ -82,15 +99,21 @@ export class OwnerPolicy {
     return { mode: this.mode, owners: [] };
   }
 
+  // Whether this process acts for the owner: named in XO_OWNER, the bound owner (or any owner before one is bound),
+  // or anyone under XO_ALLOW_ANY_OWNER.
+  serves(owner: string): boolean {
+    const lower = owner.toLowerCase();
+    if (this.mode === "any") return true;
+    if (this.mode === "explicit") return this.#explicit.includes(lower);
+    return this.#bound === undefined || this.#bound === lower;
+  }
+
   // Throws precondition_failed (fixed text, no echo of the caller's value) when this owner is not served.
   check(owner: string): void {
-    const lower = owner.toLowerCase();
-    if (this.mode === "any") return;
+    if (this.serves(owner)) return;
     if (this.mode === "explicit") {
-      if (this.#explicit.includes(lower)) return;
       throw new RelayError("precondition_failed", "This local relay serves only the owner(s) named in XO_OWNER. Use that wallet, or change XO_OWNER and restart.", { reason: "owner_not_allowed" });
     }
-    if (this.#bound === undefined || this.#bound === lower) return;
     throw new RelayError(
       "precondition_failed",
       "This local relay is bound to the first owner whose signature it accepted, and this is a different wallet. Set XO_OWNER to the wallet you want (or XO_ALLOW_ANY_OWNER=1) and restart.",
@@ -130,5 +153,7 @@ export class OwnerPolicy {
 // What the server needs from a policy (relay/server.ts); the class above satisfies it.
 export interface OwnerGate {
   checkRoute(route: RouteKey, owner: string): void;
+  // The non-throwing form, for the owner-scoped reads.
+  serves(owner: string): boolean;
   bindAfterSubmit(preparedId: string): Promise<void>;
 }

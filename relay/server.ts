@@ -16,8 +16,8 @@ import type { Flags } from "../src/relay/flags.js";
 import { checkHost, checkOrigin, isLoopbackAddress, normaliseClientAddress, TokenBuckets, type RelayKeyring } from "./auth.js";
 import type { RelayAudit } from "./audit.js";
 import { DEFAULT_HTTP, RELAY_BIND_HOST, type RelayHttpConfig } from "./config.js";
-import { OWNER_WRITE_ROUTES, SUBMIT_ROUTES, type OwnerGate } from "./owners.js";
-import { withDecodedBlock } from "./prepared.js";
+import { checkOwnerScopedRead, OWNER_WRITE_ROUTES, SUBMIT_ROUTES, type OwnerGate } from "./owners.js";
+import { keepPreparedAnswer, withDecodedBlock } from "./prepared.js";
 import { routes as defaultRoutes } from "./routes.js";
 import type { RelayContext, RelayServices, RouteTable } from "./types.js";
 
@@ -44,6 +44,7 @@ export const READ_ROUTE_KEYS: ReadonlySet<RouteKey> = new Set<RouteKey>([
   "GET /v1/health",
   "GET /v1/userop/:hash",
   "GET /v1/order/:hash",
+  "GET /v1/prepared/:id",
   "POST /v1/account/status",
   "POST /v1/orders/list",
   "POST /v1/creation/track",
@@ -385,6 +386,14 @@ export async function startRelayServer(options: ServerOptions): Promise<RunningS
         return;
       }
     }
+    // A read of a stored item answers only for an owner this relay serves; any other owner's item is not found.
+    try {
+      checkOwnerScopedRead(options.owners, routeKey, input, options.services);
+    } catch (error) {
+      reply(replyFromError(error));
+      note("refused");
+      return;
+    }
     const submitted = SUBMIT_ROUTES.has(routeKey) ? (input as { prepared_id: string }).prepared_id : undefined;
 
     // 8. The handler, with the answer-by budget.
@@ -416,6 +425,8 @@ export async function startRelayServer(options: ServerOptions): Promise<RunningS
           void options.audit?.write({ ev: "error", rid: requestId, route: routeKey, code: "response_invalid", outcome: "error" });
           return errorReply("internal", "The relay produced an answer that does not match its contract. Nothing was sent.");
         }
+        // R9: a prepared item is kept as it is sent, so GET /v1/prepared/{id} can return exactly this answer.
+        await keepPreparedAnswer(routeKey, checked.data, options.services);
         if (submitted !== undefined) await options.owners?.bindAfterSubmit(submitted).catch(() => undefined);
         return { status: 200, body: checked.data };
       } catch (error) {

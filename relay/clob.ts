@@ -3,22 +3,34 @@ import { randomBytes } from "node:crypto";
 import { getAddress, type Address, type Hex } from "viem";
 
 import { formatAtomic } from "../src/guardrails/amount.js";
-import { clobCapAmount, computeClobAmounts, formatMicro, MICRO, parseTickMicro, type ClobAmounts } from "../src/clob/amounts.js";
+import { checkLimitlessAmounts, clobCapAmount, computeClobAmounts, formatMicro, MICRO, parseTickMicro, type ClobAmounts } from "../src/clob/amounts.js";
 import { buildDecodedClobAuth, buildDecodedClobOrder, sharesMicroOf } from "../src/clob/decoded.js";
 import { buildLimitlessHeaders, type LimitlessToken } from "../src/clob/limitless/hmac.js";
 import { hashLimitlessOrder, limitlessOrderSignTypedData, limitlessOrderToWire, type LimitlessOrder } from "../src/clob/limitless/order.js";
 import { buildPolymarketL1Headers, hashPolymarketClobAuth, polymarketClobAuthSignTypedData } from "../src/clob/polymarket/clobauth.js";
 import { buildPolymarketL2Headers, type PolymarketCredentials } from "../src/clob/polymarket/l2.js";
-import { hashPolymarketOrder, polymarketOrderSignTypedData, polymarketOrderToWire, type PolymarketOrder } from "../src/clob/polymarket/order.js";
+import {
+  DEPOSIT_WALLET_DOMAIN_CALL,
+  DEPOSIT_WALLET_OWNER_CALL,
+  decodeDepositWalletOwner,
+  depositWalletCandidates,
+  depositWalletDomainMatches,
+  depositWalletProxyOf,
+  depositWalletRuntimeCode,
+  type DepositWalletProxy,
+} from "../src/clob/polymarket/deposit-wallet.js";
+import { hashPolymarketOrder, polymarketOrderSignTypedData, polymarketOrderToWire, polymarketSigningDigest, wrapPolymarketDepositWalletSignature, type PolymarketOrder } from "../src/clob/polymarket/order.js";
 import {
   CLOB_CAP_FEE_BPS,
   CLOB_CHAIN_IDS,
   CLOB_COLLATERAL_DECIMALS,
-  LIMITLESS_ASSUMED_TICK,
+  LIMITLESS_PRICE_TICK,
   LIMITLESS_GEOBLOCK_NOTE,
   LIMITLESS_TIFS,
   POLYMARKET_EXCHANGES,
   POLYMARKET_GEOBLOCK_NOTE,
+  POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET,
+  POLYMARKET_SIGNATURE_TYPE_EOA,
   POLYMARKET_TIFS,
   isPinnedLimitlessExchange,
   polymarketTickRule,
@@ -31,6 +43,7 @@ import { AUTH_PREPARED_TTL_S, MAX_ORDER_TTL_S, PREPARED_TTL_S, RELAY_PENDING_AFT
 import { RelayError } from "../src/relay/errors.js";
 import type { WriteFlagName } from "../src/relay/flags.js";
 import { AccountError, parseOwner } from "../src/xo/account/derive.js";
+import { ChainReadError, RpcReader } from "../src/xo/chain/reads.js";
 import { ZERO_ADDRESS, ZERO_BYTES32 } from "../src/xo/signing/constants.js";
 import { SigningError } from "../src/xo/signing/errors.js";
 import { rebuildDecoded } from "../src/xo/signing/rebuild.js";
@@ -42,20 +55,29 @@ import type { PreparedRecord } from "./prepared.js";
 import type { DurableStore, Json } from "./store.js";
 import type { RelayContext, RelayServices, RouteTable } from "./types.js";
 import { sanitizeUpstreamText, toRelayError, UpstreamError, type AllowedHost, type Upstream, type UpstreamResponse } from "./upstream.js";
+import { jsonRpcTransportFor } from "./userops.js";
 
 // The two EIP-712 CLOB venues besides XO: Polymarket (Polygon, pUSD) and Limitless (Base, USDC). Four routes:
 //
-//   POST /v1/clob/order/prepare   builds the venue's own Order struct for the owner EOA (maker = signer = owner,
-//                                 signature type 0), after reading the market live (Polymarket: the CLOB book for the
-//                                 tick, the minimum size and a reference price, and Gamma for the book kind; Limitless:
-//                                 the market for its exchange, tokens and fee module, and its YES book), applies the
-//                                 same cap rule as XO with the policy fee ceiling, RESERVES the cap in the ledger, and
-//                                 returns the typed data to sign plus a decoded block the card rebuilds from.
+//   POST /v1/clob/order/prepare   builds the venue's own Order struct, after reading the market live (Polymarket: the
+//                                 CLOB book for the tick, the minimum size and a reference price, and Gamma for the
+//                                 book kind; Limitless: the market for its exchange, tokens and fee module, and its YES
+//                                 book), applies the same cap rule as XO with the policy fee ceiling, RESERVES the cap
+//                                 in the ledger, and returns the typed data to sign plus a decoded block the card
+//                                 rebuilds from. The maker is the owner EOA (signature type 0) on Limitless. On
+//                                 Polymarket the relay READS which account the owner trades from (readPolymarketMaker):
+//                                 the owner's Deposit Wallet (signature type 3; maker = signer = the wallet) when one is
+//                                 deployed at an address derived from the owner, with exactly Polymarket's proxy code,
+//                                 owner() equal to the owner and the expected EIP-712 domain; the owner EOA (type 0)
+//                                 when neither derived address holds code; a refusal when the read fails or anything
+//                                 differs. For type 3 the owner signs the ERC-7739 TypedDataSign wrapper of the order.
 //   POST /v1/clob/order/submit    takes prepared_id and signature only; recomputes the digest from the stored fields,
 //                                 requires the signature to recover to the owner OVER THE DIGEST ITSELF (an EOA signs
 //                                 the EIP-712 hash; a personal_sign wrapping would be refused by the venue, so it is
-//                                 refused here), writes the `sending` marker, and POSTs once with the venue's stored
-//                                 credential. Nothing is retried; an unknown outcome is `ambiguous`.
+//                                 refused here), for a Deposit Wallet order reads the wallet again (code, owner,
+//                                 domain) and wraps the 65-byte signature for the wallet's ERC-1271 check, writes the
+//                                 `sending` marker, and POSTs once with the venue's stored credential. Nothing is
+//                                 retried; an unknown outcome is `ambiguous`.
 //   POST /v1/clob/auth/prepare    Polymarket only: the ClobAuth login the owner signs so the relay can derive or create
 //                                 the L2 credential (apiKey, secret, passphrase) and keep it in the vault. Limitless mints
 //                                 its scoped tokens in its own UI, so for it this route answers not_implemented.
@@ -77,11 +99,15 @@ import { sanitizeUpstreamText, toRelayError, UpstreamError, type AllowedHost, ty
 export const POLYMARKET_CLOB = "https://clob.polymarket.com";
 export const POLYMARKET_GAMMA = "https://gamma-api.polymarket.com";
 export const LIMITLESS_API = "https://api.limitless.exchange";
+// The Polygon public RPC the read adapters use (sdk/venues/origins.ts, service rpc_polygon). Read-only: the RpcReader
+// sends eth_getCode and eth_call only, for the Deposit Wallet check.
+export const POLYGON_RPC_URL = "https://polygon-bor-rpc.publicnode.com/";
 
 export const CLOB_UPSTREAM_HOSTS: readonly AllowedHost[] = Object.freeze([
   { host: "clob.polymarket.com", methods: ["GET", "POST", "DELETE"] },
   { host: "gamma-api.polymarket.com", methods: ["GET"] },
   { host: "api.limitless.exchange", methods: ["GET", "POST"] },
+  { host: "polygon-bor-rpc.publicnode.com", methods: ["POST"], keyless: true },
 ]);
 
 // The vault names the credentials are stored under (account = the owner EOA, lower case), the same way XO's triplet is.
@@ -130,19 +156,108 @@ function asRelayError(error: unknown): unknown {
   return error instanceof UpstreamError ? toRelayError(error) : error;
 }
 
-// The maker is the owner itself; a supplied account must be that same address (invariant 1 kept in spirit).
-function ownerOf(body: { readonly owner: string; readonly account?: string | undefined }): Address {
-  let owner: Address;
+function parsedOwnerOf(body: { readonly owner: string }): Address {
   try {
-    owner = parseOwner(body.owner);
+    return parseOwner(body.owner);
   } catch (error) {
     if (error instanceof AccountError) throw new RelayError("invalid_request", "That owner address cannot place venue orders.", { reason: error.code });
     throw error;
   }
-  if (body.account !== undefined && lower(body.account) !== lower(owner)) {
-    throw new RelayError("account_mismatch", "A venue order's maker is the owner wallet itself; the account must equal the owner.");
+}
+
+// A supplied account must be the maker the relay resolved (invariant 1): it is compared, never used as input.
+function checkSuppliedAccount(supplied: string | undefined, maker: Address): void {
+  if (supplied !== undefined && lower(supplied) !== lower(maker)) {
+    throw new RelayError("account_mismatch", "The supplied account is not the maker the relay resolved for this owner (the owner wallet itself, or on Polymarket its Deposit Wallet read from Polygon).");
   }
+}
+
+// The maker is the owner itself (the login, and every Limitless order).
+function ownerOf(body: { readonly owner: string; readonly account?: string | undefined }): Address {
+  const owner = parsedOwnerOf(body);
+  checkSuppliedAccount(body.account, owner);
   return owner;
+}
+
+// ---- which Polymarket account the owner trades from (signature type 0 or 3) ---------------------------------------------
+
+export type PolymarketMaker =
+  | { readonly kind: "eoa"; readonly maker: Address; readonly signatureType: typeof POLYMARKET_SIGNATURE_TYPE_EOA }
+  | { readonly kind: "deposit_wallet"; readonly maker: Address; readonly signatureType: typeof POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET; readonly proxy: DepositWalletProxy };
+
+function polygonReader(context: RelayContext, rpcUrl: string): RpcReader {
+  return new RpcReader({ transport: jsonRpcTransportFor(needService(context, "upstream"), "polygon_rpc"), url: rpcUrl });
+}
+
+function accountUnreadable(error: unknown): RelayError {
+  if (error instanceof RelayError) return error;
+  const read = error instanceof ChainReadError ? error.code : "unexpected";
+  return new RelayError("precondition_failed", "The relay could not read the owner's Polymarket account on Polygon, so it cannot tell which wallet is the maker. Nothing was prepared or sent.", { reason: "account_unreadable", read });
+}
+
+// owner() and eip712Domain() on a wallet whose code was already matched. Throws a RelayError with a precise reason.
+async function confirmDepositWalletState(rpc: RpcReader, owner: Address, wallet: Address): Promise<void> {
+  let ownerData: Hex;
+  let domainData: Hex;
+  try {
+    [ownerData, domainData] = await Promise.all([rpc.call(wallet, DEPOSIT_WALLET_OWNER_CALL), rpc.call(wallet, DEPOSIT_WALLET_DOMAIN_CALL)]);
+  } catch (error) {
+    if (error instanceof ChainReadError && error.code === "reverted") {
+      throw new RelayError("precondition_failed", "The Polymarket Deposit Wallet derived from this owner did not answer owner() or eip712Domain(), so no order is signed for it.", { reason: "deposit_wallet_unreadable", wallet });
+    }
+    throw accountUnreadable(error);
+  }
+  const current = decodeDepositWalletOwner(ownerData);
+  if (current === null || lower(current) !== lower(owner)) {
+    throw new RelayError("precondition_failed", "The Polymarket Deposit Wallet derived from this owner is now owned by another address (its owner() differs), so this owner cannot sign for it.", { reason: "deposit_wallet_owner_mismatch", wallet });
+  }
+  if (!depositWalletDomainMatches(domainData, wallet, CLOB_CHAIN_IDS.polymarket)) {
+    throw new RelayError("precondition_failed", "The Polymarket Deposit Wallet's EIP-712 domain is not DepositWallet version 1 on chain 137 at its own address, so the signature this relay builds would not verify. Nothing was prepared or sent.", { reason: "deposit_wallet_domain", wallet });
+  }
+}
+
+// Reads both addresses the owner's Deposit Wallet can have. None holds code: the owner EOA is the maker (type 0). One
+// holds exactly the proxy runtime derived for this owner and answers owner() == owner with the expected domain: that
+// wallet is the maker (type 3). Anything else is refused with a reason; a failed read is never taken as "no wallet".
+export async function readPolymarketMaker(context: RelayContext, owner: Address, rpcUrl: string = POLYGON_RPC_URL): Promise<PolymarketMaker> {
+  const rpc = polygonReader(context, rpcUrl);
+  const candidates = depositWalletCandidates(owner);
+  let codes: Hex[];
+  try {
+    codes = await Promise.all(candidates.map((candidate) => rpc.getCode(candidate.address)));
+  } catch (error) {
+    throw accountUnreadable(error);
+  }
+  const deployed = candidates.filter((_, index) => codes[index] !== "0x");
+  for (const candidate of deployed) {
+    if (codes[candidates.indexOf(candidate)] !== candidate.runtimeCode.toLowerCase()) {
+      throw new RelayError("precondition_failed", "An address derived as this owner's Polymarket Deposit Wallet holds code that is not Polymarket's Deposit Wallet proxy for this owner, so no order is signed for it.", { reason: "deposit_wallet_code_unexpected", wallet: candidate.address });
+    }
+  }
+  if (deployed.length === 0) return { kind: "eoa", maker: owner, signatureType: POLYMARKET_SIGNATURE_TYPE_EOA };
+  if (deployed.length > 1) {
+    throw new RelayError("precondition_failed", "Both addresses derived as this owner's Polymarket Deposit Wallet (the beacon and the UUPS form) hold a wallet; which one the venue account uses is not decided here, so nothing was prepared.", { reason: "deposit_wallet_ambiguous" });
+  }
+  const wallet = deployed[0] as (typeof candidates)[number];
+  await confirmDepositWalletState(rpc, owner, wallet.address);
+  return { kind: "deposit_wallet", maker: wallet.address, signatureType: POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET, proxy: wallet.proxy };
+}
+
+// The submit-time check of a stored Deposit Wallet order: the wallet still has exactly its proxy code (the exchange
+// requires maker.code.length > 0), is still owned by the owner and still has the expected domain.
+async function reconfirmDepositWallet(context: RelayContext, owner: Address, wallet: Address, rpcUrl: string): Promise<void> {
+  const proxy = depositWalletProxyOf(owner, wallet);
+  if (proxy === null) throw new RelayError("internal", "A stored Deposit Wallet order names a wallet that is not derived from its owner.");
+  const rpc = polygonReader(context, rpcUrl);
+  let code: Hex;
+  try {
+    code = await rpc.getCode(wallet);
+  } catch (error) {
+    throw accountUnreadable(error);
+  }
+  if (code === "0x") throw new RelayError("precondition_failed", "The Polymarket Deposit Wallet has no code on Polygon now, so the exchange would refuse the order. Nothing was sent.", { reason: "deposit_wallet_not_deployed", wallet });
+  if (code !== depositWalletRuntimeCode(owner, proxy).toLowerCase()) throw new RelayError("precondition_failed", "The Polymarket Deposit Wallet's code is not the proxy it had at prepare. Nothing was sent.", { reason: "deposit_wallet_code_unexpected", wallet });
+  await confirmDepositWalletState(rpc, owner, wallet);
 }
 
 // ---- stored shapes ------------------------------------------------------------------------------------------------------------
@@ -150,8 +265,14 @@ function ownerOf(body: { readonly owner: string; readonly account?: string | und
 type StoredOrder = {
   readonly v: 1;
   readonly venue: ClobVenue;
+  // The venue's order id (the order's EIP-712 hash). `digest` below is what the owner signs: the same value for an EOA
+  // order, the TypedDataSign digest for a Polymarket Deposit Wallet order.
   readonly hash: string;
   readonly owner: string;
+  // The maker and signer: the owner itself (type 0) or the owner's Deposit Wallet (type 3). Records written before the
+  // Deposit Wallet path existed carry neither field and read as type 0 with the owner as maker.
+  readonly maker: string;
+  readonly signatureType: 0 | 3;
   readonly tokenId: string;
   readonly marketId: string;
   readonly salt: string;
@@ -200,6 +321,9 @@ function parseStored(value: unknown): StoredOrder {
   if ((venue !== "polymarket" && venue !== "limitless") || (side !== 0 && side !== 1) || typeof tif !== "string" || !["GTC", "GTD", "FOK", "FAK"].includes(tif)) return bad();
   const book = value["book"];
   if (book !== null && book !== "v2" && book !== "ctf" && book !== "neg_risk") return bad();
+  const signatureType = value["signatureType"] === undefined ? 0 : value["signatureType"];
+  if (signatureType !== 0 && signatureType !== 3) return bad();
+  if (signatureType === 3 && venue !== "polymarket") return bad();
   const ttl = value["ttlS"];
   const final = value["final"];
   return {
@@ -207,6 +331,8 @@ function parseStored(value: unknown): StoredOrder {
     venue,
     hash: text("hash", HEX32),
     owner: text("owner", /^0x[0-9a-fA-F]{40}$/),
+    maker: optionalText("maker", /^0x[0-9a-fA-F]{40}$/) ?? text("owner", /^0x[0-9a-fA-F]{40}$/),
+    signatureType,
     tokenId: text("tokenId", /^(0|[1-9][0-9]{0,77})$/),
     marketId: text("marketId", /^(?:0x[0-9a-fA-F]{64}|[a-z0-9][a-z0-9_-]{0,127})$/),
     salt: text("salt", /^[1-9][0-9]{0,77}$/),
@@ -256,7 +382,10 @@ async function patchStored(state: DurableStore, venue: ClobVenue, hash: string, 
 // The order structs, rebuilt from the stored fields (never from the caller).
 function polymarketOrderOf(stored: StoredOrder): { readonly order: PolymarketOrder; readonly book: PolymarketBook } {
   if (stored.book === null || stored.timestampMs === null) throw new RelayError("internal", "A stored Polymarket order lacks its book or timestamp.");
-  const maker = getAddress(stored.owner);
+  const owner = getAddress(stored.owner);
+  const maker = getAddress(stored.maker);
+  // The maker is the owner (type 0) or one of the owner's two derived Deposit Wallet addresses (type 3), nothing else.
+  if (stored.signatureType === 0 ? maker !== owner : depositWalletProxyOf(owner, maker) === null) throw new RelayError("internal", "A stored Polymarket order's maker is not the owner or the owner's Deposit Wallet.");
   return {
     book: stored.book,
     order: {
@@ -267,7 +396,7 @@ function polymarketOrderOf(stored: StoredOrder): { readonly order: PolymarketOrd
       makerAmount: BigInt(stored.makerAmount),
       takerAmount: BigInt(stored.takerAmount),
       side: stored.side,
-      signatureType: 0,
+      signatureType: stored.signatureType,
       timestamp: BigInt(stored.timestampMs),
       metadata: ZERO_BYTES32,
       builder: ZERO_BYTES32,
@@ -297,10 +426,11 @@ function limitlessOrderOf(stored: StoredOrder): { readonly order: LimitlessOrder
   };
 }
 
+// What the owner signs: the order hash for an EOA order, the TypedDataSign digest for a Deposit Wallet order.
 function digestOf(stored: StoredOrder): Hex {
   if (stored.venue === "polymarket") {
     const { order, book } = polymarketOrderOf(stored);
-    return hashPolymarketOrder(order, book);
+    return polymarketSigningDigest(order, book);
   }
   const { order, exchange } = limitlessOrderOf(stored);
   return hashLimitlessOrder(order, exchange);
@@ -516,6 +646,9 @@ export interface ClobRouteDeps {
   readonly random?: (bytes: number) => Buffer;
   readonly pendingAfterMs?: number;
   readonly postTimeoutMs?: number;
+  // The Polygon JSON-RPC the Deposit Wallet check reads (default POLYGON_RPC_URL). Its host must be on the upstream
+  // allowlist.
+  readonly polygonRpcUrl?: string;
 }
 
 export interface ClobRoutes {
@@ -538,6 +671,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
   const random = deps.random ?? ((bytes: number): Buffer => randomBytes(bytes));
   const pendingAfterMs = deps.pendingAfterMs ?? SUBMIT_PENDING_AFTER_MS;
   const postTimeoutMs = deps.postTimeoutMs ?? ORDER_POST_TIMEOUT_MS;
+  const polygonRpcUrl = deps.polygonRpcUrl ?? POLYGON_RPC_URL;
   const background = new Set<Promise<void>>();
 
   function track(work: Promise<unknown>): void {
@@ -562,7 +696,8 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
   const prepareOrder: NonNullable<RouteTable["POST /v1/clob/order/prepare"]> = async (body, context) => {
     const venue = body.venue;
     guardWrite(context, CLOB_FLAG[venue]);
-    const owner = ownerOf(body);
+    // Limitless: the maker is the owner, checked now. Polymarket: the maker is read from Polygon below.
+    const owner = venue === "limitless" ? ownerOf(body) : parsedOwnerOf(body);
     const config = needService(context, "config");
     const ledger = needService(context, "ledger");
     const prepared = needService(context, "prepared");
@@ -592,15 +727,18 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     let polymarket: PolymarketMarketRead | undefined;
     let limitless: LimitlessMarketRead | undefined;
     let clock: { readonly nowS: number; readonly offsetS: number };
+    // Who makes the order: the owner, or (Polymarket) the owner's Deposit Wallet as read from Polygon.
+    let pmMaker: PolymarketMaker = { kind: "eoa", maker: getAddress(owner), signatureType: POLYMARKET_SIGNATURE_TYPE_EOA };
     if (venue === "polymarket") {
-      [clock, polymarket] = await Promise.all([polymarketClock(context, true), readPolymarketMarket(context, body.market_id, body.token_id)]);
+      [clock, polymarket, pmMaker] = await Promise.all([polymarketClock(context, true), readPolymarketMarket(context, body.market_id, body.token_id), readPolymarketMaker(context, getAddress(owner), polygonRpcUrl)]);
+      checkSuppliedAccount(body.account, pmMaker.maker);
       tick = polymarket.tick;
       minSize = polymarket.minSize;
       levels = polymarket.levels;
     } else {
       limitless = await readLimitlessMarket(context, body.market_id, body.token_id);
       clock = { nowS: Math.floor(context.now() / 1000), offsetS: 0 };
-      tick = LIMITLESS_ASSUMED_TICK;
+      tick = LIMITLESS_PRICE_TICK;
       minSize = limitless.minSize;
       levels = body.token_id === limitless.yesToken ? limitless.levels : complementLevels(limitless.levels);
     }
@@ -612,6 +750,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     let cap: ReturnType<typeof clobCapAmount>;
     try {
       amounts = computeClobAmounts({ side, price: body.price, shares: body.shares, grid: { tick, priceDecimals }, sizeDecimals: SIZE_DECIMALS, minSharesMicro: sharesMicroOf(minSize) });
+      if (venue === "limitless") checkLimitlessAmounts(amounts);
       cap = clobCapAmount(amounts, CLOB_CAP_FEE_BPS);
     } catch (error) {
       throw signingFailure(error);
@@ -620,8 +759,11 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
 
     // The order.
     const salt = nonZeroSalt(random);
-    const maker = getAddress(owner);
+    const ownerAddress = getAddress(owner);
+    const maker = venue === "polymarket" ? pmMaker.maker : ownerAddress;
     const expiration = ttl === null ? 0n : BigInt(clock.nowS + ttl);
+    // `hash` is the venue's order id; `digest` what the owner signs (they differ only for a Deposit Wallet order).
+    let hash: Hex;
     let digest: Hex;
     let typedData: TypedData;
     let decodedInput: Parameters<typeof buildDecodedClobOrder>[0]["order"];
@@ -629,18 +771,20 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     try {
       if (venue === "polymarket" && polymarket !== undefined) {
         const timestamp = BigInt(clock.nowS) * 1000n;
-        const order: PolymarketOrder = { salt, maker, signer: maker, tokenId: BigInt(body.token_id), makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side, signatureType: 0, timestamp, metadata: ZERO_BYTES32, builder: ZERO_BYTES32 };
-        digest = hashPolymarketOrder(order, polymarket.book);
+        const order: PolymarketOrder = { salt, maker, signer: maker, tokenId: BigInt(body.token_id), makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side, signatureType: pmMaker.signatureType, timestamp, metadata: ZERO_BYTES32, builder: ZERO_BYTES32 };
+        hash = hashPolymarketOrder(order, polymarket.book);
+        digest = polymarketSigningDigest(order, polymarket.book);
         typedData = JSON.parse(JSON.stringify(polymarketOrderSignTypedData(order, polymarket.book))) as TypedData;
         const exchange = POLYMARKET_EXCHANGES[polymarket.book];
         decodedInput = { venue: "polymarket", order, expiration, domain: { version: exchange.version, verifyingContract: exchange.verifyingContract } };
-        stored = { v: 1, venue, owner: maker, tokenId: body.token_id, marketId: lower(body.market_id), salt: salt.toString(), side, makerAmount: amounts.makerAmount.toString(), takerAmount: amounts.takerAmount.toString(), tif, postOnly, ttlS: ttl, expiration: expiration.toString(), timestampMs: timestamp.toString(), book: polymarket.book, exchange: null, feeRateBps: null, tick, minSize, feeBps: cap.feeBps, clockOffsetS: clock.offsetS };
+        stored = { v: 1, venue, owner: ownerAddress, maker, signatureType: pmMaker.signatureType, tokenId: body.token_id, marketId: lower(body.market_id), salt: salt.toString(), side, makerAmount: amounts.makerAmount.toString(), takerAmount: amounts.takerAmount.toString(), tif, postOnly, ttlS: ttl, expiration: expiration.toString(), timestampMs: timestamp.toString(), book: polymarket.book, exchange: null, feeRateBps: null, tick, minSize, feeBps: cap.feeBps, clockOffsetS: clock.offsetS };
       } else if (limitless !== undefined) {
         const order: LimitlessOrder = { salt, maker, signer: maker, taker: ZERO_ADDRESS, tokenId: BigInt(body.token_id), makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, expiration: 0n, nonce: 0n, feeRateBps: limitless.feeRateBps, side, signatureType: 0 };
         digest = hashLimitlessOrder(order, limitless.exchange);
+        hash = digest;
         typedData = JSON.parse(JSON.stringify(limitlessOrderSignTypedData(order, limitless.exchange))) as TypedData;
         decodedInput = { venue: "limitless", order, exchange: limitless.exchange };
-        stored = { v: 1, venue, owner: maker, tokenId: body.token_id, marketId: body.market_id, salt: salt.toString(), side, makerAmount: amounts.makerAmount.toString(), takerAmount: amounts.takerAmount.toString(), tif, postOnly, ttlS: null, expiration: "0", timestampMs: null, book: null, exchange: limitless.exchange, feeRateBps: limitless.feeRateBps.toString(), tick, minSize, feeBps: cap.feeBps, clockOffsetS: 0 };
+        stored = { v: 1, venue, owner: ownerAddress, maker, signatureType: 0, tokenId: body.token_id, marketId: body.market_id, salt: salt.toString(), side, makerAmount: amounts.makerAmount.toString(), takerAmount: amounts.takerAmount.toString(), tif, postOnly, ttlS: null, expiration: "0", timestampMs: null, book: null, exchange: limitless.exchange, feeRateBps: limitless.feeRateBps.toString(), tick, minSize, feeBps: cap.feeBps, clockOffsetS: 0 };
       } else {
         throw new RelayError("internal", "The venue read is missing.");
       }
@@ -649,7 +793,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     }
 
     // R1: the decoded block, rebuilt here as a self-check before anything is reserved or stored.
-    const decoded = buildDecodedClobOrder({ owner: maker, amounts, feeBps: cap.feeBps, tif, postOnly, ttlS: ttl, marketId: stored.marketId, tick, minSize, order: decodedInput });
+    const decoded = buildDecodedClobOrder({ owner: ownerAddress, amounts, feeBps: cap.feeBps, tif, postOnly, ttlS: ttl, marketId: stored.marketId, tick, minSize, order: decodedInput });
     const rebuilt = rebuildDecoded(decoded);
     if (!rebuilt.ok || lower(rebuilt.digest) !== lower(digest)) {
       throw new RelayError("internal", `The relay could not rebuild its own order digest from the decoded terms (${rebuilt.ok ? "digest" : rebuilt.field}). Nothing was prepared.`, { field: rebuilt.ok ? "digest" : rebuilt.field });
@@ -657,8 +801,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
 
     const nowMs = context.now();
     const reservationId = `clb_${random(16).toString("hex")}`;
-    const hash = lower(digest);
-    const record: StoredOrder = { ...stored, hash, digest: hash, capAtomic: cap.capAtomic.toString(), reservationId, preparedId: null, createdAtMs: nowMs, final: null };
+    const record: StoredOrder = { ...stored, hash: lower(hash), digest: lower(digest), capAtomic: cap.capAtomic.toString(), reservationId, preparedId: null, createdAtMs: nowMs, final: null };
     await state.commit([
       { ns: ORDERS_NS, key: recordKey(venue, hash), value: record as unknown as Json },
       { ns: RESERVATIONS_NS, key: reservationId, value: recordKey(venue, hash) },
@@ -668,7 +811,8 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     const reservationEndsMs = expiration === 0n ? nowMs + 86_400_000 : Number(expiration) * 1000;
     const reserved = await ledger.reserveFor({
       kind: "spend",
-      account: lower(maker),
+      // The caps count per owner, whichever wallet makes the order.
+      account: lower(ownerAddress),
       day: ledger.currentDay(),
       amountAtomic: cap.capAtomic,
       limitAtomic: config.guardrails.maxDailyAtomic,
@@ -696,13 +840,13 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     if (!check.ok) throw new RelayError("internal", "The relay built a signing request that does not match its digest. Nothing was prepared.");
 
     const preparedTtlS = ttl === null ? PREPARED_TTL_S : Math.max(1, Math.min(PREPARED_TTL_S, ttl - 60));
-    const item = await prepared.create({ kind: "clob_order", owner: maker, account: maker, digest, digestForm: "eip712OrderHash", payload: { venue, hash }, reservationIds: [reservationId], ttlS: preparedTtlS });
+    const item = await prepared.create({ kind: "clob_order", owner: ownerAddress, account: maker, digest, digestForm: "eip712OrderHash", payload: { venue, hash: lower(hash) }, reservationIds: [reservationId], ttlS: preparedTtlS });
     await patchStored(state, venue, hash, (current) => ({ ...current, preparedId: item.id }));
 
     const spentToday = reserved.usage.spentAtomic;
     const dayRemaining = config.guardrails.maxDailyAtomic > spentToday ? config.guardrails.maxDailyAtomic - spentToday : 0n;
     const capabilities = context.services.capabilities?.snapshot(FACT_IDS[venue]) ?? {};
-    const credentials = await hasCredentials(context, venue, maker);
+    const credentials = await hasCredentials(context, venue, ownerAddress);
     const warnings = [
       SAFETY_NOTICES.advisoryCaps,
       SAFETY_NOTICES.approvalMode,
@@ -713,11 +857,20 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
       ...(credentials ? [] : [`No ${venueDisplayName(venue)} credential is stored for this wallet yet; submitting will be refused until one is.`]),
       ...(expiration === 0n && (tif === "GTC") ? ["This order carries no signed expiry: it rests until cancelled through the venue, and the relay cannot cancel it yet."] : []),
       ...(Math.abs(clock.offsetS) > 30 ? [`The relay's clock differs from the venue's by ${Math.abs(clock.offsetS)} s. The order uses the venue's clock.`] : []),
+      ...(venue !== "polymarket"
+        ? []
+        : pmMaker.kind === "deposit_wallet"
+          ? [
+              `The maker is this wallet's Polymarket Deposit Wallet ${pmMaker.maker} (read from Polygon: deployed with Polymarket's ${pmMaker.proxy === "beacon" ? "beacon" : "UUPS"} proxy, owned by this wallet). The wallet signs a TypedDataSign wrapper of the order and the relay wraps that signature for the Deposit Wallet's ERC-1271 check at submit. No Deposit Wallet order from this relay has been accepted by Polymarket yet.`,
+            ]
+          : [
+              "No Polymarket Deposit Wallet is deployed at either address derived from this wallet (read from Polygon), so this is an EOA order (signature type 0). Polymarket's docs use an EOA as the account wallet only when it is allowlisted for trading; otherwise expect the venue to refuse it.",
+            ]),
     ];
     return {
       prepared_id: item.id,
       kind: "clob_order",
-      owner: maker,
+      owner: ownerAddress,
       account: maker,
       expires_at: isoSecondOf(item.expiresAtMs),
       sign,
@@ -776,8 +929,10 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
       const found = await secrets.get(lower(stored.owner), POLYMARKET_SECRET_NAME);
       const triplet = found === undefined ? undefined : parseTriplet(found.reveal());
       if (triplet === undefined) throw new RelayError("precondition_failed", "No Polymarket credential is stored for this wallet. Log in first (clob_auth prepare and submit).", { credentials: found === undefined ? "none" : "unreadable" });
-      const { order } = polymarketOrderOf(stored);
-      const wire = { ...polymarketOrderToWire(order, BigInt(stored.expiration)), signature };
+      const { order, book } = polymarketOrderOf(stored);
+      // Type 3: the owner's 65-byte signature over the TypedDataSign digest, wrapped for the wallet (ERC-7739).
+      const venueSignature = stored.signatureType === POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET ? wrapPolymarketDepositWalletSignature(signature, order, book) : signature;
+      const wire = { ...polymarketOrderToWire(order, BigInt(stored.expiration)), signature: venueSignature };
       const body = JSON.stringify({ order: wire, owner: triplet.apiKey, orderType: stored.tif, ...(stored.postOnly ? { postOnly: true } : {}) });
       const clock = await polymarketClock(context, false);
       const headers = buildPolymarketL2Headers({ address: stored.owner, credentials: triplet, timestampSeconds: clock.nowS, method: "POST", path: "/order", body });
@@ -817,7 +972,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     // A rejected order's reservation is given back by `sweep` once the ledger considers it expired; the ledger refuses an
     // earlier release by design.
     await patchStored(state, stored.venue, stored.hash, (current) => ({ ...current, final: { state: outcome.kind, atMs: context.now(), detail: outcome.detail.slice(0, 160) } }));
-    await audit(context, { ev: "send_result", outcome: outcome.kind === "accepted" ? "ok" : outcome.kind === "rejected" ? "refused" : "ambiguous", state: outcome.kind, preparedId: record.id, owner: stored.owner, account: stored.owner, hash: stored.hash, code, sync: true });
+    await audit(context, { ev: "send_result", outcome: outcome.kind === "accepted" ? "ok" : outcome.kind === "rejected" ? "refused" : "ambiguous", state: outcome.kind, preparedId: record.id, owner: stored.owner, account: stored.maker, hash: stored.hash, code, sync: true });
   }
 
   const submitOrder: NonNullable<RouteTable["POST /v1/clob/order/submit"]> = async (body, context) => {
@@ -834,6 +989,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
     if (stored === undefined) throw new RelayError("internal", "The relay has no record of the prepared order.");
     const owner = getAddress(record.owner);
     if (lower(stored.owner) !== lower(owner)) throw new RelayError("internal", "The stored order and the prepared item disagree about the owner.");
+    if (lower(stored.maker) !== lower(record.account)) throw new RelayError("internal", "The stored order and the prepared item disagree about the maker.");
 
     // Invariant 3: the digest is recomputed from the stored fields, never taken from the record or the caller.
     const digest = digestOf(stored);
@@ -845,7 +1001,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
       const verified = await verifyDigestSignature({ userOpHash: digest, signature: body.signature, expectedOwner: owner });
       if (!verified.ok) {
         await prepared.noteFailedAttempt(record.id);
-        await audit(context, { ev: "refused", preparedId: record.id, owner, account: owner, state: "signature_refused", code: verified.code, outcome: "refused" });
+        await audit(context, { ev: "refused", preparedId: record.id, owner, account: stored.maker, state: "signature_refused", code: verified.code, outcome: "refused" });
         if (verified.code === "owner_mismatch") throw new RelayError("owner_mismatch", "The signature is not from the owner wallet.");
         if (verified.code === "signature_invalid") throw new RelayError("signature_invalid", "The signature is not a valid 65-byte signature.");
         throw new RelayError("invalid_request", "The signature could not be checked.");
@@ -857,6 +1013,10 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
         throw new RelayError("signature_invalid", "The signature wraps the digest as a personal message (EIP-191); the venue needs a signature over the typed-data digest itself.", { reason: "eip191_not_accepted" });
       }
       signature = verified.signature;
+      // A Deposit Wallet order: the exchange requires the maker to have code and accepts the signature only through the
+      // wallet's ERC-1271 check against its current owner, so the wallet is read again now. A refusal here sends nothing
+      // and leaves the item unclaimed.
+      if (stored.signatureType === POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET) await reconfirmDepositWallet(context, owner, getAddress(stored.maker), polygonRpcUrl);
     }
 
     // One claim per prepared item: the marker is on disk before any request leaves.
@@ -870,7 +1030,7 @@ export function createClobRoutes(deps: ClobRouteDeps = {}): ClobRoutes {
       await prepared.resolve(record.id, "rejected", "not_sent_no_credentials").catch(() => undefined);
       throw error;
     }
-    await audit(context, { ev: "send_begin", outcome: "pending", state: "sending", preparedId: record.id, owner, account: owner, hash: stored.hash, sync: true });
+    await audit(context, { ev: "send_begin", outcome: "pending", state: "sending", preparedId: record.id, owner, account: stored.maker, hash: stored.hash, sync: true });
 
     const send = postOnce(context, stored, ready).then(async (outcome) => {
       await finish(context, record, stored, outcome);

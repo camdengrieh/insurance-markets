@@ -6,7 +6,6 @@ import {
   checkPreparedSign,
   digestTag,
   preparedSignSchema,
-  signatureInputSchema,
   toPayboxIntent,
   type PayboxIntentOptions,
   type PayboxSignIntent,
@@ -35,10 +34,13 @@ import type { Principal } from "./auth.js";
 //      "the inbox said verified": it is the same pure code the card uses, run here, plus the refusals that belong
 //      to signing (only a `raw` or `typedData` intent, only the kinds the Cockpit offers, and an intent that hashes
 //      to the digest the relay will check the signature against);
-//   2. reads the credential's grant from PayBox and requires approval mode `always_approve` (M5-4) and that its
-//      address is the item's owner;
-//   3. asks PayBox to sign exactly `toPayboxIntent(sign)` and waits for the user's passkey approval in the PayBox
-//      app (`--wait`; the daemon never sees a passkey);
+//   2. reads the credential's grant from PayBox (`paybox --json credentials`) and requires a granted, enabled wallet
+//      in approval mode `always_approve` (M5-4) whose address is the item's owner;
+//   3. asks PayBox to sign exactly `toPayboxIntent(sign)` (`paybox --json sign`), which puts the request to the user;
+//      reads the request (`paybox --json request <id>`) until the user has approved it with a passkey in the PayBox
+//      app (the daemon never sees a passkey); then has this client sign it with its own paired key, once
+//      (`paybox --json request <id> --complete-signature`). Between steps it stops if the kill switch, the ARM
+//      window, the flag or the item's state no longer allow the signature to be used;
 //   4. recovers the signer from the answer over `expected_digest` and requires it to be the owner. A signature that
 //      does not recover to the owner is dropped here, before anything else can see it;
 //   5. hands the canonical 65-byte signature to the submit port (by default the plugin's own submit tools through
@@ -54,8 +56,10 @@ import type { Principal } from "./auth.js";
 //
 // WHAT THE OPERATOR MUST HAVE SEEN BEFORE TURNING IT ON (the conditions are data: S2_ENABLE_CONDITIONS, below, and
 // `ENABLE_PAYBOX_SIGNER=1` is not enough on its own; `PAYBOX_SIGNER_ACK_DT=DT1,DT3` states that both live tests
-// were run and recorded). DT1 and DT3 are in docs/dapp-design.md 7.5. Until they are, nothing here is known to
-// work with the real PayBox: the CLI's output shape and its credential listing are GUESSES, written to fail closed.
+// were run and recorded). DT1 and DT3 are in docs/dapp-design.md 7.5. The command lines, the approval flow and the
+// output shapes in this file are read from the published CLI, @paybox-sh/sdk 2.2.0 (dist/cli.js, dist/index.d.ts and
+// its signing code); nothing here has been run against the real PayBox. What only a live run can show is listed in
+// S2_ENABLE_CONDITIONS, and every one of those cases is refused, not guessed.
 
 // ---- configuration ---------------------------------------------------------------------------------------------------
 
@@ -74,7 +78,9 @@ export const S2_REQUIRED_ENV = [S2_CONFIG_DIR_ENV, S2_CREDENTIAL_ENV] as const;
 export interface EnableCondition {
   readonly id: string;
   readonly test: "DT1" | "DT3";
-  // What the recorded test result must show before the flag is turned on.
+  // What is already known from the published CLI source (@paybox-sh/sdk 2.2.0), so the live test need not show it.
+  readonly readFromSource: string;
+  // What the recorded test result must show before the flag is turned on (only a live run can show it).
   readonly mustShow: string;
   // What in this file changes if the result is different from the assumption written here.
   readonly ifDifferent: string;
@@ -84,71 +90,97 @@ export const S2_ENABLE_CONDITIONS: readonly EnableCondition[] = Object.freeze([
   {
     id: "dt1_raw_allowed",
     test: "DT1",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0 types the intent { op: \"raw\", rawSigningPayloadHex } and posts it to /agent/wallet-sign as given; when it signs, it strips a 0x prefix and lowercases the payload before the signing service (buildEnvelope), so either form signs the same 32 bytes on the client side.",
     mustShow:
-      "check_operation_readiness reports `raw` available to the dedicated credential's grant for a 32-byte digest, and a `raw` sign over one digest completes. PayBox's docs call `raw` an escape hatch; whether a grant can permit it is NOT FOUND. Every userop and ClobAuth item is signed as `raw`.",
-    ifDifferent: "If `raw` is refused, S2 cannot sign user operations or the XO login. A `message` fallback for user operations is not implemented here and would need its own review.",
+      "check_operation_readiness reports `raw` available to the dedicated credential's grant for a 32-byte digest, the server accepts rawSigningPayloadHex with its 0x prefix (the default here), and a `raw` sign over one digest completes. PayBox's docs call `raw` an escape hatch; whether a grant can permit it is a server decision. Every userop and ClobAuth item is signed as `raw`.",
+    ifDifferent:
+      "If `raw` is refused, S2 cannot sign user operations or the XO login; a `message` fallback is not implemented and would need its own review. If only the 0x prefix is refused, set rawHexPrefix to `none` in createSignerModule.",
   },
   {
     id: "dt1_typed_data_allowed",
     test: "DT1",
-    mustShow: "A `typedData` sign of a Kernel-wrapped order (chain id 3223) completes, and the signature recovers to the credential's address over hashTypedData of that typed data.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0 types the intent { op: \"typedData\", typedData: viem TypedDataDefinition } with no chain flag (the chain is the domain's), and signs hashTypedData(typedData) through @moon-x/evm-adapter 0.3.0.",
+    mustShow: "The server and the grant accept a `typedData` sign of a Kernel-wrapped order (chain id 3223), and the signature recovers to the credential's address over hashTypedData of that typed data.",
     ifDifferent: "If typed data for chain 3223 is refused, orders cannot be signed by S2; the item kind `order` must then be taken out of S2_ALLOWED_KINDS.",
   },
   {
     id: "dt1_output_shape",
     test: "DT1",
-    mustShow: "The signature shape (65 bytes, or r and s with v or a recovery id), how a 0x prefix is handled, whether the result is high-s, and whether signing the same digest twice recovers to the same signer.",
-    ifDifferent: "normalizeSignature accepts the three documented shapes and flips high-s; anything else is refused as paybox_output_invalid. Set rawHexPrefix to `none` in createSignerModule if PayBox wants the digest without 0x.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0 posts the artifact { signature: 0x r||s||v, 65 bytes, v = 27 + yParity } for message and typedData, and { scheme, signature: { r, s, recovery_id } } (r and s as hex without 0x, recovery_id 0 or 1) for raw, to /agent/requests/<id>/signature; a finished request is an AgentResponse whose output (CredentialOutput, output_type \"signature\") carries the result in output.value.",
+    mustShow:
+      "That output.value of the finished request is that artifact unchanged (the server could normalise it, for example a raw result as 65-byte hex), that the raw scheme is \"ecdsa_secp256k1\", whether s is low, and that signing one digest twice recovers to the same address.",
+    ifDifferent:
+      "readSignature accepts exactly those two forms (a raw result only with scheme \"ecdsa_secp256k1\", the scheme @moon-x/evm-adapter 0.3.0 requires of an EVM wallet); any other value is paybox_output_invalid and nothing is sent. A high s is flipped by normalizeSignature. Add a recorded form to readSignature only from the live output.",
   },
   {
     id: "dt1_signature_form",
     test: "DT1",
-    mustShow:
-      "Which digest the signature recovers over for a `raw` intent: the digest itself (form `raw`) or its EIP-191 wrapping (form `eip191`). This adapter accepts either for a raw intent and reports it, and requires form `raw` for a typedData intent.",
-    ifDifferent: "If PayBox always applies the EIP-191 prefix to `raw`, the relay's validator must accept that form for orders and logins too, which is a separate finding (UO1).",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0 signs a `raw` payload as given, with no EIP-191 prefix: it is the same signing-service call the SDK makes for message and typedData after hashing them itself (hashMessage, hashTypedData), so the service signs the 32 bytes it receives.",
+    mustShow: "A `raw` sign of one digest recovers over the digest itself (form `raw`), as the source implies.",
+    ifDifferent:
+      "This adapter requires form `raw` for both ops and refuses an EIP-191 recovery as form_not_allowed. If the live run shows PayBox wrapping `raw`, the relay's validator would have to accept that form for orders and logins too, which is a separate finding (UO1).",
   },
   {
     id: "dt1_grant_limits",
     test: "DT1",
+    readFromSource: "@paybox-sh/sdk 2.2.0 types Grant.approval_mode as always_approve, iframe, autonomous or paybox; any other grant field is untyped ([key: string]: unknown), so thresholds and policies are not in the client.",
     mustShow: "Whether any threshold or policy applies to wallet-sign intents on the grant, and what the approval screen shows for a raw digest and for typed data (this fixes the two-tag wording, M4-12).",
     ifDifferent: "Wording only; no code here depends on it.",
   },
   {
     id: "dt3_login_and_pairing",
     test: "DT3",
-    mustShow: "`paybox login` (device code) and `paybox connect` (pbxk1 key pairing) complete in a separate PAYBOX_CONFIG_DIR, with only the dedicated credential granted, in mode always_approve.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0: `paybox login` (OAuth device code) and `paybox connect` (pbxk1 key pairing by code) write config.json in PAYBOX_CONFIG_DIR when it is set (configDir); login deletes a stored signing key; without a key, `request <id> --complete-signature` fails (\"cannot complete wallet-sign request without a valid local signing key\") and S2 reports paybox_failed.",
+    mustShow: "Login and pairing complete in a separate PAYBOX_CONFIG_DIR, with only the dedicated credential granted, in mode always_approve, and `paybox --json whoami` then reports canSign true.",
     ifDifferent: "No S2: the daemon cannot act as a PayBox client, and S1 (the agent signs) stays the only path.",
   },
   {
     id: "dt3_sign_command",
     test: "DT3",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0: --json is a program option; `sign` takes only --credential (a UUID) and --intent and has no --wait. Under always_approve its first answer is pending_approval with exit 0. This adapter then reads `paybox --json request <id>` every 2 s (the SDK's own waitForRequest interval) until pending_signature, and runs `paybox --json request <id> --complete-signature` once (reopen_signing_window, sign with the local key, print the request).",
     mustShow:
-      "`paybox sign --credential <id> --intent '<json>' --wait` completes under always_approve for `message`, then `raw` and `typedData`, and the exact stdout shape. parseSignOutput is a guess (JSON with a `signature`, `result.signature` or r/s/v, or a bare 0x hex); replace it with the recorded shape. Also whether a `--json` flag is needed.",
-    ifDifferent: "Until the recorded shape is wired in, any other output is refused as paybox_output_invalid and nothing is sent.",
+      "The three steps complete end to end under always_approve for `raw` and `typedData`, with the stdout of each step recorded, and how long a request stays in pending_signature after approval (its signing window) compared with the 2 s read interval.",
+    ifDifferent:
+      "Any status other than pending_approval, pending_signature, success, denied or error, a request_id that changes between steps, or a request still unsigned after --complete-signature is refused (paybox_output_invalid or paybox_failed) and nothing is sent.",
   },
   {
     id: "dt3_credential_listing",
     test: "DT3",
-    mustShow:
-      "The CLI command that lists the client's credentials with their approval_mode and address, and its output. The default argv (credentials list --json) and the field names (credential_id or id, approval_mode, address) are GUESSES; a different real shape makes S2 refuse every request (credential_unreadable), which is safe.",
-    ifDifferent: "Change CREDENTIAL_LIST_ARGV and parseCredentials to the recorded command and fields.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0: `paybox --json credentials` (GET /agent/grants) prints { credentials: [{ credential: { id, user_id, name, credential_type, provider, metadata, created_at, disabled_at }, grant: { credential_id, approval_mode, ... } }], ungranted, agent_signer_recorded }. PayBox's MCP reference says a wallet's metadata holds address, provider_wallet_id and chains, and the address may be null for an older wallet.",
+    mustShow: "The dedicated wallet appears under `credentials` with grant.approval_mode always_approve, disabled_at null and metadata.address equal to the owner.",
+    ifDifferent:
+      "parseCredentials refuses a credential that is not listed (credential_not_granted), disabled (credential_disabled), not a wallet (credential_not_wallet) or malformed (credential_unreadable); the path refuses a null address and any mode but always_approve.",
   },
   {
     id: "dt3_failure_modes",
     test: "DT3",
-    mustShow: "What a declined approval, an expired approval and a revoked client look like (exit code and stdout), so they can be told apart from a missing binary.",
-    ifDifferent: "Every non-zero exit is paybox_failed today; a decline is only recognised if the JSON output says so.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0: with --json, a terminal denied or error prints the AgentResponse and exits 1; a failed call prints {\"error\": \"<text>\"} and exits 1; a usage error is plain text on stderr. RequestStatus has no `expired`. A first answer that is denied or error with retryable true is posted again once inside the same CLI run (withExpiryRetry).",
+    mustShow:
+      "What a declined approval, an approval left to lapse and a revoked client look like (status, the `error` field, and the `reason` field the docs name but the 2.2.0 type does not), and whether the in-CLI retry ever puts a second prompt to the user.",
+    ifDifferent: "denied is paybox_declined; error, {\"error\"} and any other non-zero exit are paybox_failed; an unrecognised answer is paybox_output_invalid. No text from PayBox is kept.",
   },
   {
     id: "dt3_single_process",
     test: "DT3",
-    mustShow: "Two processes on one PAYBOX_CONFIG_DIR confirm the single-process rule (the rotating refresh token). This adapter serialises its own calls and the daemon owns the data directory alone; nothing else may use the directory.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0 refreshes the OAuth token when it is within 60 s of expiry and writes the new one back to config.json (PayboxClient.bearer). Every step of the flow is a separate CLI run on the same directory; this adapter runs them one at a time.",
+    mustShow: "Two processes on one PAYBOX_CONFIG_DIR confirm the single-process rule (the rotating refresh token). The daemon owns the data directory alone; nothing else may use it.",
     ifDifferent: "If a lock is needed, it belongs in the PayBox config directory, which this file never touches.",
   },
   {
     id: "dt3_api_key_variant",
     test: "DT3",
-    mustShow: "Whether a personal API key (pbx_live_...) can drive `sign --wait` without the pbxk1 pairing, with what scope, and without the rotation hazard.",
+    readFromSource:
+      "@paybox-sh/sdk 2.2.0: `paybox login --key pbx_live_...` stores the key instead of OAuth (so no refresh token rotates) and deletes a stored signing key; `paybox connect` then pairs a pbxk1 key with that bearer, and in-process signing still needs it.",
+    mustShow: "Whether the server accepts a personal API key for wallet-sign requests and for pairing, and with what scope.",
     ifDifferent: "Only the login step in the runbook changes; this adapter never reads either secret.",
   },
 ]);
@@ -194,7 +226,9 @@ export function s2Acknowledged(env: Env): boolean {
   return words.length === wanted.length && wanted.every((word) => words.includes(word));
 }
 
-const CREDENTIAL_ID = /^[A-Za-z0-9_-]{4,64}$/;
+// The CLI refuses a credential id or a request id that is not a UUID (@paybox-sh/sdk 2.2.0 cli.js `credentialId`,
+// `requestId`).
+export const PAYBOX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BIN_PATTERN = /^[A-Za-z0-9._/\\:-]{1,200}$/;
 
 export interface SignerReadiness {
@@ -210,7 +244,8 @@ export function signerReadiness(env: Env): SignerReadiness {
   const dir = env[S2_CONFIG_DIR_ENV];
   if (typeof dir !== "string" || dir.trim() === "" || !isAbsolute(dir.trim()) || dir.includes("\0")) missing.push(S2_CONFIG_DIR_ENV);
   const credential = env[S2_CREDENTIAL_ENV];
-  if (typeof credential !== "string" || !CREDENTIAL_ID.test(credential.trim())) missing.push(S2_CREDENTIAL_ENV);
+  // The CLI takes only a UUID here ("--credential expects a credential id, not a name").
+  if (typeof credential !== "string" || !PAYBOX_UUID.test(credential.trim())) missing.push(S2_CREDENTIAL_ENV);
   const bin = env[S2_BIN_ENV];
   if (bin !== undefined && bin.trim() !== "" && !BIN_PATTERN.test(bin.trim())) missing.push(S2_BIN_ENV);
   const flag = s2FlagOn(env);
@@ -341,7 +376,18 @@ export function vetForSigning(item: unknown, options: VetOptions): VetResult {
 
 // ---- the PayBox client port ---------------------------------------------------------------------------------------------------
 
-export const CLIENT_FAILURES = ["paybox_missing", "paybox_timeout", "paybox_failed", "paybox_declined", "paybox_output_invalid", "credential_unreadable", "aborted"] as const;
+export const CLIENT_FAILURES = [
+  "paybox_missing",
+  "paybox_timeout",
+  "paybox_failed",
+  "paybox_declined",
+  "paybox_output_invalid",
+  "credential_unreadable",
+  "credential_not_granted",
+  "credential_disabled",
+  "credential_not_wallet",
+  "aborted",
+] as const;
 export type ClientFailureCode = (typeof CLIENT_FAILURES)[number];
 export interface ClientFailure {
   readonly ok: false;
@@ -362,11 +408,20 @@ export interface ClientSigned {
   readonly requestRef?: string;
 }
 
+export interface ClientSignRequest {
+  readonly credentialId: string;
+  readonly intent: PayboxSignIntent;
+  // The whole budget: approval, signing and every read in between.
+  readonly timeoutMs: number;
+  // Asked between steps (before each status read and before the key signs). False stops the flow as `aborted`.
+  readonly stillAllowed?: () => boolean;
+}
+
 // The seam between this file and PayBox. The shipped implementation spawns the CLI (createPayboxCliClient). A test
 // passes a fake; no test calls PayBox. An SDK-based client would implement the same two methods.
 export interface PayboxClient {
   credential(credentialId: string, signal: AbortSignal): Promise<ClientCredential | ClientFailure>;
-  sign(request: { readonly credentialId: string; readonly intent: PayboxSignIntent; readonly timeoutMs: number }, signal: AbortSignal): Promise<ClientSigned | ClientFailure>;
+  sign(request: ClientSignRequest, signal: AbortSignal): Promise<ClientSigned | ClientFailure>;
 }
 
 // ---- the signing path -----------------------------------------------------------------------------------------------------------
@@ -387,7 +442,8 @@ export type SigningResult =
       readonly ok: true;
       // Canonical 65 bytes (v 27 or 28, low s) that recovers to the owner over the item's digest.
       readonly signature: Hex;
-      readonly form: "raw" | "eip191";
+      // Always "raw": PayBox signs the digest itself for both ops (see dt1_signature_form).
+      readonly form: "raw";
       readonly requestRef: string | undefined;
       readonly rewroteV: boolean;
       readonly flippedHighS: boolean;
@@ -401,6 +457,8 @@ export interface SignOptions {
   readonly signal: AbortSignal;
   // Called once, just before PayBox is asked to sign (never when the credential check refuses).
   readonly onRequest?: () => void;
+  // Passed to the client: asked between the steps of the approval flow.
+  readonly stillAllowed?: () => boolean;
 }
 
 export interface SigningPath {
@@ -456,15 +514,18 @@ export class PayboxSigningPath implements SigningPath {
     if (options.signal.aborted) return refused("aborted");
 
     options.onRequest?.();
-    const answer = await this.#guard(() => this.#client.sign({ credentialId: options.credentialId, intent: vetted.intent, timeoutMs: options.timeoutMs }, options.signal));
+    const request: ClientSignRequest = { credentialId: options.credentialId, intent: vetted.intent, timeoutMs: options.timeoutMs, ...(options.stillAllowed === undefined ? {} : { stillAllowed: options.stillAllowed }) };
+    const answer = await this.#guard(() => this.#client.sign(request, options.signal));
     if (!answer.ok) return refused(answer.code, true);
 
     // Recover the signer over the digest the relay will check, and require the owner. Nothing leaves this method
     // unless it passed.
     const checked = await verifyDigestSignature({ userOpHash: vetted.expectedDigest, signature: answer.signature, expectedOwner: vetted.owner });
     if (!checked.ok) return refused(checked.code === "owner_mismatch" ? "owner_mismatch" : "signature_invalid", true);
-    // A typed-data signature is over the EIP-712 digest itself. The EIP-191 form is only conceivable for `raw`.
-    if (vetted.op === "typedData" && checked.form !== "raw") return refused("form_not_allowed", true);
+    // Both ops are signed over the digest itself: typedData over hashTypedData, raw over the payload as given (the
+    // 2.2.0 client hands both to the same signing call, with no EIP-191 prefix). A recovery under the EIP-191
+    // wrapping is not what PayBox produces, so it is refused.
+    if (checked.form !== "raw") return refused("form_not_allowed", true);
     return {
       ok: true,
       signature: checked.signature,
@@ -577,8 +638,45 @@ export const defaultCliRunner: CliRunner = (command, options) =>
     child.on("close", (code) => finish({ kind: "exit", code, stdout: Buffer.concat(chunks).toString("utf8"), truncated }));
   });
 
-// GUESS (DT3): the command that lists the client's credentials. See S2_ENABLE_CONDITIONS dt3_credential_listing.
-export const CREDENTIAL_LIST_ARGV: readonly string[] = Object.freeze(["credentials", "list", "--json"]);
+// What the published CLI takes and prints. Every command line and every shape below is read from `@paybox-sh/sdk`
+// 2.2.0 (bin `paybox` = dist/cli.js, commander 12.1.0; types in dist/index.d.ts; the signing code in its chunk and in
+// `@moon-x/evm-adapter` 0.3.0, which 2.2.0 pins). What only a live run can settle is in S2_ENABLE_CONDITIONS, and
+// each of those cases is refused here, never guessed.
+//
+//   `--json` is a program option, so it comes before the command. Without it the CLI prints Node inspect text.
+//   `paybox --json credentials`                         GET /agent/grants; prints ClientCredentialList.
+//   `paybox --json sign --credential <uuid> --intent <json>`
+//                                                       POST /agent/wallet-sign. `sign` has no `--wait` (only swap,
+//                                                       pay-x402 and use-service do) and commander rejects an unknown
+//                                                       option. Under always_approve the answer is pending_approval
+//                                                       and the CLI exits 0.
+//   `paybox --json request <uuid>`                      GET /agent/requests/<id>; one snapshot.
+//   `paybox --json request <uuid> --complete-signature` reopen_signing_window, sign with this client's pbxk1 key,
+//                                                       then one snapshot. It signs the intent PayBox stored for the
+//                                                       request, not one this file passes again, which is why the
+//                                                       path recovers the signer over the item's own digest.
+//                                                       `request --wait` alone treats pending_signature as pending
+//                                                       and never signs.
+//   Each command prints JSON.stringify(AgentResponse + next_action) on stdout and exits 1 for status denied or error;
+//   a failed call prints {"error": "<text>"} on stdout and exits 1; a usage error is plain text on stderr.
+
+export const CREDENTIAL_LIST_ARGV: readonly string[] = Object.freeze(["--json", "credentials"]);
+
+export function signArgv(credentialId: string, intent: PayboxSignIntent): readonly string[] {
+  // One argv element per value: the intent is JSON in a single argument, never interpolated into a command line.
+  // JSON of an object starts with `{`, so the CLI never reads it as an `@file` path.
+  return ["--json", "sign", "--credential", credentialId, "--intent", JSON.stringify(intent)];
+}
+export function pollArgv(requestId: string): readonly string[] {
+  return ["--json", "request", requestId];
+}
+export function completeArgv(requestId: string): readonly string[] {
+  return ["--json", "request", requestId, "--complete-signature"];
+}
+
+// How often a request in pending_approval is read again: the 2.2.0 SDK's own waitForRequest interval (intervalMs
+// default 2e3).
+export const POLL_INTERVAL_MS = 2_000;
 
 export interface CliClientOptions {
   readonly configDir: string;
@@ -588,8 +686,12 @@ export interface CliClientOptions {
   readonly baseEnv: Env;
   readonly run?: CliRunner;
   readonly credentialArgv?: readonly string[];
-  // How long a credential listing may take (a read; the user is not involved).
+  // How long a credential listing or one status read may take (a read; the user is not involved).
   readonly readTimeoutMs?: number;
+  readonly pollIntervalMs?: number;
+  // Tests replace the clock and the pause between status reads.
+  readonly clock?: () => number;
+  readonly sleep?: (ms: number, signal: AbortSignal) => Promise<boolean>;
 }
 
 function parseJson(text: string): unknown {
@@ -600,44 +702,134 @@ function parseJson(text: string): unknown {
   }
 }
 
-const DECLINED_WORDS = new Set(["rejected", "declined", "denied", "cancelled", "canceled", "expired"]);
+// RequestStatus in @paybox-sh/sdk 2.2.0. There is no "expired": an approval left to lapse is one of these (DT3).
+export const PAYBOX_REQUEST_STATUSES = ["pending_approval", "pending_funding", "pending_signature", "pending_settlement", "pending_confirmation", "success", "denied", "error"] as const;
 
-// GUESS (DT3). Looks for the signature in the places a CLI is likely to put it; the caller validates the shape.
-export function parseSignOutput(stdout: string): { readonly signature: unknown; readonly requestRef?: string } | { readonly declined: true } | undefined {
-  const text = stdout.trim();
-  if (text === "") return undefined;
-  if (/^0x[0-9a-fA-F]{130}$/.test(text)) return { signature: text };
-  const data = parseJson(text);
-  if (typeof data === "string") return /^0x[0-9a-fA-F]{130}$/.test(data) ? { signature: data } : undefined;
-  if (!isRecord(data)) return undefined;
-  const nested = isRecord(data["result"]) ? data["result"] : undefined;
-  const refValue = data["request_id"] ?? data["requestId"] ?? data["id"] ?? nested?.["request_id"];
-  const requestRef = cleanRequestRef(refValue);
-  const withRef = (signature: unknown): { signature: unknown; requestRef?: string } => (requestRef === undefined ? { signature } : { signature, requestRef });
-  for (const candidate of [data["signature"], nested?.["signature"]]) {
-    if (candidate !== undefined && signatureInputSchema.safeParse(candidate).success) return withRef(candidate);
+// The ops whose answers this file can read. S2 itself asks only for `raw` and `typedData` (S2_ALLOWED_OPS); `message`
+// is here because its answer has exactly the typedData form, and the parser says so.
+export type PayboxAnswerOp = "message" | "typedData" | "raw";
+
+// What the signature becomes for normalizeSignature: 65-byte hex, or r and s (0x) with a recovery id of 0 or 1.
+export type PayboxSignature = Hex | { readonly r: Hex; readonly s: Hex; readonly recovery_id: 0 | 1 };
+
+export type SignOutput =
+  | { readonly status: "success"; readonly requestId: string; readonly signature: PayboxSignature }
+  | { readonly status: "pending_approval" | "pending_signature"; readonly requestId: string }
+  | { readonly status: "denied"; readonly requestId?: string }
+  | { readonly status: "error"; readonly requestId?: string }
+  // `{"error": "<text>"}`: the CLI's own catch (a failed HTTP call, a bad id, no signing key). The text is dropped.
+  | { readonly status: "cli_error" };
+
+// message and typedData: MoonXEvmSigner.signMessage / signTypedData return `0x${r}${s}${v}` with v = 27 + yParity
+// and yParity asserted to be 0 or 1 (assembleSignature), posted as the artifact { signature }.
+const SIGNATURE_65 = /^0x[0-9a-fA-F]{128}(?:1[bBcC])$/;
+// raw: the artifact is { scheme, signature } exactly as the signing service answered; r and s reach the SDK without
+// 0x (it prefixes them itself for the other ops), and an EVM wallet's scheme is "ecdsa_secp256k1" (the only scheme
+// @moon-x/evm-adapter 0.3.0 accepts).
+const WORD_HEX = /^[0-9a-fA-F]{64}$/;
+export const RAW_SCHEME = "ecdsa_secp256k1";
+
+// The signature in output.value of a finished request, in exactly the form the 2.2.0 client posted for that op.
+// Anything else is undefined (refused). Whether the server hands the artifact back unchanged is DT1 (dt1_output_shape).
+export function readSignature(output: unknown, op: PayboxAnswerOp): PayboxSignature | undefined {
+  if (!isRecord(output) || output["output_type"] !== "signature") return undefined;
+  const value = output["value"];
+  if (!isRecord(value)) return undefined;
+  if (op !== "raw") {
+    const signature = value["signature"];
+    return typeof signature === "string" && SIGNATURE_65.test(signature) ? (signature.toLowerCase() as Hex) : undefined;
   }
-  if (signatureInputSchema.safeParse(data).success) return withRef(data);
-  const status = data["status"] ?? nested?.["status"];
-  if (typeof status === "string" && DECLINED_WORDS.has(status.toLowerCase())) return { declined: true };
-  return undefined;
+  if (value["scheme"] !== RAW_SCHEME) return undefined;
+  const parts = value["signature"];
+  if (!isRecord(parts)) return undefined;
+  const r = parts["r"];
+  const s = parts["s"];
+  const recovery = parts["recovery_id"];
+  if (typeof r !== "string" || !WORD_HEX.test(r) || typeof s !== "string" || !WORD_HEX.test(s)) return undefined;
+  if (recovery !== 0 && recovery !== 1) return undefined;
+  return { r: `0x${r.toLowerCase()}` as Hex, s: `0x${s.toLowerCase()}` as Hex, recovery_id: recovery };
 }
 
-// GUESS (DT3). A list, or an object holding one; each entry names its id, approval_mode and address.
-export function parseCredentials(stdout: string, credentialId: string): ClientCredential | undefined {
+// One stdout of `sign` or `request`, read as the 2.2.0 AgentResponse. Undefined for anything it does not recognise,
+// including the pending states a wallet sign does not use (funding, settlement, confirmation).
+export function parseSignOutput(stdout: string, op: PayboxAnswerOp): SignOutput | undefined {
   const data = parseJson(stdout.trim());
-  const list = Array.isArray(data) ? data : isRecord(data) ? (["credentials", "items", "data"].map((key) => data[key]).find(Array.isArray) as unknown[] | undefined) : undefined;
-  if (list === undefined) return undefined;
-  for (const entry of list) {
-    if (!isRecord(entry)) continue;
-    const id = entry["credential_id"] ?? entry["id"];
-    if (id !== credentialId) continue;
-    const mode = entry["approval_mode"];
-    const address = entry["address"];
-    return { ok: true, approvalMode: typeof mode === "string" ? mode : null, address: typeof address === "string" ? address : null };
+  if (!isRecord(data)) return undefined;
+  if (!("status" in data)) return typeof data["error"] === "string" ? { status: "cli_error" } : undefined;
+  const status = data["status"];
+  const id = data["request_id"];
+  const requestId = typeof id === "string" && PAYBOX_UUID.test(id) ? id.toLowerCase() : undefined;
+  switch (status) {
+    case "denied":
+    case "error":
+      return requestId === undefined ? { status } : { status, requestId };
+    case "pending_approval":
+    case "pending_signature":
+      return requestId === undefined ? undefined : { status, requestId };
+    case "success": {
+      if (requestId === undefined) return undefined;
+      const signature = readSignature(data["output"], op);
+      return signature === undefined ? undefined : { status, requestId, signature };
+    }
+    default:
+      return undefined;
   }
-  return undefined;
 }
+
+export type CredentialReadFailure = ClientFailure & { readonly code: "credential_unreadable" | "credential_not_granted" | "credential_disabled" | "credential_not_wallet" };
+
+// `paybox --json credentials` as the 2.2.0 ClientCredentialList: { credentials: [{ credential: CredentialSummary,
+// grant: Grant }], ungranted, agent_signer_recorded }. Only `credentials` is read: an ungranted credential is not in it
+// (the docs show the ungranted part as counts only, the 2.2.0 type as a list; neither is needed here).
+export function parseCredentials(stdout: string, credentialId: string): ClientCredential | CredentialReadFailure {
+  const unreadable: CredentialReadFailure = { ok: false, code: "credential_unreadable" };
+  const data = parseJson(stdout.trim());
+  if (!isRecord(data) || !Array.isArray(data["credentials"])) return unreadable;
+  const wanted = credentialId.toLowerCase();
+  const matches: Array<{ credential: Record<string, unknown>; grant: Record<string, unknown> }> = [];
+  for (const entry of data["credentials"] as unknown[]) {
+    if (!isRecord(entry)) return unreadable;
+    const credential = entry["credential"];
+    const grant = entry["grant"];
+    if (!isRecord(credential) || !isRecord(grant) || typeof credential["id"] !== "string") return unreadable;
+    if (credential["id"].toLowerCase() === wanted) matches.push({ credential, grant });
+  }
+  if (matches.length === 0) return { ok: false, code: "credential_not_granted" };
+  // One id listed twice is not an answer this file can trust.
+  if (matches.length > 1) return unreadable;
+  const { credential, grant } = matches[0] as { credential: Record<string, unknown>; grant: Record<string, unknown> };
+  if (typeof grant["credential_id"] !== "string" || grant["credential_id"].toLowerCase() !== wanted) return unreadable;
+  const disabledAt = credential["disabled_at"];
+  if (disabledAt !== null && typeof disabledAt !== "string") return unreadable;
+  if (disabledAt !== null) return { ok: false, code: "credential_disabled" };
+  if (credential["credential_type"] !== "wallet") return { ok: false, code: "credential_not_wallet" };
+  const mode = grant["approval_mode"];
+  const metadata = credential["metadata"];
+  if (!isRecord(metadata)) return unreadable;
+  // metadata is Record<string, unknown>; for a wallet the docs list address, provider_wallet_id and chains, and the
+  // address may be null for an older wallet. A null address is reported as null, which the path refuses.
+  const address = metadata["address"];
+  return { ok: true, approvalMode: typeof mode === "string" ? mode : null, address: typeof address === "string" ? address : null };
+}
+
+const abortableSleep = (ms: number, signal: AbortSignal): Promise<boolean> =>
+  new Promise<boolean>((resolve) => {
+    if (signal.aborted) {
+      resolve(false);
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, Math.max(0, ms));
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+type Step = { readonly ok: true; readonly answer: Extract<SignOutput, { readonly requestId: string }> } | ClientFailure;
 
 export function createPayboxCliClient(options: CliClientOptions): PayboxClient {
   const run = options.run ?? defaultCliRunner;
@@ -646,6 +838,9 @@ export function createPayboxCliClient(options: CliClientOptions): PayboxClient {
   const env = childEnvFor(options.baseEnv, options.configDir);
   const credentialArgv = options.credentialArgv ?? CREDENTIAL_LIST_ARGV;
   const readTimeoutMs = options.readTimeoutMs ?? 30_000;
+  const pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const clock = options.clock ?? Date.now;
+  const sleep = options.sleep ?? abortableSleep;
   const failureOf = (result: CliRun): ClientFailure | undefined => {
     switch (result.kind) {
       case "timeout":
@@ -659,27 +854,66 @@ export function createPayboxCliClient(options: CliClientOptions): PayboxClient {
         return undefined;
     }
   };
+  // One CLI answer in the sign flow. A decline is read from the JSON whatever the exit code; anything else needs exit
+  // 0 (a non-zero exit never yields a signature), and every answer after the first must name the same request.
+  const stepOf = (result: CliRun, op: PayboxAnswerOp, requestId: string | undefined): Step => {
+    const failure = failureOf(result);
+    if (failure !== undefined) return failure;
+    if (result.kind !== "exit") return { ok: false, code: "paybox_failed" };
+    const answer = parseSignOutput(result.stdout, op);
+    if (answer === undefined) return { ok: false, code: result.code === 0 ? "paybox_output_invalid" : "paybox_failed" };
+    if (answer.status === "denied") return { ok: false, code: "paybox_declined" };
+    if (answer.status === "error" || answer.status === "cli_error") return { ok: false, code: "paybox_failed" };
+    if (result.code !== 0) return { ok: false, code: "paybox_failed" };
+    if (requestId !== undefined && answer.requestId !== requestId) return { ok: false, code: "paybox_output_invalid" };
+    return { ok: true, answer };
+  };
   return {
     async credential(credentialId, signal) {
       const result = await run({ bin, args: [...binArgs, ...credentialArgv] }, { env, timeoutMs: readTimeoutMs, maxStdoutBytes: MAX_CLI_STDOUT_BYTES, signal });
       const failure = failureOf(result);
       if (failure !== undefined) return failure;
       if (result.kind !== "exit" || result.code !== 0) return { ok: false, code: "paybox_failed" };
-      return parseCredentials(result.stdout, credentialId) ?? { ok: false, code: "credential_unreadable" };
+      return parseCredentials(result.stdout, credentialId);
     },
     async sign(request, signal) {
-      // The documented form (docs.paybox.sh/sdk-cli, as quoted in docs/dapp-design.md 3.3). One argv element per
-      // value: the intent is JSON in a single argument, never interpolated into a command line.
-      const args = [...binArgs, "sign", "--credential", request.credentialId, "--intent", JSON.stringify(request.intent), "--wait"];
-      const result = await run({ bin, args }, { env, timeoutMs: request.timeoutMs, maxStdoutBytes: MAX_CLI_STDOUT_BYTES, signal });
-      const failure = failureOf(result);
-      if (failure !== undefined) return failure;
-      if (result.kind !== "exit") return { ok: false, code: "paybox_failed" };
-      const parsed = parseSignOutput(result.stdout);
-      if (result.code !== 0) return { ok: false, code: parsed !== undefined && "declined" in parsed ? "paybox_declined" : "paybox_failed" };
-      if (parsed === undefined) return { ok: false, code: "paybox_output_invalid" };
-      if ("declined" in parsed) return { ok: false, code: "paybox_declined" };
-      return { ok: true, ...parsed };
+      // The CLI would refuse a non-UUID id itself; asking it anyway would only cost a process.
+      if (!PAYBOX_UUID.test(request.credentialId)) return { ok: false, code: "paybox_failed" };
+      const op: PayboxAnswerOp = request.intent.op;
+      const deadline = clock() + request.timeoutMs;
+      const stillAllowed = request.stillAllowed ?? (() => true);
+      const call = async (args: readonly string[], capMs: number): Promise<CliRun> => {
+        const left = deadline - clock();
+        if (left <= 0) return { kind: "timeout" };
+        return run({ bin, args: [...binArgs, ...args] }, { env, timeoutMs: Math.min(left, capMs), maxStdoutBytes: MAX_CLI_STDOUT_BYTES, signal });
+      };
+      const stopped = (): ClientFailure | undefined => (signal.aborted || !stillAllowed() ? { ok: false, code: "aborted" } : undefined);
+
+      // 1. Put the request to PayBox (and so to the user's PayBox app).
+      let step = stepOf(await call(signArgv(request.credentialId, request.intent), Number.POSITIVE_INFINITY), op, undefined);
+      if (!step.ok) return step;
+      const requestId = step.answer.requestId;
+      // 2. Wait for the passkey approval: read the request again until it leaves pending_approval.
+      while (step.answer.status === "pending_approval") {
+        const halt = stopped();
+        if (halt !== undefined) return halt;
+        const left = deadline - clock();
+        if (left <= 0) return { ok: false, code: "paybox_timeout" };
+        if (!(await sleep(Math.min(pollIntervalMs, left), signal))) return { ok: false, code: "aborted" };
+        const halted = stopped();
+        if (halted !== undefined) return halted;
+        step = stepOf(await call(pollArgv(requestId), readTimeoutMs), op, requestId);
+        if (!step.ok) return step;
+      }
+      // 3. Approved: sign with this client's own key, once.
+      if (step.answer.status === "pending_signature") {
+        const halt = stopped();
+        if (halt !== undefined) return halt;
+        step = stepOf(await call(completeArgv(requestId), Number.POSITIVE_INFINITY), op, requestId);
+        if (!step.ok) return step;
+      }
+      if (step.answer.status !== "success") return { ok: false, code: "paybox_failed" };
+      return { ok: true, signature: step.answer.signature, requestRef: requestId };
     },
   };
 }
@@ -766,7 +1000,7 @@ export interface SignerModuleOptions {
   // Passed to toPayboxIntent. PayBox's handling of a 0x prefix is a DT1 result.
   readonly intentOptions?: PayboxIntentOptions;
   // Tests give the CLI client a scripted runner or a fake binary.
-  readonly cli?: Partial<Pick<CliClientOptions, "run" | "bin" | "binArgs" | "credentialArgv">>;
+  readonly cli?: Partial<Pick<CliClientOptions, "run" | "bin" | "binArgs" | "credentialArgv" | "pollIntervalMs" | "clock" | "sleep">>;
 }
 
 const SIGN_TEXT = {
@@ -800,13 +1034,16 @@ const SIGNING_TEXT: Readonly<Record<SigningFailureCode, string>> = Object.freeze
   paybox_declined: "The approval was declined or expired in PayBox. Nothing was sent.",
   paybox_output_invalid: "PayBox answered in a form this software does not recognise, so it was dropped. Nothing was sent.",
   credential_unreadable: "The PayBox credential could not be read, so nothing was signed.",
-  aborted: "The request was cancelled before PayBox answered. Nothing was sent.",
+  credential_not_granted: "The signer credential is not granted to the daemon's PayBox client, so nothing was signed.",
+  credential_disabled: "The signer credential is disabled in PayBox, so nothing was signed.",
+  credential_not_wallet: "The signer credential is not a wallet, so nothing was signed.",
+  aborted: "The request was cancelled, or stopped because signing was no longer allowed, before PayBox signed. Nothing was sent.",
   not_vetted: "The item was not checked for signing, so it is not signed.",
   credential_not_always_approve: "The signer credential is not in approval mode always_approve, so S2 is disabled for it.",
   credential_owner_mismatch: "The signer credential's address is not the item's owner, so nothing was signed.",
   signature_invalid: "PayBox returned something that is not a valid signature, so it was dropped. Nothing was sent.",
   owner_mismatch: "PayBox's signature does not recover to the item's owner, so it was dropped. Nothing was sent.",
-  form_not_allowed: "PayBox signed a different digest form than a typed-data intent allows, so it was dropped. Nothing was sent.",
+  form_not_allowed: "PayBox's signature is over the EIP-191 wrapping of the digest, not the digest itself, so it was dropped. Nothing was sent.",
 });
 
 const CODE_WORD = /^[a-z0-9_]{1,48}$/;
@@ -822,6 +1059,9 @@ export function createSignerModule(options: SignerModuleOptions = {}): BridgeMod
     const book: RequestBookkeeping = { perItem: new Map(), recent: [], inFlight: new Set() };
     const closer = new AbortController();
     host.onClose(() => closer.abort());
+    // The kill cuts a PayBox call short at once (stillAllowed, below, also asks between steps).
+    const killed = new AbortController();
+    killControllerOf(host).onEngage(() => killed.abort());
     let pathMemo: SigningPath | undefined;
     let submitMemo: SubmitPort | undefined;
     const inbox = (): SignerInbox => (typeof options.inbox === "function" ? options.inbox(host) : (options.inbox ?? inboxOf(host)));
@@ -923,7 +1163,7 @@ export function createSignerModule(options: SignerModuleOptions = {}): BridgeMod
 
             try {
               const deadlineMs = vetted.expiresAtMs - SUBMIT_MARGIN_MS[vetted.kind] - nowMs;
-              const signal = AbortSignal.any([ctx.signal, closer.signal]);
+              const signal = AbortSignal.any([ctx.signal, closer.signal, killed.signal]);
               const credentialId = (host.env[S2_CREDENTIAL_ENV] ?? "").trim();
               let requestedAt: number | undefined;
               const signed = await pathOf().sign(vetted, {
@@ -936,9 +1176,14 @@ export function createSignerModule(options: SignerModuleOptions = {}): BridgeMod
                   book.recent.push(requestedAt);
                   audit("signer.request", principal, vetted, short, { outcome: "pending", verdict: "match" });
                 },
+                // While the user approves, the world may move. These are the checks that would drop the signature
+                // afterwards; asked between steps, they stop the flow before this client's key signs.
+                stillAllowed: () =>
+                  !killControllerOf(host).engaged() && armControllerOf(host).isArmed() && signerReadiness(host.env).flag && store.get(id)?.state === "shown",
               });
               if (!signed.ok) {
                 audit("signer.result", principal, vetted, short, { outcome: "refused", code: signed.code });
+                if (signed.code === "aborted" && killControllerOf(host).engaged()) return refusal("kill_switch", SIGN_TEXT.kill);
                 const code: BridgeErrorCode = signed.code === "owner_mismatch" ? "owner_mismatch" : signed.code === "signature_invalid" || signed.code === "form_not_allowed" ? "signature_invalid" : "precondition_failed";
                 return refusal(code, SIGNING_TEXT[signed.code], { reason: signed.code, requested: signed.requested });
               }

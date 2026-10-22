@@ -3,6 +3,7 @@ import * as z from "zod/v4";
 
 import { CLOB_VENUES, CLOB_TIFS, clobMarketIdSchema, clobPriceSchema, ORDER_SIDES, ORDER_SUBMIT_STATES, SAFETY_NOTICES, hex32Schema, sharesSchema, type PreparedDecoded, type SignatureInput } from "../relay/contract.js";
 import type { WriteFlagName } from "../relay/flags.js";
+import { clobAccountOf } from "../clob/polymarket/deposit-wallet.js";
 import { CLOB_CAP_FEE_BPS, LIMITLESS_GEOBLOCK_NOTE, POLYMARKET_GEOBLOCK_NOTE, venueDisplayName, type ClobVenue } from "../clob/venues.js";
 import { parseDecimalToMicro } from "../xo/units.js";
 import { CEILINGS } from "../config.js";
@@ -42,8 +43,11 @@ import {
 
 // The two CLOB venues besides XO, through the relay's /v1/clob routes (relay/clob.ts):
 //
-//   clob_order   step "prepare": the venue's own EIP-712 Order for the owner EOA (maker = signer = the PayBox wallet,
-//                signature type 0), with the typed data PayBox shows in full; step "submit": prepared_id and signature.
+//   clob_order   step "prepare": the venue's own EIP-712 Order, with the typed data PayBox shows in full. The maker is
+//                the PayBox wallet itself (signature type 0), or on Polymarket the wallet's Deposit Wallet (signature type
+//                3) when the relay reads one deployed and owned by the wallet on Polygon; then PayBox signs the ERC-7739
+//                TypedDataSign wrapper of the order, with the order nested in it. The plugin re-derives the Deposit
+//                Wallet address from the owner and accepts no other account. Step "submit": prepared_id and signature.
 //   clob_auth    step "prepare": the Polymarket ClobAuth login; step "submit": the relay derives or creates the L2
 //                credential and keeps it. Limitless mints its tokens in its own UI, so for it the tool refuses.
 //
@@ -58,7 +62,7 @@ const CLOB_FLAG: Readonly<Record<ClobVenue, WriteFlagName>> = Object.freeze({ po
 const ownerInput = z
   .string()
   .regex(/^0x[0-9a-fA-F]{40}$/, "owner must be 0x followed by 40 hex digits")
-  .describe("The PayBox EVM wallet address. On these venues it is the maker itself: there is no derived account.");
+  .describe("The PayBox EVM wallet address. It signs every order. On Limitless it is the maker; on Polymarket the maker is its Deposit Wallet when the relay finds one deployed and owned by it on Polygon, otherwise the wallet itself.");
 
 const venueInput = z.enum(CLOB_VENUES).describe('"polymarket" (Polygon, pUSD) or "limitless" (Base, USDC).');
 
@@ -122,7 +126,7 @@ export const clobAuthOutputSchema = z
   .strict();
 
 const ORDER_DESCRIPTION = [
-  `Prepares and submits a limit order on Polymarket (Polygon, pUSD) or Limitless (Base, USDC) for the PayBox wallet itself (an EOA order, signature type 0, maker and signer the owner). Step "prepare" asks the relay, which reads the market live (tick, minimum size, the exchange to sign for, a reference price), builds the venue's own EIP-712 Order, reserves the cap and returns sign_with_paybox: typed data that shows every signed field, since there is no smart-account wrapper on these venues. Step "submit" (prepared_id and signature only) sends it once with the credential the relay stores for that venue. A BUY is capped at its principal plus a ${CLOB_CAP_FEE_BPS} bps policy fee ceiling (not the venue's quote); a SELL at the larger of its proceeds and its face value.`,
+  `Prepares and submits a limit order on Polymarket (Polygon, pUSD) or Limitless (Base, USDC), signed by the PayBox wallet. On Limitless the wallet is the maker (an EOA order, signature type 0). On Polymarket the relay reads Polygon for the wallet's Deposit Wallet (the default account for Polymarket accounts deployed since 2026-05-04): when one is deployed and owned by the wallet it is the maker and signer (signature type 3) and the wallet signs a TypedDataSign wrapper with the order nested in it; when none is deployed the wallet itself is the maker (type 0); a failed read is a refusal, never a guess. Step "prepare" asks the relay, which also reads the market live (tick, minimum size, the exchange to sign for, a reference price), builds the venue's own EIP-712 Order, reserves the cap and returns sign_with_paybox: typed data that shows every signed field. Step "submit" (prepared_id and signature only) sends it once with the credential the relay stores for that venue. A BUY is capped at its principal plus a ${CLOB_CAP_FEE_BPS} bps policy fee ceiling (not the venue's quote); a SELL at the larger of its proceeds and its face value.`,
   "Limitless orders carry no expiry (nonce and expiration are 0 by the venue's rule) and rest until cancelled through the venue; this plugin cannot cancel them yet. A Polymarket GTD expiry is a wire field the venue enforces, not a signed one. No order placed through this plugin has been reconciled against a venue yet: an ambiguous send stays ambiguous.",
   POLYMARKET_GEOBLOCK_NOTE,
   LIMITLESS_GEOBLOCK_NOTE,
@@ -142,7 +146,8 @@ const AUTH_DESCRIPTION = [
   "Off unless ENABLE_CLOB_POLYMARKET is on and the kill switch is off.",
 ].join(" ");
 
-// The owner is the maker: the identity's account is the owner itself, never a derived XO account.
+// The owner signs. The identity's account starts as the owner itself (never a derived XO account); a Polymarket item
+// may name the owner's Deposit Wallet instead, re-derived here before it is accepted (withMaker).
 function clobIdentity(owner: string): ReturnType<typeof parseIdentity> {
   const parsed = parseIdentity(owner);
   if (!parsed.ok) return parsed;
@@ -234,12 +239,12 @@ export async function handleClobOrder(input: ClobOrderInput, deps: RelayToolDeps
     const cap = checkOrderCap(worst, config);
     if (!cap.allowed) return refusalResult(deps, ctx, { code: "cap_exceeded", message: cap.message, next: nextFor("cap_exceeded") });
 
+    // No account is sent: on Polymarket the relay resolves the maker from its own chain read.
     const called = await callPost(
       deps,
       "/v1/clob/order/prepare",
       {
         owner: identity.owner,
-        account: identity.account,
         venue,
         market_id: input.market_id,
         token_id: input.token_id,
@@ -253,7 +258,10 @@ export async function handleClobOrder(input: ClobOrderInput, deps: RelayToolDeps
       { kind: "prepare", budget, flag: CLOB_FLAG[venue] },
     );
     if (!called.ok) return refusalResult(deps, ctx, called.refusal);
-    const vetted = vetPrepared(deps, identity, called.data, ["clob_order"], (decoded) => orderDifference(decoded, { venue, tokenId: input.token_id as string, side: input.side as "BUY", marketId: input.market_id as string, tif, postOnly }));
+    const maker = clobAccountOf(identity.owner as `0x${string}`, called.data.account);
+    if (maker === null) return refusalResult(deps, ctx, { code: "account_mismatch", message: "The relay prepared the order for a maker that is neither the wallet nor a Polymarket Deposit Wallet derived from it, so it was not passed on.", next: nextFor("account_mismatch") });
+    const makerIdentity: Identity = { owner: identity.owner, account: maker };
+    const vetted = vetPrepared(deps, makerIdentity, called.data, ["clob_order"], (decoded) => orderDifference(decoded, { venue, tokenId: input.token_id as string, side: input.side as "BUY", marketId: input.market_id as string, tif, postOnly }));
     if (!vetted.ok) return refusalResult(deps, ctx, vetted.refusal);
     const quote = called.data.quote;
     if (quote.venue !== venue || parseDecimalToMicro(quote.price, 6) !== priceMicro || parseDecimalToMicro(quote.shares, 6) !== sharesMicro) {
@@ -264,16 +272,19 @@ export async function handleClobOrder(input: ClobOrderInput, deps: RelayToolDeps
     const capOnQuote = checkOrderCap(reserved, config);
     if (!capOnQuote.allowed) return refusalResult(deps, ctx, { code: "cap_exceeded", message: `${capOnQuote.message} (the relay's worst case including the fee ceiling).`, next: `${nextFor("cap_exceeded")} The relay may still hold a reservation for the item it prepared until it expires.` });
     const name = venueDisplayName(venue);
+    const depositWallet = maker.toLowerCase() !== identity.owner.toLowerCase();
     return buildPreparedResult(deps, {
       audit: { side: input.side, amountAtomic: reserved },
-      ctx,
-      identity,
+      ctx: { ...ctx, account: maker },
+      identity: makerIdentity,
       vetted: vetted.value,
       headline: `${name} order to ${input.side} ${quote.shares} shares of token ${input.token_id} at ${quote.price} (${tif}${postOnly ? ", post-only" : ""}).`,
       submitCall: `${CLOB_ORDER_TOOL} with step "submit"`,
       extraLines: [
         `Order: ${input.side} ${quote.shares} shares at ${quote.price} each. Worst-case outlay ${quote.max_outlay_usd} (fee ceiling ${quote.fee_bound_bps} bps included for a BUY). ${quote.expires_at === null ? "No expiry is signed." : `Wire expiration ${quote.expires_at} (not signed; the venue enforces it).`}`,
-        "The typed data in sign_with_paybox is the order itself: every signed field is visible in the signing window.",
+        depositWallet
+          ? `The maker is the wallet's Polymarket Deposit Wallet ${maker} (signature type 3). The typed data in sign_with_paybox is the TypedDataSign wrapper the wallet signs: the order is nested in it as "contents", every field visible in the signing window.`
+          : "The typed data in sign_with_paybox is the order itself: every signed field is visible in the signing window.",
       ],
       extraWarnings: tif === "GTC" ? ["A GTC order rests until it is cancelled through the venue. This plugin cannot cancel it yet."] : tif === "GTD" ? [] : ["FOK and FAK are taker orders: the submit call can return pending."],
     });

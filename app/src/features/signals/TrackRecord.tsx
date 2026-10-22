@@ -4,7 +4,7 @@
 // caveats, which are fixed text and are shown whether or not the snapshot has been loaded.
 
 import { Badge, Button, UntrustedText, formatAge, formatUtc } from "../../ui";
-import { TRACK_RECORD_CAVEATS, type PerformanceSnapshot, type QuotientResult } from "../../venues/quotient";
+import { TRACK_RECORD_CAVEATS, type PerformanceSnapshot, type QuotientResult } from "./quotient";
 import { ResultNotice } from "./Notices";
 
 export interface TrackRecordProps {

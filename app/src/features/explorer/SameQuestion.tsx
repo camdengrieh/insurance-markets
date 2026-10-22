@@ -14,12 +14,12 @@ import { useCallback } from "react";
 import { Badge, DataTable, Num, UntrustedText, VenueMark, venueName, type Tone } from "../../ui";
 import { CATEGORY_LABEL, isCategory } from "../../core/category";
 import type { MarketRef, Untrusted, VenueId } from "../../core/ports";
-import { WHY_NOT_ARBITRAGE } from "../../venues/quotient";
+import { WHY_NOT_ARBITRAGE } from "../signals/quotient";
 import { rulesComparable, type LinkLoad } from "../signals/links/dataset";
 import { useLinkVerdict } from "../signals/LinkOverlay";
 import type { LegReader } from "../signals/services";
 import { LINK_STATE_TEXT, PROOF_TEXT, bandText } from "../signals/words";
-import { LinkGroupPlaceholder, candidatesFor, type LinkCandidate } from "./links";
+import { LinkGroupEmpty, candidatesFor, type LinkCandidate } from "./links";
 
 export const NO_APPROVED_LINK = "No approved link. A link exists only after a person approves it; until then no spread is shown and nothing is called an edge.";
 export const CANDIDATES_NOTE = "Candidates come from approved links only, by id and hash, never from question text. A candidate becomes a leg only after a person approves the link and the rules hashes match. Until then no spread block is drawn.";
@@ -174,7 +174,7 @@ export function SameQuestion({ market, load, readLeg, nowMs, variant, heading = 
   if (lookup.state === "rejected") {
     body = <p data-links="rejected">The bundled link file was refused whole (it does not match its format or its own hash), so no candidate is shown.</p>;
   } else if (lookup.state === "no_dataset" || lookup.state === "none_for_market") {
-    body = variant === "compact" ? <p data-links="none">{NO_APPROVED_LINK}</p> : <LinkGroupPlaceholder market={{ ...market, native: {} }} heading={heading} />;
+    body = variant === "compact" ? <p data-links="none">{NO_APPROVED_LINK}</p> : <LinkGroupEmpty state={lookup.state} heading={heading} />;
   } else {
     proposed = <ProposedTier proposed={lookup.proposed} readLeg={readLeg} nowMs={nowMs} comparable={comparable} variant={variant} titleOf={titleOf} />;
     if (lookup.candidates.length === 0) {

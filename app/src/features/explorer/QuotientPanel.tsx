@@ -17,7 +17,7 @@ import { useCallback, useState, useSyncExternalStore } from "react";
 
 import type { MarketRef, VenueId } from "../../core/ports";
 import { Badge, Button, Num, Tile, useNow, venueName } from "../../ui";
-import { MARKET_KEY, ROUTES, WHY_NOT_ARBITRAGE, approvalFor, qNumber, type QuotientResult, type QuotientRow, type RowSet } from "../../venues/quotient";
+import { MARKET_KEY, ROUTES, WHY_NOT_ARBITRAGE, approvalFor, qNumber, type QuotientResult, type QuotientRow, type RowSet } from "../signals/quotient";
 import { ResultNotice, RowCard, pointsText, probabilityText, useSignalsServices, usdLabel, type LinkLoad, type SessionSnapshot } from "../signals";
 import { quotientCovers } from "./views";
 

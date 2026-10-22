@@ -582,7 +582,7 @@ describe("the views are filter states of one table, never screens", () => {
     const { container } = await mount(<MarketsView />, services);
     click(chip(container, "linked"));
     expect(rowsOf(container)).toHaveLength(0);
-    expect(allText(must(container, "[data-view-note='linked']"))).toContain("No link dataset has been approved by a person yet");
+    expect(allText(must(container, "[data-view-note='linked']"))).toContain("This build bundles no link file");
     expect(allText(tile(container, "empty") as Element)).toContain("No linked market among the loaded rows");
   });
 

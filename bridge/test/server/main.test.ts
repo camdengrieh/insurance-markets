@@ -20,6 +20,7 @@ import {
   type CockpitDaemonHandle,
 } from "../../main.js";
 import { AGENT_TOKEN_FILE, COCKPIT_DIR_NAME } from "../../auth.js";
+import { INBOX_JOURNAL_FILE } from "../../inbox-restore.js";
 import { AGENT_TOKEN_PATTERN, bridgeErrorResponseSchema } from "../../contract.js";
 import { defineRoute, json, type BridgeModule } from "../../server.js";
 import { createStaticSite } from "../../static.js";
@@ -371,5 +372,51 @@ describe("stderr hygiene", () => {
     assert.equal(after.includes(ui), false);
     assert.equal(after.includes(token), false);
     assert.equal(bridgeErrorResponseSchema.safeParse((await send({ port: handle.daemon.port, path: "/ui/status" })).json()).success, true);
+  });
+});
+
+describe("the inbox after a restart (bridge/inbox-restore.ts)", () => {
+  const ID = "00112233445566778899aabbccddeeff";
+  const LIST = `${JSON.stringify({ v: 1, items: [{ prepared_id: ID, owner: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", kind: "userop", requested_by: "ui", created_at: "2026-10-19T12:00:00Z" }] })}\n`;
+
+  async function writeList(): Promise<string> {
+    const cockpit = join(dataDir, COCKPIT_DIR_NAME);
+    await mkdir(cockpit, { recursive: true, mode: 0o700 });
+    const file = join(cockpit, INBOX_JOURNAL_FILE);
+    await writeFile(file, LIST, { mode: 0o600 });
+    return file;
+  }
+
+  function withRelay(ctx: CockpitContext, seen: string[]): CockpitContext {
+    const runtime: LocalRuntime = {
+      ...ctx.runtime,
+      handler: async (request) => {
+        seen.push(`${request.method} ${request.path}`);
+        return { status: 410, bodyText: JSON.stringify({ error: { code: "expired", message: "This prepared item expired. Prepare it again.", details: { state: "expired" } } }) };
+      },
+    };
+    return { ...ctx, runtime };
+  }
+
+  it("a writer reads each listed item back from its relay before it announces itself, and drops what the relay will not hand out", async () => {
+    const file = await writeList();
+    const stderr = captureStderr();
+    const seen: string[] = [];
+    const handle = await boot(withRelay(context(readyStatus(), [], stderr), seen));
+    assert.deepEqual(seen, [`GET /v1/prepared/${ID}`]);
+    const text = stderr.text();
+    assert.match(text, new RegExp(`inbox item ${ID} from before the restart was not restored: the relay says it ran out of time\\.`));
+    assert.ok(text.indexOf("was not restored") < text.indexOf("#pair="), "said before the pairing link");
+    await handle.close();
+    assert.deepEqual(JSON.parse(await readFile(file, "utf8")), { v: 1, items: [] });
+  });
+
+  it("a read-only instance neither reads the list back nor writes it", async () => {
+    const file = await writeList();
+    const seen: string[] = [];
+    const handle = await boot(withRelay(context(lockedStatus()), seen));
+    await handle.close();
+    assert.deepEqual(seen, []);
+    assert.equal(await readFile(file, "utf8"), LIST);
   });
 });

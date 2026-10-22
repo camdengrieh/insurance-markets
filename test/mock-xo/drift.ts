@@ -1,7 +1,7 @@
 // Shape drift (spec amendment A9). Two uses of one structural comparison:
 //
 //   1. the mock against the recordings: every read surface the mock serves is requested and its JSON shape
-//      is diffed against the recorded fixtures in test/fixtures/xo (checkMockAgainstFixtures). If someone
+//      is diffed against the recorded fixtures in sdk/venues/xo/fixtures (checkMockAgainstFixtures). If someone
 //      edits a catalogue builder and a key goes missing, this fails.
 //   2. recorded live responses against the recordings: compareDirectoryToFixtures(dir) diffs responses a
 //      person saved from the real service (one JSON file per fixture, same file name) against the fixtures.
@@ -11,7 +11,7 @@
 // strings: numeric text, hex text, ISO date-time, empty, other text) and the keys of every object. Values
 // are ignored; an empty array matches any array; a key seen in only some elements of an array is optional.
 
-import { fixture } from "../fixtures/xo/load.js";
+import { XO_FIXTURE_DIRECTORY, fixture } from "../fixtures/xo/load.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -126,7 +126,7 @@ export function formatDifferences(differences: readonly ShapeDifference[]): stri
   return differences.map((d) => `${d.path}: ${d.problem} (expected ${d.expected}, got ${d.actual})`).join("\n");
 }
 
-// The merged shape of the named fixtures (test/fixtures/xo).
+// The merged shape of the named fixtures (sdk/venues/xo/fixtures).
 export function fixtureShape(names: readonly string[]): ShapeNode {
   return inferShape(names.map((name) => fixture(name)));
 }
@@ -148,7 +148,7 @@ export interface DirectoryDrift {
   readonly unknown: readonly string[];
 }
 
-const FIXTURE_DIRECTORY = new URL("../fixtures/xo/", import.meta.url);
+const FIXTURE_DIRECTORY = XO_FIXTURE_DIRECTORY;
 
 export function fixtureNames(): string[] {
   return readdirSync(FIXTURE_DIRECTORY)
@@ -506,6 +506,8 @@ export const SHAPE_CHECKS: readonly ShapeCheck[] = [
 // Fixtures the mock does not serve (read endpoints not built), each with the reason. The completeness test
 // requires every fixture to be either in a check above or in this table.
 export const UNSERVED_FIXTURES: Readonly<Record<string, string>> = Object.freeze({
+  "data-markets-list-clob-active-trimmed-2026-10-20.json": "the recorder's and linker's discovery replay (trimmed rows); the mock serves the full list recordings",
+  "data-market-lookups-slug-and-contract-trimmed-2026-10-20.json": "the recorder's by-slug and by-contract replay (a list of path, status, body); the mock serves the full detail recordings",
   "orderbook-live-activity.json": "GET /live-activity is not built (no client uses it)",
   "orderbook-last-trades-prices.json": "GET /last-trades-prices is not built (no client uses it)",
   "orderbook-markets.json": "the orderbook's own market list (GET /markets) is not built; the Data API list is",

@@ -319,7 +319,7 @@ export function OrderTerms({ order }: { readonly order: NonNullable<VettedItem["
         },
         ...(order.minProceedsUsd === null ? [] : [{ label: "Worst-case proceeds after the fee bound", value: `${order.minProceedsUsd} USD` }]),
         { label: "Counted against the caps", value: `${order.capUsd} USD (fee bound ${order.feeBoundBps} bps)` },
-        { label: "Maker", value: <Mono>{order.maker}</Mono> },
+        { label: order.makerKind === "deposit_wallet" ? "Maker (your Polymarket Deposit Wallet, signature type 3)" : order.makerKind === "owner" ? "Maker (your wallet, signature type 0)" : "Maker", value: <Mono>{order.maker}</Mono> },
       ]}
     />
   );

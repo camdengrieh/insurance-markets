@@ -9,6 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
@@ -22,7 +23,8 @@
       "viem": ["./node_modules/viem"],
       "viem/*": ["./node_modules/viem/*"],
       "zod": ["./node_modules/zod"],
-      "zod/*": ["./node_modules/zod/*"]
+      "zod/*": ["./node_modules/zod/*"],
+      "vitest": ["./node_modules/vitest"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "../bridge/contract.ts", "headers.config.ts"],

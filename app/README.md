@@ -23,9 +23,9 @@ All paths are under `app/src/`. Counts are from the stream reports for this buil
 |---|---|---|
 | Shell, session | `main.tsx`, `App.tsx`, `session.ts`, `SessionStatus.tsx`, `ui/*` | The "risograph desk" shell (`docs/design/cockpit-v2/`): hash router, paper/ink light and dark themes (`ui/theme.css`, every colour a token), the vendored Archivo and Martian Mono faces (`ui/fonts.css`, `ui/fonts/`, SIL OFL 1.1), Bayer-dither tone (`ui/dither.tsx`: `DitherDefs`, `DitherBar`, the one live `DitherField`), the top bar (brand, search field that filters loaded rows, "Local Cockpit · n of m venues read", wallet chip slot, theme select), the `HeroBand`, the one caution tile shape behind every status tile (error, empty, unproven, restricted-terms, needs-Cockpit), `Dialog` (narrow, wide, sheet; a sheet on phones), the mono `ProvenanceLine`, `Chip`, `Mark`, `Num`, `UntrustedText`, route discovery and a footer dock slot. There is no navigation bar. In the Cockpit build `session.ts` exchanges the pairing code at load and `SessionStatus` says in words whether the page is paired |
 | Core | `core/*` | Money (exact integers and decimal strings), budgets and the 10-minute pause, cache policy, the two fetch ports, EIP-55 and look-alike address checks, derived Kernel account, address-binding store, venue policy table, capability facts, registry reader |
-| Readers | `venues/{xo,polymarket,trueo,hyperliquid,pascal,manifold,limitless}` | Read-only venue readers behind the `VenueReadAdapter` port (`core/ports.ts`), wired into the Markets screen. Limitless is read through the daemon only |
-| Readers not wired | `venues/{kalshi,sx,udx,novig,gemini,og,defillama}` | Built and tested offline, restricted-terms or daemon-only, off by default, and not reachable from any screen: there is no screen to switch a restricted venue on, and SX Bet, UDX and OG have no host in `headers.config.ts` |
-| Quotient | `venues/quotient/*` | A closed-route client for Quotient (not a venue). Off until the user ticks the licence clause. Never pays on its own. |
+| Readers | `sdk/venues/{xo,polymarket,trueo,hyperliquid,pascal,manifold,limitless}` (the shared SDK, reached as `@sdk/venues/...`) | Read-only venue readers behind the `VenueReadAdapter` port (`core/ports.ts`), wired into the Markets screen. Limitless is read through the daemon only |
+| Readers not wired | `sdk/venues/{kalshi,sx,udx,novig,gemini,og,defillama}` | Built and tested offline, restricted-terms or daemon-only, off by default, and not reachable from any screen: there is no screen to switch a restricted venue on, and SX Bet, UDX and OG have no host in the registry (`sdk/venues/origins.ts`, re-exported by `headers.config.ts`) |
+| Quotient | `features/signals/quotient/*` | A closed-route client for Quotient (not a venue). Off until the user ticks the licence clause. Never pays on its own. The body is validated by the shared validator in `sdk/signals/quotient` (also used by pm's `pm_signal_parse`). |
 | Markets, Market | `features/explorer/*`, `routes/{markets,market}.tsx` | Cross-venue list and one-market page |
 | Portfolio, Wallet | `features/{portfolio,wallet}/*`, `routes/{portfolio,wallet}.tsx` | Positions by address, per-chain account map, balances, funding steps shown as text (nothing can be sent from them) |
 | Signals | `features/signals/*`, `routes/signals.tsx` | Quotient screen and the link overlay (shows "no links": no dataset exists) |
@@ -62,7 +62,7 @@ Run from the repository root after the toolchain is set up (`source .tools/env.s
 |---|---|
 | Install | `pnpm --dir app install --frozen-lockfile` |
 | Type check | `pnpm --dir app run typecheck` (and `typecheck:bridge` for `bridge/`) |
-| Tests | `pnpm --dir app run test` (Vitest); one path: `pnpm --dir app exec vitest run src/venues/xo` |
+| Tests | `pnpm --dir app run test` (Vitest); one path: `pnpm --dir app exec vitest run ../sdk/venues/xo` |
 | Build both | `pnpm --dir app run build`; one: `build:standalone`, `build:cockpit` |
 | Preview with the real headers | `pnpm --dir app run serve:standalone` or `serve:cockpit` (binds `127.0.0.1`, free port, prints the URL) |
 | Dev server | `pnpm --dir app run dev` (Vite, `--mode cockpit`; the dev server was not exercised) |
@@ -128,9 +128,9 @@ Zod 4 probes `new Function("")` when a schema is built, which a strict CSP repor
 Each venue reader has a `*.live.test.ts` (or `live.test.ts`) that is **skipped unless `APP_LIVE=1`**. They exist to catch an upstream shape or CORS change and to settle the "unverified" labels above. All of them were written and **none was run**. They send real requests, so run them deliberately:
 
 ```sh
-APP_LIVE=1 pnpm --dir app exec vitest run src/venues/xo
-APP_LIVE=1 pnpm --dir app exec vitest run src/venues/polymarket src/venues/manifold src/venues/pascal
-APP_LIVE=1 pnpm --dir app exec vitest run src/venues/hyperliquid src/venues/trueo src/venues/quotient
+APP_LIVE=1 pnpm --dir app exec vitest run ../sdk/venues/xo
+APP_LIVE=1 pnpm --dir app exec vitest run ../sdk/venues/polymarket ../sdk/venues/manifold ../sdk/venues/pascal
+APP_LIVE=1 pnpm --dir app exec vitest run ../sdk/venues/hyperliquid ../sdk/venues/trueo src/features/signals/quotient
 APP_LIVE=1 pnpm --dir app exec vitest run src/features/portfolio/live.test.ts
 ```
 

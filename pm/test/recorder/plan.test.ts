@@ -68,8 +68,8 @@ test("dry run lists exact URLs, cadence and projected load, and never mentions a
   assert.match(text, /GET https:\/\/api-mainnet\.xo\.market\/api\/markets\/contract\/0xabc/);
   assert.match(text, /every 900s {2}GET https:\/\/api-mainnet/);
   assert.match(text, /GET https:\/\/gamma-api\.polymarket\.com\/markets\?condition_ids=0xdef/);
-  assert.match(text, /GET https:\/\/orderbooks\.xo\.market\/book\?token_id=<yes_token_id from the state call>/);
-  assert.match(text, /GET https:\/\/clob\.polymarket\.com\/book\?token_id=<yes_token_id from the state call>/);
+  assert.match(text, /GET https:\/\/orderbooks\.xo\.market\/book  \(token_id = the outcome-0 token id the state call returns\)/);
+  assert.match(text, /GET https:\/\/clob\.polymarket\.com\/book  \(token_id = the outcome-0 token id the state call returns\)/);
   assert.match(text, /GET https:\/\/api\.limitless\.exchange\/markets\/some-slug\/orderbook/);
   assert.match(text, /user-agent: insurance-markets-research\/0\.1/);
   assert.match(text, /GET only/);

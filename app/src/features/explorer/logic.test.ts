@@ -8,7 +8,6 @@ import { EXPLORER_VENUES, UNREPORTED_VENUES, venueStatusOf } from "./catalog";
 import { feeView, safeReasons, tickLines, MODEL_TEXT } from "./describe";
 import { classifyError, FeedError } from "./feed";
 import { isSafeMarketId, marketHref, parseMarketParams } from "./ids";
-import { linksFor } from "./links";
 import { summary } from "./test-support";
 import { filterRows, sortRows } from "./MarketsView";
 import { toRow } from "./MarketTable";
@@ -117,12 +116,6 @@ describe("describe", () => {
     expect(tickLines("0.001")).toEqual(["0.001"]);
     expect(tickLines("<b>")).toEqual([]);
     expect(tickLines([{ from: "0", to: "0.1", tick: "0.001" }, { from: "x", to: "1", tick: "0.01" }])).toEqual(["0.001 from 0 to 0.1"]);
-  });
-});
-
-describe("links", () => {
-  it("every market has no links until a human-approved dataset exists", () => {
-    expect(linksFor({ venue: "xo", marketId: "0x1", native: {} })).toEqual({ state: "no_dataset", count: 0 });
   });
 });
 

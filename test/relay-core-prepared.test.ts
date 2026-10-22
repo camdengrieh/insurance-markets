@@ -120,13 +120,17 @@ describe("creating a prepared item", () => {
     await r.storage.close();
   });
 
-  it("has no place to put a signature: the stored record holds the digest and the payload only", async () => {
+  it("has no place to put a signature: the stored record holds the digest, the payload and the prepare answer only", async () => {
     const r = await rig();
     const record = await r.prepared.create(input());
     assert.deepEqual(Object.keys(record).sort(), [
-      "account", "createdAtMs", "detail", "digest", "digestForm", "expiresAtMs", "failedAttempts", "id", "kind", "owner",
+      "account", "answer", "createdAtMs", "detail", "digest", "digestForm", "expiresAtMs", "failedAttempts", "id", "kind", "owner",
       "payload", "reservationIds", "resolvedAtMs", "sendStartedAtMs", "state",
     ]);
+    assert.equal(record.answer, null, "nothing is kept until the prepare route's checked answer is");
+    // The answer slot takes only a strict Prepared item of the contract, which has no field for a signature.
+    assert.deepEqual(await r.prepared.keepAnswer({ prepared_id: record.id, kind: record.kind, owner: record.owner, sign: { expected_digest: record.digest }, signature: `0x${"11".repeat(65)}` }), { kept: false, reason: "shape" });
+    assert.equal(r.prepared.get(record.id)?.answer, null);
     await r.storage.close();
   });
 });

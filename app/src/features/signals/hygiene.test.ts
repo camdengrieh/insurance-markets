@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { ENTRY_STATUSES } from "../../venues/quotient";
+import { ENTRY_STATUSES } from "./quotient";
 import { gateReasonText, orientationText } from "./words";
 import { pointsText, probabilityText, usdLabel } from "./figures";
 
@@ -19,7 +19,11 @@ function files(): Array<{ readonly name: string; readonly text: string }> {
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
+      // quotient/ is the Quotient client (it makes the requests, reads the 402 challenge and serialises nothing to
+      // the screen); its own hygiene test (quotient/hygiene.test.ts) holds it to the client's rules.
+      if (entry.isDirectory()) {
+        if (entry.name !== "quotient") walk(full);
+      }
       else if (/\.(?:tsx?|css)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) out.push({ name: full.slice(src.length + 1), text: readFileSync(full, "utf8") });
     }
   };
@@ -107,7 +111,7 @@ describe("words for every reason the Quotient client can give", () => {
   const FALLBACK = "A reason this screen has no words for. The check failed.";
 
   it("has words for every gate reason the client writes", () => {
-    const orientation = readFileSync(join(src, "venues", "quotient", "orientation.ts"), "utf8");
+    const orientation = readFileSync(join(here, "quotient", "orientation.ts"), "utf8");
     const tokens = new Set<string>();
     for (const match of orientation.matchAll(/fail\(\s*"[a-z_]+"\s*,\s*"([a-z_0-9]+)"/g)) tokens.add(match[1] ?? "");
     for (const match of orientation.matchAll(/\?\s*"([a-z_0-9]+)"\s*:/g)) tokens.add(match[1] ?? "");

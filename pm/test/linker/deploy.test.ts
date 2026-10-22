@@ -85,4 +85,12 @@ test("the bundle builds deterministically as one file with no secrets or machine
   assert.deepEqual(envReads, []);
   assert.match(text, /insurance-markets-research\/0\.1/);
   assert.equal(/approveLink|APPROVAL_ACK/.test(text), false, "the approval path is not in the linker bundle");
+  // Only the linker's command line runs: a bundled module's run-as-script guard (the recorder's) would fire too, since
+  // every module of a bundle shares one import.meta.url.
+  for (const args of [["--help"], ["dry-run", "--venues", "xo"]]) {
+    const r = spawnSync(process.execPath, [join(DEPLOY, "dist", "linker.mjs"), ...args], { cwd: REPO, encoding: "utf8" });
+    assert.equal(r.status, 0, `${args.join(" ")}: ${r.stderr}`);
+    assert.match(r.stdout, /^pm-linker/);
+    assert.equal(r.stdout.includes("pm-recorder") || r.stderr.includes("pm-recorder"), false, args.join(" "));
+  }
 });

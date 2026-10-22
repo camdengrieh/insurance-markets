@@ -15,7 +15,7 @@
 import * as z from "zod/v4";
 
 import { TRUST_LABEL } from "@shared/guardrails/untrusted";
-import { KNOWN_MARKET_STATUSES } from "@shared/xo/types";
+import { KNOWN_MARKET_STATUSES } from "@sdk/venues/xo/api/types";
 
 import { parseQty } from "../../core/money";
 import { untrustedField, type Untrusted } from "../../core/untrusted";

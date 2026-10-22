@@ -6,7 +6,7 @@ import { buildBundle, serializeBundle } from "../../links/bundle.js";
 import { emptyRegistry } from "../../links/store.js";
 import { LOCK_STALE_MS, acquireLock, runCli, type CliIo } from "../../recorder/main.js";
 import { identityCandidate, leg, propose } from "../links/fixtures.js";
-import { market, startWorld, tempDir, totalSeen, type World } from "./helpers.js";
+import { cond, market, startWorld, tempDir, totalSeen, type World } from "./helpers.js";
 
 const worlds: World[] = [];
 after(async () => {
@@ -23,15 +23,25 @@ function io(world?: World, extra: Partial<CliIo> = {}): { io: CliIo; out: string
   };
 }
 
-function bundleFiles(dir: string, xoId: string, polyId: string, withKalshi = false): { bundle: string; pin: string } {
+// The legs of a bundle: SYNTHETIC- ids (a synthetic bundle), or, with `hashed`, ids derived from a label by hashing
+// (cond(), never a real market) in a bundle that is not marked synthetic: the shared XO and Polymarket parsers the
+// collectors use accept only 32-byte condition ids, which a SYNTHETIC- id cannot be, so a bundle whose markets are
+// actually collected from the loopback world uses hashed ids.
+const XO_ID = cond("xo-aaa");
+const POLY_ID = cond("poly-bbb");
+const KALSHI_PARTNER = cond("x2");
+const KALSHI_LEG = cond("kalshi-k").slice(2, 34);
+
+function bundleFiles(dir: string, xoId: string, polyId: string, withKalshi = false, hashed = false): { bundle: string; pin: string } {
   let reg = emptyRegistry();
   const a = leg("xo", "x");
   const b = leg("polymarket", "p", { rulesSha256: a.rulesSha256, maskedSha256: a.maskedSha256 });
-  reg = propose(reg, identityCandidate("0001", { legs: [{ ...a, marketId: xoId }, { ...b, marketId: polyId }] })).registry;
+  const synthetic = { synthetic: !hashed };
+  reg = propose(reg, identityCandidate("0001", { legs: [{ ...a, marketId: xoId }, { ...b, marketId: polyId }], ...synthetic })).registry;
   if (withKalshi) {
-    const x2 = leg("xo", "x2");
-    const k = leg("kalshi", "k", { rulesSha256: x2.rulesSha256, maskedSha256: x2.maskedSha256 });
-    reg = propose(reg, identityCandidate("0002", { legs: [x2, k] })).registry;
+    const x2 = leg("xo", "x2", hashed ? { marketId: KALSHI_PARTNER } : {});
+    const k = leg("kalshi", "k", { rulesSha256: x2.rulesSha256, maskedSha256: x2.maskedSha256, ...(hashed ? { marketId: KALSHI_LEG } : {}) });
+    reg = propose(reg, identityCandidate("0002", { legs: [x2, k], ...synthetic })).registry;
   }
   const built = buildBundle(reg, { createdAt: "2026-10-20T00:00:00Z", includeCandidates: true });
   assert.ok(built.ok);
@@ -114,7 +124,7 @@ test("an unpinned or wrongly pinned bundle is refused", async () => {
 });
 
 test("run needs targets; once records, then report, verify, gaps, status and prune work on the result", async () => {
-  const world = await startWorld([market("xo", "SYNTHETIC-xo-aaa", { fee: "600" }), market("polymarket", "SYNTHETIC-poly-bbb", { fee: "0.04", bids: [["0.45", "50"]], asks: [["0.47", "50"]] })]);
+  const world = await startWorld([market("xo", XO_ID, { fee: "600" }), market("polymarket", POLY_ID, { fee: "0.04", bids: [["0.45", "50"]], asks: [["0.47", "50"]] })]);
   worlds.push(world);
   const dir = tempDir();
   try {
@@ -122,7 +132,7 @@ test("run needs targets; once records, then report, verify, gaps, status and pru
     assert.equal(await runCli(["once", "--db", join(dir.path, "n.sqlite")], none.io), 2);
     assert.match(none.err.join("\n"), /no targets/);
 
-    const { bundle, pin } = bundleFiles(dir.path, "SYNTHETIC-xo-aaa", "SYNTHETIC-poly-bbb", true);
+    const { bundle, pin } = bundleFiles(dir.path, XO_ID, POLY_ID, true, true);
     const cfgFile = join(dir.path, "cfg.json");
     writeFileSync(cfgFile, JSON.stringify({ hostBases: Object.fromEntries(Object.entries(world.hosts).map(([h, f]) => [h, f.base])), backoff: { baseMs: 1000, maxMs: 5000, factor: 2, jitter: 0, maxAttempts: 2 } }));
     const db = join(dir.path, "rec.sqlite");
@@ -139,8 +149,8 @@ test("run needs targets; once records, then report, verify, gaps, status and pru
     for (const suffix of ["", "-wal", "-shm"]) if (existsSync(db + suffix)) bytes += readFileSync(db + suffix).toString("latin1").toLowerCase();
     assert.ok(bytes.length > 1000, "the database was written");
     assert.equal(bytes.includes("kalshi"), false);
-    assert.equal(bytes.includes("synthetic-k"), false);
-    assert.equal(bytes.includes("synthetic-x2"), false);
+    assert.equal(bytes.includes(KALSHI_LEG), false);
+    assert.equal(bytes.includes(KALSHI_PARTNER), false);
     assert.equal(world.hosts["orderbooks.xo.market"]!.seen.length, 1, "the XO partner of the Kalshi link was never fetched");
 
     // A second pass an hour later adds a second observation.

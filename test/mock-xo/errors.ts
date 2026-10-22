@@ -1,7 +1,7 @@
 // Error bodies the mock serves. One place, so the read mock and the write mock agree on the text.
 //
 // Basis of each body:
-//   fixture    recorded in test/fixtures/xo (live GET)
+//   fixture    recorded in sdk/venues/xo/fixtures (live GET)
 //   docs       quoted from the XO docs or OpenAPI (docs/research/01, 02, 03); the exact live text is M
 //   synthetic  invented by this mock because the real service's body was never observed; labelled M
 //

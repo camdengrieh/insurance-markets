@@ -165,7 +165,8 @@ export class HostBudgets {
 export type PauseReason = "forbidden" | "rate_limited" | "retry_after";
 export type PauseState = { readonly paused: false } | { readonly paused: true; readonly untilMs: number; readonly reason: PauseReason };
 
-export const MAX_RETRY_AFTER_MS = 86_400_000;
+export { MAX_RETRY_AFTER_MS, parseRetryAfterMs } from "@sdk/venues/transport";
+import { MAX_RETRY_AFTER_MS } from "@sdk/venues/transport";
 
 export interface PauseOptions {
   readonly after429?: number;
@@ -249,15 +250,4 @@ export function backoffDelayMs(attempt: number, random: () => number, options: B
   const unit = random();
   const clamped = unit >= 0 && unit < 1 ? unit : 0;
   return Math.floor(clamped * ceiling);
-}
-
-// The Retry-After header: delay-seconds or an HTTP date. Anything else is null. Capped at 24 hours.
-export function parseRetryAfterMs(header: string | null | undefined, nowMs: number): number | null {
-  if (header === null || header === undefined) return null;
-  const text = header.trim();
-  if (/^[0-9]{1,12}$/.test(text)) return Math.min(Number(text) * 1000, MAX_RETRY_AFTER_MS);
-  if (text.length > 64 || !/^[A-Za-z]{3},/.test(text)) return null;
-  const date = Date.parse(text);
-  if (!Number.isFinite(date)) return null;
-  return Math.min(Math.max(date - nowMs, 0), MAX_RETRY_AFTER_MS);
 }

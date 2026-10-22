@@ -1,4 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["sdk/**/*.ts", "src/**/*.ts", "test/**/*.ts", "scripts/live/**/*.ts"]
+  "compilerOptions": { "allowImportingTsExtensions": true },
+  "include": ["sdk/**/*.ts", "src/**/*.ts", "test/**/*.ts", "scripts/live/**/*.ts"],
+  "exclude": ["sdk/**/*.test.ts", "sdk/**/fixtures/**"]
 }

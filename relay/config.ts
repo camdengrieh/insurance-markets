@@ -27,7 +27,7 @@ import type { RelayContext, RelayServices } from "./types.js";
 
 export const RELAY_BIND_HOST = "127.0.0.1" as const;
 export const DEFAULT_RELAY_PORT = 8787;
-export const RELAY_VERSION = "0.2.0";
+export const RELAY_VERSION = "0.3.0";
 
 // A creation seed is a $10.00 stake with the 1.08 fee multiplier (amendment A3).
 export const CREATION_SEED_CAP_ATOMIC = 10_800_000n;

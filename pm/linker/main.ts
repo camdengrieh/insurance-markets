@@ -22,7 +22,7 @@ import { systemClock, type Clock } from "../recorder/clock.js";
 import { parseConfig, type RecorderConfig } from "../recorder/config.js";
 import { writeAtomic } from "../recorder/discover.js";
 import { PoliteClient } from "../recorder/http.js";
-import { acquireLock, ensureWritableDir } from "../recorder/main.js";
+import { acquireLock, ensureWritableDir } from "../recorder/lock.js";
 import { QUOTIENT_FLAG } from "../signals/flag.js";
 import { isLinkerVenue, LINKER_VENUES, refusalReason, type LinkerVenue } from "./allowlist.js";
 import { serializeAppDataset, toAppDataset } from "./app-dataset.js";

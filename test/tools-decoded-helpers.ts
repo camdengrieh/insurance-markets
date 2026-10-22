@@ -103,7 +103,7 @@ export function verifiedUseropItem(options: VerifiedUseropOptions): Obj {
 
 // ---- a verified order ---------------------------------------------------------------------------------------------
 
-// A real XO market (test/fixtures/xo): its condition id and its two outcome token ids, which are the CTF position
+// A real XO market (sdk/venues/xo/fixtures): its condition id and its two outcome token ids, which are the CTF position
 // ids of that condition, so an order for one of them can carry the condition and still pass the binding check.
 export const REAL_CONDITION_ID = "0xb63d8f77fc1437a804d5fdeedb4c00dc49e1d7c7738f6410c36f1f44e6cfd654";
 export const REAL_YES_TOKEN = "68215442288791572296498952759094916177229244750752613990844701608971303593663";

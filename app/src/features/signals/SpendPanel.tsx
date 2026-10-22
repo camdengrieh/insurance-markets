@@ -2,7 +2,7 @@
 // ledger is authoritative and the credit on the key is the hard cap. It lives in this tab's memory only.
 
 import { Field, Tile } from "../../ui";
-import type { SpendSnapshot } from "../../venues/quotient";
+import type { SpendSnapshot } from "./quotient";
 import { usdLabel } from "./figures";
 
 // The user's own daily limit can only go down from the client's budget.

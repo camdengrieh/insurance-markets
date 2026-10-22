@@ -1,14 +1,17 @@
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 
+import { clobAccountOf } from "../clob/polymarket/deposit-wallet.js";
 import {
-  POST_ROUTES,
+  PREPARED_GET_SINCE_RELAY_VERSION,
   PREPARED_KINDS,
   RELAY_CLIENT_TIMEOUT_MS,
   SAFETY_NOTICES,
   preparedIdSchema,
-  type GetPath,
+  preparedItemPath,
+  preparedItemSchema,
   type PreparedKind,
+  type RelayFailure,
   type RelayResult,
 } from "../relay/contract.js";
 import type { WriteFlagName } from "../relay/flags.js";
@@ -19,6 +22,7 @@ import {
   STATUS_ANNOTATIONS,
   baseResultShape,
   buildPreparedResult,
+  cleanText,
   defaultRelayToolDeps,
   gateWrite,
   internalFailure,
@@ -35,6 +39,7 @@ import {
   type PreparedLike,
   type Refusal,
   type RelayToolDeps,
+  type Scrub,
   type ToolContext,
 } from "./relay-tool-kit.js";
 
@@ -48,18 +53,20 @@ import {
 // reserves nothing and needs no switch. It hands out sign_with_paybox only when the matching write path is on at
 // this plugin and the kill switch is off, like a prepare tool outside a dry run.
 //
-// The relay route this calls, GET /v1/prepared/{prepared_id}, is NOT in the relay contract yet (it belongs to
-// src/relay/contract.ts and relay/, which this stream does not own). Until the relay owner adds it, a real relay
-// answers not_implemented (or the client refuses the unknown path), and this tool says so instead of guessing.
-// The answer it expects is exactly the item a prepare route returns: the strict Prepared object of its kind.
+// The relay route it calls, GET /v1/prepared/{prepared_id} (src/relay/contract.ts, relay/prepared.ts), answers exactly
+// the item the prepare route returned (the strict Prepared object of its kind) while that item can still be signed,
+// and otherwise its state: expired, already used (or a send whose outcome is unknown), or not found (which is also the
+// answer for an item of an owner the relay does not serve). The relay and this plugin ship separately, so a relay older
+// than PREPARED_GET_SINCE_RELAY_VERSION has no such route and answers not_found ("No such route"); this tool then
+// reads the relay's version from GET /v1/health and refuses with the version mismatch instead of "no such item".
 
 export const GET_PREPARED_TOOL = "xo_get_prepared";
 export const PREPARED_GET_ROUTE = "/v1/prepared/:id";
 
 const CALL_CAP_MS = 3_500;
 
-export function preparedPath(preparedId: string): string {
-  return `/v1/prepared/${preparedIdSchema.parse(preparedId)}`;
+export function preparedPath(preparedId: string): `/v1/prepared/${string}` {
+  return preparedItemPath(preparedId);
 }
 
 const getPreparedInput = z
@@ -92,20 +99,45 @@ const SUBMIT_FOR: Readonly<Record<PreparedKind, { readonly call: string; readonl
   clob_auth: { call: 'clob_auth with step "submit"', flags: ["ENABLE_CLOB_POLYMARKET"] },
 });
 
-function schemaFor(item: unknown) {
-  if (typeof item === "object" && item !== null) {
-    if ("quote" in item) return (item as { readonly kind?: unknown }).kind === "clob_order" ? POST_ROUTES["/v1/clob/order/prepare"].response : POST_ROUTES["/v1/order/prepare"].response;
-    if ("user_op_hash" in item) return POST_ROUTES["/v1/userop/prepare"].response;
-  }
-  return POST_ROUTES["/v1/auth/prepare"].response;
+// "0.3.0" -> [0, 3, 0]; undefined for anything that is not three dot-separated numbers.
+function versionParts(version: string): readonly [number, number, number] | undefined {
+  const match = /^(\d{1,6})\.(\d{1,6})\.(\d{1,6})(?:[-+].*)?$/.exec(version);
+  return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])];
 }
 
-function notImplemented(): Refusal {
+export function relayVersionPredatesPreparedGet(version: string): boolean | undefined {
+  const have = versionParts(version);
+  const need = versionParts(PREPARED_GET_SINCE_RELAY_VERSION);
+  if (have === undefined || need === undefined) return undefined;
+  for (let index = 0; index < 3; index += 1) {
+    if (have[index] !== need[index]) return (have[index] as number) < (need[index] as number);
+  }
+  return false;
+}
+
+function versionMismatch(version: string): Refusal {
   return {
     code: "not_implemented",
-    message: "This relay cannot return a prepared item by id (GET /v1/prepared/{prepared_id} is not part of its contract yet).",
-    next: `${nextFor("not_implemented")} Ask the operator to update the relay, or prepare the item through the matching prepare tool instead.`,
+    message: `The relay reports version ${version}, which predates GET /v1/prepared/{prepared_id} (relay ${PREPARED_GET_SINCE_RELAY_VERSION} or later), so it cannot return a prepared item by id. Nothing was read or changed.`,
+    next: `Ask the operator to update the relay to ${PREPARED_GET_SINCE_RELAY_VERSION} or later. Until then, do not sign anything on the strength of this id: prepare the item again through the matching prepare tool, which returns the item itself.`,
+    details: { relay_version: version, needs_relay_version: PREPARED_GET_SINCE_RELAY_VERSION },
   };
+}
+
+// The relay's answer for a stored item that cannot be handed out, worded for someone holding only its id.
+function failureRefusal(failure: RelayFailure, scrub: Scrub): Refusal {
+  const refusal = refusalFromFailure(failure, "read", scrub);
+  const state = failure.details?.["state"];
+  if (failure.code === "not_found") {
+    return { ...refusal, next: "The relay holds no item under this id for an owner it serves (it may have expired and been removed, or never existed). Do not sign anything for this id; prepare the item again." };
+  }
+  if (failure.code === "prepared_used" && state === "ambiguous") {
+    return { ...refusal, next: "A send for this item was started and its outcome is unknown. Do NOT sign or submit it again, and do not prepare an identical item to send: check the order with xo_order_status or the operation with xo_userop_status first." };
+  }
+  if (failure.code === "prepared_used") {
+    return { ...refusal, next: "This item was already used (it is single use) and nothing for it can be signed now. Check the status of what it held; prepare a new item only if that is still wanted." };
+  }
+  return refusal;
 }
 
 export async function handleGetPrepared(input: GetPreparedInput, deps: RelayToolDeps = defaultRelayToolDeps()): Promise<CallToolResult> {
@@ -116,20 +148,27 @@ export async function handleGetPrepared(input: GetPreparedInput, deps: RelayTool
       return refusalResult(deps, base, { code: "budget_exceeded", message: "Too little time was left in this call to start the relay request safely.", next: nextFor("budget_exceeded") });
     }
     const scrub = makeScrub(deps.config());
+    const relay = deps.relay();
     let result: RelayResult<unknown>;
     try {
-      // Not a path of the relay contract yet (see the note at the top), so it is typed through GetPath on purpose; the
-      // real client refuses an unknown path before sending anything, which is mapped to not_implemented below.
-      result = (await deps.relay().get(preparedPath(input.prepared_id) as GetPath, { timeoutMs: budget.relayMs(Math.min(CALL_CAP_MS, RELAY_CLIENT_TIMEOUT_MS)) })) as RelayResult<unknown>;
+      result = await relay.get(preparedPath(input.prepared_id), { timeoutMs: budget.relayMs(Math.min(CALL_CAP_MS, RELAY_CLIENT_TIMEOUT_MS)) });
     } catch {
       return refusalResult(deps, base, { code: "internal", message: "The relay's answer could not be read, so it was not used.", next: "The relay did not answer. Nothing was changed. Try the read again." });
     }
     if (!result.ok) {
-      const fields = result.error.details?.["fields"];
-      const refusedPath = result.error.code === "invalid_request" && Array.isArray(fields) && fields.includes("(path)");
-      return refusalResult(deps, base, refusedPath ? notImplemented() : refusalFromFailure(result.error, "read", scrub));
+      // A relay without this route answers not_found ("No such route"), or not_implemented when its route table lacks
+      // the handler. Its version, from GET /v1/health, tells that apart from an id it does not hold.
+      if ((result.error.code === "not_found" || result.error.code === "not_implemented") && budget.canStart(false)) {
+        try {
+          const health = await relay.get("/v1/health", { timeoutMs: budget.relayMs(Math.min(CALL_CAP_MS, RELAY_CLIENT_TIMEOUT_MS)) });
+          if (health.ok && relayVersionPredatesPreparedGet(health.data.version) === true) return refusalResult(deps, base, versionMismatch(cleanText(health.data.version, 32, scrub, true)));
+        } catch {
+          // No version to compare: the relay's own answer stands.
+        }
+      }
+      return refusalResult(deps, base, failureRefusal(result.error, scrub));
     }
-    const parsed = schemaFor(result.data).safeParse(result.data);
+    const parsed = preparedItemSchema.safeParse(result.data);
     if (!parsed.success) {
       return refusalResult(deps, base, { code: "internal", message: "The relay's answer did not match the prepared-item contract, so it was not used.", next: nextFor("internal") });
     }
@@ -140,8 +179,12 @@ export async function handleGetPrepared(input: GetPreparedInput, deps: RelayTool
     // The owner is whatever the item says; the account must be the one derived from it, like everywhere else.
     const parsedIdentity = parseIdentity(item.owner);
     if (!parsedIdentity.ok) return refusalResult(deps, base, parsedIdentity.refusal);
-    // A CLOB venue item's maker is the owner itself: no derived account (src/clob/decoded.ts).
-    const identity = item.kind === "clob_order" || item.kind === "clob_auth" ? { ...parsedIdentity.value, account: parsedIdentity.value.owner } : parsedIdentity.value;
+    // A CLOB venue item's maker is the owner itself or (a Polymarket order) the owner's Deposit Wallet, re-derived from the
+    // owner here; any other account is compared against the owner and refused (src/clob/decoded.ts rebuilds the rest).
+    const identity =
+      item.kind === "clob_order" || item.kind === "clob_auth"
+        ? { ...parsedIdentity.value, account: (item.kind === "clob_order" ? clobAccountOf(parsedIdentity.value.owner as `0x${string}`, item.account) : null) ?? parsedIdentity.value.owner }
+        : parsedIdentity.value;
     const ctx: ToolContext = { ...base, owner: identity.owner, account: identity.account };
     const vetted = vetPrepared(deps, identity, item, PREPARED_KINDS);
     if (!vetted.ok) return refusalResult(deps, ctx, vetted.refusal);
@@ -174,7 +217,7 @@ export async function handleGetPrepared(input: GetPreparedInput, deps: RelayTool
 const GET_PREPARED_DESCRIPTION = [
   "Returns the prepared item the relay holds under a prepared_id: the signing intent, the summary lines, both tags (digest_tag and inner_hash_tag), the caps it reserves, its expiry and the decoded block (the operation's fields and calls, the order's 13 signed fields, or the login message's fields). Use it when something other than this agent asked the relay to prepare an item (the Cockpit page, for example) and you were handed only the id: fetch the record here instead of trusting the page's description of it.",
   "Read-only: it changes nothing and reserves nothing, and it works with the kill switch on. The plugin checks the owner, the derived account, the kind and the time left, then rebuilds the digest, the inner_hash_tag and every summary line from the decoded block and reports the result as verification. An item that fails that check is refused (prepared_mismatch); an item with no decoded block is passed on marked unverified. sign_with_paybox is returned only when the write path that would submit it is on at this plugin and the kill switch is off.",
-  "To sign, pass sign_with_paybox UNCHANGED to PayBox request_wallet_sign and compare the tags; then submit with the tool named in next_action. Needs a relay that supports GET /v1/prepared/{prepared_id}; an older relay answers not_implemented.",
+  `To sign, pass sign_with_paybox UNCHANGED to PayBox request_wallet_sign and compare the tags; then submit with the tool named in next_action. The relay returns an item only while it can still be signed: an expired item is refused with expired, a used one (or one whose send has an unknown outcome) with prepared_used, and an id it does not hold for an owner it serves with not_found. Reads GET /v1/prepared/{prepared_id}, which needs relay ${PREPARED_GET_SINCE_RELAY_VERSION} or later; an older relay is refused with not_implemented naming its version.`,
   DECODED_NOTICE,
   SAFETY_NOTICES.advisoryCaps,
   SAFETY_NOTICES.untrustedText,

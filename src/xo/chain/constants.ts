@@ -501,3 +501,21 @@ export const POLYMARKET_EXCHANGE_V3 = "0xe3333700cA9d93003F00f0F71f8515005F6c00A
 export const POLYMARKET_CTF_EXCHANGE = "0xE111180000d2663C0091e4f400237545B87B996B" as const;
 export const POLYMARKET_NEG_RISK_EXCHANGE = "0xe2222d279d744050d28e00520010520000310F59" as const;
 export const LIMITLESS_CTF_EXCHANGE = "0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5" as const;
+
+// Polymarket's Deposit Wallet (signature type 3, POLY_1271), Polygon mainnet (137). Used by src/clob/polymarket/
+// deposit-wallet.ts to derive an owner's wallet address and by the relay to confirm it on chain. Sources:
+//   - factory and beacon: docs.polymarket.com/trading/wallets-auth.md "Derive a Deposit Wallet Address" (read
+//     2026-10-21): "factory = 0x00000000000Fb5C9ADea0298D729A0CB3823Cc07", "beacon = 0x7A18EDfe055488A3128f01F563e5B479D92ffc3a";
+//     the same two values are the production `walletDerivation` of the official client, npm @polymarket/client 0.13.0
+//     (github.com/Polymarket/ts-sdk packages/client, src/environments.ts).
+//   - UUPS implementation (wallets deployed before the beacon upgrade): @polymarket/client 0.13.0 environments.ts
+//     `depositWalletImplementation`; Sourcify exact match (creation and runtime) on chain 137, contract
+//     src/DepositWallet.sol, verified 2026-05-01. The factory's own `implementation()` returned it on 2026-10-21.
+//   - current beacon implementation: what the beacon's `implementation()` returned on 2026-10-21 over the Polygon
+//     public RPC (sdk/venues/origins.ts rpc_polygon); Sourcify exact match on chain 137, verified 2026-07-28. Used
+//     only by the anvil test; nothing at runtime depends on which implementation the beacon serves (the relay reads
+//     the wallet's own eip712Domain() instead).
+export const POLYMARKET_DEPOSIT_WALLET_FACTORY = "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07" as const;
+export const POLYMARKET_DEPOSIT_WALLET_BEACON = "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a" as const;
+export const POLYMARKET_DEPOSIT_WALLET_UUPS_IMPLEMENTATION = "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB" as const;
+export const POLYMARKET_DEPOSIT_WALLET_BEACON_IMPLEMENTATION = "0xf7f27C29e60fe6325beF8dA7F93250353d2e3294" as const;

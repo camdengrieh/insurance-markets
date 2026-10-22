@@ -4,40 +4,37 @@
 // no file, network or process access (a test scans the source to keep it that way). Quotient's
 // terms bar redistribution, so rows go back to the same agent that paid for them and nowhere else.
 //
-// Shapes come from the OpenAPI 20.5.0 spec only (research 12, section 5): no real paid body was
-// ever read. The parser is therefore strict about what safety depends on and lenient about the
-// rest. Unknown fields are ignored. An unknown venue or an unknown value of an enum we rely on
-// (entry_status, q_coverage, quote_method, forecast_status.state, ...) REJECTS that row and sets
-// schemaDrift, because a new value may change what the row means. Units are normalised exactly
-// (0..100 to 0..1) and a value outside its documented scale is rejected, never guessed.
+// The body is validated by the shared Quotient validator (sdk/signals/quotient), the same one the
+// dApp's Signals screen reads through: structure, closed lists, unit scales, a number that arrives
+// in two fields being the same number, ISO timestamps and timestamps in the future. Shapes come from
+// the OpenAPI 20.5.0 spec only (research 12, section 5): no real paid body was ever read. An unknown
+// venue or an unknown value of an enum REJECTS that row and sets schemaDrift, because a new value may
+// change what the row means.
+//
+// What stays here is this tool's own contract: the flag, the input caps (the agent passes only the
+// rows it selected, as a bare array or under one of markets/signals/items/data), one output row per
+// sports listing, and the demotions that say why a row cannot be used as an input.
 
+import { ingest, type QuoteMethod, type QuoteView, type QuotientRow as ValidatedRow, type RowRefusal, type SportsListing } from "../../sdk/signals/quotient/index.js";
 import { sanitizeField, UNTRUSTED_DATA_NOTICE, type UntrustedContent } from "../../src/guardrails/untrusted.js";
 import { ZERO, absR, cmp, eq, ratToDecExact, sub, type Rational, type SDec } from "../core/rational.js";
 import {
   DISCLOSURE,
-  ENTRY_STATUSES,
-  FORECAST_STATES,
   LIVE_QUOTE_VENUES,
   MAX_BODY_BYTES,
   MAX_ROWS,
   QUALITY_STATUSES,
   QUALITY_TIERS,
-  QUOTE_METHODS,
   QUOTIENT_CLAUSE,
-  Q_COVERAGE,
-  RETIRED_REASONS,
   SPREAD_DIRECTIONS,
-  isQuotientVenue,
   type EntryStatus,
   type ForecastState,
   type QCoverage,
-  type QuoteMethod,
   type QuotientVenue,
   type RetiredReason,
 } from "./constants.js";
 import { flagOff, type FlagContext, type FlagOff } from "./flag.js";
-import { NATIVE_ID_RE, parseMarketKey } from "./keys.js";
-import { pct100, prob01, toRational } from "./numbers.js";
+import { toRational } from "./numbers.js";
 
 export const ROW_SOURCES = ["mispriced", "signal", "signal_sports_listing"] as const;
 export type RowSource = (typeof ROW_SOURCES)[number];
@@ -84,7 +81,7 @@ export type RejectCode =
 export interface RejectedRow {
   readonly index: number;
   readonly code: RejectCode;
-  // A field name from this module, never a value taken from the row.
+  // A field name written by the validator, never a value taken from the row.
   readonly field: string;
 }
 
@@ -164,7 +161,6 @@ export interface ParseOptions {
 
 export const DEFAULT_MAX_FORECAST_AGE_MS = 24 * 3_600_000;
 export const DEFAULT_MAX_QUOTE_AGE_MS = 15 * 60_000;
-const CLOCK_SKEW_MS = 5 * 60_000;
 
 export interface ParseSuccess {
   readonly ok: true;
@@ -193,19 +189,7 @@ export type ParseFailure = {
 };
 export type ParseResult = ParseSuccess | ParseFailure | FlagOff;
 
-// ---------------------------------------------------------------------------------------------
-// Readers
-
 type Obj = Readonly<Record<string, unknown>>;
-
-class RowError extends Error {
-  constructor(
-    readonly code: RejectCode,
-    readonly field: string,
-  ) {
-    super(code);
-  }
-}
 
 function isObj(v: unknown): v is Obj {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -216,174 +200,100 @@ function get(o: Obj, key: string): unknown {
   return Object.hasOwn(o, key) ? o[key] : undefined;
 }
 
-function nested(o: Obj, key: string): Obj | null {
-  const v = get(o, key);
-  return isObj(v) ? v : null;
-}
+// ---------------------------------------------------------------------------------------------
+// Refusals: the validator's reasons in this tool's vocabulary
 
-function missing(v: unknown): boolean {
-  return v === undefined || v === null;
-}
+const VENUE_FIELDS: readonly string[] = ["venue", "market.venue", "markets.venue"];
+const KEY_FIELDS: readonly string[] = ["marketKey", "market.marketKey", "markets.marketKey"];
+const NATIVE_FIELDS: readonly string[] = ["nativeMarketId", "market.nativeMarketId", "markets.nativeMarketId"];
 
-function readEnum<T extends string>(o: Obj, key: string, allowed: readonly T[], required: boolean): T | null {
-  const v = get(o, key);
-  if (missing(v)) {
-    if (required) throw new RowError("MISSING_FIELD", key);
-    return null;
+function rejectCode(refusal: RowRefusal): RejectCode {
+  const { code, field } = refusal;
+  switch (code) {
+    case "missing_field":
+      return field === "market_odds" ? "NO_QUOTE" : "MISSING_FIELD";
+    case "wrong_type":
+      if (field === "row") return "BAD_ROW";
+      return KEY_FIELDS.includes(field) ? "BAD_MARKET_KEY" : "BAD_FIELD";
+    case "unknown_enum":
+      return VENUE_FIELDS.includes(field) ? "UNKNOWN_VENUE" : "UNKNOWN_ENUM";
+    case "unit_not_a_number":
+      return "BAD_FIELD";
+    case "unit_out_of_range":
+      return "OUT_OF_RANGE";
+    case "inconsistent":
+      return KEY_FIELDS.includes(field) || NATIVE_FIELDS.includes(field) ? "MARKET_KEY_MISMATCH" : "INCONSISTENT";
+    case "future_timestamp":
+      return "FUTURE_TIMESTAMP";
   }
-  if (typeof v !== "string") throw new RowError("BAD_FIELD", key);
-  if (!(allowed as readonly string[]).includes(v)) throw new RowError("UNKNOWN_ENUM", key);
-  return v as T;
 }
 
-function readBool(o: Obj, key: string, required = false): boolean | null {
-  const v = get(o, key);
-  if (missing(v)) {
-    if (required) throw new RowError("MISSING_FIELD", key);
-    return null;
-  }
-  if (typeof v !== "boolean") throw new RowError("BAD_FIELD", key);
-  return v;
+function rejected(refusal: RowRefusal): RejectedRow {
+  return { index: refusal.index, code: rejectCode(refusal), field: refusal.field };
 }
 
-function readProb(o: Obj, key: string, scale: "01" | "100", required: boolean): Rational | null {
-  const v = get(o, key);
-  if (missing(v)) {
-    if (required) throw new RowError("MISSING_FIELD", key);
-    return null;
-  }
-  const r = scale === "01" ? prob01(v) : pct100(v);
-  if (!r.ok) throw new RowError(r.code === "OUT_OF_RANGE" ? "OUT_OF_RANGE" : "BAD_FIELD", key);
+// ---------------------------------------------------------------------------------------------
+// Row builders: a validated row in, this tool's row (with its demotions) out
+
+function rational(dec: string): Rational {
+  const r = toRational(dec);
+  // The validator hands over plain decimal strings; anything else is a bug, not data.
+  if (!r.ok) throw new Error("validated decimal did not parse");
   return r.value;
 }
 
 function dec(r: Rational): string {
   const text = ratToDecExact(r);
   // Decimals and exact divisions by 100 always terminate; anything else is a bug, not data.
-  if (text === null) throw new RowError("BAD_FIELD", "decimal");
+  if (text === null) throw new Error("decimal did not terminate");
   return text;
 }
 
-const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-
-function readTime(o: Obj, key: string, allowDateOnly = false): number | null {
-  const v = get(o, key);
-  if (missing(v)) return null;
-  if (typeof v !== "string") throw new RowError("BAD_FIELD", key);
-  if (!ISO.test(v) && !(allowDateOnly && DATE_ONLY.test(v))) throw new RowError("BAD_FIELD", key);
-  const ms = Date.parse(DATE_ONLY.test(v) ? `${v}T00:00:00Z` : v);
-  if (Number.isNaN(ms)) throw new RowError("BAD_FIELD", key);
-  return ms;
+function ratSigned(r: Rational): SDec {
+  const neg = r.n < 0n;
+  return neg ? `-${dec({ n: -r.n, d: r.d })}` : dec(r);
 }
 
 function iso(ms: number): string {
   return new Date(ms).toISOString();
 }
 
-function readText(o: Obj, key: string): string | null {
-  const v = get(o, key);
-  return typeof v === "string" ? v : null;
+function resanitised(field: "title" | "generic" | "description", value: { readonly value: string } | null): UntrustedContent | null {
+  return value === null ? null : sanitizeField(field, value.value, "quotient");
 }
 
-function readCount(o: Obj, key: string): number | null {
-  const v = get(o, key);
-  return typeof v === "number" && Number.isSafeInteger(v) && v >= 0 && v <= 1_000_000_000 ? v : null;
-}
-
-function text(field: "title" | "generic" | "description", value: string | null): UntrustedContent | null {
-  return value === null ? null : sanitizeField(field, value, "quotient");
-}
-
-// ---------------------------------------------------------------------------------------------
-// Row builders
-
-interface Identity {
-  readonly venue: QuotientVenue;
-  readonly marketKey: string;
-  readonly marketId: string;
-  readonly conditionId: string | null;
-}
-
-function readIdentity(m: Obj): Identity {
-  const venueRaw = get(m, "venue");
-  if (missing(venueRaw)) throw new RowError("MISSING_FIELD", "venue");
-  if (!isQuotientVenue(venueRaw)) throw new RowError("UNKNOWN_VENUE", "venue");
-  const keyRaw = get(m, "marketKey");
-  if (missing(keyRaw)) throw new RowError("MISSING_FIELD", "marketKey");
-  const key = parseMarketKey(keyRaw);
-  if (key === null) throw new RowError("BAD_MARKET_KEY", "marketKey");
-  if (key.venue !== venueRaw) throw new RowError("MARKET_KEY_MISMATCH", "marketKey");
-  const native = get(m, "nativeMarketId");
-  if (!missing(native)) {
-    const asText = typeof native === "number" && Number.isSafeInteger(native) ? String(native) : native;
-    if (typeof asText !== "string" || !NATIVE_ID_RE.test(asText)) throw new RowError("BAD_FIELD", "nativeMarketId");
-    if (asText !== key.id) throw new RowError("MARKET_KEY_MISMATCH", "nativeMarketId");
-  }
-  const cond = get(m, "condition_id");
-  let conditionId: string | null = null;
-  if (!missing(cond)) {
-    if (typeof cond !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(cond)) throw new RowError("BAD_FIELD", "condition_id");
-    conditionId = cond.toLowerCase();
-  }
-  return { venue: key.venue, marketKey: `${key.venue}:${key.id}`, marketId: key.id, conditionId };
-}
-
-function readQuote(venue: QuotientVenue, q: Obj | null, nowMs: number): { quote: QuoteInfo; selected: Rational | null } {
-  if (q === null) {
-    return { quote: { method: null, freshness: "unreported", liveVerified: null, observedAt: null, ageMs: null }, selected: null };
-  }
-  const rawMethod = get(q, "quote_method");
-  let method: QuoteMethod | null = null;
-  if (!missing(rawMethod)) {
-    if (typeof rawMethod !== "string") throw new RowError("BAD_FIELD", "quote_method");
-    const norm = rawMethod.trim().toLowerCase().replace(/[\s-]+/g, "_");
-    if (!(QUOTE_METHODS as readonly string[]).includes(norm)) throw new RowError("UNKNOWN_ENUM", "quote_method");
-    method = norm as QuoteMethod;
-  }
-  const freshRaw = get(q, "freshness");
-  const freshness: QuoteInfo["freshness"] =
-    typeof freshRaw !== "string" ? "unreported" : freshRaw.trim().toLowerCase() === "fresh" ? "fresh" : "not_fresh";
-  const observed = readTime(q, "observed_at");
-  if (observed !== null && observed > nowMs + CLOCK_SKEW_MS) throw new RowError("FUTURE_TIMESTAMP", "observed_at");
-  const selected = readProb(q, "selected_probability", "01", false);
-  const liveVerified =
-    method === null ? null : method !== "graph_snapshot" && (LIVE_QUOTE_VENUES as readonly string[]).includes(venue);
+function quoteInfo(venue: QuotientVenue, view: QuoteView | null, nowMs: number): QuoteInfo {
+  if (view === null) return { method: null, freshness: "unreported", liveVerified: null, observedAt: null, ageMs: null };
   return {
-    quote: {
-      method,
-      freshness,
-      liveVerified,
-      observedAt: observed === null ? null : iso(observed),
-      ageMs: observed === null ? null : Math.max(0, nowMs - observed),
-    },
-    selected,
+    method: view.method,
+    freshness: view.reportedFresh === null ? "unreported" : view.reportedFresh ? "fresh" : "not_fresh",
+    liveVerified: view.method === null ? null : view.method !== "graph_snapshot" && (LIVE_QUOTE_VENUES as readonly string[]).includes(venue),
+    observedAt: view.observedAtMs === null ? null : iso(view.observedAtMs),
+    ageMs: view.observedAtMs === null ? null : Math.max(0, nowMs - view.observedAtMs),
   };
 }
 
-function readQuality(o: Obj): QuotientRow["quality"] {
-  const q = nested(o, "quality");
+function qualityOf(row: ValidatedRow): QuotientRow["quality"] {
+  const q = row.quality;
   if (q === null) return null;
-  const status = readEnum(q, "status", QUALITY_STATUSES, false);
-  const tier = readEnum(q, "tier", QUALITY_TIERS, false);
-  const src = readEnum(q, "assessment_source", ["live", "historical"] as const, false);
-  const live = nested(q, "live");
-  const hist = nested(q, "historical");
   return {
-    status,
-    tier,
-    assessmentSource: src,
-    basis: text("generic", readText(q, "basis")),
-    liveN: live === null ? null : readCount(live, "n"),
-    historicalN: hist === null ? null : readCount(hist, "n"),
+    status: q.status,
+    tier: q.tier,
+    assessmentSource: q.assessmentSource,
+    basis: resanitised("generic", q.basis),
+    liveN: q.liveSample,
+    historicalN: q.historicalSample,
   };
 }
 
 interface Common {
   readonly source: RowSource;
   readonly signalId: string | null;
-  readonly identity: Identity;
-  readonly question: string | null;
+  readonly venue: QuotientVenue;
+  readonly marketKey: string;
+  readonly marketId: string;
+  readonly conditionId: string | null;
+  readonly question: UntrustedContent | null;
   readonly q: Rational;
   readonly orientation: Orientation;
   readonly market: Rational | null;
@@ -405,8 +315,7 @@ interface Common {
   readonly capacity: Rational | null;
   readonly endMs: number | null;
   readonly reportedSpread: Rational | null;
-  readonly reportedDirection: (typeof SPREAD_DIRECTIONS)[number] | null;
-  readonly thesis: string | null;
+  readonly thesis: { readonly value: string } | null;
   readonly warnings: readonly string[];
 }
 
@@ -420,14 +329,7 @@ function finish(c: Common, o: ParseOptions): QuotientRow {
     spread = dec(absR(diff));
     if (cmp(diff, ZERO) > 0) direction = "q_higher";
     else if (cmp(diff, ZERO) < 0) direction = "q_lower";
-    if (c.reportedDirection !== null && direction !== null && c.reportedDirection !== direction) {
-      throw new RowError("INCONSISTENT", "spread_direction");
-    }
-    if (c.reportedSpread !== null && cmp(absR(sub(c.reportedSpread, absR(diff))), { n: 1n, d: 100n }) > 0) {
-      // Quotient's spread is built on its own selected quote; a large gap means the inputs we
-      // were given do not describe the same quote.
-      throw new RowError("INCONSISTENT", "spread");
-    }
+    // The validator refused a reported spread more than 0.01 away; a smaller gap is Quotient's rounding.
     if (c.reportedSpread !== null && !eq(c.reportedSpread, absR(diff))) warnings.push("reported_spread_differs_slightly");
   }
 
@@ -455,9 +357,10 @@ function finish(c: Common, o: ParseOptions): QuotientRow {
   if (c.isSignal && c.drawdown !== false) add("DRAWDOWN_RISK_ELEVATED_OR_UNKNOWN");
   if (o.minCapacityUsd !== undefined) {
     const need = toRational(o.minCapacityUsd);
-    if (!need.ok) throw new RowError("BAD_FIELD", "minCapacityUsd");
-    if (c.capacity === null) add("CAPACITY_UNKNOWN");
-    else if (cmp(c.capacity, need.value) < 0) add("CAPACITY_BELOW_SIZE");
+    if (need.ok) {
+      if (c.capacity === null) add("CAPACITY_UNKNOWN");
+      else if (cmp(c.capacity, need.value) < 0) add("CAPACITY_BELOW_SIZE");
+    }
   }
   if (c.qCoverage === "under_review") add("COVERAGE_UNDER_REVIEW");
   else if (c.qCoverage === "research_only") add("COVERAGE_RESEARCH_ONLY");
@@ -470,11 +373,11 @@ function finish(c: Common, o: ParseOptions): QuotientRow {
   return {
     source: c.source,
     signalId: c.signalId,
-    venue: c.identity.venue,
-    marketKey: c.identity.marketKey,
-    marketId: c.identity.marketId,
-    conditionId: c.identity.conditionId,
-    question: text("title", c.question),
+    venue: c.venue,
+    marketKey: c.marketKey,
+    marketId: c.marketId,
+    conditionId: c.conditionId,
+    question: c.question,
     qYes: dec(c.q),
     orientation: c.orientation,
     marketOdds: c.market === null ? null : dec(c.market),
@@ -498,154 +401,110 @@ function finish(c: Common, o: ParseOptions): QuotientRow {
     drawdownRiskElevated: c.drawdown,
     capacityUsd: c.capacity === null ? null : dec(c.capacity),
     endDate: c.endMs === null ? null : iso(c.endMs),
-    ...(o.includeText === true && c.thesis !== null ? { thesis: sanitizeField("description", c.thesis, "quotient") } : {}),
+    ...(o.includeText === true && c.thesis !== null ? { thesis: sanitizeField("description", c.thesis.value, "quotient") } : {}),
     warnings,
     demotions,
     usable: demotions.length === 0,
   };
 }
 
-function ratSigned(r: Rational): SDec {
-  const neg = r.n < 0n;
-  const text = ratToDecExact(neg ? { n: -r.n, d: r.d } : r);
-  if (text === null) throw new RowError("BAD_FIELD", "decimal");
-  return neg ? `-${text}` : text;
+function sportsOrientation(row: ValidatedRow): Orientation {
+  return { kind: "sports_yes_side", yesSide: resanitised("generic", row.sports?.yesSide ?? null), mappedToTokens: false };
 }
 
-function readCoverage(m: Obj | null, fallback: QCoverage | null): QCoverage {
-  const v = m === null ? null : readEnum(m, "q_coverage", Q_COVERAGE, fallback === null);
-  if (v !== null) return v;
-  if (fallback !== null) return fallback;
-  throw new RowError("MISSING_FIELD", "q_coverage");
-}
-
-function checkFuture(ms: number | null, nowMs: number, field: string): void {
-  if (ms !== null && ms > nowMs + CLOCK_SKEW_MS) throw new RowError("FUTURE_TIMESTAMP", field);
-}
-
-// Mispriced rows: top-level market fields (research 12, section 5.2).
-function mispricedRow(row: Obj, o: ParseOptions): QuotientRow {
-  const identity = readIdentity(row);
-  const q = readProb(row, "quotient_odds", "01", true) as Rational;
-  const { quote, selected } = readQuote(identity.venue, nested(row, "venue_quote"), o.nowMs);
-  const odds = readProb(row, "market_odds", "01", false);
-  if (odds !== null && selected !== null && !eq(odds, selected)) throw new RowError("INCONSISTENT", "market_odds");
-  const market = odds ?? selected;
-  if (market === null) throw new RowError("NO_QUOTE", "market_odds");
-  const forecast = nested(row, "forecast");
-  const forecastMs = forecast === null ? null : readTime(forecast, "created_at");
-  checkFuture(forecastMs, o.nowMs, "created_at");
-  if (forecast !== null) {
-    const fp = readProb(forecast, "probability", "01", false);
-    if (fp !== null && !eq(fp, q)) throw new RowError("INCONSISTENT", "probability");
-  }
-  const sports = nested(row, "sports");
-  const yesSide = sports === null ? null : readText(sports, "yes_side");
-  const orientation: Orientation =
-    sports === null ? { kind: "venue_yes" } : { kind: "sports_yes_side", yesSide: text("generic", yesSide), mappedToTokens: false };
-  const fs = nested(row, "forecast_status");
-  const endMs = readTime(row, "end_date", true);
+// Mispriced rows (research 12, section 5.2).
+function mispricedRow(row: ValidatedRow, o: ParseOptions): QuotientRow {
+  const venue = row.venue as QuotientVenue;
+  const id = row.nativeMarketId as string;
   return finish(
     {
       source: "mispriced",
       signalId: null,
-      identity,
-      question: readText(row, "question"),
-      q,
-      orientation,
-      market,
+      venue,
+      marketKey: `${venue}:${id}`,
+      marketId: id,
+      conditionId: row.conditionId,
+      question: resanitised("title", row.question),
+      q: rational(row.qYesRaw),
+      orientation: row.sports === null ? { kind: "venue_yes" } : sportsOrientation(row),
+      market: row.marketOdds === null ? null : rational(row.marketOdds),
       side: null,
       atPublish: null,
-      qCoverage: readCoverage(row, null),
+      qCoverage: row.coverage as QCoverage,
       entryEligible: null,
       entryStatus: null,
       inPlay: null,
       isActive: null,
       retiredReason: null,
-      forecastState: fs === null ? null : readEnum(fs, "state", FORECAST_STATES, false),
-      quote,
-      forecastMs,
-      quality: forecast === null ? null : readQuality(forecast),
-      inDispute: readBool(row, "inDispute"),
+      forecastState: row.forecastStatus,
+      quote: quoteInfo(venue, row.quote, o.nowMs),
+      forecastMs: row.forecast.createdAtMs,
+      quality: qualityOf(row),
+      inDispute: row.inDispute,
       drawdown: null,
       isSignal: false,
       capacity: null,
-      endMs,
-      reportedSpread: readProb(row, "spread", "01", false),
-      reportedDirection: readEnum(row, "spread_direction", SPREAD_DIRECTIONS, false),
-      thesis: forecast === null ? null : readText(forecast, "thesis"),
+      endMs: row.endsAtMs,
+      reportedSpread: row.spread === null ? null : rational(row.spread),
+      thesis: row.forecast.thesis,
       warnings: [],
     },
     o,
   );
 }
 
-function atPublish(row: Obj, warnings: string[]): QuotientRow["atPublish"] {
-  const eq0 = readProb(row, "entry_q", "100", false);
-  const ep = readProb(row, "entry_pm", "100", false);
-  if (eq0 === null && ep === null) return null;
-  const raw = get(row, "entry_q");
-  // entry_q is documented on 0..100. A value below 1 may mean the scale changed to 0..1.
-  if (typeof raw === "number" && raw > 0 && raw < 1) warnings.push("entry_q_below_1_on_a_0_100_scale");
-  return { q: eq0 === null ? null : dec(eq0), marketPrice: ep === null ? null : dec(ep) };
-}
-
 // Non-sports signals (research 12, section 5.1).
-function signalRow(row: Obj, o: ParseOptions): QuotientRow {
-  const m = nested(row, "market");
-  if (m === null) throw new RowError("MISSING_FIELD", "market");
-  const identity = readIdentity(m);
-  const q = readProb(row, "latest_q", "01", true) as Rational;
-  const { quote, selected } = readQuote(identity.venue, nested(row, "venue_quote"), o.nowMs);
-  const odds = readProb(m, "market_odds", "01", false);
-  if (odds !== null && selected !== null && !eq(odds, selected)) throw new RowError("INCONSISTENT", "market_odds");
-  const market = odds ?? selected;
-  if (market === null) throw new RowError("NO_QUOTE", "market_odds");
-  const side = readEnum(row, "side", ["YES", "NO"] as const, true);
-  const fs = nested(row, "forecast_status");
-  const forecastMs = readTime(row, "forecast_updated_at");
-  checkFuture(forecastMs, o.nowMs, "forecast_updated_at");
-  const id = get(row, "id");
-  const live = readBool(row, "live_priced");
-  const warnings: string[] = [];
+function signalRow(row: ValidatedRow, o: ParseOptions): QuotientRow {
+  const venue = row.venue as QuotientVenue;
+  const id = row.nativeMarketId as string;
+  const signal = row.signal;
+  if (signal === null) throw new Error("a validated signal row has no signal view");
+  const quote = quoteInfo(venue, row.quote, o.nowMs);
   // live_priced is true only for a verified live Polymarket International or Kalshi quote.
+  const live = signal.livePriced;
   const q2: QuoteInfo = live === null ? quote : { ...quote, liveVerified: quote.liveVerified === false ? false : live };
-  const capRaw = get(row, "capacity_usd_at_2c");
-  let capacity: Rational | null = null;
-  if (!missing(capRaw)) {
-    const c = toRational(capRaw);
-    if (!c.ok) throw new RowError("BAD_FIELD", "capacity_usd_at_2c");
-    capacity = c.value;
+  const warnings: string[] = [];
+  let atPublish: QuotientRow["atPublish"] = null;
+  if (signal.entryQ !== null || signal.entryPm !== null) {
+    // entry_q is documented on 0..100. A value below 1 there (below 0.01 once normalised) may mean the scale changed.
+    if (signal.entryQ !== null) {
+      const eq0 = rational(signal.entryQ);
+      if (cmp(eq0, ZERO) > 0 && cmp(eq0, { n: 1n, d: 100n }) < 0) warnings.push("entry_q_below_1_on_a_0_100_scale");
+    }
+    atPublish = { q: signal.entryQ === null ? null : dec(rational(signal.entryQ)), marketPrice: signal.entryPm === null ? null : dec(rational(signal.entryPm)) };
   }
+  const market = row.marketOdds ?? row.quote?.probability ?? null;
   return finish(
     {
       source: "signal",
-      signalId: typeof id === "string" && /^[A-Za-z0-9_.:-]{1,80}$/.test(id) ? id : null,
-      identity,
-      question: readText(m, "question"),
-      q,
+      signalId: signal.id,
+      venue,
+      marketKey: `${venue}:${id}`,
+      marketId: id,
+      conditionId: row.conditionId,
+      question: resanitised("title", row.question),
+      q: rational(row.qYesRaw),
       orientation: { kind: "venue_yes" },
-      market,
-      side,
-      atPublish: atPublish(row, warnings),
-      qCoverage: readCoverage(m, null),
-      entryEligible: readBool(row, "entry_eligible", true),
-      entryStatus: readEnum(row, "entry_status", ENTRY_STATUSES, true),
-      inPlay: readBool(row, "in_play"),
-      isActive: readBool(row, "is_active", true),
-      retiredReason: readEnum(row, "retired_reason", RETIRED_REASONS, false),
-      forecastState: fs === null ? null : readEnum(fs, "state", FORECAST_STATES, false),
+      market: market === null ? null : rational(market),
+      side: signal.side,
+      atPublish,
+      qCoverage: row.coverage as QCoverage,
+      entryEligible: signal.entryEligible,
+      entryStatus: signal.entryStatus,
+      inPlay: signal.inPlay,
+      isActive: signal.isActive,
+      retiredReason: signal.retiredReason,
+      forecastState: row.forecastStatus,
       quote: q2,
-      forecastMs,
-      quality: readQuality(row),
-      inDispute: readBool(m, "inDispute"),
-      drawdown: readBool(row, "drawdown_risk_elevated"),
+      forecastMs: row.forecast.createdAtMs,
+      quality: qualityOf(row),
+      inDispute: row.inDispute,
+      drawdown: signal.drawdownRiskElevated,
       isSignal: true,
-      capacity,
-      endMs: readTime(m, "end_date", true),
+      capacity: signal.capacityUsdAt2c === null ? null : rational(signal.capacityUsdAt2c),
+      endMs: row.endsAtMs,
       reportedSpread: null,
-      reportedDirection: null,
-      thesis: readText(row, "thesis"),
+      thesis: row.forecast.thesis,
       warnings,
     },
     o,
@@ -654,66 +513,47 @@ function signalRow(row: Obj, o: ParseOptions): QuotientRow {
 
 // Sports signals (kind "sports_game", API 20.0.0): one result per graph-linked listing, each with
 // its own eligibility. No venue is primary; never take markets[0].
-function sportsRows(row: Obj, o: ParseOptions, rejected: RejectedRow[], index: number): QuotientRow[] {
-  const pick = nested(row, "pick");
-  const sports = nested(row, "sports");
-  const listings = get(row, "markets");
-  if (pick === null || sports === null || !Array.isArray(listings)) throw new RowError("MISSING_FIELD", "pick");
-  const q = readProb(pick, "probability", "01", true) as Rational;
-  const forecastMs = readTime(row, "forecast_updated_at");
-  checkFuture(forecastMs, o.nowMs, "forecast_updated_at");
-  const id = get(row, "id");
-  const out: QuotientRow[] = [];
-  for (const listing of listings.slice(0, 50)) {
-    try {
-      if (!isObj(listing)) throw new RowError("BAD_ROW", "markets");
-      const identity = readIdentity(listing);
-      const price = readProb(listing, "price", "01", false);
-      const quoteInfo = readQuote(identity.venue, nested(listing, "venue_quote"), o.nowMs);
-      const market = price ?? quoteInfo.selected;
-      const fs = nested(row, "forecast_status");
-      out.push(
-        finish(
-          {
-            source: "signal_sports_listing",
-            signalId: typeof id === "string" && /^[A-Za-z0-9_.:-]{1,80}$/.test(id) ? id : null,
-            identity,
-            question: readText(listing, "question") ?? readText(row, "question"),
-            q,
-            orientation: { kind: "sports_yes_side", yesSide: text("generic", readText(sports, "yes_side")), mappedToTokens: false },
-            market,
-            side: readEnum(listing, "signal_side", ["YES", "NO"] as const, false),
-            atPublish: null,
-            // Every covered sports market is `experimental`; a missing label is treated the same way.
-            qCoverage: readCoverage(listing, "experimental"),
-            entryEligible: readBool(listing, "entry_eligible", true),
-            entryStatus: readEnum(listing, "entry_status", ENTRY_STATUSES, true),
-            inPlay: readBool(row, "in_play"),
-            isActive: readBool(row, "is_active"),
-            retiredReason: readEnum(row, "retired_reason", RETIRED_REASONS, false),
-            forecastState: fs === null ? null : readEnum(fs, "state", FORECAST_STATES, false),
-            quote: quoteInfo.quote,
-            forecastMs,
-            quality: readQuality(row),
-            inDispute: null,
-            drawdown: readBool(row, "drawdown_risk_elevated"),
-            isSignal: true,
-            capacity: null,
-            endMs: readTime(row, "resolves_at"),
-            reportedSpread: null,
-            reportedDirection: null,
-            thesis: readText(row, "thesis"),
-            warnings: [],
-          },
-          o,
-        ),
-      );
-    } catch (e) {
-      if (e instanceof RowError) rejected.push({ index, code: e.code, field: e.field });
-      else throw e;
-    }
-  }
-  return out;
+function sportsRows(row: ValidatedRow, o: ParseOptions): QuotientRow[] {
+  const signal = row.signal;
+  if (signal === null || row.sports === null) throw new Error("a validated sports row has no signal or sports view");
+  return row.sports.listings.map((listing: SportsListing) => {
+    const market = listing.price ?? listing.quote?.probability ?? null;
+    return finish(
+      {
+        source: "signal_sports_listing",
+        signalId: signal.id,
+        venue: listing.venue,
+        marketKey: listing.marketKey,
+        marketId: listing.nativeMarketId,
+        conditionId: listing.conditionId,
+        question: resanitised("title", listing.question),
+        q: rational(row.qYesRaw),
+        orientation: sportsOrientation(row),
+        market: market === null ? null : rational(market),
+        side: listing.signalSide,
+        atPublish: null,
+        qCoverage: listing.coverage,
+        entryEligible: listing.entryEligible,
+        entryStatus: listing.entryStatus,
+        inPlay: signal.inPlay,
+        isActive: signal.isActive,
+        retiredReason: signal.retiredReason,
+        forecastState: row.forecastStatus,
+        quote: quoteInfo(listing.venue, listing.quote, o.nowMs),
+        forecastMs: row.forecast.createdAtMs,
+        quality: qualityOf(row),
+        inDispute: null,
+        drawdown: signal.drawdownRiskElevated,
+        isSignal: true,
+        capacity: null,
+        endMs: row.endsAtMs,
+        reportedSpread: null,
+        thesis: row.forecast.thesis,
+        warnings: [],
+      },
+      o,
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -759,32 +599,31 @@ export function parseSignalBody(ctx: FlagContext, kind: ParseKind, body: unknown
   if (rawRows === null) return { ok: false, error: "BAD_SHAPE", detail: "expected an array of rows or an object with exactly one of markets, signals, items or data holding an array" };
   if (rawRows.length > MAX_ROWS) return { ok: false, error: "TOO_MANY_ROWS", detail: `at most ${MAX_ROWS} rows per call` };
 
+  // The rows the agent selected, in the envelope of the route they came from.
+  const envelope = kind === "mispriced" ? { markets: rawRows } : { signals: rawRows };
+  const outcome = ingest(envelope, { fetchedAtMs: options.nowMs, transport: "T3", route: kind });
+  const validated = outcome.ok ? outcome.set.rows : [];
+  const refusals = outcome.ok ? outcome.set.rejected : outcome.rejected;
+
   const rows: QuotientRow[] = [];
-  const rejected: RejectedRow[] = [];
-  rawRows.forEach((raw, index) => {
-    try {
-      if (!isObj(raw)) throw new RowError("BAD_ROW", "row");
-      if (kind === "mispriced") {
-        rows.push(mispricedRow(raw, options));
-      } else if (get(raw, "kind") === "sports_game") {
-        rows.push(...sportsRows(raw, options, rejected, index));
-      } else {
-        rows.push(signalRow(raw, options));
-      }
-    } catch (e) {
-      if (e instanceof RowError) rejected.push({ index, code: e.code, field: e.field });
-      else throw e;
-    }
-  });
+  const rejectedRows: RejectedRow[] = refusals.map(rejected);
+  for (const row of validated) {
+    if (row.kind === "mispriced") rows.push(mispricedRow(row, options));
+    else if (row.kind === "sports_signal") {
+      rows.push(...sportsRows(row, options));
+      for (const refusal of row.sports?.listingRefusals ?? []) rejectedRows.push(rejected(refusal));
+    } else rows.push(signalRow(row, options));
+  }
+  rejectedRows.sort((a, b) => a.index - b.index);
 
   return {
     ok: true,
     kind,
     parsedAtMs: options.nowMs,
     rows,
-    rejected,
-    schemaDrift: rejected.some((r) => r.code === "UNKNOWN_ENUM" || r.code === "UNKNOWN_VENUE"),
-    counts: { received: rawRows.length, parsed: rows.length, usable: rows.filter((r) => r.usable).length, rejected: rejected.length },
+    rejected: rejectedRows,
+    schemaDrift: rejectedRows.some((r) => r.code === "UNKNOWN_ENUM" || r.code === "UNKNOWN_VENUE"),
+    counts: { received: rawRows.length, parsed: rows.length, usable: rows.filter((r) => r.usable).length, rejected: rejectedRows.length },
     restricted: { source: "quotient", memoryOnly: true, persisted: false, exported: false },
     clause: QUOTIENT_CLAUSE,
     disclosure: DISCLOSURE,

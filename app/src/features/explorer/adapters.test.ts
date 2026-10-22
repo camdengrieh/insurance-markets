@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { harness } from "../../venues/polymarket/fixtures/harness";
-import { recorded } from "../../venues/polymarket/fixtures/load";
+import { harness } from "@sdk/venues/polymarket/fixtures/harness";
+import { recorded } from "@sdk/venues/polymarket/fixtures/load";
 import { createExplorerAdapters } from "./adapters";
 
 const GAMMA = "https://gamma-api.polymarket.com";

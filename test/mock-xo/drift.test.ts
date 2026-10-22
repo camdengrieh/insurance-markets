@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
-import { fixture } from "../fixtures/xo/load.js";
+import { XO_FIXTURE_DIRECTORY, fixture } from "../fixtures/xo/load.js";
 import {
   checkMockAgainstFixtures,
   compareDirectoryToFixtures,
@@ -19,7 +19,7 @@ import {
 } from "./drift.js";
 import { startMockXo, type MockXo } from "./server.js";
 
-const FIXTURES = new URL("../fixtures/xo/", import.meta.url).pathname;
+const FIXTURES = XO_FIXTURE_DIRECTORY.pathname;
 
 describe("shape inference and diff", () => {
   const sample = { id: 1, name: "x", tags: ["a", "b"], price: "0.5", at: "2026-10-19T00:00:00.000Z", hex: "0xab", inner: { ok: true, maybe: null }, rows: [{ a: 1 }, { a: 2, b: "z" }] };

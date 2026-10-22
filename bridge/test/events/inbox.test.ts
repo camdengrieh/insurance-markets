@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
+import { getAddress } from "viem";
+
+import { clobCapAmount, computeClobAmounts } from "../../../src/clob/amounts.js";
+import { buildDecodedClobOrder, rebuildClobOrder } from "../../../src/clob/decoded.js";
+import { depositWalletAddress } from "../../../src/clob/polymarket/deposit-wallet.js";
+import { POLYMARKET_EXCHANGES } from "../../../src/clob/venues.js";
+import { digestTag } from "../../../src/relay/contract.js";
 import { PreparedStore } from "../../../relay/prepared.js";
 import { openRelayStorage } from "../../../relay/store.js";
 import { createMemoryAudit } from "../../../relay/audit.js";
@@ -172,6 +179,56 @@ describe("ingest accepts the relay's record", () => {
     assert.equal(rig.inbox.ingestToolResult("text", "ui"), undefined);
     assert.equal(rig.inbox.ingestToolResult(null, "ui"), undefined);
     assert.equal(rig.inbox.size(), 1);
+  });
+});
+
+// A Polymarket order made by the owner's Deposit Wallet (signature type 3), built with the relay's own builders.
+function depositWalletOrder(account?: string): Obj {
+  const owner = getAddress(OWNER);
+  const wallet = depositWalletAddress(owner, "beacon");
+  const amounts = computeClobAmounts({ side: 0, price: "0.52", shares: "10", grid: { tick: "0.01", priceDecimals: 2 }, sizeDecimals: 2, minSharesMicro: 0n });
+  const cap = clobCapAmount(amounts);
+  const decoded = buildDecodedClobOrder({
+    owner,
+    amounts,
+    feeBps: cap.feeBps,
+    tif: "GTC",
+    postOnly: false,
+    ttlS: null,
+    marketId: `0x${"99".repeat(32)}`,
+    tick: "0.01",
+    minSize: "5",
+    order: {
+      venue: "polymarket",
+      expiration: 0n,
+      domain: { version: POLYMARKET_EXCHANGES.v2.version, verifyingContract: POLYMARKET_EXCHANGES.v2.verifyingContract },
+      order: { salt: 991n, maker: wallet, signer: wallet, tokenId: 1n, makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side: 0, signatureType: 3, timestamp: 1792411200000n, metadata: `0x${"00".repeat(32)}`, builder: `0x${"00".repeat(32)}` },
+    },
+  });
+  const rebuilt = rebuildClobOrder(decoded);
+  if (!rebuilt.ok) throw new Error(rebuilt.reason);
+  return {
+    prepared_id: ID_C,
+    kind: "clob_order",
+    owner,
+    account: account ?? wallet,
+    expires_at: "2026-10-19T12:04:00Z",
+    sign: { intent: { op: "typedData", typedData: rebuilt.typed_data }, expected_digest: rebuilt.digest, digest_form: "eip712OrderHash" },
+    summary: { lines: rebuilt.lines, digest_tag: digestTag(rebuilt.digest), inner_hash_tag: digestTag(rebuilt.inner_hash), inner_hash_kind: "typed_data_hash" },
+    caps: { reserved_usd: decoded.terms.cap_usd, day_remaining_usd: "44.28" },
+    capabilities: { PM1: "unknown", PM2: "unknown", PB3: "unknown" },
+    warnings: [],
+    decoded,
+    quote: { venue: "polymarket", price: decoded.terms.price, shares: decoded.terms.shares, max_outlay_usd: decoded.terms.max_outlay_usd ?? "0", fee_bound_bps: decoded.terms.fee_bound_bps, expires_at: null },
+  };
+}
+
+describe("a Polymarket Deposit Wallet order", () => {
+  it("is taken when its account is the wallet derived from the owner, and refused when it is another owner's wallet", async () => {
+    const rig = await rigOf();
+    assert.equal(ingest(rig, depositWalletOrder()).ok, true);
+    const theirs = depositWalletAddress(getAddress(`0x${"44".repeat(20)}`), "beacon");
+    assert.deepEqual(ingest(rig, { ...depositWalletOrder(theirs), prepared_id: ID_D }), { ok: false, reason: "record_mismatch", field: "account" });
   });
 });
 

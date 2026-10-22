@@ -6,7 +6,7 @@
 // reader that gives no rules hash, and a close time that is missing all stop a link from being "verified".
 
 import type { Status } from "../../../core/ports";
-import { capSpreadLabel, type SpreadLabel } from "../../../venues/quotient";
+import { capSpreadLabel, type SpreadLabel } from "../quotient";
 import type { Link, LinkLeg } from "./schema";
 
 export type LegObservation =

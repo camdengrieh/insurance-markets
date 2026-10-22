@@ -8,7 +8,7 @@ import { PoliteClient } from "../../recorder/http.js";
 import { RecorderStore } from "../../recorder/store.js";
 import type { Target } from "../../recorder/types.js";
 import { seededRandom } from "../../recorder/clock.js";
-import { HOSTILE, market, startWorld, tempDir, totalSeen, T0, type MarketSpec, type World } from "./helpers.js";
+import { HOSTILE, cond, market, startWorld, tempDir, totalSeen, T0, type MarketSpec, type World } from "./helpers.js";
 import { ALL_RECORDABLE_HOSTS } from "../../recorder/allowlist.js";
 
 const H = 3_600_000;
@@ -42,11 +42,19 @@ async function rig(specs: MarketSpec[], overrides: Record<string, unknown> = {},
   return { world, store, client, collector: new Collector({ store, client, clock: world.clock, config }) };
 }
 
+// Condition ids derived from a label (the shared XO and Polymarket parsers accept only 32-byte hex ids).
+const A1 = cond("a1");
+const A2 = cond("a2");
+const B1 = cond("b1");
+const B2 = cond("b2");
+const B3 = cond("b3");
+const FAR = cond("far");
+const NEAR = cond("near");
 const xo = (id: string, extra: Partial<MarketSpec> = {}): MarketSpec => market("xo", id, { fee: "600", ...extra });
 const poly = (id: string, extra: Partial<MarketSpec> = {}): MarketSpec => market("polymarket", id, { fee: "0.04", ...extra });
 
 test("first tick resolves each market and records one book; a second tick right after does nothing", async () => {
-  const r = await rig([xo("0xa1"), poly("0xb1"), market("limitless", "slug-1")]);
+  const r = await rig([xo(A1), poly(B1), market("limitless", "slug-1")]);
   try {
     const s1 = await r.collector.tick();
     assert.equal(s1.due, 3);
@@ -58,12 +66,12 @@ test("first tick resolves each market and records one book; a second tick right 
     const s2 = await r.collector.tick();
     assert.equal(s2.due, 0);
     assert.equal(totalSeen(r.world), before, "no request when nothing is due");
-    const snap = r.store.snapshots("xo:0xa1")[0];
+    const snap = r.store.snapshots(`xo:${A1}`)[0];
     assert.equal(snap?.bestBid, "0.4");
     assert.equal(snap?.bestAsk, "0.42");
     assert.equal(snap?.venueTsMs, T0);
     assert.equal(r.store.snapshots("limitless:slug-1")[0]?.bestBid, "0.4");
-    assert.equal(r.store.marketStates("polymarket:0xb1")[0]?.fee.params["rate"], "0.04");
+    assert.equal(r.store.marketStates(`polymarket:${B1}`)[0]?.fee.params["rate"], "0.04");
     // host stats were flushed
     assert.ok(r.store.hostTotals().length >= 4);
   } finally {
@@ -73,15 +81,15 @@ test("first tick resolves each market and records one book; a second tick right 
 
 test("cadence: hourly for far markets, every five minutes for short-dated ones", async () => {
   const soon = new Date(T0 + 2 * DAY).toISOString();
-  const r = await rig([xo("0xfar"), xo("0xnear", { closeIso: soon })]);
+  const r = await rig([xo(FAR), xo(NEAR, { closeIso: soon })]);
   try {
     await r.collector.tick();
     for (let i = 0; i < 12; i += 1) {
       r.world.clock.advance(300_000);
       await r.collector.tick();
     }
-    assert.equal(r.store.snapshots("xo:0xnear").length, 13);
-    assert.equal(r.store.snapshots("xo:0xfar").length, 2, "one at the start and one after the hour");
+    assert.equal(r.store.snapshots(`xo:${NEAR}`).length, 13);
+    assert.equal(r.store.snapshots(`xo:${FAR}`).length, 2, "one at the start and one after the hour");
     assert.equal(r.store.events("gap").length, 0);
   } finally {
     r.store.close();
@@ -92,7 +100,7 @@ test("resumable: a restart on the same database continues on schedule without a 
   const dir = tempDir();
   try {
     const path = join(dir.path, "r.sqlite");
-    const a = await rig([xo("0xa1")], {}, path);
+    const a = await rig([xo(A1)], {}, path);
     await a.collector.tick();
     a.store.endRun(a.world.clock.nowMs(), "signal");
     a.store.close();
@@ -111,7 +119,7 @@ test("resumable: a restart on the same database continues on schedule without a 
     world.clock.advance(51 * 60_000);
     const s2 = await c2.tick();
     assert.equal(s2.booksOk, 1);
-    assert.equal(store.snapshots("xo:0xa1").length, 2);
+    assert.equal(store.snapshots(`xo:${A1}`).length, 2);
     assert.equal(store.events("gap").length, 0);
     store.close();
   } finally {
@@ -120,7 +128,7 @@ test("resumable: a restart on the same database continues on schedule without a 
 });
 
 test("a long outage is logged as a gap with both ends, and collection resumes", async () => {
-  const r = await rig([xo("0xa1")]);
+  const r = await rig([xo(A1)]);
   try {
     await r.collector.tick();
     r.world.clock.advance(5 * H);
@@ -128,14 +136,14 @@ test("a long outage is logged as a gap with both ends, and collection resumes", 
     const gaps = r.store.events("gap");
     assert.equal(gaps.length, 1);
     assert.match(gaps[0]?.detail ?? "", /^from=\d+ to=\d+ missed_ms=18000000$/);
-    assert.equal(r.store.snapshots("xo:0xa1").length, 2);
+    assert.equal(r.store.snapshots(`xo:${A1}`).length, 2);
   } finally {
     r.store.close();
   }
 });
 
 test("one host failing backs off and does not stop the others", async () => {
-  const r = await rig([xo("0xa1"), poly("0xb1")], { backoff: { baseMs: 1000, maxMs: 4000, factor: 2, jitter: 0, maxAttempts: 2 }, breaker: { failures: 50, cooldownMs: 1000 } });
+  const r = await rig([xo(A1), poly(B1)], { backoff: { baseMs: 1000, maxMs: 4000, factor: 2, jitter: 0, maxAttempts: 2 }, breaker: { failures: 50, cooldownMs: 1000 } });
   try {
     const clob = r.world.hosts["clob.polymarket.com"];
     assert.ok(clob);
@@ -145,7 +153,7 @@ test("one host failing backs off and does not stop the others", async () => {
     assert.equal(s.booksFailed, 1);
     assert.ok(r.store.events("backoff").some((e) => e.host === "clob.polymarket.com"));
     assert.ok(r.store.events("book_failed").length === 1);
-    assert.equal(r.store.snapshots("polymarket:0xb1").length, 0);
+    assert.equal(r.store.snapshots(`polymarket:${B1}`).length, 0);
     assert.ok(r.store.hostTotals().find((h) => h.host === "clob.polymarket.com")?.throttled ?? 0 >= 1);
   } finally {
     r.store.close();
@@ -153,7 +161,7 @@ test("one host failing backs off and does not stop the others", async () => {
 });
 
 test("a repeatedly failing host trips the breaker and later calls are skipped, not sent", async () => {
-  const specs = [poly("0xb1"), poly("0xb2"), poly("0xb3")];
+  const specs = [poly(B1), poly(B2), poly(B3)];
   const r = await rig(specs, { backoff: { baseMs: 1000, maxMs: 4000, factor: 2, jitter: 0, maxAttempts: 1 }, breaker: { failures: 2, cooldownMs: 3_600_000 } });
   try {
     const gamma = r.world.hosts["gamma-api.polymarket.com"];
@@ -170,7 +178,7 @@ test("a repeatedly failing host trips the breaker and later calls are skipped, n
 });
 
 test("a missing book (404) is logged and retried on the next interval, not hammered", async () => {
-  const r = await rig([xo("0xa1", { bookStatus: 404 })]);
+  const r = await rig([xo(A1, { bookStatus: 404 })]);
   try {
     await r.collector.tick();
     assert.equal(r.store.events("book_failed")[0]?.detail, "reason=http_error status=404");
@@ -178,25 +186,25 @@ test("a missing book (404) is logged and retried on the next interval, not hamme
     r.world.clock.advance(60_000);
     await r.collector.tick();
     assert.equal(totalSeen(r.world), seen, "not retried before the interval");
-    r.world.markets.get("xo:0xa1")!.bookStatus = undefined;
+    r.world.markets.get(`xo:${A1}`)!.bookStatus = undefined;
     r.world.clock.advance(H);
     await r.collector.tick();
-    assert.equal(r.store.snapshots("xo:0xa1").length, 1);
+    assert.equal(r.store.snapshots(`xo:${A1}`).length, 1);
   } finally {
     r.store.close();
   }
 });
 
 test("a closed market is retired: no further requests for it", async () => {
-  const r = await rig([xo("0xa1", { status: "resolved" }), xo("0xa2")]);
+  const r = await rig([xo(A1, { status: "resolved" }), xo(A2)]);
   try {
     await r.collector.tick();
     assert.equal(r.store.events("retired").length, 1);
-    assert.equal(r.store.snapshots("xo:0xa1").length, 0, "no book for a resolved market");
-    const seen = r.world.hosts["api-mainnet.xo.market"]!.seen.filter((q) => q.path.endsWith("0xa1")).length;
+    assert.equal(r.store.snapshots(`xo:${A1}`).length, 0, "no book for a resolved market");
+    const seen = r.world.hosts["api-mainnet.xo.market"]!.seen.filter((q) => q.path.endsWith(A1)).length;
     r.world.clock.advance(3 * DAY);
     await r.collector.tick();
-    assert.equal(r.world.hosts["api-mainnet.xo.market"]!.seen.filter((q) => q.path.endsWith("0xa1")).length, seen);
+    assert.equal(r.world.hosts["api-mainnet.xo.market"]!.seen.filter((q) => q.path.endsWith(A1)).length, seen);
   } finally {
     r.store.close();
   }
@@ -204,7 +212,7 @@ test("a closed market is retired: no further requests for it", async () => {
 
 test("polling stops after close plus the grace period", async () => {
   const close = new Date(T0 + 2 * H).toISOString();
-  const r = await rig([xo("0xa1", { closeIso: close })]);
+  const r = await rig([xo(A1, { closeIso: close })]);
   try {
     await r.collector.tick();
     r.world.clock.advance(2 * H + 7 * H);
@@ -218,7 +226,7 @@ test("polling stops after close plus the grace period", async () => {
 });
 
 test("clock skew is logged from the Date header and warned about when large", async () => {
-  const r = await rig([xo("0xa1")]);
+  const r = await rig([xo(A1)]);
   try {
     r.world.hosts["orderbooks.xo.market"]!.handler = (_q, _u) => ({
       body: { bids: [{ price: "0.4", size: "1" }], asks: [{ price: "0.42", size: "1" }], timestamp: String(T0) },
@@ -237,26 +245,26 @@ test("clock skew is logged from the Date header and warned about when large", as
 });
 
 test("a clock that runs backwards never writes an out-of-order row", async () => {
-  const r = await rig([xo("0xa1")]);
+  const r = await rig([xo(A1)]);
   try {
     await r.collector.tick();
     r.world.clock.advance(2 * H);
     await r.collector.tick();
     r.world.clock.set(T0 + 30 * 60_000);
     // Force the target due again by pretending its last book is old.
-    const st = r.store.targetStates().get("xo:0xa1");
+    const st = r.store.targetStates().get(`xo:${A1}`);
     assert.ok(st);
     r.store.saveTargetState({ ...st, lastBookMs: T0 - 5 * H });
     await r.collector.tick();
     assert.equal(r.store.events("clock_regress").length, 1);
-    assert.deepEqual(r.store.snapshots("xo:0xa1").map((s) => s.observedMs), [T0, T0 + 2 * H]);
+    assert.deepEqual(r.store.snapshots(`xo:${A1}`).map((s) => s.observedMs), [T0, T0 + 2 * H]);
   } finally {
     r.store.close();
   }
 });
 
 test("the per-host hourly budget defers work; nothing exceeds it", async () => {
-  const specs = Array.from({ length: 6 }, (_, i) => xo(`0xm${i}`));
+  const specs = Array.from({ length: 6 }, (_, i) => xo(cond(`m${i}`)));
   const r = await rig(specs, { hostBudgets: { "orderbooks.xo.market": { rps: 2, burst: 2, maxPerHour: 3 } } });
   try {
     const s = await r.collector.tick();
@@ -276,7 +284,7 @@ test("third-party text never reaches the database: hostile titles are not stored
   const dir = tempDir();
   try {
     const path = join(dir.path, "r.sqlite");
-    const r = await rig([xo("0xa1", { title: HOSTILE }), poly("0xb1", { title: HOSTILE }), market("limitless", "slug-1", { title: HOSTILE })], {}, path);
+    const r = await rig([xo(A1, { title: HOSTILE }), poly(B1, { title: HOSTILE }), market("limitless", "slug-1", { title: HOSTILE })], {}, path);
     await r.collector.tick();
     r.store.close();
     let bytes = "";
@@ -293,7 +301,7 @@ test("third-party text never reaches the database: hostile titles are not stored
 });
 
 test("only allowlisted hosts are ever contacted", async () => {
-  const r = await rig([xo("0xa1"), poly("0xb1"), market("limitless", "s")]);
+  const r = await rig([xo(A1), poly(B1), market("limitless", "s")]);
   try {
     await r.collector.tick();
     const hosts = [...r.client.counters().keys()];
@@ -305,7 +313,7 @@ test("only allowlisted hosts are ever contacted", async () => {
 });
 
 test("a full disk budget pauses collection instead of writing", async () => {
-  const r = await rig([xo("0xa1")], { maxDbBytes: 1_000_000 });
+  const r = await rig([xo(A1)], { maxDbBytes: 1_000_000 });
   try {
     const cfg = r.world.config({ maxDbBytes: 1_000_000 });
     const tiny = new Collector({ store: r.store, client: r.client, clock: r.world.clock, config: { ...cfg, maxDbBytes: 1 } });
@@ -319,14 +327,14 @@ test("a full disk budget pauses collection instead of writing", async () => {
 });
 
 test("retention runs once a day inside the loop and keeps recent data", async () => {
-  const r = await rig([xo("0xa1")], { retentionDays: 7, intervalSec: 3600 });
+  const r = await rig([xo(A1)], { retentionDays: 7, intervalSec: 3600 });
   try {
     await r.collector.tick();
     for (let d = 0; d < 9; d += 1) {
       r.world.clock.advance(DAY);
       await r.collector.tick();
     }
-    const times = r.store.snapshots("xo:0xa1").map((s) => s.observedMs);
+    const times = r.store.snapshots(`xo:${A1}`).map((s) => s.observedMs);
     assert.ok(Math.min(...times) >= r.world.clock.nowMs() - 7 * DAY - DAY, "old rows are gone");
     assert.ok(r.store.events("prune").length >= 1);
     assert.equal(r.store.verify().ok, true);
@@ -336,14 +344,14 @@ test("retention runs once a day inside the loop and keeps recent data", async ()
 });
 
 test("run() exits at once when aborted and 'once' does a single tick", async () => {
-  const r = await rig([xo("0xa1")]);
+  const r = await rig([xo(A1)]);
   try {
     const ac = new AbortController();
     await r.collector.run(ac.signal, true);
-    assert.equal(r.store.snapshots("xo:0xa1").length, 1);
+    assert.equal(r.store.snapshots(`xo:${A1}`).length, 1);
     ac.abort();
     await r.collector.run(ac.signal);
-    assert.equal(r.store.snapshots("xo:0xa1").length, 1);
+    assert.equal(r.store.snapshots(`xo:${A1}`).length, 1);
   } finally {
     r.store.close();
   }
@@ -351,7 +359,7 @@ test("run() exits at once when aborted and 'once' does a single tick", async () 
 
 test("TC-2: when the registry terms go stale the recorder stops collecting, and says so once", async () => {
   // A long retention window, so the 400-day jump does not prune the first snapshot away.
-  const r = await rig([xo("0xa1")], { retentionDays: 1000 });
+  const r = await rig([xo(A1)], { retentionDays: 1000 });
   try {
     const s1 = await r.collector.tick();
     assert.equal(s1.due, 1);

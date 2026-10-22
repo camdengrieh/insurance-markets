@@ -121,7 +121,9 @@ export const clobMarketIdSchema = z.string().regex(/^(?:0x[0-9a-fA-F]{64}|[a-z0-
 // ---- what the relay asks PayBox to sign (amendment A1) ------------------------------------------
 
 // eip712OrderHash and eip712ClobAuth: an EOA signs the EIP-712 digest itself (the CLOB venues); the three Kernel and
-// user-operation forms are XO's.
+// user-operation forms are XO's. For a Polymarket Deposit Wallet order (signature type 3) the eip712OrderHash digest is
+// the EIP-712 digest of the TypedDataSign struct that wraps the order (still signed raw by the owner EOA, never as an
+// EIP-191 message); the venue's order id is the order's own hash, carried in the summary lines.
 export const DIGEST_FORMS = ["userOpHash", "kernelWrappedOrderHash", "kernelWrappedClobAuth", "eip712OrderHash", "eip712ClobAuth"] as const;
 export type DigestForm = (typeof DIGEST_FORMS)[number];
 
@@ -579,7 +581,9 @@ const clobPolymarketOrderFields = z
     maker_amount: uintStringSchema,
     taker_amount: uintStringSchema,
     side: z.union([z.literal(0), z.literal(1)]),
-    signature_type: z.literal(0),
+    // 0: the owner EOA is the maker and signs the order hash. 3: the owner's Polymarket Deposit Wallet is the maker and
+    // signer, and the owner signs the ERC-7739 TypedDataSign wrapper of the order (src/clob/polymarket/order.ts).
+    signature_type: z.union([z.literal(0), z.literal(3)]),
     // Unix milliseconds, signed.
     timestamp_ms: uintStringSchema,
     metadata: hex32Schema,
@@ -615,7 +619,8 @@ export const decodedClobOrderSchema = z
     chain_id: z.union([z.literal(137), z.literal(8453)]),
     action: z.literal("place_order"),
     owner: ownerSchema,
-    // The maker: the owner itself.
+    // The maker: the owner itself (signature type 0), or on Polymarket the owner's Deposit Wallet (signature type 3),
+    // which the rebuild re-derives from the owner (src/clob/polymarket/deposit-wallet.ts) and never takes on trust.
     account: addressSchema,
     order: z.discriminatedUnion("venue", [clobPolymarketOrderFields, clobLimitlessOrderFields]),
     domain: z
@@ -1209,8 +1214,9 @@ const orderStatusResponse = z
 
 // ---- POST /v1/clob/order/prepare, POST /v1/clob/order/submit, POST /v1/clob/auth/prepare, POST /v1/clob/auth/submit --------
 //
-// The CLOB venues besides XO. The maker is the owner EOA itself; `account`, when supplied, must equal the owner. The
-// relay reads the market (tick, minimum size, the exchange on Limitless, the book on Polymarket) itself; the caller
+// The CLOB venues besides XO. The maker is the owner EOA itself, or on Polymarket the owner's Deposit Wallet when the
+// relay finds one deployed and owned by the owner on Polygon (signature type 3); `account`, when supplied, must equal the
+// maker the relay resolves (account_mismatch otherwise) and is never used as input. The relay reads the market (tick, minimum size, the exchange on Limitless, the book on Polymarket) itself; the caller
 // names the market only by the id the read adapter shows (a condition id or a slug) and the outcome token.
 
 const clobOrderPrepareRequest = z
@@ -1381,6 +1387,22 @@ const creationTrackResponse = z
   })
   .strict();
 
+// ---- GET /v1/prepared/{prepared_id} (amendment R9) --------------------------------------------------------------------------
+//
+// The stored item by id, for an agent that was handed only the id (the Cockpit page asked the relay to prepare it) and
+// must fetch and re-check the record itself instead of trusting the page. The answer is exactly the strict Prepared
+// object the prepare route of its kind returned: a user operation (kinds userop and create), an XO order, a CLOB venue
+// order, or a login (kinds auth and clob_auth). The relay answers it only while the item is still signable: an item
+// that expired says `expired`, one that was already sent (or whose send is ambiguous) says `prepared_used` with its
+// state, and an id this relay does not hold for an owner it serves says `not_found`.
+//
+// Relays older than PREPARED_GET_SINCE_RELAY_VERSION do not have this route (they answer `not_found`, "No such route").
+export const PREPARED_GET_SINCE_RELAY_VERSION = "0.3.0";
+// The four answer shapes, each held to the kinds its prepare route returns (a login is the plain Prepared object).
+const preparedLoginItemSchema = preparedSchema.refine((value) => value.kind === "auth" || value.kind === "clob_auth", { message: "a login item is kind auth or clob_auth", path: ["kind"] });
+export const preparedItemSchema = z.union([preparedUserOpSchema, preparedOrderSchema, preparedClobOrderSchema, preparedLoginItemSchema]);
+export type PreparedItem = z.infer<typeof preparedItemSchema>;
+
 // ---- GET /v1/health ---------------------------------------------------------------------------------------------------------
 
 export const HEALTH_STATUSES = ["ok", "degraded", "kill_switch"] as const;
@@ -1419,11 +1441,13 @@ export const POST_ROUTES = {
 
 const noParamsSchema = z.object({}).strict();
 const hashParamsSchema = z.object({ hash: hex32Schema }).strict();
+const preparedParamsSchema = z.object({ id: preparedIdSchema }).strict();
 
 export const GET_ROUTES = {
   "/v1/health": { params: noParamsSchema, response: healthResponse },
   "/v1/userop/:hash": { params: hashParamsSchema, response: useropStatusResponse },
   "/v1/order/:hash": { params: hashParamsSchema, response: orderStatusResponse },
+  "/v1/prepared/:id": { params: preparedParamsSchema, response: preparedItemSchema },
 } as const;
 
 export type PostPath = keyof typeof POST_ROUTES;
@@ -1440,12 +1464,14 @@ export type GetParams<R extends GetRoute> = z.output<(typeof GET_ROUTES)[R]["par
 export type GetResponseInput<R extends GetRoute> = z.input<(typeof GET_ROUTES)[R]["response"]>;
 
 // The concrete paths a client calls for the GET routes.
-export type GetPath = "/v1/health" | `/v1/userop/0x${string}` | `/v1/order/0x${string}`;
+export type GetPath = "/v1/health" | `/v1/userop/0x${string}` | `/v1/order/0x${string}` | `/v1/prepared/${string}`;
 export type GetResponse<P extends GetPath> = P extends "/v1/health"
   ? z.output<(typeof GET_ROUTES)["/v1/health"]["response"]>
   : P extends `/v1/userop/${string}`
     ? z.output<(typeof GET_ROUTES)["/v1/userop/:hash"]["response"]>
-    : z.output<(typeof GET_ROUTES)["/v1/order/:hash"]["response"]>;
+    : P extends `/v1/prepared/${string}`
+      ? z.output<(typeof GET_ROUTES)["/v1/prepared/:id"]["response"]>
+      : z.output<(typeof GET_ROUTES)["/v1/order/:hash"]["response"]>;
 
 export const POST_PATHS = Object.freeze(Object.keys(POST_ROUTES) as PostPath[]);
 export const GET_ROUTE_PATTERNS = Object.freeze(Object.keys(GET_ROUTES) as GetRoute[]);
@@ -1460,6 +1486,10 @@ export function userOpStatusPath(hash: string): `/v1/userop/0x${string}` {
 
 export function orderStatusPath(hash: string): `/v1/order/0x${string}` {
   return `/v1/order/${hex32Schema.parse(hash).toLowerCase()}` as `/v1/order/0x${string}`;
+}
+
+export function preparedItemPath(preparedId: string): `/v1/prepared/${string}` {
+  return `/v1/prepared/${preparedIdSchema.parse(preparedId)}`;
 }
 
 export function isPostPath(path: string): path is PostPath {

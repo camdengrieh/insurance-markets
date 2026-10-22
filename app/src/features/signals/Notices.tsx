@@ -2,7 +2,7 @@
 // client (fixed strings); nothing is copied from a response. A 402 is "payment required", and this page never pays.
 
 import { Badge, Button, Tile } from "../../ui";
-import type { QuotientResult, RowRefusal, RowSet } from "../../venues/quotient";
+import type { QuotientResult, RowRefusal, RowSet } from "./quotient";
 import { usdLabel } from "./figures";
 import { refusalCodeText } from "./words";
 

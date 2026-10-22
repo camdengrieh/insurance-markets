@@ -9,8 +9,8 @@
 import { useEffect, useState } from "react";
 
 import { Badge, Missing, formatUtc, useNow, venueName, type Tone } from "../../ui";
-import { WHY_NOT_ARBITRAGE } from "../../venues/quotient";
-import type { QuotientRow } from "../../venues/quotient";
+import { WHY_NOT_ARBITRAGE } from "./quotient";
+import type { QuotientRow } from "./quotient";
 import { DATASET_STALE_AFTER_DAYS, datasetAge, linksForLeg, type LinkLoad } from "./links/dataset";
 import type { Link, LinkDataset } from "./links/schema";
 import { linkLabel, verifyLink, type LegCheck, type LinkVerdict } from "./links/verify";

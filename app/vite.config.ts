@@ -7,7 +7,7 @@ import { baseConfig } from "./scripts/vite-base.ts";
 export default defineConfig(({ mode }) =>
   mergeConfig(baseConfig({ mode }), {
     test: {
-      include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
+      include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts", "../sdk/**/*.test.ts"],
       exclude: ["node_modules/**", "dist/**", "e2e/**", "scripts/fixtures/**"],
       // Pure code runs in node; a test that needs a DOM says so with `// @vitest-environment jsdom`.
       environment: "node",

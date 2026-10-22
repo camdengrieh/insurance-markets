@@ -27,7 +27,7 @@ import {
   type QuotientResult,
   type RouteId,
   type RowSet,
-} from "../../venues/quotient";
+} from "./quotient";
 import { CallPanel, type ImportRoute, type PaidRoute } from "./CallPanel";
 import { GatePanel, ShapeStatus } from "./GatePanel";
 import { RejectedRows, ResultNotice } from "./Notices";

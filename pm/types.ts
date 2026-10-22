@@ -1,11 +1,29 @@
-// Venue-agnostic types shared by every pm/ module (docs/aggregation-design.md section 2.1 to 2.5).
+// Venue-agnostic types shared by every pm/ module (docs/aggregation-design.md section 2.1 to 2.5). The parts of
+// the read model that are the same everywhere (refs, outcomes, rules, status, collateral, groups, the adapter error
+// set and capability map) are the SDK's (sdk/model.ts) and re-exported here. Books, fees, ticks, pages and list rows
+// keep their pm shape until the books and fee engine move into the SDK (docs/sdk-and-api-design.md step 4).
 // Types only, plus a very small exact-decimal bridge. Real math lives in pm/core.
 //
 // Decimal rule: at the edges (adapter input, tool output) a number is a plain decimal string
 // (`Dec`); inside the engine it is a `Fixed` (bigint units plus an explicit scale). Floating
 // point is never used for money, prices or share counts. `null` means unknown and is never zero.
 
-import type { Dec, Result, Untrusted, VenueId as SdkVenueId } from "../sdk/model.js";
+import type {
+  AdapterCaps,
+  AdapterError,
+  Collateral,
+  Dec,
+  FeeModelId,
+  MarketGroup,
+  MarketRef as SdkMarketRef,
+  Outcome,
+  Result,
+  Rules,
+  Status,
+  Untrusted,
+  VenueId as SdkVenueId,
+  VoidPolicy,
+} from "../sdk/model.js";
 import type { Fixed } from "../sdk/money/fixed.js";
 import type { CategoryVerdict } from "../sdk/category.js";
 
@@ -43,29 +61,34 @@ export const VENUE_IDS = [
 ] as const satisfies readonly SdkVenueId[];
 export type VenueId = (typeof VENUE_IDS)[number];
 
+export type {
+  AdapterCaps,
+  AdapterError,
+  Collateral,
+  FeeModelId,
+  MarketGroup,
+  Outcome,
+  ResolutionMechanism,
+  Rules,
+  Status,
+  VoidPolicy,
+} from "../sdk/model.js";
+
+// A market reference whose venue is one this layer reads.
+export interface MarketRef extends SdkMarketRef {
+  readonly venue: VenueId;
+}
+
 export function isVenueId(value: unknown): value is VenueId {
   return typeof value === "string" && (VENUE_IDS as readonly string[]).includes(value);
 }
 
-export interface MarketRef {
-  readonly venue: VenueId;
-  // XO/Polymarket: conditionId; Kalshi: ticker; Limitless: slug; Trueo: `${chainId}:${marketAddress}`.
-  readonly marketId: string;
-  // eventId, slug, series, rootEventSlug, negRiskMarketID, marketKey and similar venue keys.
-  readonly native: Readonly<Record<string, string>>;
-}
 
 export type OutcomeRole = "yes" | "no" | "label";
 
-// Outcome order matters: never match on title text (XO index 0 is the "Yes" token even for
-// team-named markets).
-export interface OutcomeRef {
-  readonly index: number;
-  readonly role: OutcomeRole;
-  readonly label: Untrusted<string>;
-  // XO outcomeTokenId; Polymarket clobTokenIds[i] for version "v1", else positionIds[i].
-  readonly tokenId: string;
-}
+// Outcome order matters: never match on title text (XO index 0 is the "Yes" token even for team-named markets).
+export type OutcomeRef = Outcome;
+
 
 export interface TokenRef {
   readonly venue: VenueId;
@@ -75,48 +98,9 @@ export interface TokenRef {
 // ---------------------------------------------------------------------------------------------
 // Rules, status, market
 
-export type VoidPolicy =
-  | "fifty_fifty"
-  | "refund"
-  | "last_traded_price"
-  | "scalar"
-  | "invalid_reverse_trades"
-  | "unknown";
 
-export type ResolutionMechanism =
-  | "uma_oo"
-  | "chainlink"
-  | "exchange"
-  | "xo_manual_modra"
-  | "pyth"
-  | "external_parity"
-  | "optimistic_council"
-  | "protocol_mark"
-  | "unknown";
 
-export interface Rules {
-  readonly text: Untrusted<string>;
-  // sha256 of NFKC-normalised, whitespace-collapsed rules text (hex, lowercase).
-  readonly sha256: string;
-  readonly sources: readonly string[];
-  readonly mechanism: ResolutionMechanism;
-  readonly resolver?: string;
-  readonly cutoffUtc?: string;
-  readonly windowStartUtc?: string;
-  readonly void: VoidPolicy;
-  readonly canCloseEarly?: boolean;
-}
 
-export type Status =
-  | "pending"
-  | "active"
-  | "paused"
-  | "closed"
-  | "determined"
-  | "disputed"
-  | "resolved"
-  | "voided"
-  | "unknown";
 
 // Tick is either one global step or per-price-range steps (Kalshi price_ranges[]).
 export interface TickRange {
@@ -126,24 +110,12 @@ export interface TickRange {
 }
 export type Tick = Dec | readonly TickRange[];
 
-export type Custody = "self" | "smart_account" | "venue" | "broker";
+export type Custody = Collateral["custody"];
 
-export interface Collateral {
-  readonly symbol: string;
-  // CAIP-2 chain id, for example "eip155:137".
-  readonly chain: string;
-  readonly decimals: number;
-  readonly custody: Custody;
-}
 
-export type GroupKind = "neg_risk" | "mutually_exclusive" | "event" | "series";
-export type Exhaustive = "proven" | "by_rule" | "no" | "unknown";
+export type GroupKind = MarketGroup["kind"];
+export type Exhaustive = MarketGroup["exhaustive"];
 
-export interface MarketGroup {
-  readonly key: string;
-  readonly kind: GroupKind;
-  readonly exhaustive: Exhaustive;
-}
 
 export interface Provenance {
   readonly fetchedAtMs: number;
@@ -237,13 +209,6 @@ export interface Quote {
 // ---------------------------------------------------------------------------------------------
 // Fees
 
-export type FeeModelId =
-  | "curve_pq"
-  | "curve_min"
-  | "ad_valorem_bps"
-  | "profit_pct"
-  | "amm_stack"
-  | "unknown";
 
 // Names a fee model plus the parameter source it was read from, for example "xo:curve_pq".
 // Unknown models use "unknown" and fail closed.
@@ -333,15 +298,6 @@ export interface LinkRef {
 // ---------------------------------------------------------------------------------------------
 // Adapter plumbing
 
-export type AdapterError =
-  | "RATE_LIMITED"
-  | "STALE"
-  | "NOT_SUPPORTED"
-  | "SCHEMA_DRIFT"
-  | "VENUE_PAUSED"
-  | "NOT_FOUND"
-  | "TIMEOUT"
-  | "EMPTY_BOOK";
 
 export type { Result } from "../sdk/model.js";
 
@@ -352,18 +308,6 @@ export interface Page<T> {
   readonly hasNext: boolean;
 }
 
-// ccxt-style capability map: false means NOT_SUPPORTED, never a guess.
-export interface AdapterCaps {
-  readonly listMarkets: boolean;
-  readonly search: boolean;
-  readonly getMarket: boolean;
-  readonly getBook: boolean;
-  readonly getBooksBatch: boolean;
-  readonly getFeeSpec: boolean;
-  readonly getResolution: boolean;
-  readonly getPositionsByAddress: boolean;
-  readonly stream: false;
-}
 
 export interface VenueReadAdapter {
   readonly id: VenueId;

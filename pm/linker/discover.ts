@@ -2,27 +2,36 @@
 // feature record (hashes only). All requests go through the recorder's PoliteClient, so the host
 // allowlist, per-host budgets, backoff, breaker and the fixed User-Agent apply unchanged. GET only.
 //
+// Every venue answer is read by that venue's one shared parser (sdk/venues/<venue>), the same code
+// the dApp's readers run, so a market's status, group, void policy, category and rules fingerprint
+// are what the dApp shows for it:
 // XO: the list route carries `rules: {}`, so each market needs one detail read (by contract id),
-//   decoded with the strict src/xo decoders. Detail reads are cached in the state file by rules
-//   hash and refreshed after DETAIL_REFRESH_MS, capped per run; markets whose detail is not yet
-//   read are carried by their cached features or skipped until the next run (resumable).
-// Polymarket: Gamma /markets/keyset pages (description, resolutionSource, endDate in each row).
-// Limitless: /markets/active pages (description, expirationTimestamp in each row).
+//   decoded with the strict shared decoders (sdk/venues/xo/api/client.ts) and mapped by marketOf.
+//   Detail reads are cached in the state file by rules hash and refreshed after DETAIL_REFRESH_MS,
+//   capped per run; markets whose detail is not yet read are carried by their cached features or
+//   skipped until the next run (resumable).
+// Polymarket: Gamma /markets/keyset pages (parseKeysetPage, parseGammaMarket, normalizeMarket).
+// Limitless: /markets/active pages (parseListBody, marketOf).
 //
-// Rule fields are assembled exactly as pm/adapters builds them, so the pinned rules-v2 hash is the
-// one pm_verify_link recomputes. Titles and rule text are used in memory only.
+// Rule fields come from the shared builders (sdk/rules.ts xoRuleFields, polymarketRuleFields,
+// limitlessRuleFields), and the pinned rules-v2 hash must equal the fingerprint the shared reader puts
+// in Market.rules.sha256 (the one the dApp re-checks a leg against and pm_verify_link recomputes); a
+// market where they differ is skipped, never pinned. Titles and rule text are used in memory only.
 
-import { decodeMarketDetail, decodeMarketPage, lifecycleOf } from "../../src/xo/client.js";
-import { categorise } from "../core/category.js";
+import { NO_CATEGORY, type CategoryVerdict } from "../../sdk/category.js";
+import type { Market } from "../../sdk/model.js";
+import { limitlessRuleFields, polymarketRuleFields, xoLossyRuleRead, xoRuleFields, type RuleRecord } from "../../sdk/rules.js";
+import { marketOf as limitlessMarketOf, parseListBody } from "../../sdk/venues/limitless/index.js";
+import { normalizeMarket, parseGammaMarket, parseKeysetPage } from "../../sdk/venues/polymarket/index.js";
+import { decodeMarketDetail, decodeMarketPage } from "../../sdk/venues/xo/api/client.js";
+import { marketOf as xoMarketOf, statusOf as xoStatusOf, xoRootEventSlug } from "../../sdk/venues/xo/index.js";
 import { sha256Hex } from "../links/canonical.js";
-import { canonicalizeRecord, hashCanonical, xoLossyRuleRead, xoRulesText, type FieldValue } from "../links/hash.js";
+import { canonicalizeRecord, hashCanonical } from "../links/hash.js";
 import { marketId as marketIdSchema } from "../links/schema.js";
 import type { Clock } from "../recorder/clock.js";
 import type { PoliteClient } from "../recorder/http.js";
 import type { RequestSpec } from "../recorder/types.js";
 import { urlOf } from "../recorder/types.js";
-import { isRecord } from "../recorder/venues/common.js";
-import type { VoidPolicy } from "../types.js";
 import { LINKER_HOSTS, type LinkerVenue } from "./allowlist.js";
 import {
   DETAIL_REFRESH_MS,
@@ -82,6 +91,7 @@ export interface DiscoverDeps {
 }
 
 const CONDITION = /^0x[0-9a-f]{64}$/;
+const LIMITLESS_ORIGIN = `https://${LINKER_HOSTS.limitless}`;
 
 function spec(host: string, path: string, query?: Record<string, string>): RequestSpec {
   return { host, path, ...(query === undefined ? {} : { query }), purpose: "resolve" };
@@ -160,22 +170,24 @@ interface Built {
   readonly venue: LinkerVenue;
   readonly marketId: string;
   readonly title: string;
-  readonly ruleFields: Readonly<Record<string, FieldValue>>;
+  // The shared rule record (sdk/rules.ts) and the market the shared reader built from the same answer.
+  readonly ruleFields: RuleRecord;
+  readonly market: Market;
   readonly closeUtc: string;
-  readonly native: readonly string[];
-  readonly voidPolicy: VoidPolicy;
-  readonly resolverId: string | null;
   readonly groupKey: string | null;
   readonly groupKind: MarketFeatures["groupKind"];
   readonly outcomes: number;
 }
 
-// Hash with the rules-v2 recipe and build the feature record; null with a reason when unhashable.
+// Hash with the rules-v2 recipe and build the feature record; null with a reason when unhashable or when the hash
+// is not the fingerprint the shared reader shows for the market.
 function featuresOf(b: Built, stamp: string): { ok: true; value: StoredMarket } | { ok: false; reason: string } {
   const canon = canonicalizeRecord(b.venue, b.ruleFields);
   if (!canon.ok) return { ok: false, reason: `rules_${canon.error.toLowerCase()}` };
   const hashes = hashCanonical(canon.value);
-  const cat = categorise({ venue: b.venue, native: b.native, title: b.title });
+  if (hashes.rulesSha256 !== b.market.rules.sha256) return { ok: false, reason: "rules_fingerprint_mismatch" };
+  const cat: CategoryVerdict = b.market.category ?? NO_CATEGORY;
+  const resolver = b.market.rules.resolver?.toLowerCase() ?? null;
   const f = buildFeatures({
     venue: b.venue,
     marketId: b.marketId,
@@ -186,8 +198,8 @@ function featuresOf(b: Built, stamp: string): { ok: true; value: StoredMarket } 
     closeUtc: b.closeUtc,
     category: cat.category,
     categoryConfidence: cat.confidence,
-    voidPolicy: b.voidPolicy,
-    resolverId: b.resolverId,
+    voidPolicy: b.market.rules.void,
+    resolverId: resolver !== null && validId(resolver) ? resolver : null,
     groupKey: b.groupKey,
     groupKind: b.groupKind,
     outcomes: b.outcomes,
@@ -229,7 +241,7 @@ async function discoverXo(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise
         skip(c, "not_clob");
         continue;
       }
-      if (lifecycleOf(m, ctx.nowMs) !== "open") {
+      if (xoStatusOf(m, ctx.nowMs) !== "active") {
         skip(c, "not_open");
         continue;
       }
@@ -295,31 +307,21 @@ async function discoverXo(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise
       continue;
     }
     // Rule fields exactly as every client assembles them for the rules-v2 recipe (sdk/rules.ts).
-    if (xoLossyRuleRead(detail) !== null) {
-      skip(c, "rules_lossy_read");
+    const ruleFields = xoRuleFields(detail);
+    if (ruleFields === null) {
+      skip(c, xoLossyRuleRead(detail) !== null ? "rules_lossy_read" : "rules_missing_field");
       continue;
     }
-    const displayText = xoRulesText(detail);
-    const sources = detail.resolutionSources.slice(0, 20).map(String);
-    const ruleFields: Record<string, FieldValue> = {
-      ...(displayText === "" ? {} : { rules: displayText }),
-      resolutionSources: sources,
-      resolverAddress: detail.resolverAddress,
-      expiresAt: detail.expiresAt,
-    };
-    const root = isRecord(r.json) ? r.json["rootEventSlug"] : undefined;
-    const groupKey = typeof root === "string" && /^[A-Za-z0-9][A-Za-z0-9-]{0,199}$/.test(root) ? `xo-evt-${sha256Hex(`xo-root:${root}`).slice(0, 16)}` : null;
-    const resolver = detail.resolverAddress === null ? null : detail.resolverAddress.toLowerCase();
+    const root = xoRootEventSlug(r.json);
+    const groupKey = root === null ? null : `xo-evt-${sha256Hex(`xo-root:${root}`).slice(0, 16)}`;
     const built = featuresOf(
       {
         venue: "xo",
         marketId: row.conditionId,
         title: String(detail.title),
         ruleFields,
+        market: xoMarketOf(detail, ctx.nowMs, ctx.nowMs).market,
         closeUtc: row.closeUtc,
-        native: detail.categoryPath.map((p) => String(p.name)),
-        voidPolicy: "unknown",
-        resolverId: resolver !== null && validId(resolver) ? resolver : null,
         groupKey,
         groupKind: groupKey === null ? null : "event",
         outcomes: 2,
@@ -338,94 +340,72 @@ async function discoverXo(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise
 
 // ---- Polymarket ----
 
-function jsonStrings(raw: unknown): string[] | null {
-  let list: unknown = raw;
-  if (typeof raw === "string") {
-    try {
-      list = JSON.parse(raw) as unknown;
-    } catch {
-      return null;
-    }
-  }
-  return Array.isArray(list) && list.every((x) => typeof x === "string") ? (list as string[]) : null;
-}
-
 async function discoverPoly(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promise<boolean> {
   let cursor: string | null = null;
   const seen = new Set<string>();
   for (let page = 0; page < ctx.options.polyPages; page += 1) {
-    const r = await getJson(ctx, polyKeysetSpec(cursor));
+    const spec = polyKeysetSpec(cursor);
+    const r = await getJson(ctx, spec);
     if (!r.ok) {
       ctx.notes.push(`polymarket keyset page ${page + 1} failed (${r.reason})`);
       return false;
     }
-    const env = r.json;
-    const markets = isRecord(env) ? env["markets"] : undefined;
-    if (!Array.isArray(markets)) {
+    const keyset = parseKeysetPage(r.json);
+    if (!keyset.ok) {
       ctx.notes.push(`polymarket keyset page ${page + 1} is not a keyset envelope`);
       return false;
     }
-    for (const m of markets as unknown[]) {
+    for (const row of keyset.rows) {
       c.listed += 1;
-      if (!isRecord(m)) {
-        skip(c, "row_not_object");
+      // The shared row shape: exactly two outcomes, a condition id, the flags and fields typed.
+      const parsed = parseGammaMarket(row);
+      if (!parsed.ok) {
+        skip(c, "row_refused");
         continue;
       }
-      const idRaw = m["conditionId"];
-      const id = typeof idRaw === "string" ? idRaw.toLowerCase() : "";
+      const raw = parsed.value;
+      const id = raw.conditionId.toLowerCase();
       if (!CONDITION.test(id) && !validId(id)) {
         skip(c, "bad_id");
         continue;
       }
       if (seen.has(id)) continue;
       seen.add(id);
-      if (m["active"] !== true || m["closed"] === true || m["archived"] === true || m["acceptingOrders"] === false || m["enableOrderBook"] === false) {
+      const normalized = normalizeMarket(raw, { nowMs: ctx.nowMs, transport: "T0", source: urlOf(spec) });
+      if (!normalized.ok) {
+        skip(c, "market_refused");
+        continue;
+      }
+      const market = normalized.value;
+      // Tradable as the shared reader decides it: status active (flags and the UMA history), accepting orders, book on.
+      if (!market.tradable.ok) {
         skip(c, "not_open");
         continue;
       }
-      const outcomes = jsonStrings(m["outcomes"]);
-      if (outcomes === null || outcomes.length !== 2) {
-        skip(c, "not_binary");
-        continue;
-      }
-      const close = toUtcStamp(m["endDate"]);
+      const close = toUtcStamp(market.timesUtc.closesAt);
       if (close === null || !openEnough(close, ctx.nowMs)) {
         skip(c, "closes_too_soon");
         continue;
       }
       c.open += 1;
-      const description = m["description"];
-      const resolutionSource = m["resolutionSource"];
-      const endDate = m["endDate"];
-      if (typeof description !== "string" || typeof endDate !== "string") {
+      const ruleFields = polymarketRuleFields(raw);
+      if (ruleFields === null) {
         skip(c, "rules_missing_field");
         continue;
       }
-      const ruleFields: Record<string, FieldValue> = { description, resolutionSource: typeof resolutionSource === "string" ? resolutionSource : null, endDate };
-      const nr = m["negRiskMarketID"];
-      const groupKey = m["negRisk"] === true && typeof nr === "string" && CONDITION.test(nr.toLowerCase()) ? nr.toLowerCase() : null;
-      const resolvedBy = m["resolvedBy"];
-      const native: string[] = [];
-      const events = m["events"];
-      const event0 = Array.isArray(events) && isRecord(events[0]) ? events[0] : null;
-      if (event0 !== null) {
-        if (typeof event0["category"] === "string") native.push(event0["category"]);
-        const tags = event0["tags"];
-        if (Array.isArray(tags)) for (const t of tags as unknown[]) if (isRecord(t) && typeof t["label"] === "string") native.push(t["label"]);
-      }
+      // The shared group key (polymarket:neg_risk:<id>); an event is not a group the linker proposes from.
+      const group = market.group?.kind === "neg_risk" ? market.group.key.toLowerCase() : null;
       const built = featuresOf(
         {
           venue: "polymarket",
           marketId: id,
-          title: typeof m["question"] === "string" ? m["question"] : "",
+          title: raw.question,
           ruleFields,
+          market,
           closeUtc: close,
-          native,
-          voidPolicy: m["umaBond"] !== undefined && m["umaBond"] !== null ? "fifty_fifty" : "unknown",
-          resolverId: typeof resolvedBy === "string" && /^0x[0-9a-fA-F]{40}$/.test(resolvedBy) ? resolvedBy.toLowerCase() : null,
-          groupKey,
-          groupKind: groupKey === null ? null : "neg_risk",
-          outcomes: 2,
+          groupKey: group,
+          groupKind: group === null ? null : "neg_risk",
+          outcomes: raw.outcomes.length,
         },
         ctx.stamp,
       );
@@ -436,9 +416,8 @@ async function discoverPoly(ctx: Ctx, out: StoredMarket[], c: VenueCount): Promi
       out.push(built.value);
       c.featured += 1;
     }
-    const next = isRecord(env) ? env["next_cursor"] : undefined;
-    if (typeof next !== "string" || next === "" || markets.length === 0) return true;
-    cursor = next;
+    if (keyset.next === null || keyset.rows.length === 0) return true;
+    cursor = keyset.next;
   }
   return true;
 }
@@ -453,64 +432,39 @@ async function discoverLimitless(ctx: Ctx, out: StoredMarket[], c: VenueCount): 
       ctx.notes.push(`limitless active page ${page} failed (${r.reason})`);
       return false;
     }
-    const rows = isRecord(r.json) ? r.json["data"] : undefined;
-    if (!Array.isArray(rows)) {
-      ctx.notes.push(`limitless active page ${page} is not a list envelope`);
+    const list = parseListBody(r.json, LIMITLESS_ORIGIN, ctx.nowMs, page, LIMITLESS_PAGE_SIZE);
+    if (!list.ok) {
+      ctx.notes.push(`limitless active page ${page} refused by the shared parser (${list.detail})`);
       return false;
     }
-    for (const m of rows as unknown[]) {
-      c.listed += 1;
-      if (!isRecord(m)) {
-        skip(c, "row_not_object");
-        continue;
-      }
-      const slug = m["slug"];
-      if (typeof slug !== "string" || !validId(slug)) {
+    c.listed += list.value.rows.length + list.value.rejected.length;
+    for (const rejected of list.value.rejected) skip(c, rejected.reason);
+    for (const row of list.value.rows) {
+      const slug = row.slug;
+      if (!validId(slug)) {
         skip(c, "bad_id");
         continue;
       }
       if (seen.has(slug)) continue;
       seen.add(slug);
-      if (m["marketType"] !== "single") {
-        skip(c, "not_single");
-        continue;
-      }
-      const status = m["status"];
-      if ((status !== "FUNDED" && status !== "ACTIVE") || m["expired"] === true) {
+      const market = limitlessMarketOf(row, LIMITLESS_ORIGIN, ctx.nowMs);
+      if (market.status !== "active") {
         skip(c, "not_open");
         continue;
       }
-      const close = toUtcStamp(m["expirationTimestamp"]);
+      const close = toUtcStamp(market.timesUtc.closesAt);
       if (close === null || !openEnough(close, ctx.nowMs)) {
         skip(c, "closes_too_soon");
         continue;
       }
       c.open += 1;
-      const description = m["description"];
-      const expiry = m["expirationTimestamp"];
-      if (typeof description !== "string" || (typeof expiry !== "string" && typeof expiry !== "number")) {
+      const ruleFields = limitlessRuleFields(row);
+      if (ruleFields === null) {
         skip(c, "rules_missing_field");
         continue;
       }
-      const native: string[] = [];
-      for (const k of ["categories", "tags"]) {
-        const v = m[k];
-        if (Array.isArray(v)) for (const x of v as unknown[]) if (typeof x === "string") native.push(x);
-      }
       const built = featuresOf(
-        {
-          venue: "limitless",
-          marketId: slug,
-          title: typeof m["title"] === "string" ? m["title"] : "",
-          ruleFields: { description, expirationTimestamp: typeof expiry === "number" && !Number.isSafeInteger(expiry) ? String(expiry) : expiry },
-          closeUtc: close,
-          native,
-          voidPolicy: "unknown",
-          resolverId: null,
-          groupKey: null,
-          groupKind: null,
-          outcomes: 2,
-        },
+        { venue: "limitless", marketId: slug, title: row.title, ruleFields, market, closeUtc: close, groupKey: null, groupKind: null, outcomes: 2 },
         ctx.stamp,
       );
       if (!built.ok) {
@@ -520,7 +474,7 @@ async function discoverLimitless(ctx: Ctx, out: StoredMarket[], c: VenueCount): 
       out.push(built.value);
       c.featured += 1;
     }
-    if (rows.length < LIMITLESS_PAGE_SIZE) return true;
+    if (!list.value.hasMore) return true;
   }
   return true;
 }

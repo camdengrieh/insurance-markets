@@ -73,7 +73,7 @@ export function clone<T>(value: T): T {
 type Obj = Record<string, unknown>;
 
 export function xoFixture(name: string): Obj {
-  return JSON.parse(readFileSync(new URL(`../../../test/fixtures/xo/${name}`, import.meta.url), "utf8")) as Obj;
+  return JSON.parse(readFileSync(new URL(`../../../sdk/venues/xo/fixtures/${name}`, import.meta.url), "utf8")) as Obj;
 }
 
 // Real captures under docs/research/fixtures (live GET responses; nothing in them is hand-written). Returns null when

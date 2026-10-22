@@ -15,7 +15,9 @@ import { SideToggle, SignStrip, canToggle } from "./OrderBar";
 import { sideLabel, tifLabel } from "./ticket";
 
 // The order ticket for a Polymarket or Limitless market: the venue counterpart of the XO OrderPanel (ActionPanels.tsx),
-// which is left as it is. The maker is the owner wallet itself. The ticket shows the venue's tick and minimum size
+// which is left as it is. On Limitless the maker is the owner wallet itself. On Polymarket the relay reads, at prepare,
+// whether the owner's Deposit Wallet is deployed on Polygon: if so it is the maker (signature type 3), otherwise the
+// owner wallet is (type 0). The page never assumes either; the prepared item says which, and vet.ts checks it. The ticket shows the venue's tick and minimum size
 // as the market record carries them, the worst case with the policy fee ceiling, the fields that will be signed
 // ("what you sign": the typed data IS the order on these venues), and the provenance of the facts it used. It
 // prepares through the clob_order tool (step prepare) and signs and sends nothing.
@@ -57,12 +59,19 @@ export function ClobOrderPanel({ ctx, facts, tokenChoices, heading = "h2", layou
   const signed = ticket === null ? [] : signedFieldsPreview(ticket, facts, owner);
   const age = formatAge(facts.fetchedAtMs, ctx.services.nowMs());
   const tile = heading === "h4" ? "h4" : "h3";
-  const intro = (
-    <p>
-      A {name} order is signed by your wallet itself (an EOA order, signature type 0): there is no smart-account wrapper, so the typed data PayBox shows is the order, field by field. This page prepares it through the Cockpit and never signs or sends. The numbers
-      below are worked out here with the plugin&apos;s own rules and compared, digit for digit, with what the relay quotes.
-    </p>
-  );
+  const intro =
+    venue === "polymarket" ? (
+      <p>
+        A Polymarket order is signed by your wallet. Which account makes it is read from Polygon when the order is prepared: your Polymarket Deposit Wallet (the default account for Polymarket accounts deployed since 2026-05-04) when one is deployed and owned by your wallet, signature type 3, and PayBox
+        then shows a TypedDataSign wrapper with the order nested in it; otherwise your wallet itself, signature type 0, and PayBox shows the order field by field. This page prepares it through the Cockpit and never signs or sends. The numbers below are worked out
+        here with the plugin&apos;s own rules and compared, digit for digit, with what the relay quotes.
+      </p>
+    ) : (
+      <p>
+        A {name} order is signed by your wallet itself (an EOA order, signature type 0): there is no smart-account wrapper, so the typed data PayBox shows is the order, field by field. This page prepares it through the Cockpit and never signs or sends. The
+        numbers below are worked out here with the plugin&apos;s own rules and compared, digit for digit, with what the relay quotes.
+      </p>
+    );
   const unproven = (
     <UnprovenTile capability={`${name} order path`} state={ctx.facts[action === "polymarket_order" ? "polymarket_first_order_accepted" : "limitless_first_order_accepted"]} heading={tile}>
       No live test has recorded an order on {name} from this build. Until the operator records one, nothing is handed to an agent: the ticket and the prepare path are shown so they can be checked, never as a green light.
@@ -150,7 +159,7 @@ export function ClobOrderPanel({ ctx, facts, tokenChoices, heading = "h2", layou
   const everyField =
     signed.length === 0 ? null : (
       <Tile tone="neutral" title="What you sign" heading={tile} dataKind="what-you-sign" dataCode={venue}>
-        <p className="tr-note">The EIP-712 Order struct, as the relay will build it. Every value below is visible in the signing window; the ones marked are chosen by the relay when it prepares.</p>
+        <p className="tr-note">The EIP-712 Order struct, as the relay will build it. Every value below is visible in the signing window; the ones marked are chosen by the relay when it prepares{venue === "polymarket" ? ", including which account is the maker" : ""}.</p>
         <KeyValues rows={signed.map((line) => ({ label: line.label, value: line.fromRelay === true ? <span>{line.value} <Badge tone="neutral">set by the relay</Badge></span> : /^0x[0-9a-fA-F]{40}$/.test(line.value) || /^[0-9]+$/.test(line.value) ? <Mono>{line.value}</Mono> : line.value }))} />
       </Tile>
     );
@@ -180,7 +189,7 @@ export function ClobOrderPanel({ ctx, facts, tokenChoices, heading = "h2", layou
           below={
             <>
               <p className="tr-bar-note">
-                A {name} order is signed by your wallet itself, so PayBox shows every field of the order. Price on the <Num>{facts.tick}</Num> tick; size in shares with at most {CLOB_SIZE_DECIMALS} decimals
+                {venue === "polymarket" ? "A Polymarket order is signed by your wallet; the maker (your Deposit Wallet or your wallet) is read from Polygon at prepare, and PayBox shows every field of the order." : `A ${name} order is signed by your wallet itself, so PayBox shows every field of the order.`} Price on the <Num>{facts.tick}</Num> tick; size in shares with at most {CLOB_SIZE_DECIMALS} decimals
                 {facts.minSize === "0" ? "" : <>, at least <Num>{facts.minSize}</Num></>}, as the market record read from {name} ({age}) carries them. The page prepares; you sign in PayBox; nothing is sent from here.
               </p>
               {issues}

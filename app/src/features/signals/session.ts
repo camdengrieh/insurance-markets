@@ -20,8 +20,8 @@ import {
   type KeyAccess,
   type QuotientClient,
   type QuotientGate,
-} from "../../venues/quotient";
-import type { SpendSnapshot } from "../../venues/quotient";
+} from "./quotient";
+import type { SpendSnapshot } from "./quotient";
 
 export type AccessChoice = "none" | "key";
 

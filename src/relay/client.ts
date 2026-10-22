@@ -444,13 +444,15 @@ function plan(target: Extract<Target, { ok: true }>, method: Method, path: strin
   const route: { readonly params: ZodType; readonly response: ZodType } = GET_ROUTES[matched.route];
   const params = route.params.safeParse(matched.params);
   if (!params.success) return invalidRequest(["(path)"]);
-  const field = matched.route === "/v1/order/:hash" ? "order_hash" : matched.route === "/v1/userop/:hash" ? "user_op_hash" : undefined;
+  // The answer must be about the id in the path: the order or operation hash, or the prepared item's id.
+  const field = matched.route === "/v1/order/:hash" ? "order_hash" : matched.route === "/v1/userop/:hash" ? "user_op_hash" : matched.route === "/v1/prepared/:id" ? "prepared_id" : undefined;
+  const asked = matched.route === "/v1/prepared/:id" ? matched.params["id"] : matched.params["hash"];
   return {
     url: `${base}${path}`,
     bodyText: undefined,
     response: route.response,
     retrySafe: true,
-    match: { kind: "get", hash: matched.params["hash"], field },
+    match: { kind: "get", hash: asked, field },
   };
 }
 

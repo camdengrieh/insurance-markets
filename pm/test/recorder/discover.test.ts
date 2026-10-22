@@ -1,6 +1,7 @@
 // Discovery tests. Inputs are REAL public responses captured from the XO Data API and the
-// Polymarket Gamma API on 2026-10-20 and trimmed (see fixtures/PROVENANCE.txt); they are replayed
-// by loopback servers, so nothing here can reach a real host.
+// Polymarket Gamma API on 2026-10-20 and trimmed (provenance: sdk/venues/xo/fixtures/MANIFEST.json
+// and sdk/venues/polymarket/fixtures/README.txt); they are replayed by loopback servers, so nothing
+// here can reach a real host.
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -16,17 +17,32 @@ import { RecorderStore } from "../../recorder/store.js";
 import { targetsFromFile } from "../../recorder/targets.js";
 import { startWorld, tempDir, T0, type Handler, type World } from "./helpers.js";
 
-const FIX = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const readFix = (name: string): unknown => JSON.parse(readFileSync(join(FIX, name), "utf8")) as unknown;
+const SDK = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "sdk", "venues");
+const readFix = (path: string): unknown => JSON.parse(readFileSync(join(SDK, path), "utf8")) as unknown;
 
 interface Lookup {
   path: string;
   status: number;
   body: unknown;
 }
-const XO_LIST = readFix("xo-markets-list.json") as { data: Record<string, unknown>[]; meta: Record<string, unknown> };
-const XO_LOOKUPS = readFix("xo-market-lookups.json") as Lookup[];
-const POLY_EVENTS = readFix("polymarket-events.json") as Record<string, unknown>[];
+const XO_LIST = readFix("xo/fixtures/data-markets-list-clob-active-trimmed-2026-10-20.json") as { data: Record<string, unknown>[]; meta: Record<string, unknown> };
+const XO_LOOKUPS = readFix("xo/fixtures/data-market-lookups-slug-and-contract-trimmed-2026-10-20.json") as Lookup[];
+
+// The capture was trimmed of all text, so its market rows have no `question` (and the large event's rows no `slug`),
+// which every real Gamma market row carries and the shared parser requires. Each such row gets a labelled SYNTHETIC
+// question and slug here; every captured value is left as it is.
+function withSyntheticText(events: Record<string, unknown>[]): Record<string, unknown>[] {
+  let n = 0;
+  for (const e of events) {
+    for (const m of (e["markets"] ?? []) as Record<string, unknown>[]) {
+      n += 1;
+      if (m["question"] === undefined) m["question"] = `SYNTHETIC question ${n}`;
+      if (m["slug"] === undefined) m["slug"] = `synthetic-market-${n}`;
+    }
+  }
+  return events;
+}
+const POLY_EVENTS = withSyntheticText(readFix("polymarket/fixtures/gamma_events_list_trimmed_captured_2026-10-20.json") as Record<string, unknown>[]);
 
 const worlds: World[] = [];
 after(async () => {

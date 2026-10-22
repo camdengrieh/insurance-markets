@@ -9,6 +9,7 @@ import { getAddress } from "viem";
 
 import { buildDecodedClobAuth, buildDecodedClobOrder, rebuildClobAuth, rebuildClobOrder } from "../src/clob/decoded.js";
 import { clobCapAmount, computeClobAmounts } from "../src/clob/amounts.js";
+import { depositWalletAddress } from "../src/clob/polymarket/deposit-wallet.js";
 import { LIMITLESS_EXCHANGES, POLYMARKET_EXCHANGES } from "../src/clob/venues.js";
 import { SAFETY_NOTICES, digestTag } from "../src/relay/contract.js";
 import { APPROVAL_RECOMMENDED, DECODED_NOTICE } from "../src/tools/relay-tool-kit.js";
@@ -48,9 +49,12 @@ function snapshotOf(tool: Obj): Obj {
   };
 }
 
-// A Polymarket order item exactly as the relay would build it (same builders), so the plugin's rebuild passes.
-function polymarketPrepared(over: { readonly side?: "BUY" | "SELL"; readonly tif?: "GTC" | "GTD" } = {}): Obj {
+// A Polymarket order item exactly as the relay would build it (same builders), so the plugin's rebuild passes. `maker`
+// "beacon" builds the Deposit Wallet form (signature type 3) for the owner's derived beacon-proxy wallet.
+function polymarketPrepared(over: { readonly side?: "BUY" | "SELL"; readonly tif?: "GTC" | "GTD"; readonly maker?: "owner" | "beacon"; readonly signatureType?: 0 | 3 } = {}): Obj {
   const owner = getAddress(OWNER);
+  const maker = over.maker === "beacon" ? depositWalletAddress(owner, "beacon") : owner;
+  const signatureType = over.signatureType ?? (over.maker === "beacon" ? 3 : 0);
   const side = over.side === "SELL" ? 1 : 0;
   const amounts = computeClobAmounts({ side, price: "0.52", shares: "10", grid: { tick: "0.01", priceDecimals: 2 }, sizeDecimals: 2, minSharesMicro: 5_000_000n });
   const cap = clobCapAmount(amounts);
@@ -70,7 +74,7 @@ function polymarketPrepared(over: { readonly side?: "BUY" | "SELL"; readonly tif
       venue: "polymarket",
       expiration,
       domain: { version: POLYMARKET_EXCHANGES.v2.version, verifyingContract: POLYMARKET_EXCHANGES.v2.verifyingContract },
-      order: { salt: 777n, maker: owner, signer: owner, tokenId: BigInt(TOKEN), makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side, signatureType: 0, timestamp: 1792411200000n, metadata: ZERO_BYTES32, builder: ZERO_BYTES32 },
+      order: { salt: 777n, maker, signer: maker, tokenId: BigInt(TOKEN), makerAmount: amounts.makerAmount, takerAmount: amounts.takerAmount, side, signatureType, timestamp: 1792411200000n, metadata: ZERO_BYTES32, builder: ZERO_BYTES32 },
     },
   });
   const rebuilt = rebuildClobOrder(decoded);
@@ -79,7 +83,7 @@ function polymarketPrepared(over: { readonly side?: "BUY" | "SELL"; readonly tif
     prepared_id: ID,
     kind: "clob_order",
     owner,
-    account: owner,
+    account: maker,
     expires_at: isoSecond(NOW + 240_000),
     sign: { intent: { op: "typedData", typedData: rebuilt.typed_data }, expected_digest: rebuilt.digest, digest_form: "eip712OrderHash" },
     summary: { lines: rebuilt.lines, digest_tag: digestTag(rebuilt.digest), inner_hash_tag: digestTag(rebuilt.inner_hash), inner_hash_kind: "typed_data_hash" },
@@ -211,7 +215,7 @@ describe("clob_order", () => {
     assert.notEqual(other.isError, true, JSON.stringify(other.structuredContent));
   });
 
-  it("prepares a Polymarket order: the request is forwarded with the owner as account, the item is vetted and rebuilt, and sign_with_paybox is the order's typed data", async () => {
+  it("prepares a Polymarket order: the request carries the owner and no account (the relay resolves the maker), the item is vetted and rebuilt, and sign_with_paybox is the order's typed data", async () => {
     const { deps, relay } = makeDeps({ env: ENV_CLOB });
     relay.on("POST /v1/clob/order/prepare", polymarketPrepared());
     const result = await handleClobOrder({ step: "prepare", venue: "polymarket", owner: OWNER, market_id: CONDITION, token_id: TOKEN, side: "BUY", price: "0.52", shares: "10", tif: "GTD", ttl_s: 300 }, deps);
@@ -220,7 +224,7 @@ describe("clob_order", () => {
     assert.equal(structured["outcome"], "prepared");
     assert.equal(asObj(structured["verification"])["status"], "verified");
     const call = must(relay.callsTo("POST /v1/clob/order/prepare")[0]);
-    assert.deepEqual(call.body, { owner: getAddress(OWNER), account: getAddress(OWNER), venue: "polymarket", market_id: CONDITION, token_id: TOKEN, side: "BUY", price: "0.52", shares: "10", tif: "GTD", ttl_s: 300 });
+    assert.deepEqual(call.body, { owner: getAddress(OWNER), venue: "polymarket", market_id: CONDITION, token_id: TOKEN, side: "BUY", price: "0.52", shares: "10", tif: "GTD", ttl_s: 300 });
     const intent = asObj(structured["sign_with_paybox"]);
     assert.equal(intent["op"], "typedData");
     assert.equal(asObj(intent["typedData"])["primaryType"], "Order");
@@ -229,6 +233,37 @@ describe("clob_order", () => {
     assert.match(String(structured["next_action"]), /clob_order with step "submit"/);
     const harness = await connect(registerClobTools);
     assert.equal(await validateAgainstTool(harness, CLOB_ORDER_TOOL, structured), undefined);
+  });
+
+  it("prepares a Polymarket Deposit Wallet order: the account is the wallet derived from the owner, sign_with_paybox is the TypedDataSign wrapper with the order nested", async () => {
+    const { deps, relay } = makeDeps({ env: ENV_CLOB });
+    relay.on("POST /v1/clob/order/prepare", polymarketPrepared({ maker: "beacon" }));
+    const result = await handleClobOrder({ step: "prepare", venue: "polymarket", owner: OWNER, market_id: CONDITION, token_id: TOKEN, side: "BUY", price: "0.52", shares: "10", tif: "GTD", ttl_s: 300 }, deps);
+    assert.notEqual(result.isError, true, JSON.stringify(result.structuredContent));
+    const structured = asObj(result.structuredContent);
+    const wallet = depositWalletAddress(getAddress(OWNER), "beacon");
+    assert.equal(structured["outcome"], "prepared");
+    assert.equal(asObj(structured["verification"])["status"], "verified");
+    assert.equal(structured["account"], wallet);
+    const typed = asObj(asObj(structured["sign_with_paybox"])["typedData"]);
+    assert.equal(typed["primaryType"], "TypedDataSign");
+    assert.equal(asObj(typed["message"])["verifyingContract"], wallet);
+    assert.equal(asObj(asObj(typed["message"])["contents"])["signatureType"], 3);
+    assert.ok(result.content.some((part) => part.type === "text" && part.text.includes(`Deposit Wallet ${wallet}`)));
+    const harness = await connect(registerClobTools);
+    assert.equal(await validateAgainstTool(harness, CLOB_ORDER_TOOL, structured), undefined);
+  });
+
+  it("refuses an item whose account is neither the owner nor its derived Deposit Wallet, and a Deposit Wallet maker on an EOA (type 0) order", async () => {
+    const { deps, relay } = makeDeps({ env: ENV_CLOB });
+    const ask = { step: "prepare" as const, venue: "polymarket" as const, owner: OWNER, market_id: CONDITION, token_id: TOKEN, side: "BUY" as const, price: "0.52", shares: "10", tif: "GTD" as const, ttl_s: 300 };
+    // Another owner's Deposit Wallet (derived from an unrelated address): a real-looking wallet, but not this owner's.
+    relay.on("POST /v1/clob/order/prepare", { ...polymarketPrepared({ maker: "beacon" }), account: depositWalletAddress(getAddress(LIMITLESS_EXCHANGES[0]!), "beacon") });
+    const stranger = await handleClobOrder(ask, deps);
+    assert.equal(stranger.isError, true);
+    assert.equal(asObj(stranger.structuredContent)["code"], "account_mismatch");
+    // The builders accept the struct (maker == signer), but the rebuild refuses: an EOA order's maker is the owner.
+    assert.throws(() => polymarketPrepared({ maker: "beacon", signatureType: 0 }), /maker of an EOA venue order is the owner/);
   });
 
   it("refuses an item whose decoded block is for another token, side or venue than asked (request mismatch), and a quote that differs", async () => {

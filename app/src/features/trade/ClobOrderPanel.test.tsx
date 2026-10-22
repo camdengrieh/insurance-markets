@@ -82,7 +82,7 @@ describe("the venue ticket, unproven and switched off", () => {
     // worked out from the ticket (nothing marked as an example, because nothing is one).
     const strip = must(panel, "[role=group][aria-label='What you sign']");
     expect(allText(strip)).toContain("Polymarket CTF Exchange v3 · 137");
-    expect(allText(strip)).toContain("BUY · EOA, type 0");
+    expect(allText(strip)).toContain("BUY · type 3 or 0, read at prepare");
     expect(allText(strip)).toContain("5.2 USD → 10 shares");
     expect(allText(strip)).toContain("1,000 bps");
     expect(allText(strip)).not.toMatch(/example/i);

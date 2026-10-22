@@ -75,8 +75,11 @@ export function polymarketTickRule(tick: string): PolymarketTickRule | undefined
 }
 
 // Signature types (trading/wallets-auth.md WalletType enum; place-orders.md "signatureType: 0 = EOA, 1 = Proxy, 2 = Safe,
-// 3 = Deposit Wallet"). Only 0 is built: a Deposit Wallet signs an ERC-7739 TypedDataSign wrapper whose exact
-// contents-description string this repository could not verify against a primary source, so type 3 fails closed.
+// 3 = Deposit Wallet"; Polymarket/ctf-exchange-v2 src/exchange/libraries/Structs.sol SignatureType: EOA, POLY_PROXY,
+// POLY_GNOSIS_SAFE, POLY_1271). Two are built: 0 (the owner EOA is the maker) and 3 (the owner's Deposit Wallet is the
+// maker; the owner signs an ERC-7739 TypedDataSign wrapper, src/clob/polymarket/order.ts). Which one an owner gets is
+// read from Polygon by the relay (src/clob/polymarket/deposit-wallet.ts, relay/clob.ts), never assumed. Proxy (1) and
+// Safe (2) accounts are not built and are refused.
 export const POLYMARKET_SIGNATURE_TYPE_EOA = 0;
 export const POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET = 3;
 
@@ -84,7 +87,7 @@ export const POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET = 3;
 // 2.11 and docs/research/37 section 4.2): "Orders submitted from blocked regions will be rejected"; the check is
 // `GET https://polymarket.com/api/geoblock` on the site, not on an API host this relay is allowed to reach. The relay
 // therefore never claims the caller may trade: it records the fact as unknown and lets the venue's own refusal (a 403)
-// pause the venue, exactly as the read adapter does (app/src/venues/polymarket/geoblock.ts).
+// pause the venue, exactly as the read adapter does (sdk/venues/polymarket/geoblock.ts).
 export const POLYMARKET_GEOBLOCK_NOTE =
   "Polymarket decides eligibility by the requesting IP and rejects orders from blocked regions. This relay does not check, mask or route around it; a venue refusal pauses the venue.";
 
@@ -110,10 +113,22 @@ export function isPinnedLimitlessExchange(address: string): boolean {
 // address for open orders; feeRateBps 0 on COLLATERAL fee-module venues, otherwise the owner's effectiveFeeRateBps.
 export const LIMITLESS_SIGNATURE_TYPE_EOA = 0;
 
-// The venue's tick was never read from a documented field; the recorded book has three-decimal prices
-// (app/src/venues/limitless/constants.ts LIMITLESS_VERIFICATION.tick). The relay reads the market and refuses a book
-// whose prices are finer than this.
-export const LIMITLESS_ASSUMED_TICK = "0.001";
+// The venue's price tick: one venue-wide rule, with no per-market field. Sources (read 2026-10-21):
+//   - the Limitless OpenAPI (https://docs.limitless.exchange/openapi.json), schema Order.price: "Decimal price with at
+//     most three places; price × contracts must equal the collateral amount exactly as an integer", minimum 0.001,
+//     maximum 0.999, multipleOf 0.001;
+//   - https://docs.limitless.exchange/api-reference/trading/create-order.md: "price is required and may have at most
+//     three decimal places, so prices run from 0.001 to 0.999. The collateral equation must be exact";
+//   - the official SDK, npm @limitless-exchange/sdk 1.3.0: DEFAULT_PRICE_TICK = 1e-3, the client constructs its
+//     OrderBuilder with 1e-3, and the builder refuses a price off the tick and shares that are not a multiple of
+//     sharesStep = priceScale / tickInt (1,000 raw units, 0.001 shares, at this tick).
+// This relay's own grid is stricter on size (two size decimals, so shares are a multiple of 0.01, which is a multiple
+// of 0.001) and checks the product exactly (src/clob/amounts.ts), and it checks the shares step explicitly as well.
+export const LIMITLESS_PRICE_TICK = "0.001";
+
+// create-order.md: "makerAmount must be at least 100 raw units; this is the API's only order-size floor"; the OpenAPI
+// Order.makerAmount has "minimum": 100. Raw 6-decimal units (collateral for a BUY, contracts for a SELL).
+export const LIMITLESS_MIN_MAKER_AMOUNT = 100n;
 
 // Limitless terms as read (docs/research/09 section 2.3, ToS 2026-09-15): not available in the United States, Ontario or
 // Alberta; automation through the API is invited. Shown as a dated fact, never as an eligibility verdict.

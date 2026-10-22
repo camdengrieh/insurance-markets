@@ -48,6 +48,21 @@ describe("the card on a venue order", () => {
     expect(evaluation.freshness.state).toBe("fresh");
   });
 
+  it("verifies a Polymarket Deposit Wallet order: the maker is the wallet derived from the owner, the intent is the TypedDataSign wrapper", () => {
+    const built = buildClobTicket({ tokenId: TOKEN, side: "BUY", price: "0.52", shares: "10", tif: "GTC", ttlS: "", postOnly: false }, PM);
+    if (!built.ok) throw new Error(JSON.stringify(built.issues));
+    const item = clobItemFor(built.ticket, OWNER as `0x${string}`, { nowMs: NOW, maker: "beacon" });
+    const evaluation = evaluateCard(item.prepared, { nowMs: NOW + 1_000, state: "prepared" });
+    expect(evaluation.verification).toBe("verified");
+    expect(evaluation.checks.filter((check) => check.status === "fail")).toEqual([]);
+    expect(evaluation.checks.find((check) => check.id === "account")?.label).toBe("The maker is the owner's Polymarket Deposit Wallet");
+    expect(evaluation.intent?.op).toBe("typedData");
+    if (evaluation.intent?.op === "typedData") {
+      expect(evaluation.intent.typedData.primaryType).toBe("TypedDataSign");
+      expect(evaluation.intent.typedData.message["verifyingContract"]).toBe(item.prepared["account"]);
+    }
+  });
+
   it("fails the account check when the item's account is not the owner wallet, and withholds the intent", () => {
     const item = itemFor(PM);
     const evaluation = evaluateCard({ ...item.prepared, account: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" }, { nowMs: NOW + 1_000, state: "prepared" });

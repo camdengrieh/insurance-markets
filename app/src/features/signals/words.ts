@@ -2,8 +2,8 @@
 // client is a name this project wrote (never upstream text), and the words for it are written here. A token that is
 // not in a table prints as "a reason this screen has no words for" and never as the raw string.
 
-import type { QCoverage, QuotientVenue, OrientationReason, RefusalCode, SpreadLabel } from "../../venues/quotient";
-import { ENTRY_STATUSES } from "../../venues/quotient";
+import type { QCoverage, QuotientVenue, OrientationReason, RefusalCode, SpreadLabel } from "./quotient";
+import { ENTRY_STATUSES } from "./quotient";
 import type { VenueId } from "../../core/ports";
 import type { LinkLabelReason, LinkReason } from "./links/verify";
 
@@ -108,6 +108,7 @@ export const REFUSAL_CODE_TEXT: Readonly<Record<RefusalCode, string>> = Object.f
   unit_not_a_number: "a number is not a number",
   unit_out_of_range: "a number is out of range",
   inconsistent: "two numbers in the row disagree",
+  future_timestamp: "a time in the row is later than when it was received",
 });
 
 export function refusalCodeText(code: string): string {

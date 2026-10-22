@@ -1,0 +1,16 @@
+{
+  "name": "deposit-wallet-beacon-implementation",
+  "address": "0xf7f27C29e60fe6325beF8dA7F93250353d2e3294",
+  "chain_id": 137,
+  "contract": "DepositWallet",
+  "size": 20858,
+  "sha256": "ee8074401634efbb5f76d855008a85a03fc67cc40eb78448c1c49905facc437e",
+  "keccak256": "0xf5c1072460e64902af84d35f5bb1d0a15d80a88c5827b831a977fbc5a0684b96",
+  "source_url": "https://sourcify.dev/server/v2/contract/137/0xf7f27C29e60fe6325beF8dA7F93250353d2e3294?fields=runtimeBytecode",
+  "source_field": "runtimeBytecode.onchainBytecode",
+  "sourcify_match": "exact_match",
+  "cross_check": "equal to eth_getCode at the address over https://polygon-bor-rpc.publicnode.com/ (sdk/venues/origins.ts rpc_polygon)",
+  "captured_at": "2026-10-21",
+  "evm_version": "osaka",
+  "compiler": "solc 0.8.34+commit.80d5c536"
+}

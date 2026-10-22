@@ -262,7 +262,8 @@ const POLYMARKET: PlatformRecord = {
   ),
   collateral: sec(
     "collateral",
-    { chain: "eip155:137", asset: "pUSD", decimals: 6, custody: "self" },
+    // Positions sit in the user's proxy or Deposit Wallet, a contract wallet (sdk/venues/polymarket/constants.ts).
+    { chain: "eip155:137", asset: "pUSD", decimals: 6, custody: "smart_account" },
     "H",
     "live_api",
     [`${AD}#2.3`],

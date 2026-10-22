@@ -43,10 +43,14 @@ describe("the flag and the acknowledgement", () => {
     assert.equal(signerReadiness({ ...S2_ENV, ENABLE_PAYBOX_SIGNER: "0" }).ready, false);
     assert.deepEqual(signerReadiness({ ...S2_ENV, PAYBOX_CONFIG_DIR: "config" }).missing, ["PAYBOX_CONFIG_DIR"]);
     assert.deepEqual(signerReadiness({ ...S2_ENV, PAYBOX_CONFIG_DIR: `${CONFIG_DIR}\0x` }).missing, ["PAYBOX_CONFIG_DIR"]);
-    assert.deepEqual(signerReadiness({ ...S2_ENV, PAYBOX_SIGNER_CREDENTIAL: "ab" }).missing, ["PAYBOX_SIGNER_CREDENTIAL"]);
+    // The PayBox CLI takes a credential id only as a UUID (@paybox-sh/sdk 2.2.0), so anything else is not configured.
+    for (const bad of ["ab", "cred-test-0001", "Personal wallet", `${CREDENTIAL}x`, CREDENTIAL.replace(/-/g, "")]) {
+      assert.deepEqual(signerReadiness({ ...S2_ENV, PAYBOX_SIGNER_CREDENTIAL: bad }).missing, ["PAYBOX_SIGNER_CREDENTIAL"], bad);
+    }
+    assert.equal(signerReadiness({ ...S2_ENV, PAYBOX_SIGNER_CREDENTIAL: CREDENTIAL.toUpperCase() }).ready, true);
     assert.deepEqual(signerReadiness({ ...S2_ENV, PAYBOX_BIN: "paybox --flag" }).missing, ["PAYBOX_BIN"]);
     assert.equal(signerReadiness({ ...S2_ENV, PAYBOX_BIN: "/opt/paybox/bin/paybox" }).ready, true);
-    assert.equal(CREDENTIAL.length >= 4, true);
+    assert.match(CREDENTIAL, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 });
 
@@ -56,6 +60,7 @@ describe("the conditions for turning it on are written down", () => {
     assert.deepEqual([...tests].sort(), ["DT1", "DT3"]);
     assert.equal(new Set(S2_ENABLE_CONDITIONS.map((condition) => condition.id)).size, S2_ENABLE_CONDITIONS.length, "ids are unique");
     for (const condition of S2_ENABLE_CONDITIONS) {
+      assert.ok(condition.readFromSource.length > 40, condition.id);
       assert.ok(condition.mustShow.length > 40, condition.id);
       assert.ok(condition.ifDifferent.length > 10, condition.id);
     }
@@ -63,9 +68,11 @@ describe("the conditions for turning it on are written down", () => {
     for (const required of ["dt1_raw_allowed", "dt1_typed_data_allowed", "dt1_output_shape", "dt3_sign_command", "dt3_credential_listing", "dt3_single_process"]) assert.ok(ids.includes(required), required);
   });
 
-  it("says out loud which parts are guesses", () => {
-    const text = S2_ENABLE_CONDITIONS.map((condition) => condition.mustShow).join(" ");
-    assert.match(text, /GUESS/);
+  it("each condition says what was read from the published CLI and what only the live run can show; nothing is a guess", () => {
+    for (const condition of S2_ENABLE_CONDITIONS) assert.match(condition.readFromSource, /@paybox-sh\/sdk 2\.2\.0/, condition.id);
+    const source = readFileSync(fileURLToPath(new URL("../../paybox-signer.ts", import.meta.url)), "utf8");
+    assert.ok(!/GUESS/.test(source), "no GUESS marker is left in the signer");
+    assert.ok(!/"--wait"/.test(source), "no command of the flow is built with --wait");
   });
 });
 

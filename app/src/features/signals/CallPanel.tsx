@@ -5,7 +5,7 @@
 import { useRef, useState } from "react";
 
 import { Button, Field, Tile } from "../../ui";
-import { MISPRICED_SORTS, MISPRICED_VENUES, QUOTIENT_VENUES, ROUTES, SIGNAL_STATUSES, type MispricedParams, type RouteId, type SignalsParams } from "../../venues/quotient";
+import { MISPRICED_SORTS, MISPRICED_VENUES, QUOTIENT_VENUES, ROUTES, SIGNAL_STATUSES, type MispricedParams, type RouteId, type SignalsParams } from "./quotient";
 import { usdLabel } from "./figures";
 import { quotientVenueName } from "./words";
 

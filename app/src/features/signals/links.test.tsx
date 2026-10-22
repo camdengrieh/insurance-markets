@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { Status } from "../../core/ports";
 import { cleanup } from "../../ui/testing/dom";
-import { capSpreadLabel } from "../../venues/quotient";
+import { capSpreadLabel } from "./quotient";
 import { fakeEntry, market as fakeMarket } from "../explorer/test-support";
 import { DATASET_STALE_AFTER_DAYS, canonicalJson, datasetAge, linksForLeg, loadBundledLinks, parseLinkDataset, pinDataset, showsInDefaultView } from "./links/dataset";
 import { linkDatasetSchema, type Link } from "./links/schema";

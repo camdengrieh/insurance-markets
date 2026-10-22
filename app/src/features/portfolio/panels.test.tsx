@@ -6,7 +6,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { AddressBinding } from "../../core/bindings";
 import { FetchError } from "../../core/fetch";
-import { recorded, SENATE_YES } from "../../venues/polymarket/fixtures/load";
+import { recorded, SENATE_YES } from "@sdk/venues/polymarket/fixtures/load";
 import { ConnectActionProvider, useRegisterConnectAction } from "../../ui";
 import { act, allText, cleanup, click, must, render } from "../../ui/testing/dom";
 import { runAxe } from "../../ui/testing/axe";

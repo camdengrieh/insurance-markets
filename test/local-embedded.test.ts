@@ -88,6 +88,24 @@ describe("the embedded relay answers like the HTTP one, without a socket", () =>
     const health = await relay.client.get("/v1/health");
     assert.equal(health.ok && health.data.kill, true);
     assert.equal(health.ok && health.data.status, "kill_switch");
+    // Reading a stored item by id is a read: it is answered (here: there is no such item), not refused.
+    assert.equal(code(await relay.client.get(`/v1/prepared/${"0".repeat(32)}`)), "not_found");
+  });
+
+  it("reads a stored item by id only for an owner it serves; any other owner's item is the same not_found as an unknown id", async () => {
+    const { relay, dir } = await startEmbedded({ env: { XO_OWNER: OTHER } });
+    // An item of OWNER, kept with its answer the way the pipeline keeps a prepare answer.
+    const record = await relay.services.prepared.create({ kind: "auth", owner: OWNER, account: deriveAccount(OWNER), digest: HASH as `0x${string}`, digestForm: "kernelWrappedClobAuth", payload: null });
+    const hidden = await raw(relay, "GET", `/v1/prepared/${record.id}`);
+    const unknown = await raw(relay, "GET", `/v1/prepared/${"0".repeat(32)}`);
+    assert.equal(hidden.status, 404);
+    assert.deepEqual(hidden, unknown);
+    await relay.close();
+    // The same directory serving OWNER: the item is there, and it says why it cannot be handed out.
+    const mine = await startEmbedded({ dir, env: { XO_OWNER: OWNER } });
+    const shown = await raw(mine.relay, "GET", `/v1/prepared/${record.id}`);
+    assert.equal(shown.status, 422);
+    assert.equal(shown.body.error?.code, "precondition_failed");
   });
 
   it("the kill switch engaged while running takes effect on the very next write", async () => {

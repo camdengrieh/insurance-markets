@@ -47,7 +47,8 @@ describe("xo adapter: getMarket", () => {
     assert.deepEqual(m.outcomes.map((o) => [o.index, o.role]), [[0, "yes"], [1, "no"]]);
     assert.equal(m.outcomes[0]?.tokenId, YES);
     assert.equal(m.tick, "0.001");
-    assert.deepEqual(m.collateral, { symbol: "USDC", chain: "eip155:3223", decimals: 6, custody: "smart_account" });
+    // XO settles in bridged USDC.e on chain 3223 (the shared reader's XO_COLLATERAL, as pm/registry/records.ts says).
+    assert.deepEqual(m.collateral, { symbol: "USDC.e", chain: "eip155:3223", decimals: 6, custody: "smart_account" });
     assert.equal(m.status, "active");
     assert.deepEqual(m.tradable, { ok: true, reasons: [] });
     assert.equal(m.rules.mechanism, "xo_manual_modra");
@@ -81,6 +82,26 @@ describe("xo adapter: getMarket", () => {
     assert.equal(m.fee.modelId, "unknown");
     const checked = checkFeeSpec(m.fee, NOW);
     assert.equal(checked.ok, false);
+  });
+
+  it("makes the fee unknown for a fee curve model the shared parser does not understand", async () => {
+    const config = detail["effectiveFeeConfig"] as Record<string, unknown>;
+    const conviction = patch(detail, [["effectiveFeeConfig"], { ...config, curveModel: "CONVICTION_CURVE" }]);
+    const m = await adapterFor(marketRoutes(conviction)).adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.equal(m.fee.modelId, "unknown");
+    assert.ok(m.extras.warnings.some((w) => w.includes("fee is unknown")));
+  });
+
+  it("is not tradable while the review status is missing or asks for an update", async () => {
+    const update = patch(detail, [["reviewStatus"], "UPDATE_REQUIRED"]);
+    let m = await adapterFor(marketRoutes(update)).adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.equal(m.tradable.ok, false);
+    assert.ok(m.tradable.reasons.includes("review_update_required"));
+    assert.ok(m.extras.warnings.includes("XO review status is UPDATE_REQUIRED"));
+    const missing = patch(detail, [["reviewStatus"], null]);
+    m = await adapterFor(marketRoutes(missing)).adapter.getMarket({ venue: "xo", marketId: CID, native: {} });
+    assert.equal(m.tradable.ok, false);
+    assert.ok(m.tradable.reasons.includes("review_status_missing"));
   });
 
   it("gives roles by slot even when the titles are team names", async () => {
@@ -221,7 +242,8 @@ describe("xo adapter: statuses", () => {
     assert.equal(xoStatusOf("settled"), "resolved");
     assert.equal(xoStatusOf("closed_no_winner"), "closed");
     assert.equal(xoStatusOf("review_required"), "paused");
-    assert.equal(xoStatusOf("cancelled"), "voided");
+    // A cancelled market is not a confirmed refund: the shared table says "unknown", never "voided".
+    assert.equal(xoStatusOf("cancelled"), "unknown");
     assert.equal(xoStatusOf("unknown"), "unknown");
   });
 });
@@ -320,7 +342,8 @@ describe("xo adapter: listMarkets", () => {
   it("maps requested statuses onto XO list statuses", async () => {
     const { adapter, calls } = adapterFor([route(DATA, "/api/markets", listFixture)]);
     await adapter.listMarkets({ statuses: ["paused", "pending"] });
-    assert.equal(calls[0]!.url.searchParams.get("statuses"), "PENDING,PAUSED");
+    // UPDATE_REQUIRED reads as "paused" (the creator must update the market), so a paused query asks for it too.
+    assert.equal(calls[0]!.url.searchParams.get("statuses"), "PENDING,PAUSED,UPDATE_REQUIRED");
   });
 });
 

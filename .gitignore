@@ -50,4 +50,5 @@ docs/research/fixtures/*
 
 # Kalshi terms bar caching its data and this repo is public: never commit recorded Kalshi bodies
 app/src/venues/kalshi/fixtures/*_recorded.json
+sdk/venues/kalshi/fixtures/*_recorded.json
 **/kalshi*recorded*

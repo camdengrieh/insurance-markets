@@ -5,7 +5,7 @@
 import { useRef, useState } from "react";
 
 import { Badge, Button, Field, Tile, formatUtc } from "../../ui";
-import { LICENCE_CLAUSE_BODY, LICENCE_CLAUSE_QUOTES, LICENCE_CLAUSE_SOURCE, LICENCE_CLAUSE_TITLE, QUOTIENT_SHAPE_STATUS } from "../../venues/quotient";
+import { LICENCE_CLAUSE_BODY, LICENCE_CLAUSE_QUOTES, LICENCE_CLAUSE_SOURCE, LICENCE_CLAUSE_TITLE, QUOTIENT_SHAPE_STATUS } from "./quotient";
 import type { AccessChoice, SessionSnapshot, SignalsSession } from "./session";
 
 export function ShapeStatus() {

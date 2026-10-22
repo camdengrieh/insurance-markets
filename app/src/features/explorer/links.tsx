@@ -1,41 +1,25 @@
 // Cross-venue links on the Markets surface (docs/dapp-design.md 4.5 "Linked groups", M3).
 //
-// No human-approved link dataset is bundled today (`[ML]` and `[AD]` are design only), so APPROVED_LINK_DATASET is
-// null, every market has "no links", and the words say so. When a build bundles `features/signals/data/links.json`
-// (hash-pinned, ids and hashes only: no titles, no prices), the lookups below name the OTHER legs of every approved
-// link that names a market as CANDIDATES: a candidate is never proof, and no spread is drawn between candidates.
-// Nothing here guesses a link from similar titles.
+// The links come from the dataset the build bundles (features/signals/data/links.json, written by the linker's
+// export-app step: hash-pinned, ids and hashes only, no titles, no prices) and loaded by signals/links/dataset.ts.
+// The lookups below name the OTHER legs of every approved link that names a market as CANDIDATES: a candidate is
+// never proof, and no spread is drawn between candidates. Nothing here guesses a link from similar titles.
 
 import type { MarketRef, VenueId } from "../../core/ports";
-import { Badge, Tile } from "../../ui";
+import { Tile } from "../../ui";
 import { linksForLeg, proposedForLeg, type LinkLoad } from "../signals/links/dataset";
 import type { Link, LinkLeg } from "../signals/links/schema";
 
-// null: no human-approved dataset is bundled. The signals feature's loader (loadBundledLinks) answers "absent" for
-// the same reason; both say "no links" until a person approves a set.
-export const APPROVED_LINK_DATASET: null = null;
-
-export interface LinkLookup {
-  readonly state: "no_dataset" | "none_for_market" | "linked";
-  readonly count: number;
-}
-
-export function linksFor(_ref: MarketRef): LinkLookup {
-  return APPROVED_LINK_DATASET === null ? { state: "no_dataset", count: 0 } : { state: "none_for_market", count: 0 };
-}
-
-export function LinkBadge({ market }: { readonly market: MarketRef }) {
-  const lookup = linksFor(market);
-  return lookup.count === 0 ? <Badge tone="neutral">no links</Badge> : <Badge tone="info">{`${lookup.count} linked`}</Badge>;
-}
-
-export function LinkGroupPlaceholder({ market, heading = "h3" }: { readonly market: MarketRef; readonly heading?: "h3" | "h4" }) {
-  const lookup = linksFor(market);
+// The tile for a market no approved link names, worded for why: this build bundles no link file, or the file it
+// bundles names no link for this market.
+export function LinkGroupEmpty({ state, heading = "h3" }: { readonly state: "no_dataset" | "none_for_market"; readonly heading?: "h3" | "h4" }) {
   return (
-    <Tile tone="neutral" title="Linked groups: no links" heading={heading} dataKind="links-none" dataCode={lookup.state}>
+    <Tile tone="neutral" title="Linked groups: no links" heading={heading} dataKind="links-none" dataCode={state}>
       <p>
-        No link dataset has been approved by a person yet, so this market is not shown next to any market on another venue. The app does not guess
-        links from similar titles.
+        {state === "no_dataset"
+          ? "This build bundles no link file, so this market is not shown next to any market on another venue."
+          : "No approved link in the bundled link file names this market, so it is not shown next to any market on another venue."}{" "}
+        The app does not guess links from similar titles.
       </p>
       <p>A gap between two venues is not an arbitrage: the rules, the resolver, the close time and the fees can all differ.</p>
     </Tile>

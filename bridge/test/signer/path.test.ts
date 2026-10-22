@@ -91,10 +91,15 @@ describe("the credential must be in always_approve (M5-4)", () => {
     assert.equal((await path.sign(vetted(deployItem()), options())).ok, true, "case does not matter");
   });
 
-  it("an unreadable credential refuses, and so does a client that throws", async () => {
-    const { client, path } = setup();
-    client.credentialFailure = { ok: false, code: "credential_unreadable" };
-    assert.equal(failed(await path.sign(vetted(deployItem()), options())).code, "credential_unreadable");
+  it("an unreadable, ungranted, disabled or non-wallet credential refuses, and so does a client that throws", async () => {
+    for (const code of ["credential_unreadable", "credential_not_granted", "credential_disabled", "credential_not_wallet"] as const) {
+      const { client, path } = setup();
+      client.credentialFailure = { ok: false, code };
+      const result = failed(await path.sign(vetted(deployItem()), options()));
+      assert.equal(result.code, code);
+      assert.equal(result.requested, false);
+      assert.equal(client.signCalls.length, 0);
+    }
     const throwing = new PayboxSigningPath({
       credential: async () => {
         throw new Error("pbxk1.SHOULD-NEVER-APPEAR");
@@ -164,21 +169,26 @@ describe("what comes back is checked before it is let out", () => {
     assert.equal(result.signature, sig);
   });
 
-  it("a typed-data intent needs a signature over the EIP-712 digest itself, not its EIP-191 wrapping", async () => {
-    const item = vetted(orderItem());
-    // sign the EIP-191 wrapping of the digest instead
-    const wrapped = await OWNER_KEY_ACCOUNT.signMessage({ message: { raw: item.expectedDigest } });
+  it("both ops need a signature over the digest itself, not its EIP-191 wrapping (@paybox-sh/sdk 2.2.0 signs raw as given)", async () => {
+    for (const make of [orderItem, deployItem, authItem]) {
+      const item = vetted(make());
+      // sign the EIP-191 wrapping of the digest instead
+      const wrapped = await OWNER_KEY_ACCOUNT.signMessage({ message: { raw: item.expectedDigest } });
+      const { client, path } = setup();
+      client.signer = async () => ({ ok: true, signature: wrapped });
+      const result = failed(await path.sign(item, options()));
+      assert.equal(result.code, "form_not_allowed", item.op);
+      assert.equal(result.requested, true);
+    }
+  });
+
+  it("passes stillAllowed through to the client, and only when one is given", async () => {
     const { client, path } = setup();
-    client.signer = async () => ({ ok: true, signature: wrapped });
-    const result = failed(await path.sign(item, options()));
-    assert.equal(result.code, "form_not_allowed");
-    // for a raw intent the same answer is recognised and reported
-    const raw = vetted(deployItem());
-    const rawWrapped = await OWNER_KEY_ACCOUNT.signMessage({ message: { raw: raw.expectedDigest } });
-    client.signer = async () => ({ ok: true, signature: rawWrapped });
-    const ok = await path.sign(raw, options());
-    assert.ok(ok.ok);
-    assert.equal(ok.form, "eip191");
+    const stillAllowed = (): boolean => true;
+    assert.ok((await path.sign(vetted(deployItem()), options({ stillAllowed }))).ok);
+    assert.equal(client.signCalls[0]?.stillAllowed, stillAllowed);
+    assert.ok((await path.sign(vetted(deployItem()), options())).ok);
+    assert.ok(!("stillAllowed" in (client.signCalls[1] ?? {})));
   });
 
   it("a request reference that looks like a key is not kept", async () => {

@@ -128,10 +128,10 @@ test("a second linker on the same --out is refused by the lock", async () => {
 test("replaying the REAL captured shapes: XO list and detail (rules removed from the capture), Gamma keyset, Limitless active", async () => {
   const world = await startWorld([], Date.parse("2026-10-19T12:00:00Z"));
   worlds.push(world);
-  const xoList = readFixture("pm/test/recorder/fixtures/xo-markets-list.json") as { data: Record<string, unknown>[]; meta: Record<string, unknown> };
-  const xoLookups = readFixture("pm/test/recorder/fixtures/xo-market-lookups.json") as { path: string; status: number; body: unknown }[];
-  const gamma = readFixture("app/src/venues/polymarket/fixtures/gamma_markets_keyset_captured_2026-10-20.json") as { markets: unknown[] };
-  const limitless = readFixture("app/src/venues/limitless/fixtures/markets_active_list_captured_2026-10-20.json") as { data: unknown[] };
+  const xoList = readFixture("sdk/venues/xo/fixtures/data-markets-list-clob-active-trimmed-2026-10-20.json") as { data: Record<string, unknown>[]; meta: Record<string, unknown> };
+  const xoLookups = readFixture("sdk/venues/xo/fixtures/data-market-lookups-slug-and-contract-trimmed-2026-10-20.json") as { path: string; status: number; body: unknown }[];
+  const gamma = readFixture("sdk/venues/polymarket/fixtures/gamma_markets_keyset_captured_2026-10-20.json") as { markets: unknown[] };
+  const limitless = readFixture("sdk/venues/limitless/fixtures/markets_active_list_captured_2026-10-20.json") as { data: unknown[] };
   world.hosts["api-mainnet.xo.market"]!.handler = (_r, u) => {
     if (u.pathname === "/api/markets") {
       return u.searchParams.get("page") === "1"
@@ -174,7 +174,7 @@ test("PM_QUOTIENT=1 with a body file prints agreement on stdout only; the body n
       body,
       JSON.stringify({
         markets: [
-          { venue: "polymarket", marketKey: `polymarket:${polyId}`, condition_id: polyId, question: sentinel, quotient_odds: 0.61, market_odds: 0.55, q_coverage: "forecasting", forecast: { created_at: "2026-10-20T11:00:00Z" }, venue_quote: { quote_method: "midpoint", freshness: "fresh", observed_at: "2026-10-20T11:55:00Z" } },
+          { venue: "polymarket", marketKey: `polymarket:${polyId}`, nativeMarketId: polyId, condition_id: polyId, question: sentinel, quotient_odds: 0.61, market_odds: 0.55, spread: 0.06, spread_direction: "q_higher", q_coverage: "forecasting", forecast: { created_at: "2026-10-20T11:00:00Z", probability: 0.61 }, venue_quote: { quote_method: "midpoint", freshness: "fresh", observed_at: "2026-10-20T11:55:00Z" } },
         ],
       }),
     );

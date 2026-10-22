@@ -1,9 +1,10 @@
-import { AUTH_PREPARED_TTL_S, PREPARED_TTL_S, digestTag, type DigestForm, type Hex, type PreparedKind, type RouteKey } from "../src/relay/contract.js";
+import { AUTH_PREPARED_TTL_S, PREPARED_TTL_S, digestTag, preparedItemSchema, type DigestForm, type GetResponseInput, type Hex, type PreparedKind, type RouteKey } from "../src/relay/contract.js";
 import { RelayError } from "../src/relay/errors.js";
 import { buildDecodedAuth, rebuildDecoded } from "../src/xo/signing/rebuild.js";
 import type { RelayAudit } from "./audit.js";
 import { randomHex } from "./crypto.js";
 import { NAMESPACES, type DurableStore, type Json } from "./store.js";
+import type { RelayServices, RouteTable } from "./types.js";
 
 // Prepared items and the send protocol (docs/phase1-gap-closing.md section 5.4 invariants 2 to 4 and
 // section 9 A2).
@@ -23,7 +24,10 @@ import { NAMESPACES, type DurableStore, type Json } from "./store.js";
 //   - after a restart, an item found in `sending` becomes `ambiguous` and is NEVER sent again
 //     (recoverInterrupted); only reconcile, by order hash or nonce, can settle it;
 //   - the TTL is 5 minutes (90 s for an auth item) and a caller can only shorten it;
-//   - signatures are never stored: submit takes them in memory, the record keeps only the digest.
+//   - signatures are never stored: submit takes them in memory, the record keeps only the digest;
+//   - the answer the prepare route gave (the strict Prepared object, after the contract check) is kept with the
+//     record, so GET /v1/prepared/{id} (amendment R9) can return exactly that item. It is what the caller already
+//     received: no signature, no credential, nothing the caller did not see.
 
 export type PreparedState = "prepared" | "sending" | "accepted" | "rejected" | "ambiguous" | "expired";
 
@@ -46,6 +50,9 @@ export interface PreparedRecord {
   readonly reservationIds: readonly string[];
   // Everything the owning module needs to rebuild and re-check the item at submit. Opaque here.
   readonly payload: Json;
+  // The prepare route's answer as it was sent (keepAnswer), or null: not recorded yet, or an item from a relay
+  // version that did not keep it.
+  readonly answer: Json | null;
 }
 
 type StoredPrepared = {
@@ -64,6 +71,8 @@ type StoredPrepared = {
   failedAttempts: number;
   reservationIds: string[];
   payload: Json;
+  // Absent in records written before the answer was kept.
+  answer?: Json | null;
 };
 
 export interface CreatePreparedInput {
@@ -89,6 +98,9 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const DETAIL = /^[a-z][a-z0-9_]{0,47}$/;
 const MAX_PAYLOAD_BYTES = 64 * 1024;
+// A Prepared answer is bounded by its schema (24 summary lines, 24 warnings, the typed data, the decoded block);
+// this is a guard against a bug, not a size anything legitimate reaches.
+const MAX_ANSWER_BYTES = 256 * 1024;
 const MAX_FAILED_ATTEMPTS = 5;
 const TERMINAL_RETENTION_MS = 7 * 86_400_000;
 
@@ -97,7 +109,11 @@ export function defaultTtlS(kind: PreparedKind): number {
 }
 
 function toRecord(stored: StoredPrepared): PreparedRecord {
-  return { ...stored, digest: stored.digest as Hex, reservationIds: [...stored.reservationIds] };
+  return { ...stored, digest: stored.digest as Hex, reservationIds: [...stored.reservationIds], answer: stored.answer ?? null };
+}
+
+function isObject(value: unknown): value is { readonly [key: string]: unknown } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export class PreparedStore {
@@ -159,11 +175,41 @@ export class PreparedStore {
         failedAttempts: 0,
         reservationIds: [...(input.reservationIds ?? [])],
         payload: input.payload ?? null,
+        answer: null,
       };
       return { ops: [{ ns: NAMESPACES.prepared, key: id, value: stored }], result: stored };
     });
     await this.#audit?.write({ ev: "prepared", outcome: "ok", state: "prepared", owner: input.owner, account: input.account, preparedId: record.id, digestTag: record.digest.slice(2, 18) });
     return toRecord(record);
+  }
+
+  // Keeps the answer the prepare route sent for this item. The answer must be a strict Prepared item of the contract
+  // (so it has no field a signature or a credential could ride in), must be about this very item (its id, kind, owner
+  // and digest), is kept once (a second call changes nothing) and only while the item is still unsent. Returns
+  // whether it is now kept; never throws for a mismatch, so a prepare answer is never lost over it.
+  async keepAnswer(answer: unknown): Promise<{ readonly kept: boolean; readonly reason?: string }> {
+    if (!isObject(answer) || !preparedItemSchema.safeParse(answer).success) return { kept: false, reason: "shape" };
+    const id = answer["prepared_id"];
+    const sign = answer["sign"];
+    const owner = answer["owner"];
+    if (typeof id !== "string" || !ID.test(id) || !isObject(sign) || typeof sign["expected_digest"] !== "string" || typeof owner !== "string") return { kept: false, reason: "shape" };
+    let text: string;
+    try {
+      text = JSON.stringify(answer);
+    } catch {
+      return { kept: false, reason: "shape" };
+    }
+    if (text.length > MAX_ANSWER_BYTES) return { kept: false, reason: "too_large" };
+    const digest = sign["expected_digest"].toLowerCase();
+    const json = JSON.parse(text) as Json;
+    return this.#store.transact<{ readonly kept: boolean; readonly reason?: string }>((reader) => {
+      const current = reader.get<StoredPrepared>(NAMESPACES.prepared, id);
+      if (current === undefined) return { ops: [], result: { kept: false, reason: "no_record" } };
+      if (current.kind !== answer["kind"] || current.owner.toLowerCase() !== owner.toLowerCase() || current.digest !== digest) return { ops: [], result: { kept: false, reason: "mismatch" } };
+      if (current.answer !== undefined && current.answer !== null) return { ops: [], result: { kept: true } };
+      if (current.state !== "prepared") return { ops: [], result: { kept: false, reason: "not_prepared" } };
+      return { ops: [{ ns: NAMESPACES.prepared, key: id, value: { ...current, answer: json } }], result: { kept: true } };
+    });
   }
 
   // Claims the item for sending. The marker is on disk (fsynced) when this resolves, so the caller
@@ -312,6 +358,75 @@ export async function withDecodedBlock(route: RouteKey, output: unknown, service
   if (!rebuilt.ok || rebuilt.digest.toLowerCase() !== sign.expected_digest.toLowerCase()) return miss("rebuild");
   return { ...item, summary: { ...summary, inner_hash_tag: digestTag(rebuilt.inner_hash), inner_hash_kind: "typed_data_hash" }, decoded };
 }
+
+// ---- keeping the prepare answer, and GET /v1/prepared/{id} (amendment R9) ------------------------------------------------------
+//
+// The routes whose answer is a prepared item. The pipelines (relay/server.ts, relay/embedded.ts) hand their checked answer
+// to keepPreparedAnswer before replying, so the item can be read back by id exactly as it was sent: what the caller saw
+// is what a later reader gets, byte for byte, including the decoded block added above.
+export const PREPARE_ROUTE_KEYS: ReadonlySet<RouteKey> = new Set<RouteKey>([
+  "POST /v1/userop/prepare",
+  "POST /v1/auth/prepare",
+  "POST /v1/order/prepare",
+  "POST /v1/clob/order/prepare",
+  "POST /v1/clob/auth/prepare",
+]);
+
+// Called with the answer AFTER it passed the contract check. A miss is audited and the answer still goes out: the
+// item is valid and its caller has it; only the read-back by id will say that it was not kept.
+export async function keepPreparedAnswer(route: RouteKey, answer: unknown, services: { readonly prepared?: PreparedStore; readonly audit?: RelayAudit }): Promise<void> {
+  if (!PREPARE_ROUTE_KEYS.has(route)) return;
+  let kept: { readonly kept: boolean; readonly reason?: string };
+  try {
+    kept = services.prepared === undefined ? { kept: false, reason: "no_store" } : await services.prepared.keepAnswer(answer);
+  } catch {
+    kept = { kept: false, reason: "store_failed" };
+  }
+  if (!kept.kept) await services.audit?.write({ ev: "error", route, code: "answer_not_kept", outcome: "error", note: kept.reason ?? "unknown" }).catch(() => undefined);
+}
+
+// One answer for an id that does not exist and for an item of an owner this relay does not serve, so a caller can
+// tell neither apart: the pipeline's owner check (relay/owners.ts) throws this very error.
+export function preparedNotFound(): RelayError {
+  return new RelayError("not_found", "No such prepared item (it may have expired or never existed).");
+}
+
+// Whose item an id names, for the pipeline's owner check; undefined when there is no such item.
+export function preparedOwnerOf(store: PreparedStore | undefined, id: unknown): string | undefined {
+  return typeof id === "string" ? store?.get(id)?.owner : undefined;
+}
+
+const USED_MESSAGE: Readonly<Record<Exclude<PreparedState, "prepared" | "expired">, string>> = Object.freeze({
+  sending: "A send for this prepared item is under way. It is single use and is not handed out again; check the status of what it holds.",
+  accepted: "This prepared item was already submitted and accepted. It is single use and is not handed out again.",
+  rejected: "This prepared item was already used: it was submitted and refused, or locked after too many bad signatures. Prepare it again.",
+  ambiguous: "A send for this prepared item was started and its outcome is unknown. It is not handed out again and must not be sent again; check the status of the order or operation it holds.",
+});
+
+// The item as the prepare route answered it, while it can still be signed and submitted. Otherwise the state, never the
+// item: an agent must not be handed something signable that the relay would refuse (or must never send twice).
+const readPrepared: NonNullable<RouteTable["GET /v1/prepared/:id"]> = async (params, context) => {
+  const store = (context.services as RelayServices).prepared;
+  if (store === undefined) throw new RelayError("internal", "The prepared-item store is not wired into this relay.");
+  const record = store.get(params.id);
+  if (record === undefined) throw preparedNotFound();
+  const { state } = record;
+  if (state === "expired" || (state === "prepared" && context.now() >= record.expiresAtMs)) {
+    throw new RelayError("expired", "This prepared item expired. Prepare it again.", { state: "expired" });
+  }
+  if (state !== "prepared") {
+    throw new RelayError("prepared_used", USED_MESSAGE[state], { state, ...(record.detail === null ? {} : { reason: record.detail }) });
+  }
+  if (record.answer === null) {
+    throw new RelayError("precondition_failed", "This item was prepared by a relay version that did not keep the prepared answer, so it cannot be returned by id. Prepare it again.", { reason: "answer_not_kept" });
+  }
+  // Checked against the contract by the pipeline before it is sent, like every answer.
+  return record.answer as unknown as GetResponseInput<"/v1/prepared/:id">;
+};
+
+export const routes: RouteTable = {
+  "GET /v1/prepared/:id": readPrepared,
+};
 
 declare module "./types.js" {
   interface RelayServices {

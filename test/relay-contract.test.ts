@@ -27,6 +27,7 @@ import {
   marketTitleSlot,
   matchGetRoute,
   orderStatusPath,
+  preparedItemPath,
   ownerSchema,
   preparedSchema,
   signatureInputSchema,
@@ -314,7 +315,7 @@ describe("contract: routes", () => {
         "/v1/userop/submit",
       ],
     );
-    assert.deepEqual([...GET_ROUTE_PATTERNS].sort(), ["/v1/health", "/v1/order/:hash", "/v1/userop/:hash"]);
+    assert.deepEqual([...GET_ROUTE_PATTERNS].sort(), ["/v1/health", "/v1/order/:hash", "/v1/prepared/:id", "/v1/userop/:hash"]);
     assert.equal(CONTRACT_ROUTE_KEYS.length, POST_PATHS.length + GET_ROUTE_PATTERNS.length);
     assert.equal(new Set(CONTRACT_ROUTE_KEYS).size, CONTRACT_ROUTE_KEYS.length);
   });
@@ -541,6 +542,11 @@ describe("contract: routes", () => {
     assert.deepEqual(matchGetRoute("/v1/health"), { route: "/v1/health", params: {} });
     assert.deepEqual(matchGetRoute(`/v1/userop/${h("ab")}`), { route: "/v1/userop/:hash", params: { hash: h("ab") } });
     assert.deepEqual(matchGetRoute(`/v1/order/${h("cd")}`), { route: "/v1/order/:hash", params: { hash: h("cd") } });
+    assert.deepEqual(matchGetRoute(`/v1/prepared/${"ab".repeat(16)}`), { route: "/v1/prepared/:id", params: { id: "ab".repeat(16) } });
+    assert.ok(GET_ROUTES["/v1/prepared/:id"].params.safeParse({ id: "ab".repeat(16) }).success);
+    for (const bad of ["AB".repeat(16), "ab".repeat(15), `0x${"ab".repeat(16)}`, "../health"]) {
+      assert.equal(GET_ROUTES["/v1/prepared/:id"].params.safeParse({ id: bad }).success, false, bad);
+    }
     for (const bad of ["/v1/userop/", "/v1/userop", "/v1/order/x/y", "/v2/health", "", "/", "/v1/health/", "/v1/other/0x1"]) {
       assert.equal(matchGetRoute(bad), undefined, bad);
     }
@@ -549,11 +555,30 @@ describe("contract: routes", () => {
     assert.ok(GET_ROUTES["/v1/userop/:hash"].params.safeParse({ hash: h("ab") }).success);
   });
 
+  it("answers GET /v1/prepared/:id with exactly the item a prepare route returns for its kind", () => {
+    const schema = GET_ROUTES["/v1/prepared/:id"].response;
+    const quote = { price: "0.55", shares: "10", max_outlay_usd: "6.05", fee_bound_bps: 1000, expires_at: LATER_ISO };
+    const userop = { ...preparedBase(), user_op_hash: h("ab") };
+    const order = { ...orderPrepared(), quote };
+    for (const item of [userop, order]) {
+      const parsed = schema.safeParse(item);
+      assert.ok(parsed.success, JSON.stringify(parsed.error?.issues));
+      assert.deepEqual(parsed.data, item, "nothing is added or dropped");
+    }
+    // A user operation without its hash, an order without its quote, or extra fields: not an item of any kind.
+    assert.equal(schema.safeParse(preparedBase()).success, false);
+    assert.equal(schema.safeParse(orderPrepared()).success, false);
+    assert.equal(schema.safeParse({ ...userop, signature: h("cd") }).success, false);
+    assert.equal(schema.safeParse({ prepared_id: ID }).success, false);
+  });
+
   it("builds status paths only from valid hashes", () => {
     assert.equal(userOpStatusPath(h("AB")), `/v1/userop/${h("ab")}`);
     assert.equal(orderStatusPath(h("CD")), `/v1/order/${h("cd")}`);
     assert.throws(() => userOpStatusPath("0x12"));
     assert.throws(() => orderStatusPath("../etc/passwd"));
+    assert.equal(preparedItemPath("ab".repeat(16)), `/v1/prepared/${"ab".repeat(16)}`);
+    assert.throws(() => preparedItemPath("../v1/health"));
   });
 });
 

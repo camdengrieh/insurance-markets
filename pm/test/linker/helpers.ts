@@ -1,6 +1,6 @@
 // Test helpers for the linker: a loopback world playing the three allowlisted venues in their REAL
-// response shapes (the captured fixtures under pm/test/recorder/fixtures and app/src/venues/*/fixtures
-// are the templates), filled with SYNTHETIC market text that is labelled as such. Nothing here can
+// response shapes (the recorded fixtures under sdk/venues/*/fixtures are the templates, because
+// discovery reads them with the shared venue parsers), filled with SYNTHETIC market text that is labelled as such. Nothing here can
 // reach a real host; ids are derived from a label by hashing so no real market is ever named.
 
 import { createHash } from "node:crypto";
@@ -95,7 +95,7 @@ export function xoDetailBody(m: SynthMarket, listRow: Record<string, unknown>): 
   };
 }
 
-// Gamma /markets/keyset row: the captured row's fields (app/src/venues/polymarket/fixtures).
+// Gamma /markets/keyset row: the captured row's fields (sdk/venues/polymarket/fixtures).
 export function gammaKeysetRow(m: SynthMarket): Record<string, unknown> {
   rowId += 1;
   const nr = m.groupKey;
@@ -114,6 +114,7 @@ export function gammaKeysetRow(m: SynthMarket): Record<string, unknown> {
     resolvedBy: "0x157Ce2d672854c848c9b79C49a8Cc6cc89176a49",
     enableOrderBook: true,
     clobTokenIds: JSON.stringify([`${rowId}1`, `${rowId}2`]),
+    orderPriceMinTickSize: 0.001,
     umaBond: "500",
     acceptingOrders: true,
     negRisk: nr !== undefined,
@@ -131,7 +132,7 @@ export function limitlessRow(m: SynthMarket): Record<string, unknown> {
     slug: m.id,
     title: m.title,
     description: `<p>${m.rules}</p>`,
-    expirationTimestamp: String(Date.parse(m.closeIso)),
+    expirationTimestamp: Date.parse(m.closeIso),
     expirationDate: "Dec 31, 2026",
     status: m.status ?? "FUNDED",
     expired: false,

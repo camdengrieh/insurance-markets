@@ -1,5 +1,5 @@
 // The mock's market catalogue: markets as the Data API and the orderbook describe them, built from the
-// recorded fixtures in test/fixtures/xo so their SHAPE is the recorded shape by construction.
+// recorded fixtures in sdk/venues/xo/fixtures so their SHAPE is the recorded shape by construction.
 //
 // A market is a small spec plus deterministic ids (keccak of the seed, so a run never depends on Math.random,
 // the clock or the order tests ran in). The Data API detail and list rows are clones of recorded rows with the

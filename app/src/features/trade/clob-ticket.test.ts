@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { LIMITLESS_ASSUMED_TICK } from "@shared/clob/venues";
+import { depositWalletAddress } from "@shared/clob/polymarket/deposit-wallet";
+import { LIMITLESS_PRICE_TICK } from "@shared/clob/venues";
 
 import type { Market } from "../../core/ports";
 import { untrusted } from "../../core/untrusted";
@@ -9,7 +10,7 @@ import { buildClobTicket, clobMarketFacts, clobOverOrderCap, expectedClobQuote, 
 // The venue ticket's arithmetic: the one documented example (place-orders.md, BUY 10 at 0.52) and the grammar.
 
 const PM: ClobMarketFacts = { venue: "polymarket", marketId: "0x" + "99".repeat(32), tick: "0.01", minSize: "5", polymarketBook: "v2", fetchedAtMs: 0 };
-const LM: ClobMarketFacts = { venue: "limitless", marketId: "will-it-rain-1792411200000", tick: LIMITLESS_ASSUMED_TICK, minSize: "0", polymarketBook: null, fetchedAtMs: 0 };
+const LM: ClobMarketFacts = { venue: "limitless", marketId: "will-it-rain-1792411200000", tick: LIMITLESS_PRICE_TICK, minSize: "0", polymarketBook: null, fetchedAtMs: 0 };
 const TOKEN = "74611051635435493013469257818411865069553882173471237703549469284847187679089";
 
 function input(overrides: Partial<ClobTicketInput> = {}): ClobTicketInput {
@@ -67,10 +68,18 @@ describe("the venue ticket", () => {
     expect(clobOverOrderCap(ticket, "ten")).toBeNull();
   });
 
-  it("previews the signed fields: the wallet as maker and signer, the exact amounts, and the venue's domain", () => {
-    const pm = signedFieldsPreview(ok(PM, { tif: "GTD", ttlS: "300" }), PM, "0x" + "11".repeat(20));
+  it("previews the signed fields: the maker read at prepare (Polymarket) or the wallet (Limitless), the exact amounts, and the venue's domain", () => {
+    const wallet = "0x" + "11".repeat(20);
+    const pm = signedFieldsPreview(ok(PM, { tif: "GTD", ttlS: "300" }), PM, wallet);
     const byLabel = Object.fromEntries(pm.map((line) => [line.label, line]));
-    expect(byLabel["maker and signer"]?.value).toBe("0x" + "11".repeat(20));
+    // Polymarket: the maker is not assumed. The relay reads Polygon; the page names both derived wallet addresses.
+    expect(byLabel["maker and signer"]?.fromRelay).toBe(true);
+    expect(byLabel["maker and signer"]?.value).toMatch(/Deposit Wallet/);
+    expect(byLabel["your Deposit Wallet addresses"]?.value).toContain(depositWalletAddress(wallet as `0x${string}`, "beacon"));
+    expect(byLabel["your Deposit Wallet addresses"]?.value).toContain(depositWalletAddress(wallet as `0x${string}`, "uups"));
+    expect(byLabel["signatureType"]?.value).toMatch(/^3 \(Deposit Wallet\) or 0 \(EOA\)/);
+    expect(byLabel["what your wallet signs"]?.value).toMatch(/TypedDataSign/);
+    expect(signedFieldsPreview(ok(LM), LM, wallet).find((line) => line.label === "maker and signer")?.value).toBe(wallet);
     expect(byLabel["makerAmount"]?.value).toBe("5200000");
     expect(byLabel["salt"]?.fromRelay).toBe(true);
     expect(byLabel["domain"]?.value).toContain("version 3");
@@ -78,6 +87,13 @@ describe("the venue ticket", () => {
     const lm = signedFieldsPreview(ok(LM), LM, null);
     expect(lm.some((line) => line.label === "expiration, nonce" && line.value.startsWith("0 and 0"))).toBe(true);
     expect(lm.some((line) => line.label === "domain" && line.value.includes("chain 8453"))).toBe(true);
+  });
+
+  it("refuses a Limitless order under the venue's 100 raw-unit maker floor, and takes one at it", () => {
+    expect(codes(LM, { price: "0.001", shares: "0.01" })).toEqual(["below_venue_floor"]);
+    expect(codes(LM, { price: "0.001", shares: "0.1" })).toEqual([]);
+    // Polymarket has no such floor in this build: the same order is only checked against the market's own minimum.
+    expect(codes({ ...PM, tick: "0.001", minSize: "0" }, { price: "0.001", shares: "0.01" })).toEqual([]);
   });
 
   it("reads the facts from a market record and refuses a tick it cannot build on", () => {

@@ -8,6 +8,8 @@
 //   - text a market creator or an upstream service can influence is `Untrusted<string>` and is rendered only
 //     as a text node inside a fixed "untrusted" slot.
 
+import type { CategoryVerdict } from "./category.js";
+
 // Non-negative plain decimal string such as "0.534" (no exponent, hex or separators).
 export type Dec = string;
 
@@ -53,4 +55,305 @@ export type VenueId = (typeof VENUE_IDS)[number];
 
 export function isVenueId(value: unknown): value is VenueId {
   return typeof value === "string" && (VENUE_IDS as readonly string[]).includes(value);
+}
+
+// ---- the read model (docs/aggregation-design.md 2.1 to 2.4, docs/dapp-design.md 4.4) ---------------------------
+//
+// Every venue reader (sdk/venues) returns these types. A capability a venue lacks is NOT_SUPPORTED, never an
+// invented value; an unknown enum fails closed.
+
+// ---- provenance -------------------------------------------------------------------------------------------------
+
+// T0 browser-direct, T0-RPC public JSON-RPC, T1 needs the daemon (no credential), T2 needs the user's own key
+// held by the daemon, T3 imported from the user's agent.
+export type Transport = "T0" | "T0-RPC" | "T1" | "T2" | "T3";
+export type Freshness = "live" | "recent" | "stale" | "unknown";
+// Drives memory-only handling (restricted terms) and the no-export rule.
+export type LicenseClass = "own_use_only" | "attribution" | "open" | "unknown";
+
+export interface Prov {
+  readonly venue: VenueId;
+  readonly source: string;
+  readonly fetchedAtMs: number;
+  readonly venueTsMs?: number;
+  readonly transport: Transport;
+  readonly freshness: Freshness;
+  readonly ttlMs: number;
+  readonly license: LicenseClass;
+}
+
+// ---- markets (aggregation-design 2.1) ---------------------------------------------------------------------------------
+
+export interface MarketRef {
+  readonly venue: VenueId;
+  // XO and Polymarket: conditionId; Kalshi: ticker; Limitless: slug; Trueo: `${chainId}:${marketAddress}`.
+  readonly marketId: string;
+  // eventId, slug, series, rootEventSlug, negRiskMarketID, marketKey and the like.
+  readonly native: Readonly<Record<string, string>>;
+}
+
+export interface TokenRef {
+  readonly venue: VenueId;
+  readonly tokenId: string;
+  readonly marketId?: string;
+}
+
+export interface Outcome {
+  // ORDER MATTERS; never match on title text. XO index 0 is the "Yes" token even for team-named markets.
+  readonly index: number;
+  readonly role: "yes" | "no" | "label";
+  readonly label: Untrusted<string>;
+  // XO outcomeTokenId; Polymarket clobTokenIds[i] if version is "v1", else positionIds[i].
+  readonly tokenId: string;
+}
+
+export type VoidPolicy =
+  | "fifty_fifty"
+  | "refund"
+  | "last_traded_price"
+  | "scalar"
+  | "invalid_reverse_trades"
+  | "unknown";
+
+export type ResolutionMechanism =
+  | "uma_oo"
+  | "chainlink"
+  | "exchange"
+  | "xo_manual_modra"
+  | "pyth"
+  | "external_parity"
+  | "optimistic_council"
+  | "protocol_mark"
+  | "unknown";
+
+export interface Rules {
+  readonly text: Untrusted<string>;
+  // The rules-v2 fingerprint of the venue's rule fields (rules.ts rulesFingerprint); "" when they cannot be
+  // fingerprinted, which never equals another market's value.
+  readonly sha256: string;
+  readonly sources: readonly string[];
+  readonly mechanism: ResolutionMechanism;
+  // XO resolverAddress is creator-specified, so it is data, not a guarantee.
+  readonly resolver?: string;
+  // XO cutoffs are UTC, Polymarket's are ET (about five hours apart).
+  readonly cutoffUtc?: string;
+  readonly windowStartUtc?: string;
+  readonly void: VoidPolicy;
+  readonly canCloseEarly?: boolean;
+}
+
+export type Status =
+  | "pending"
+  | "active"
+  | "paused"
+  | "closed"
+  | "determined"
+  | "disputed"
+  | "resolved"
+  | "voided"
+  | "unknown";
+
+// Kalshi publishes price_ranges[]; a flat tick covers every other venue.
+export interface TickRange {
+  readonly from: Dec;
+  readonly to: Dec;
+  readonly tick: Dec;
+}
+export type TickRanges = readonly TickRange[];
+
+export interface Collateral {
+  readonly symbol: string;
+  // CAIP-2 chain id, or "offchain" for a custodial USD venue.
+  readonly chain: string;
+  readonly decimals: number;
+  readonly custody: "self" | "smart_account" | "venue" | "broker";
+}
+
+export interface MarketGroup {
+  readonly key: string;
+  readonly kind: "neg_risk" | "mutually_exclusive" | "event" | "series";
+  readonly exhaustive: "proven" | "by_rule" | "no" | "unknown";
+}
+
+export type FeeModelId = "curve_pq" | "curve_min" | "ad_valorem_bps" | "profit_pct" | "amm_stack" | "unknown";
+
+// Parameters of one fee side. The adapter fills what its model needs; a missing parameter makes the model
+// unusable and the spec fails closed.
+export interface FeeParams {
+  readonly rate?: Dec;
+  readonly bps?: number;
+  readonly min?: Dec;
+  readonly max?: Dec;
+  readonly exponent?: Dec;
+}
+
+export interface FeeSpec {
+  readonly modelId: FeeModelId;
+  readonly taker?: FeeParams;
+  readonly maker?: FeeParams;
+  readonly rounding?: string;
+  readonly payer: "buyer_adds_seller_withholds" | "outcome_tokens" | "in_pool";
+  readonly paramsSource: {
+    readonly url: string;
+    readonly field: string;
+    readonly granularity: "market" | "series" | "event" | "token" | "category";
+  };
+  readonly verifiedAt: string;
+  // Past ttl, or modelId "unknown", means fail closed: no executable label, no net-of-fee number.
+  readonly ttlSec: number;
+}
+
+export interface Market {
+  readonly ref: MarketRef;
+  readonly title: Untrusted<string>;
+  readonly outcomes: readonly Outcome[];
+  readonly rules: Rules;
+  readonly status: Status;
+  readonly tradable: { readonly ok: boolean; readonly reasons: readonly string[] };
+  readonly timesUtc: {
+    readonly opensAt?: string;
+    readonly closesAt?: string;
+    readonly expectedResolutionAt?: string;
+    readonly latestResolutionAt?: string;
+  };
+  // XO 0.001 globally; Polymarket per market; Kalshi price_ranges[].
+  readonly tick: Dec | TickRanges;
+  readonly minSize?: Dec;
+  readonly collateral: Collateral;
+  readonly group?: MarketGroup;
+  readonly fee: FeeSpec;
+  readonly prov: {
+    readonly fetchedAtMs: number;
+    readonly source: string;
+    readonly adapterVersion: string;
+    readonly schemaHash: string;
+  };
+  // The fixed-taxonomy verdict (category.ts). Absent when the adapter did not run it; read as "other", "none".
+  readonly category?: CategoryVerdict;
+  // The venue's own category words, untrusted; shown only through UntrustedText, never matched or echoed elsewhere.
+  readonly categoryNative?: Untrusted<string>;
+}
+
+// What a list row carries: enough to render the Markets table without a detail fetch. aggregation-design
+// leaves this type open; it is defined here. `displayPrice` is the venue's list price and is NEVER an
+// executable quote (XO's list price and Polymarket outcomePrices are not books).
+export interface OutcomeSummary {
+  readonly index: number;
+  readonly role: "yes" | "no" | "label";
+  readonly label: Untrusted<string>;
+  readonly tokenId: string;
+  readonly displayPrice: Dec | null;
+}
+
+export type VolumeUnit = "usd" | "usdc_e" | "shares" | "contracts" | "unknown";
+
+export interface MarketSummary {
+  readonly ref: MarketRef;
+  readonly title: Untrusted<string>;
+  readonly status: Status;
+  readonly closesAtUtc: string | null;
+  readonly outcomes: readonly OutcomeSummary[];
+  // Null when the venue reports none; the unit is always stated, never assumed.
+  readonly volume: { readonly amount: Dec | null; readonly unit: VolumeUnit; readonly windowHours: number | null };
+  readonly prov: Prov;
+  // As on Market: the fixed-taxonomy verdict and the venue's own category words (untrusted, display only).
+  readonly category?: CategoryVerdict;
+  readonly categoryNative?: Untrusted<string>;
+}
+
+// ---- books (aggregation-design 2.1 and 2.2) --------------------------------------------------------------------------------
+
+export interface Level {
+  readonly price: Dec;
+  // Size in SHARES (XO sizes have up to six decimals). Never raw venue units.
+  readonly size: Dec;
+}
+
+export interface Book {
+  readonly token: { readonly venue: VenueId; readonly tokenId: string };
+  // Always sorted explicitly: bids descending, asks ascending. Never trust the venue's order.
+  readonly bids: readonly Level[];
+  readonly asks: readonly Level[];
+  readonly asOfMs: number;
+  readonly venueTsMs?: number;
+  readonly hash?: string;
+  // A complement-derived book is synthetic and never executable.
+  readonly derived: "native" | "complement";
+}
+
+// ---- the adapter (aggregation-design 2.4) ------------------------------------------------------------------------------------
+
+export type AdapterError =
+  | "RATE_LIMITED"
+  | "STALE"
+  | "NOT_SUPPORTED"
+  | "SCHEMA_DRIFT"
+  | "VENUE_PAUSED"
+  | "NOT_FOUND"
+  | "TIMEOUT"
+  | "EMPTY_BOOK";
+
+export interface Page<T> {
+  readonly items: readonly T[];
+  // Page on this cursor only (XO: meta.hasNextPage); null when there is no next page.
+  readonly next: string | null;
+}
+
+export interface ListMarketsQuery {
+  readonly statuses?: readonly Status[];
+  readonly cursor?: string;
+  readonly limit?: number;
+  readonly text?: string;
+}
+
+// ccxt-style `has` map: false means NOT_SUPPORTED, never a guess. `stream` is always false (polling only).
+export interface AdapterCaps {
+  readonly listMarkets: boolean;
+  readonly search: boolean;
+  readonly getMarket: boolean;
+  readonly getBook: boolean;
+  readonly getBooksBatch: boolean;
+  readonly getFeeSpec: boolean;
+  readonly getResolution: boolean;
+  readonly getPositionsByAddress: boolean;
+  readonly stream: false;
+}
+
+export interface VenueHealth {
+  readonly ok: boolean;
+  readonly notes: readonly string[];
+}
+
+export interface VenueReadAdapter {
+  readonly id: VenueId;
+  readonly caps: AdapterCaps;
+  listMarkets(q: ListMarketsQuery): Promise<Page<MarketSummary>>;
+  // Full rules, sources, fee parameters, group keys.
+  getMarket(ref: MarketRef): Promise<Market>;
+  getBooks(tokens: readonly TokenRef[], opts: { readonly deadlineMs: number }): Promise<ReadonlyArray<Result<Book, AdapterError>>>;
+  // Reads live parameters; unknown yields modelId "unknown" (fail closed).
+  getFeeSpec(market: Market): Promise<FeeSpec>;
+  // XO: GET /trading-state; Limitless: /maintenance/status.
+  health(): Promise<VenueHealth>;
+}
+
+// ---- injected dependencies --------------------------------------------------------------------------------------------------------
+
+// The same adapter runs in the standalone build (fetch goes straight to a CORS-open host) and in the Cockpit
+// build (fetch maps the absolute upstream URL onto the daemon's read proxy). Adapters build absolute upstream
+// URLs, call `deps.fetch`, and never touch a global. The host owns the implementations of this type.
+export type FetchLike = (input: string, init?: { readonly method?: "GET" | "POST"; readonly headers?: Readonly<Record<string, string>>; readonly body?: string; readonly signal?: AbortSignal }) => Promise<FetchResponseLike>;
+
+export interface FetchResponseLike {
+  readonly ok: boolean;
+  readonly status: number;
+  readonly headers: { get(name: string): string | null };
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+
+export interface AdapterDeps {
+  readonly fetch: FetchLike;
+  // An injected clock, so tests are deterministic.
+  readonly nowMs: () => number;
 }
