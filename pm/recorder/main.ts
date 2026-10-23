@@ -67,7 +67,7 @@ inputs
   --targets <path>         JSON file with XO or Polymarket groups and loose markets
                            (discover writes it; default: targets.json next to the database)
   --discover               (run, once) keep --targets up to date by discovery; no hand-written list needed
-  --discover-every <sec>   (run) seconds between discoveries (default 86400, minimum 300)
+  --discover-every <sec>   (run) seconds between discoveries (default 21600, minimum 300)
   --dry                    (discover) print the requests it would make and their count; nothing is sent
   --max-short N  --max-regular N   (discover) per venue caps for markets closing within the short horizon / others
   --no-candidates          record approved links only
@@ -168,7 +168,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (hours !== undefined) set("shortHorizonSec", Math.round(hours * 3600));
   set("depthLevels", parseNum(values.depth, "--depth", errors));
   set("retentionDays", parseNum(values["retention-days"], "--retention-days", errors));
-  const everySec = parseNum(values["discover-every"], "--discover-every", errors) ?? 86_400;
+  const everySec = parseNum(values["discover-every"], "--discover-every", errors) ?? 21_600;
   if (everySec < 300 || everySec > 7 * 86_400) errors.push("--discover-every must be between 300 and 604800 seconds");
   const discoverOpts: DiscoverOptions = {
     ...DEFAULT_DISCOVER,

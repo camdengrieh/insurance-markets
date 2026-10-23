@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { blockKey, bucketOf, buildBlocks, pairsOf } from "../../../sdk/linker/block.js";
+import { blockKey, bucketOf, buildBlocks, pairsOf, sameNativeGroup, sameVenueDifferentTitle } from "../../../sdk/linker/block.js";
 import { MAX_BLOCK_SIZE } from "../../../sdk/linker/constants.js";
 import type { MarketFeatures } from "../../../sdk/linker/features.js";
 
 function f(id: string, category: string, closeUtc: string, venue: MarketFeatures["venue"] = "xo"): MarketFeatures {
-  return { venue, marketId: id, titleTokens: [], ruleTokens: [], numbers: [], dates: [], entities: [], rulesSha256: "a".repeat(64), maskedSha256: "b".repeat(64), closeUtc, category, categoryConfidence: "none", voidPolicy: "unknown", resolverId: null, groupKey: null, groupKind: null, outcomes: 2 };
+  return { venue, marketId: id, titleTokens: [], ruleTokens: [], numbers: [], dates: [], entities: [], rulesSha256: "a".repeat(64), maskedSha256: "b".repeat(64), titleSha256: "c".repeat(64), closeUtc, category, categoryConfidence: "none", voidPolicy: "unknown", resolverId: null, groupKey: null, groupKind: null, outcomes: 2 };
 }
 
 test("blocks are category plus close-week; pairs are drawn inside a block and with the next week only", () => {
@@ -52,4 +52,33 @@ test("an oversized block is truncated and says so", () => {
   const [block] = buildBlocks(ms);
   assert.equal(block?.markets.length, MAX_BLOCK_SIZE);
   assert.equal(block?.truncated, 5);
+});
+
+test("siblings of one native group are never paired, and are counted; the same group key on two venues still pairs", () => {
+  const close = "2026-12-31T00:00:00Z";
+  const g = "0x" + "9".repeat(64);
+  const sib = (id: string, venue: MarketFeatures["venue"] = "polymarket"): MarketFeatures => ({ ...f(id, "politics", close, venue), groupKey: g, groupKind: "neg_risk" });
+  const markets = [sib("a"), sib("b"), sib("c"), f("d", "politics", close, "polymarket"), sib("e", "xo")];
+  const { pairs, siblings, skipped } = pairsOf(buildBlocks(markets));
+  assert.equal(skipped, 0);
+  assert.equal(siblings, 3); // a-b, a-c, b-c
+  const names = pairs.map((p) => [p.a.marketId, p.b.marketId].sort().join("")).sort();
+  assert.deepEqual(names, ["ad", "ae", "bd", "be", "cd", "ce", "de"]);
+  assert.equal(sameNativeGroup(sib("a"), sib("b")), true);
+  assert.equal(sameNativeGroup(sib("a"), sib("e", "xo")), false);
+  assert.equal(sameNativeGroup(f("x", "politics", close), f("y", "politics", close)), false); // no group: not siblings
+});
+
+test("two markets of one venue pair only when their titles are identical; across venues titles may differ", () => {
+  const close = "2026-12-31T00:00:00Z";
+  const t = (id: string, venue: MarketFeatures["venue"], title: string): MarketFeatures => ({ ...f(id, "sports", close, venue), titleSha256: title.repeat(64) });
+  // a and b: one venue, sibling outcomes with different titles; c: a relisting of a; d: another venue.
+  const markets = [t("a", "limitless", "1"), t("b", "limitless", "2"), t("c", "limitless", "1"), t("d", "xo", "3")];
+  const { pairs, sameVenue, siblings } = pairsOf(buildBlocks(markets));
+  assert.equal(siblings, 0);
+  assert.equal(sameVenue, 2); // a-b, b-c
+  const names = pairs.map((p) => [p.a.marketId, p.b.marketId].sort().join("")).sort();
+  assert.deepEqual(names, ["ac", "ad", "bd", "cd"]);
+  assert.equal(sameVenueDifferentTitle(t("a", "limitless", "1"), t("b", "limitless", "2")), true);
+  assert.equal(sameVenueDifferentTitle(t("a", "limitless", "1"), t("d", "xo", "3")), false);
 });

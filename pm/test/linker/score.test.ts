@@ -66,12 +66,13 @@ test("adding a shared title token never lowers the score (monotone)", () => {
   }
 });
 
-test("identical rule text short-circuits to 10000; threshold edges decide proposability", () => {
+test("identical rule text and the same question short-circuit to 10000; threshold edges decide proposability", () => {
   const a = feat("SYNTHETIC one", "same rules", { rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
-  const b = feat("SYNTHETIC two", "same rules", { venue: "polymarket", rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
+  const b = feat("SYNTHETIC one", "same rules", { venue: "polymarket", rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
   const s = scorePair(a, b);
   assert.equal(s.bps, 10000);
   assert.equal(s.identicalRules, true);
+  assert.equal(s.sameQuestion, true);
   assert.equal(s.proposable, true);
   assert.equal(bandOf(10000), "strong");
   assert.equal(bandOf(BAND_STRONG_BPS), "strong");
@@ -114,4 +115,22 @@ test("the evidence code is a short code without spaces (fit for a restricted leg
   const code = evidenceCode(scorePair(a, b));
   assert.match(code, /^[A-Za-z0-9][A-Za-z0-9_:.+/-]{0,39}$/);
   assert.match(code, /^s\d+\.t\d+\.r\d+\.n\d+\.d\d+\.c\d+h$/);
+});
+
+test("identical rule text with different questions is scored, not short-circuited, and the vetoes still apply", () => {
+  // Sibling outcomes of one event: the venue's rule fields (here the shared event description) are
+  // identical, only the question differs.
+  const rules = "This market resolves to the candidate who wins the 2028 election";
+  const a = feat("Will Alice Example win the 2028 election?", rules, { venue: "polymarket", rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
+  const b = feat("Will Bob Example win the 2028 election?", rules, { venue: "polymarket", marketId: "0x" + "2".repeat(64), rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
+  const s = scorePair(a, b);
+  assert.equal(s.identicalRules, true);
+  assert.equal(s.sameQuestion, false);
+  assert.ok(s.bps < 10000, `${s.bps}`);
+  // Different numbers in the questions now veto even with identical rules.
+  const rateRules = "This market resolves on the official published rate";
+  const c = feat("Will the rate be above 4%?", rateRules, { rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
+  const d = feat("Will the rate be above 5%?", rateRules, { venue: "polymarket", rulesSha256: "e".repeat(64), maskedSha256: "f".repeat(64) });
+  assert.deepEqual(scorePair(c, d).vetoes, ["number_disagreement"]);
+  assert.equal(scorePair(c, d).proposable, false);
 });

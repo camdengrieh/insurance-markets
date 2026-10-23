@@ -67,6 +67,8 @@ export function parseState(raw: unknown): LinkerState {
     const entities = strings(v["entities"]);
     if (titleTokens === null || ruleTokens === null || numbers === null || dates === null || entities === null) continue;
     if (typeof v["rulesSha256"] !== "string" || !HEX64.test(v["rulesSha256"]) || typeof v["maskedSha256"] !== "string" || !HEX64.test(v["maskedSha256"])) continue;
+    // A row written before the title pin existed is dropped, so the next run reads that market afresh.
+    if (typeof v["titleSha256"] !== "string" || !HEX64.test(v["titleSha256"])) continue;
     if (typeof v["closeUtc"] !== "string" || !STAMP.test(v["closeUtc"]) || typeof v["seenAt"] !== "string" || !STAMP.test(v["seenAt"]) || typeof v["detailAt"] !== "string" || !STAMP.test(v["detailAt"])) continue;
     const conf = v["categoryConfidence"];
     if (conf !== "native" && conf !== "keyword" && conf !== "none") continue;
@@ -83,6 +85,7 @@ export function parseState(raw: unknown): LinkerState {
       entities,
       rulesSha256: v["rulesSha256"],
       maskedSha256: v["maskedSha256"],
+      titleSha256: v["titleSha256"],
       closeUtc: v["closeUtc"],
       category: typeof v["category"] === "string" ? v["category"] : "other",
       categoryConfidence: conf,

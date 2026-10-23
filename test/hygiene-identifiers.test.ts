@@ -51,6 +51,8 @@ const SKIP_DIRS: ReadonlySet<string> = new Set([
   ".playwright-browsers",
   ".playwright",
   "ms-playwright",
+  // The Vercel CLI's local link and prebuilt output (app/.vercel, gitignored).
+  ".vercel",
 ]);
 const TEXT_FILE = /\.(?:md|ts|mjs|js|json|py|sh|yaml|yml|txt|toml|csv)$|^(?:NOTICE|\.gitignore|\.gitattributes|\.editorconfig)$/;
 // app/ (the static client) and bridge/ (the daemon) hold more kinds of text: components, styles, pages, manifests,
@@ -227,6 +229,7 @@ describe("personal identifiers stay out of everything that can be committed", ()
         "app/.cache/vite/deps.json": "x",
         "app/.playwright-browsers/chromium/notes.txt": "x",
         "app/test-results/trace.json": "x",
+        "app/.vercel/output/builds.json": "x",
         "bridge/node_modules/dep/index.js": "x",
         "bridge/dist/main.js": "x",
         "elsewhere/page.html": "x",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isAutomationHandle, linkErrors } from "../../links/invariants.js";
+import { computeLinkId } from "../../links/schema.js";
 import { emptyRegistry, findLink } from "../../links/store.js";
 import { groupCandidates, pairCandidate, scoreCandidates } from "../../../sdk/linker/candidates.js";
 import { buildFeatures, type FeatureInput, type MarketFeatures } from "../../../sdk/linker/features.js";
@@ -61,6 +62,9 @@ test("identical rule text, template, void policy and close is an identity candid
   assert.ok(c);
   assert.equal(c.relation, "identity");
   assert.equal(c.basis.class, "identical");
+  // The same rule text under a different question is not an identity.
+  const b3 = { ...b2, titleSha256: "9".repeat(64) };
+  assert.notEqual(pairCandidate(A, b3, scorePair(A, b3))?.relation, "identity");
 });
 
 test("a mixed synthetic/real pair and a non-binary market never become candidates", () => {
@@ -154,4 +158,31 @@ test("native neg-risk groups become partition candidates (P0 provenance) and sam
     assert.equal(l.state, "candidate");
     assert.deepEqual(linkErrors(l), []);
   }
+});
+
+test("identity candidates proposed from equal rules hashes alone are vetoed: siblings of one group, or different questions", () => {
+  const g = "0x" + "6".repeat(64);
+  const rules = "resolves to the candidate who wins";
+  const x = feat("polymarket", "SYNTHETIC-poly-x", "SYNTHETIC Will Alpha win?", rules, { rulesSha256: "7".repeat(64), maskedSha256: "8".repeat(64), groupKey: g, groupKind: "neg_risk" });
+  const y = feat("polymarket", "SYNTHETIC-poly-y", "SYNTHETIC Will Beta win?", rules, { rulesSha256: "7".repeat(64), maskedSha256: "8".repeat(64), groupKey: g, groupKind: "neg_risk" });
+  // What an earlier run proposed: an identity from the rules hash alone.
+  const old = { ...scorePair(x, y), sameQuestion: true };
+  const input = pairCandidate(x, y, old);
+  assert.equal(input?.relation, "identity");
+  if (input === null) return;
+  const r = proposeAll(emptyRegistry(), [{ input, linkId: computeLinkId(input), kind: "identity", source: "statistics" as const }], TODAY);
+  const id = r.proposed[0]?.linkId ?? "";
+  assert.ok(id);
+  const seen = new Map([[`polymarket:${x.marketId}`, x], [`polymarket:${y.marketId}`, y]]);
+  const v = retireStale(r.registry, seen, NOW, TODAY);
+  assert.deepEqual(v.vetoed.map((l) => l.linkId), [id]);
+  assert.equal(v.vetoed[0]?.reason, "same_native_group,same_venue_different_title,question_differs");
+  assert.equal(findLink(v.registry, id)?.state, "revoked");
+  // The same pair across two venues with different questions: question_differs only.
+  const xo = { ...x, venue: "xo" as const, marketId: "SYNTHETIC-xo-x" };
+  const crossInput = pairCandidate(xo, y, { ...scorePair(xo, y), sameQuestion: true });
+  if (crossInput === null) return assert.fail("cross-venue input");
+  const r2 = proposeAll(emptyRegistry(), [{ input: crossInput, linkId: computeLinkId(crossInput), kind: "identity", source: "statistics" as const }], TODAY);
+  const v2 = retireStale(r2.registry, new Map([[`xo:${xo.marketId}`, xo], [`polymarket:${y.marketId}`, y]]), NOW, TODAY);
+  assert.equal(v2.vetoed[0]?.reason, "question_differs");
 });

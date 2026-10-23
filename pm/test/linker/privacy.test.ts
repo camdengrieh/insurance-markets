@@ -61,5 +61,5 @@ test("the linker never imports a signing, trading, browser or approval module, a
 test("no file the linker writes is named for text: the state, bundle and groups hold ids, hashes, categories and timestamps", () => {
   const state = readFileSync(join(PM, "linker", "state.ts"), "utf8");
   assert.match(state, /ids-and-hashes-only/);
-  assert.equal(/title|question|description/.test(state.replace(/\/\/.*$/gm, "").replace(/titleTokens/g, "")), false);
+  assert.equal(/title|question|description/.test(state.replace(/\/\/.*$/gm, "").replace(/titleTokens|titleSha256/g, "")), false);
 });

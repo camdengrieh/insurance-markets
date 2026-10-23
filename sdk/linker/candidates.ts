@@ -53,7 +53,7 @@ export function pairCandidate(a: MarketFeatures, b: MarketFeatures, score: PairS
   if (delta === null) return null;
   const proof: CandidateInput["proof"] = { level: "P_unproven", evidence: [{ method: "statistics_hint", detail: evidenceCode(score) }] };
   const validUntil = earliestClose(legs);
-  if (score.identicalRules && score.sameTemplate && a.voidPolicy === b.voidPolicy && delta === 0) {
+  if (score.sameQuestion && score.sameTemplate && a.voidPolicy === b.voidPolicy && delta === 0) {
     return { relation: "identity", legs, basis: { class: "identical", axes: [], cutoffDeltaMinutes: 0 }, proof, validUntil, synthetic };
   }
   if (delta > 0) {

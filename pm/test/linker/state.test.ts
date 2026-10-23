@@ -21,6 +21,7 @@ function stored(venue: string, id: string): StoredMarket {
     entities: [],
     rulesSha256: "a".repeat(64),
     maskedSha256: "b".repeat(64),
+    titleSha256: "c".repeat(64),
     closeUtc: "2026-12-31T00:00:00Z",
     category: "other",
     categoryConfidence: "none",

@@ -3,6 +3,7 @@
 // (sdk/linker/candidates.ts). Stale candidates of the linker's own are vetoed here; a human-approved
 // link whose pinned leg changed is suspended (the safe direction). Nothing in this module can approve.
 
+import { sameNativeGroup, sameVenueDifferentTitle } from "../../sdk/linker/block.js";
 import type { MarketFeatures } from "../../sdk/linker/features.js";
 import type { CandidateInput, Link, ProposerSource } from "../links/schema.js";
 import { vetoLink, findLink, proposeLink, suspendLink, type Outcome, type Registry } from "../links/store.js";
@@ -55,6 +56,9 @@ export interface RetireOutcome {
 
 // A leg seen this run with a different rules hash or close time, or a close in the past: the
 // linker's own candidates are vetoed (revoked); an approved link is suspended for human review.
+// The linker's own same-question candidates (identity, near_identity) are also vetoed when two legs
+// are siblings of one native group or are on one venue with different titles, or when an identity's
+// legs ask different questions: earlier runs proposed those (sdk/linker/block.ts, score.ts sameQuestion).
 export function retireStale(registry: Registry, seen: ReadonlyMap<string, MarketFeatures>, nowMs: number, today: string): RetireOutcome {
   let reg = registry;
   const vetoed: { linkId: string; reason: string }[] = [];
@@ -69,6 +73,14 @@ export function retireStale(registry: Registry, seen: ReadonlyMap<string, Market
       const close = Date.parse(leg.closeUtc);
       if (Number.isFinite(close) && close <= nowMs) reasons.push(`leg${i}:closed`);
     });
+    if (link.state === "candidate" && (link.relation === "identity" || link.relation === "near_identity")) {
+      const legs = link.legs;
+      if (legs.some((a, i) => legs.some((b, j) => j > i && sameNativeGroup(a, b)))) reasons.push("same_native_group");
+      const fs = legs.map((l) => seen.get(`${l.venue}:${l.marketId}`));
+      const known = fs.every((f) => f !== undefined) ? (fs as MarketFeatures[]) : null;
+      if (known !== null && known.some((a, i) => known.some((b, j) => j > i && sameVenueDifferentTitle(a, b)))) reasons.push("same_venue_different_title");
+      if (link.relation === "identity" && known !== null && new Set(known.map((f) => f.titleSha256)).size > 1) reasons.push("question_differs");
+    }
     if (reasons.length === 0) continue;
     const reason = reasons.join(",").slice(0, 200);
     if (link.state === "candidate") {

@@ -106,7 +106,7 @@ character set before they can reach a URL.
 ```sh
 $RUN discover --dry --targets pm/recorder/data/targets.json   # the requests it would make, and their count; sends nothing
 $RUN discover --targets pm/recorder/data/targets.json         # build the file from public data
-$RUN run --discover --db ... --targets ...                    # build it if missing or older than --discover-every (default 86400 s), then refresh it in the loop
+$RUN run --discover --db ... --targets ...                    # build it if missing or older than --discover-every (default 21600 s), then refresh it in the loop
 ```
 
 Discovery uses the same client as collection (allowlist, budgets, User-Agent, backoff), GET only:

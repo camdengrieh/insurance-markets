@@ -56,6 +56,8 @@ export interface RunReportInput {
   readonly discovery: DiscoverResult;
   readonly pairs: number;
   readonly pairsSkipped: number;
+  readonly pairsSiblings: number;
+  readonly pairsSameVenue: number;
   readonly scored: { readonly candidates: number; readonly vetoed: number; readonly belowLine: number; readonly invalid: number };
   readonly groups: number;
   readonly proposed: readonly { readonly linkId: string; readonly kind: string }[];
@@ -73,7 +75,7 @@ export interface RunReportInput {
 
 export function runReportLines(r: RunReportInput): string[] {
   const lines: string[] = [];
-  lines.push(`pm-linker ${r.command} at ${r.at}: ${r.discovery.requests} requests, ${r.markets.length} markets with features, ${r.pairs} pairs scored${r.pairsSkipped > 0 ? ` (${r.pairsSkipped} beyond the pair cap)` : ""}`);
+  lines.push(`pm-linker ${r.command} at ${r.at}: ${r.discovery.requests} requests, ${r.markets.length} markets with features, ${r.pairs} pairs scored${r.pairsSiblings > 0 ? `, ${r.pairsSiblings} same-group sibling pairs left out` : ""}${r.pairsSameVenue > 0 ? `, ${r.pairsSameVenue} same-venue pairs with different titles left out` : ""}${r.pairsSkipped > 0 ? ` (${r.pairsSkipped} beyond the pair cap)` : ""}`);
   for (const [venue, c] of Object.entries(r.discovery.counts)) {
     const skipped = Object.entries(c.skipped)
       .sort(([a], [b]) => (a < b ? -1 : 1))

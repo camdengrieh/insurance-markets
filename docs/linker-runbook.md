@@ -74,7 +74,13 @@ tags, else a keyword in the title, else `other`) plus the ISO week of its close.
 block, between a block and the next week's block of the same category, and between any block and the
 `other` block of the same and the next week (a market the classifier could not place may still be the same
 question). Each unordered pair is scored exactly once. Blocks above 400 markets are truncated and the report
-says so. Within-venue pairs are scored like cross-venue ones.
+says so. Within-venue pairs are scored like cross-venue ones, except that two markets of one venue in the
+same native group (an XO root event, a Polymarket neg-risk set) are never paired: they are different
+outcomes of one event, proposed only as a `partition` or `ladder` below. Nor are two markets of one venue
+whose titles differ: a venue does not list one question twice under different wording, and its sibling
+outcomes ("A to win vs B" and "B to win vs A", "map 1" and "map 2", one up/down template per ticker)
+share every masked token and entity the score compares. A relisting with the identical title is still
+scored. The report counts both kinds of pair it leaves out.
 
 The score of a pair, in integer basis points (`sdk/linker/score.ts`, weights in `sdk/linker/constants.ts`):
 
@@ -85,8 +91,13 @@ score = ( 35 * J(titleTokens) + 20 * J(ruleTokens) + 15 * A(numbers)
 J(x) = Jaccard index of the two hash sets (0 when both empty)
 A(x) = J(x) when both sides have values; 5000 when both are empty; 2500 when one side is empty
 P(d) = 10000 when the closes are within 60 minutes; 0 at 7 days or more; linear in between
-rulesSha256 equal (identical rule text) short-circuits to 10000
+rulesSha256 and titleSha256 both equal (same rule text, same question) short-circuits to 10000
 ```
+
+Equal rule hashes alone are not enough: a venue's rule fields can leave the question out (Polymarket's
+are the event description, resolution source and end date), so "Will X win?" and "Will Y win?" in one
+event can share a rules hash. `titleSha256` is the sha256 of the canonical title; like every feature it is
+a hash, never text.
 
 Tokens come from the title and the rules after the existing canonicalisation (`pm/links/hash.ts`:
 `canonicalRuleText`, then `maskRuleText`, so dates, times, numbers, URLs and venue names are slot markers);
@@ -98,7 +109,7 @@ Thresholds: a pair at or above **6000** is proposed; bands for the reader are `s
 numbers and share none (`number_disagreement`: 80000 versus 90000 is a ladder, not the same question), or
 both name dates, share none, and close more than two days apart (`date_disagreement`).
 
-Relation and basis of a proposal: identical rule hashes, template, void policy and close give `identity`
+Relation and basis of a proposal: identical rule hashes and titles, template, void policy and close give `identity`
 (basis `identical`); different closes give `near_identity` with a `timing_cutoff` axis whose values are the
 two pinned close instants (minor up to 24 hours, major beyond) and `cutoffDeltaMinutes`; the same close with
 different rule text gives `near_identity` with basis `different` and no axes: the reviewer names the axes,
@@ -113,7 +124,11 @@ human-labelled evaluation, and none has been run.
 
 Stale candidates: a candidate of the linker's whose leg was seen with a different rules hash or close time,
 or whose leg has closed, is vetoed (`store.vetoLink`, state `revoked`), and the pair is re-proposed with the
-new pins if it still scores. A **human-approved** link whose pinned leg changed is **suspended** for review
+new pins if it still scores. A same-question candidate of the linker's (`identity`, `near_identity`) is also
+vetoed when two of its legs are siblings of one native group (`same_native_group`) or sit on one venue with
+different titles (`same_venue_different_title`), or when an `identity`'s
+legs have different titles (`question_differs`): earlier runs proposed those from equal rules hashes alone.
+A **human-approved** link whose pinned leg changed is **suspended** for review
 and the report prints it in capitals.
 
 ## 4. Run it once, locally
@@ -178,7 +193,7 @@ source .tools/env.sh
 node_modules/.bin/tsx pm/linker/main.ts once --registry pm/links/data/registry.json --out pm/linker/out
 node_modules/.bin/tsx pm/links/cli.ts export --write-shipped --include-candidates
 node_modules/.bin/tsx pm/linker/main.ts export-app --out pm/linker/out --app-out app/src/features/signals/data/links.json
-node_modules/.bin/tsc --noEmit -p pm/tsconfig.json && node_modules/.bin/tsx --test "pm/**/*.test.ts"
+node_modules/.bin/tsc --noEmit -p pm/tsconfig.json && node_modules/.bin/tsx --test "pm/test/**/*.test.ts"
 ```
 
 then commits `pm/links/data/registry.json`, `pm/links/data/links.bundle.json`, `pm/links/data/links.bundle.pin`,
@@ -208,7 +223,7 @@ false change (the words say so).
 
 ```sh
 node_modules/.bin/tsc --noEmit -p pm/tsconfig.json
-node_modules/.bin/tsx --test "pm/**/*.test.ts"
+node_modules/.bin/tsx --test "pm/test/**/*.test.ts"
 ```
 
 The linker's tests are under `pm/test/linker`: features, scoring (symmetry, monotonicity, threshold edges),

@@ -39,6 +39,21 @@ export function buildBlocks(features: readonly MarketFeatures[]): Block[] {
     });
 }
 
+// Two markets of one venue in the same native group (an XO root event, a Polymarket neg-risk set) are
+// different outcomes of one event, never the same question: groupCandidates proposes them as a
+// partition or ladder, so the pair scorer never sees them.
+export function sameNativeGroup(a: Pick<MarketFeatures, "venue" | "groupKey">, b: Pick<MarketFeatures, "venue" | "groupKey">): boolean {
+  return a.venue === b.venue && a.groupKey !== null && a.groupKey === b.groupKey;
+}
+
+// Two markets of one venue whose titles differ are not paired either. A venue does not list one question
+// twice under different wording, while its sibling outcomes ("A to win vs B" and "B to win vs A", "map 1"
+// and "map 2", one up/down template per ticker) share every masked token and entity the scorer compares.
+// The same title twice on one venue (a relisting) is still scored.
+export function sameVenueDifferentTitle(a: Pick<MarketFeatures, "venue" | "titleSha256">, b: Pick<MarketFeatures, "venue" | "titleSha256">): boolean {
+  return a.venue === b.venue && a.titleSha256 !== b.titleSha256;
+}
+
 export interface Pair {
   readonly a: MarketFeatures;
   readonly b: MarketFeatures;
@@ -51,13 +66,18 @@ export const WILDCARD_CATEGORY = "other";
 
 // Within a block every unordered pair once; across adjacent buckets of one category every pair
 // once; the wildcard block of a bucket against every other category of that bucket and the next.
-// Each unordered pair is generated exactly once. Stops at MAX_PAIRS_PER_RUN and counts the rest.
-export function pairsOf(blocks: readonly Block[]): { pairs: Pair[]; skipped: number } {
+// Each unordered pair is generated exactly once. Siblings of one native group and same-venue pairs with
+// different titles are left out and counted. Stops at MAX_PAIRS_PER_RUN and counts the rest.
+export function pairsOf(blocks: readonly Block[]): { pairs: Pair[]; skipped: number; siblings: number; sameVenue: number } {
   const pairs: Pair[] = [];
   let skipped = 0;
+  let siblings = 0;
+  let sameVenue = 0;
   const byKey = new Map(blocks.map((b) => [b.key, b]));
   const push = (a: MarketFeatures, b: MarketFeatures, key: string): void => {
-    if (pairs.length >= MAX_PAIRS_PER_RUN) skipped += 1;
+    if (sameNativeGroup(a, b)) siblings += 1;
+    else if (sameVenueDifferentTitle(a, b)) sameVenue += 1;
+    else if (pairs.length >= MAX_PAIRS_PER_RUN) skipped += 1;
     else pairs.push({ a, b, blockKey: key });
   };
   const cross = (from: Block, to: Block | undefined, label: string): void => {
@@ -75,5 +95,5 @@ export function pairsOf(blocks: readonly Block[]): { pairs: Pair[]; skipped: num
       for (const other of blocks) if (other.category !== WILDCARD_CATEGORY && other.bucket === block.bucket + 1) cross(block, other, `${block.key}~+1`);
     }
   }
-  return { pairs, skipped };
+  return { pairs, skipped, siblings, sameVenue };
 }

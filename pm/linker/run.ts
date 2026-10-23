@@ -123,7 +123,7 @@ export async function runOnce(deps: RunDeps): Promise<RunResult> {
   // ---- retire stale, then propose ----
   const retired = retireStale(registryBefore, seen, nowMs, today);
   const blocks = buildBlocks(markets);
-  const { pairs, skipped: pairsSkipped } = pairsOf(blocks);
+  const { pairs, skipped: pairsSkipped, siblings: pairsSiblings, sameVenue: pairsSameVenue } = pairsOf(blocks);
   const scored = scoreCandidates(pairs);
   const groups = groupCandidates(markets);
   const proposals = proposeAll(
@@ -177,6 +177,8 @@ export async function runOnce(deps: RunDeps): Promise<RunResult> {
     discovery,
     pairs: pairs.length,
     pairsSkipped,
+    pairsSiblings,
+    pairsSameVenue,
     scored: { candidates: scored.candidates.length, vetoed: scored.vetoed, belowLine: scored.belowLine, invalid: scored.invalid },
     groups: groups.length,
     proposed: proposals.proposed,

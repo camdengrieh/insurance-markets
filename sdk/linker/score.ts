@@ -6,7 +6,8 @@
 //   J(x)  = Jaccard index of the two hash sets in bps (0 when both are empty)
 //   A(x)  = J(x) when both sides have values; 5000 when both are empty; 2500 when one is empty
 //   P(d)  = 10000 when d <= 60 min; 0 when d >= 7 days; linear in between
-//   rulesSha256 equal (identical rule text) short-circuits to 10000.
+//   rulesSha256 AND titleSha256 equal (same rule text, same question) short-circuits to 10000.
+//   Equal rules hashes alone do not: sibling outcomes of one event can share their rule text.
 //
 // Symmetric (every term is symmetric), monotone in shared tokens (adding a shared token can only
 // raise a Jaccard term), and integer-only. Two hard vetoes stop a pair whatever its score.
@@ -73,6 +74,8 @@ export interface PairScore {
   };
   readonly closeDeltaMinutes: number | null;
   readonly identicalRules: boolean;
+  // Identical rules and the same canonical title: the only case that skips scoring and the vetoes.
+  readonly sameQuestion: boolean;
   readonly sameTemplate: boolean;
   readonly vetoes: readonly Veto[];
   // Above the proposal line and not vetoed.
@@ -97,6 +100,7 @@ export function scorePair(a: MarketFeatures, b: MarketFeatures): PairScore {
     close: closeProximityBps(delta),
   };
   const identicalRules = a.rulesSha256 === b.rulesSha256;
+  const sameQuestion = identicalRules && a.titleSha256 === b.titleSha256;
   const weighted =
     WEIGHTS.title * parts.title +
     WEIGHTS.rules * parts.rules +
@@ -104,9 +108,9 @@ export function scorePair(a: MarketFeatures, b: MarketFeatures): PairScore {
     WEIGHTS.dates * parts.dates +
     WEIGHTS.entities * parts.entities +
     WEIGHTS.close * parts.close;
-  const bps = identicalRules ? 10000 : Math.floor(weighted / WEIGHT_SUM);
+  const bps = sameQuestion ? 10000 : Math.floor(weighted / WEIGHT_SUM);
   const vetoes: Veto[] = [];
-  if (!identicalRules) {
+  if (!sameQuestion) {
     if (disjoint(a.numbers, b.numbers)) vetoes.push("number_disagreement");
     if (disjoint(a.dates, b.dates) && (delta === null || delta > DATE_VETO_CLOSE_DELTA_MINUTES)) vetoes.push("date_disagreement");
   }
@@ -115,6 +119,7 @@ export function scorePair(a: MarketFeatures, b: MarketFeatures): PairScore {
     parts,
     closeDeltaMinutes: delta,
     identicalRules,
+    sameQuestion,
     sameTemplate: a.maskedSha256 === b.maskedSha256,
     vetoes,
     proposable: vetoes.length === 0 && bps >= CANDIDATE_MIN_BPS,

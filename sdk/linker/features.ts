@@ -25,6 +25,10 @@ export interface MarketFeatures {
   readonly entities: readonly string[];
   readonly rulesSha256: string;
   readonly maskedSha256: string;
+  // sha256 of the canonical title: an equality pin for the question itself. A venue's rule fields can
+  // leave the question out (Polymarket's are the event description, resolution source and end date), so
+  // sibling outcomes of one event ("Will X win?", "Will Y win?") can share a rules hash.
+  readonly titleSha256: string;
   // YYYY-MM-DDTHH:MM:SSZ
   readonly closeUtc: string;
   readonly category: string;
@@ -185,6 +189,7 @@ export function buildFeatures(input: FeatureInput): MarketFeatures {
     entities: unique(entitiesOf(title).map((e) => tokenHash("e", e))),
     rulesSha256: input.rulesSha256,
     maskedSha256: input.maskedSha256,
+    titleSha256: sha256Hex(title),
     closeUtc: input.closeUtc,
     category: input.category,
     categoryConfidence: input.categoryConfidence,

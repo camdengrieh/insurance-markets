@@ -2,7 +2,7 @@
 
 The read-only order-book recorder (`pm/recorder`) as one container with one data directory, for the
 30-day evidence window. It needs no credentials and no hand-written market list: on start it discovers
-its targets from public XO and Polymarket data, records them, and refreshes the list daily.
+its targets from public XO and Polymarket data, records them, and refreshes the list every six hours.
 
 It sends only `GET` requests with the User-Agent `insurance-markets-research/0.1`, to five public
 read hosts, within per-host budgets far below the venues' documented limits. It trades nothing.
@@ -49,7 +49,7 @@ unprivileged `node` user. If it cannot create or write `/data` it refuses to sta
 SIGTERM ends the run cleanly, the next start resumes from the database, and a lock left behind by a hard
 kill is cleared when the entrypoint is the container's main process.
 
-Every start after the first reuses a targets file younger than 24 hours; otherwise it rediscovers first.
+Every start after the first reuses a targets file younger than six hours; otherwise it rediscovers first.
 The first discovery makes roughly 5 listing requests to XO, about a dozen to Gamma, and up to 300 lookup
 requests to XO at about one per second, so allow up to ten minutes before the first snapshots. Expected
 log lines, in order: `discover: ... targets ...`, `discover: wrote /data/targets.json`, then `tick: due=...`.
