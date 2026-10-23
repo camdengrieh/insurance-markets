@@ -27,7 +27,13 @@ const KIND_TEXT: Readonly<Record<BindingKind, string>> = Object.freeze({
   venue_account: "Venue account",
 });
 
-const SOURCE_TEXT = { pasted: "pasted by you", agent_import: "imported from your agent", derived: "derived from your address" } as const;
+const SOURCE_TEXT = { pasted: "pasted by you", agent_import: "imported from your agent", derived: "derived from your address", wallet_signed: "signed by your wallet" } as const;
+
+// A signed proof that could not be checked here (a smart account signs through its contract) says so.
+function sourceText(binding: AddressBinding): string {
+  if (binding.proof !== undefined && !binding.proof.verified) return "signed by your wallet; not checked here, it may be a smart account";
+  return SOURCE_TEXT[binding.source];
+}
 
 type AddKind = "eoa" | "venue_proxy" | "solana";
 
@@ -142,7 +148,7 @@ function BindingCard({ binding, state }: { readonly binding: AddressBinding; rea
         <UntrustedText value={untrusted(binding.label)} field="generic" /> <Badge tone="neutral">{KIND_TEXT[binding.kind]}</Badge>
       </h4>
       <p>
-        <code>{binding.address ?? "no address"}</code> <span className="pf-note">({SOURCE_TEXT[binding.source]})</span>
+        <code>{binding.address ?? "no address"}</code> <span className="pf-note">({sourceText(binding)})</span>
       </p>
       <fieldset className="wl-venues">
         <legend>Ask these venues about this address</legend>

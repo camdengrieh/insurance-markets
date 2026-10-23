@@ -29,6 +29,16 @@ const SINKS: ReadonlyArray<{ readonly name: string; readonly pattern: RegExp }> 
   { name: "document.write", pattern: /document\s*\.\s*write(?:ln)?\s*\(/ },
 ];
 
+// The one documented exception: lodash's global-object probe (lodash.isequal, inside the WalletConnect chunk),
+// `root = freeGlobal || freeSelf || Function("return this")()`. In a page `self` is the window, so the call is
+// short-circuited and never runs; were it ever reached, the CSP (no 'unsafe-eval') would refuse it. Only this exact
+// shape is removed before the sinks are matched.
+export const LODASH_ROOT_PROBE = /typeof self==`object`&&self&&self\.Object===Object&&self,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\|\|([A-Za-z_$][\w$]*)\|\|Function\(`return this`\)\(\)/g;
+
+export function withoutDocumentedProbes(text: string): string {
+  return text.replace(LODASH_ROOT_PROBE, "");
+}
+
 function ext(path: string): string {
   const at = path.lastIndexOf(".");
   return at === -1 ? "" : path.slice(at).toLowerCase();
@@ -66,8 +76,9 @@ export async function inspectDirectory(dir: string, label: string): Promise<Viol
     violations.push(...originViolations(name, text));
     if (extension === ".html") violations.push(...htmlViolations(name, text));
     if (extension === ".js") {
+      const code = withoutDocumentedProbes(text);
       for (const sink of SINKS) {
-        if (sink.pattern.test(text)) violations.push({ file: name, rule: "code-sink", detail: `${sink.name} in the bundle` });
+        if (sink.pattern.test(code)) violations.push({ file: name, rule: "code-sink", detail: `${sink.name} in the bundle` });
       }
     }
   }

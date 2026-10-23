@@ -9,8 +9,16 @@ import { App } from "../../App";
 import { act, allText, cleanup, click, must, render, settle } from "../../ui/testing/dom";
 import { resolveRoutes, type Loader } from "../../ui/routes";
 import { runAxe } from "../../ui/testing/axe";
+import { testEnvironment } from "./connect/testkit";
 import { fakeNetwork } from "./testkit";
 import { eventually, harness } from "./view-harness";
+
+// No browser wallet and no WalletConnect project id: the modal opens on WalletConnect, so each test picks the watch tab.
+function watchTab(dialog: HTMLElement): void {
+  const tab = [...dialog.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((entry) => entry.textContent === "Just watch an address");
+  if (tab === undefined) throw new Error("no watch tab");
+  click(tab);
+}
 import { WalletServicesProvider } from "./services";
 import { WalletChip } from "./WalletChip";
 import { WALLET_PANELS_SUMMARY } from "./WalletView";
@@ -68,12 +76,13 @@ describe("the wallet has no screen of its own", () => {
       const location = memoryLocation({ path: "/" });
       const view = render(
         <WalletServicesProvider services={h.services}>
-          <App loaders={NO_ROUTES} mode={mode} locationHook={location.hook} topBarEnd={<WalletChip />} />
+          <App loaders={NO_ROUTES} mode={mode} locationHook={location.hook} topBarEnd={<WalletChip />} walletEnvironment={testEnvironment({ target: null, projectId: null })} />
         </WalletServicesProvider>,
       );
       await settle(10);
       await eventually(() => expect(must(view.container, "button.ui-wallet-chip").getAttribute("data-status")).toBe("ready"), act);
       click(must(view.container, "button.ui-wallet-chip"));
+      watchTab(dialog());
       await eventually(() => expect(allText(dialog())).toMatch(/Saved addresses/), act);
       expect(allText(dialog())).toMatch(/No addresses saved yet/);
       await unfold(dialog());
@@ -97,12 +106,13 @@ describe("the wallet has no screen of its own", () => {
       const location = memoryLocation({ path: "/" });
       const view = render(
         <WalletServicesProvider services={h.services}>
-          <App loaders={NO_ROUTES} mode={mode} locationHook={location.hook} topBarEnd={<WalletChip />} />
+          <App loaders={NO_ROUTES} mode={mode} locationHook={location.hook} topBarEnd={<WalletChip />} walletEnvironment={testEnvironment({ target: null, projectId: null })} />
         </WalletServicesProvider>,
       );
       await settle(10);
       await eventually(() => expect(must(view.container, "button.ui-wallet-chip").getAttribute("data-status")).toBe("ready"), act);
       click(must(view.container, "button.ui-wallet-chip"));
+      watchTab(dialog());
       await eventually(() => expect(allText(dialog())).toMatch(/Saved addresses/), act);
       await unfold(dialog());
       await eventually(() => expect(dialog().querySelector('[data-testid="account-map"]')).not.toBeNull(), act);

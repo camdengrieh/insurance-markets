@@ -236,3 +236,151 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ---- connecting a wallet (connect/ConnectTabs.tsx) ------------------------------------------------------------- */
+
+.wl-wallets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+  gap: 0.5rem;
+}
+
+.wl-wallet .ui-button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+/* A wallet's own icon (a data: image) or, without one, an outlined square of the same size. */
+.wl-wallet-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: var(--line) solid var(--border);
+}
+
+img.wl-wallet-icon {
+  border: 0;
+  object-fit: contain;
+}
+
+.wl-pairing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.wl-pairing > p {
+  margin: 0;
+}
+
+/* The QR stays dark on light in both themes (scanners need the contrast); the canvas paints its own quiet zone. */
+.wl-qr {
+  width: min(232px, 100%);
+  height: auto;
+  image-rendering: pixelated;
+  border: var(--line) solid var(--border);
+  align-self: flex-start;
+}
+
+.wl-pairing-link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border: var(--line) solid var(--border);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.wl-pairing-actions,
+.wl-connected-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+a.ui-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.wl-connected {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 16px 20px;
+  border: var(--line-strong) solid var(--text);
+  background: var(--surface);
+}
+
+.wl-connected h3 {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.wl-connected .wl-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+.wl-connected .wl-facts > div {
+  display: contents;
+}
+
+.wl-connected .wl-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.wl-connected > p {
+  margin: 0;
+}
+
+/* ---- the chip with a wallet connected (WalletChip.tsx) ----------------------------------------------------------- */
+
+.ui-wallet-group {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.ui-wallet-name,
+.ui-wallet-chain {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-wallet-disconnect {
+  min-height: var(--tap);
+  margin-left: calc(-1 * var(--line));
+  padding: 0 10px;
+  border: var(--line) solid var(--text);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+@media (max-width: 43.99rem) {
+  .ui-wallet-name {
+    display: none;
+  }
+}

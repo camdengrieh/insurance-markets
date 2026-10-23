@@ -1,4 +1,4 @@
-import { BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS, NEVER_IN_APP_HOSTS } from "../headers.config.ts";
+import { BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS, LINK_ONLY_HOSTS, NEVER_IN_APP_HOSTS, WALLET_RELAY_ORIGINS } from "../headers.config.ts";
 import { lineOf, type Violation } from "./lib.ts";
 
 // What counts as a third-party origin, shared by check-origins (source) and check-bundle (built output).
@@ -7,6 +7,7 @@ import { lineOf, type Violation } from "./lib.ts";
 //   network   an origin in headers.config.ts (a CSP entry, or a daemon-only host an adapter may name);
 //   inert     a documentation link, XML namespace or schema id inside a library; never fetched, and the
 //             CSP would block a fetch to it anyway. Each is listed here with the reason it is harmless;
+//   link      a host the page only links to (headers.config.ts LINK_ONLY_HOSTS); https only, never in a CSP;
 //   never     a host that must not appear at all (headers.config.ts NEVER_IN_APP_HOSTS);
 //   unknown   anything else: a violation.
 // The CSP is the real barrier. This policy makes a new hostname a reviewed change.
@@ -19,18 +20,35 @@ export const INERT_HOSTS: Readonly<Record<string, string>> = Object.freeze({
   "abitype.dev": "abitype documentation links in error messages",
   "docs.soliditylang.org": "viem documentation link in an error message",
   "4byte.sourcify.dev": "viem decode-error message names a signature database; the string is never fetched",
+  "oxlib.sh": "ox (viem's own dependency) documentation links in error messages",
+  "rolldown.rs": "the bundler's runtime names its documentation in a 'require is not available' error message",
+  // The WalletConnect chunk (@walletconnect/sign-client and its tree), loaded only when the visitor uses WalletConnect.
+  // Its relay is a network origin (headers.config.ts WALLET_RELAY_ORIGINS); none of the hosts below is in any CSP, so
+  // the browser would refuse a request to one even if the code made it.
+  "links.ethers.org": "ethers v5 error messages (pulled in by @walletconnect/utils) link their documentation; never fetched",
+  "github.com": "elliptic's package.json (inlined by @walletconnect/utils' crypto) names its repository and issue tracker; never fetched",
+  "t.me": "WalletConnect link mode compares a wallet's universal link with Telegram's prefix; a string comparison, and link mode is not used here",
+  "rpc.walletconnect.org": "WalletConnect's Blockchain API, used only to check a smart-account reply to a one-click sign-in (authenticate), which this page never requests",
+  "verify.walletconnect.com": "WalletConnect Verify: wallet-side lookup only; the dApp-side registration (an iframe) is replaced with a no-op at init",
+  "verify.walletconnect.org": "WalletConnect Verify: as verify.walletconnect.com",
+  "echo.walletconnect.com": "WalletConnect push registration, which only a wallet calls",
+  "pulse.walletconnect.org": "WalletConnect telemetry, switched off at init (telemetryEnabled: false)",
 });
 
-export type HostClass = "network" | "inert" | "never" | "unknown";
+export type HostClass = "network" | "inert" | "link" | "never" | "unknown";
 
 const NETWORK_HOSTS: ReadonlySet<string> = new Set(
   [...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin), ...DAEMON_ONLY_ORIGINS.map((entry) => entry.origin)].map((origin) => new URL(origin).hostname),
 );
 
+// The wallet relay is the one network origin reached over wss rather than https.
+const RELAY_HOSTS: ReadonlySet<string> = new Set(WALLET_RELAY_ORIGINS.map((entry) => new URL(entry.origin).hostname));
+
 export function classifyHost(host: string): HostClass {
   const lower = host.toLowerCase();
   if (Object.hasOwn(NEVER_IN_APP_HOSTS, lower)) return "never";
-  if (NETWORK_HOSTS.has(lower)) return "network";
+  if (NETWORK_HOSTS.has(lower) || RELAY_HOSTS.has(lower)) return "network";
+  if (Object.hasOwn(LINK_ONLY_HOSTS, lower)) return "link";
   if (Object.hasOwn(INERT_HOSTS, lower)) return "inert";
   return "unknown";
 }
@@ -78,9 +96,15 @@ export function originViolations(file: string, text: string): Violation[] {
   for (const hit of findUrls(text)) {
     const cls = classifyHost(hit.host);
     if (cls === "network" || cls === "inert") {
-      if (hit.scheme === "http" || hit.scheme === "ws" || hit.scheme === "wss" || hit.scheme === "ftp") {
-        if (cls === "network") violations.push({ file, line: hit.line, rule: "insecure-origin", detail: `${hit.url}: network origins are https only` });
+      const relay = RELAY_HOSTS.has(hit.host);
+      const secure = relay ? hit.scheme === "wss" : hit.scheme === "https";
+      if (cls === "network" && !secure) {
+        violations.push({ file, line: hit.line, rule: "insecure-origin", detail: `${hit.url}: network origins are https only (the wallet relay is wss only)` });
       }
+      continue;
+    }
+    if (cls === "link") {
+      if (hit.scheme !== "https") violations.push({ file, line: hit.line, rule: "insecure-origin", detail: `${hit.url}: a link target is https only` });
       continue;
     }
     if (cls === "never") {
