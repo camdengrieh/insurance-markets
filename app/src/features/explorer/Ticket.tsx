@@ -21,7 +21,8 @@ import { Button, Field, Missing, Num, Tile, UntrustedText, useAppMode, useNow, v
 import { usePairing } from "../terminal/usePairing";
 import { useTradeServices } from "../trade/services";
 import { TradeDesk, clobMarketFacts, type TokenChoice } from "../trade";
-import { hasDirectExecutor } from "../trade/direct";
+import { XoTradePanel, tradesDirectly } from "../trade/direct";
+import { useWalletServices } from "../wallet/services";
 import { priceText } from "./display";
 import { isSafeMarketId } from "./ids";
 import { useExplorerServices } from "./services";
@@ -87,7 +88,7 @@ export function PrepareOrderAction({ venue, onPrepare }: { readonly venue: Marke
     );
   }
   if (mode !== "cockpit") {
-    if (hasDirectExecutor(venue)) {
+    if (tradesDirectly(venue)) {
       return (
         <Button onClick={onPrepare} data-prepare="direct">
           {PREPARE_DIRECT}
@@ -182,7 +183,7 @@ export function Ticket({ market }: { readonly market: Market }) {
     return <VenueStateTile venue={venue} state={readState} nowMs={nowMs} heading="h4" kept="No order is prepared while this lasts: there is no book to quote." />;
   }
   // A venue with a direct executor trades from the standalone build with the visitor's own wallet (the desk routes it).
-  if (mode !== "cockpit" && !hasDirectExecutor(venue)) {
+  if (mode !== "cockpit" && !tradesDirectly(venue)) {
     return (
       <Tile tone="info" title="Prepare order: needs the Cockpit" heading="h4" dataKind="ticket" dataCode="needs-cockpit">
         <p>
@@ -190,6 +191,13 @@ export function Ticket({ market }: { readonly market: Market }) {
           never signs or sends.
         </p>
       </Tile>
+    );
+  }
+  if (venue === "xo" && mode !== "cockpit") {
+    return (
+      <div data-ticket="xo">
+        <XoWalletTicket market={market} />
+      </div>
     );
   }
   if (venue === "xo") {
@@ -210,6 +218,29 @@ export function Ticket({ market }: { readonly market: Market }) {
   return (
     <div data-ticket={venue}>
       <TradeDesk panels="order" tokenChoices={tokenChoicesOf(market)} clobMarket={facts} heading="h4" />
+    </div>
+  );
+}
+
+// The standalone build's XO ticket: the visitor's own wallet signs, through the markets API's relay (trade/direct/xo).
+// The panel trades one outcome; the visitor picks which.
+function XoWalletTicket({ market }: { readonly market: Market }) {
+  const { deps } = useWalletServices();
+  const choices = tokenChoicesOf(market);
+  const [tokenId, setTokenId] = useState<string | null>(choices[0]?.tokenId ?? null);
+  const chosen = choices.find((choice) => choice.tokenId === tokenId) ?? null;
+  return (
+    <div className="ui-stack">
+      {choices.length > 1 ? (
+        <div className="tr-toggle" role="group" aria-label="Outcome to trade">
+          {choices.map((choice) => (
+            <button key={choice.tokenId} type="button" className="tr-toggle-button" data-outcome={choice.outcome ?? "label"} aria-pressed={choice.tokenId === tokenId} onClick={() => setTokenId(choice.tokenId)}>
+              {choice.short ?? choice.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <XoTradePanel deps={deps} outcome={chosen === null ? null : { tokenId: chosen.tokenId, label: chosen.label }} />
     </div>
   );
 }

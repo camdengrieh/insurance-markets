@@ -45,9 +45,11 @@ describe("the direct path's source", () => {
     for (const { name, text } of ALL) {
       const source = code(text);
       expect(source, name).not.toMatch(/\b(?:localStorage|indexedDB|document\.cookie|clipboard|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/);
-      if (name === "services.tsx") continue;
+      // The wiring points: services.tsx for the CLOB executors; for XO, the panel (the page's fetch for its relay
+      // client) and its credential store (the tab's sessionStorage); each takes fakes in tests.
+      if (name === "services.tsx" || name === "xo/XoTradePanel.tsx" || name === "xo/credentials.ts") continue;
       expect(source, name).not.toMatch(/\bsessionStorage\b/);
-      expect(source, name).not.toMatch(/(?:globalThis|window)\.fetch\b|(?<![.\w])fetch\s*\(/);
+      expect(source, name).not.toMatch(/(?:globalThis|window)\.fetch\b|(?<![.\w#])fetch\s*\(/);
     }
   });
 

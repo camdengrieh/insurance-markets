@@ -226,14 +226,15 @@ describe("M0-8 and the spread labels in the modal", () => {
 });
 
 describe("books that cannot be shown", () => {
-  it("XO in the standalone build: needs the Cockpit, nothing requested, never an empty book; the ticket says so too", async () => {
+  it("XO in the standalone build: the book needs the Cockpit, nothing requested, never an empty book; the ticket is the wallet one", async () => {
     const xo = fakeEntry("xo", { detail: detailOf(market("xo", "m1")), books: { state: "needs_cockpit", what: "XO order books" } });
     await mount(show("xo"), fakeServices([xo]));
     expect(xo.bookCalls).toHaveLength(0);
     const books = must(dialog(), "#explorer-books-heading").parentElement as Element;
     expect(allText(books)).toContain("XO Market: needs the Cockpit");
     expect(allText(books)).not.toMatch(/Best bid|No orders/);
-    expect(allText(must(dialog(), "[data-kind='ticket'][data-code='needs-cockpit']"))).toContain("Prepare order: needs the Cockpit");
+    // The ticket trades with the visitor's wallet through the markets API's relay; this build names no relay, and says so.
+    expect(allText(must(dialog(), "[data-ticket='xo'] [data-testid='xo-direct']"))).toContain("XO trading is not available in this build.");
   });
 
   it("Manifold has no order book and says so", async () => {

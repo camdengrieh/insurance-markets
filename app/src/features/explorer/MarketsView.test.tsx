@@ -680,10 +680,10 @@ describe("the inspector", () => {
     expect(pm.listCalls.length).toBe(before);
   });
 
-  it("XO in the standalone build: Prepare order needs the Cockpit; the Cockpit build unpaired: not paired", async () => {
+  it("XO in the standalone build: trade with your wallet; the Cockpit build unpaired: not paired", async () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1")]], books: { state: "needs_cockpit", what: "XO order books" } });
     const standalone = await mount(<MarketsView />, fakeServices([xo]));
-    expect(buttonWith(inspector(standalone.container), /Prepare order/).textContent).toBe("Prepare order: needs the Cockpit");
+    expect(buttonWith(inspector(standalone.container), /Trade with your wallet/).disabled).toBe(false);
     cleanup();
     const cockpit = await mount(<MarketsView />, fakeServices([fakeEntry("xo", { pages: [[summary("xo", "m1")]] })], { mode: "cockpit" }));
     const prepare = buttonWith(inspector(cockpit.container), /Prepare order/);

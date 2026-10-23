@@ -15,6 +15,7 @@ pm/linker/out/
 
 # Per-machine agent settings can hold local paths; never commit them.
 .claude/settings.local.json
+.claude/worktrees/
 
 # Python bytecode caches (embed absolute paths)
 __pycache__/

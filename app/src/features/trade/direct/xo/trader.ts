@@ -177,7 +177,7 @@ export class XoTrader {
       return refused(keyOnly ? "XO says this account has an API key but did not send its secret, so this tab cannot sign with it. The key was made elsewhere; this page cannot recover its secret." : "XO's answer did not hold a credential in a form this page knows.", answerOf(answer, false));
     }
     this.#options.store.put(this.owner, this.account, credential);
-    return { state: "done", words: `${words} It is kept in this tab only (sessionStorage) and is gone when the tab closes.`, answer: answerOf(answer, false) };
+    return { state: "done", words: `${words} It is kept in this tab only and is gone when the tab closes.`, answer: answerOf(answer, false) };
   }
 
   // ---- (b) an order -----------------------------------------------------------------------------------------------------
