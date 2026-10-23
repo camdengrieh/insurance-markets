@@ -9,3 +9,4 @@ playwright-report/
 blob-report/
 # Scratch build directories made by scripts/*.test.ts.
 scripts/fixtures/.tmp-*/
+.vercel
