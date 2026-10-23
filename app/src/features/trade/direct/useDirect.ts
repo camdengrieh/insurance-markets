@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
+import type { Hex } from "viem";
+
 import type { WalletSigner } from "../../../core/signer";
 import type { ClobMarketFacts, ClobTicket } from "../clob-ticket";
 import type { PolymarketExecutor } from "./polymarket/executor";
 import type { ApprovalAmount } from "./polymarket/funding";
-import type { DirectAccount, DirectApproval, DirectCancelAnswer, DirectFunding, DirectOpenOrders, DirectOrderAnswer, DirectPreparedOrder, DirectReadiness, DirectResult, DirectSession, DirectTransaction } from "./types";
+import type { DirectAccount, DirectApproval, DirectCancelAnswer, DirectExecutor, DirectFunding, DirectOpenOrders, DirectOrderAnswer, DirectPreparedOrder, DirectReadiness, DirectResult, DirectSession, DirectTransaction } from "./types";
 
 // The state of the direct ticket for one wallet and one market. Every request is started by the visitor (connect,
 // log in, review, sign, approve, cancel) except the reads that follow from them: the account when a wallet connects,
@@ -29,6 +31,8 @@ export interface DirectState {
   readonly session: DirectSession | null;
   readonly login: Async<DirectSession>;
   readonly doLogin: () => void;
+  // A login the screen runs itself (Limitless: a pasted token, checked with the venue), with the same bookkeeping.
+  readonly doLoginWith: (run: (signer: WalletSigner) => Promise<DirectResult<DirectSession>>) => void;
   readonly doLogout: () => void;
   readonly funding: Async<DirectFunding>;
   readonly rereadFunding: () => void;
@@ -50,7 +54,21 @@ export interface DirectState {
   readonly doApprove: () => void;
 }
 
+// What the ticket asks of a venue: the executor's questions, with its funding read and approvals for one market.
+export interface TicketPort extends DirectExecutor<{ readonly ticket: ClobTicket; readonly facts: ClobMarketFacts; readonly outcome: string | null }> {
+  funding(account: DirectAccount, tokenId: string | null): Promise<DirectResult<DirectFunding>>;
+  approval(account: DirectAccount, approval: DirectApproval, amount: ApprovalAmount): DirectTransaction;
+  sendApproval(signer: WalletSigner, account: DirectAccount, transaction: DirectTransaction): Promise<DirectResult<Hex>>;
+}
+
+// Polymarket's funding is read against the exchange of the market's book.
 export function useDirectPolymarket(signer: WalletSigner | null, executor: PolymarketExecutor, facts: ClobMarketFacts, tokenId: string): DirectState {
+  const book = executor.bookOf(facts);
+  const port: TicketPort = useMemo(() => ({ ...executor, funding: (account, token) => executor.funding(account, book, token) }), [executor, book]);
+  return useDirectTicket(signer, port, facts, tokenId);
+}
+
+export function useDirectTicket(signer: WalletSigner | null, executor: TicketPort, facts: ClobMarketFacts, tokenId: string): DirectState {
   const [readVersion, rereadAccount] = useReducer((n: number) => n + 1, 0);
   const [readiness, setReadiness] = useState<Async<DirectReadiness>>(IDLE);
   const [picked, setPicked] = useState(0);
@@ -98,7 +116,6 @@ export function useDirectPolymarket(signer: WalletSigner | null, executor: Polym
   // Read again whenever this page changes it (log in, log out: sessionVersion) or the wallet changes.
   const session = useMemo(() => (signer === null ? null : executor.session(signer)), [signer, executor, sessionVersion]);
 
-  const book = executor.bookOf(facts);
   const fundingToken = /^[1-9][0-9]{0,77}$/.test(tokenId) ? tokenId : null;
   useEffect(() => {
     if (account === null) {
@@ -107,13 +124,13 @@ export function useDirectPolymarket(signer: WalletSigner | null, executor: Polym
     }
     let live = true;
     setFunding(RUNNING);
-    void executor.funding(account, book, fundingToken).then((result) => {
+    void executor.funding(account, fundingToken).then((result) => {
       if (live) setFunding(done(result));
     });
     return () => {
       live = false;
     };
-  }, [executor, account, book, fundingToken, fundingVersion]);
+  }, [executor, account, fundingToken, fundingVersion]);
 
   const sessionKey = session?.keyTag ?? null;
   useEffect(() => {
@@ -140,6 +157,19 @@ export function useDirectPolymarket(signer: WalletSigner | null, executor: Polym
       bumpSession();
     });
   }, [executor, signer]);
+
+  const doLoginWith = useCallback(
+    (run: (who: WalletSigner) => Promise<DirectResult<DirectSession>>) => {
+      if (signer === null) return;
+      setLogin(RUNNING);
+      void run(signer).then((result) => {
+        if (current.current !== signer) return;
+        setLogin(done(result));
+        bumpSession();
+      });
+    },
+    [signer],
+  );
 
   const doLogout = useCallback(() => {
     if (signer === null) return;
@@ -222,6 +252,7 @@ export function useDirectPolymarket(signer: WalletSigner | null, executor: Polym
     session,
     login,
     doLogin,
+    doLoginWith,
     doLogout,
     funding,
     rereadFunding,

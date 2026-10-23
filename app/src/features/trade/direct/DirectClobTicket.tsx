@@ -12,6 +12,7 @@ import { KeyValues, Mono } from "../components";
 import { OrderBar, SideToggle, SignStrip, canToggle } from "../OrderBar";
 import { sideLabel, tifLabel, type SignCell } from "../ticket";
 import { DirectCardDialog } from "./DirectCard";
+import { LimitlessTicket } from "./limitless/LimitlessTicket";
 import { atomicText } from "./polymarket/card";
 import type { PolymarketExecutor } from "./polymarket/executor";
 import { fundingStop } from "./polymarket/funding";
@@ -19,7 +20,8 @@ import { useDirectServices } from "./services";
 import type { DirectFunding, DirectRefusal, DirectResult } from "./types";
 import { useDirectPolymarket, type Async, type DirectState } from "./useDirect";
 
-// The order ticket of the standalone build for a venue with a direct executor (Polymarket today): the visitor's own
+// The order ticket of the standalone build for a venue with a direct executor (Polymarket here; Limitless in
+// limitless/LimitlessTicket.tsx, which this file routes to and lends its blocks): the visitor's own
 // wallet signs and this page sends the signed order to the venue from the visitor's browser. Nothing goes through a
 // server of the author's. In order:
 //   no wallet       one action: connect a wallet (the shell's Connect modal);
@@ -38,7 +40,7 @@ export interface DirectClobTicketProps {
   readonly heading?: "h2" | "h4";
 }
 
-function tileHeading(heading: "h2" | "h4"): TileHeading {
+export function tileHeading(heading: "h2" | "h4"): TileHeading {
   return heading === "h2" ? "h3" : "h4";
 }
 
@@ -55,7 +57,7 @@ export function RefusalText({ refusal }: { readonly refusal: DirectRefusal }) {
   );
 }
 
-function RefusalTile({ refusal, title, heading, actions }: { readonly refusal: DirectRefusal; readonly title: string; readonly heading: TileHeading; readonly actions?: ReactNode }) {
+export function RefusalTile({ refusal, title, heading, actions }: { readonly refusal: DirectRefusal; readonly title: string; readonly heading: TileHeading; readonly actions?: ReactNode }) {
   return (
     <Tile tone={refusal.code === "venue_ambiguous" ? "warn" : "danger"} title={title} heading={heading} role="alert" dataKind="direct-refusal" dataCode={refusal.code} actions={actions}>
       <RefusalText refusal={refusal} />
@@ -249,10 +251,10 @@ function ApprovalActions({ state, funding, ticket, blocker }: { readonly state: 
   );
 }
 
-function AnswerTile({ answer, heading }: { readonly answer: DirectResult<{ readonly orderId: string; readonly status: string; readonly venueText: string | null }>; readonly heading: TileHeading }) {
+export function AnswerTile({ answer, heading, venue = "Polymarket" }: { readonly answer: DirectResult<{ readonly orderId: string; readonly status: string; readonly venueText: string | null }>; readonly heading: TileHeading; readonly venue?: string }) {
   if (!answer.ok) return <RefusalTile refusal={answer.refusal} title={answer.refusal.code === "venue_ambiguous" ? "The order's outcome is unknown" : "The order was not placed"} heading={heading} />;
   return (
-    <Tile tone="ok" title="Polymarket accepted the order" heading={heading} role="status" dataKind="direct-answer" dataCode={answer.value.status}>
+    <Tile tone="ok" title={`${venue} accepted the order`} heading={heading} role="status" dataKind="direct-answer" dataCode={answer.value.status}>
       <KeyValues
         rows={[
           { label: "Order id", value: <Mono>{answer.value.orderId}</Mono> },
@@ -268,9 +270,9 @@ function AnswerTile({ answer, heading }: { readonly answer: DirectResult<{ reado
   );
 }
 
-function OrdersBlock({ state, heading }: { readonly state: DirectState; readonly heading: TileHeading }) {
+export function OrdersBlock({ state, heading, venue = "Polymarket", loggedOut = "Log in to list and cancel your open orders on this market." }: { readonly state: DirectState; readonly heading: TileHeading; readonly venue?: string; readonly loggedOut?: string }) {
   const { orders } = state;
-  if (state.session === null) return <p className="tr-note">Log in to list and cancel your open orders on this market.</p>;
+  if (state.session === null) return <p className="tr-note">{loggedOut}</p>;
   if (orders.phase !== "done") return <p role="status">Listing your open orders on this market.</p>;
   if (!orders.result.ok) {
     return (
@@ -342,7 +344,7 @@ function OrdersBlock({ state, heading }: { readonly state: DirectState; readonly
           </tbody>
         </table>
       )}
-      {list.more ? <p className="tr-note">Polymarket has more orders than the first page shown here.</p> : null}
+      {list.more ? <p className="tr-note">{`${venue} has more orders than the first page shown here.`}</p> : null}
       <Button onClick={state.rereadOrders} data-action="direct-reread-orders">
         List again
       </Button>
@@ -372,6 +374,9 @@ export function DirectClobTicket({ facts, tokenChoices, heading = "h4" }: Direct
   const services = useDirectServices();
   const executor: PolymarketExecutor = services.executor("polymarket");
   const tile = tileHeading(heading);
+  // Limitless has its own ticket (a pasted API token instead of a login signature, Base instead of Polygon, our
+  // markets API's relay in between); it shares this file's blocks.
+  if (facts.venue === "limitless") return <LimitlessTicket facts={facts} tokenChoices={tokenChoices} heading={heading} />;
   if (facts.venue !== "polymarket") return null;
   if (signer === null) {
     return (

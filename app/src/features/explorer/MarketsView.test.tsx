@@ -139,13 +139,12 @@ describe("the list", () => {
 });
 
 describe("M0-2: venues the build cannot read are said, not emptied", () => {
-  it("standalone: Limitless needs the Cockpit, Kalshi is off for restricted terms, XO books need the Cockpit", async () => {
+  it("standalone: Limitless is read through our markets API, Kalshi is off for restricted terms, XO books need the Cockpit", async () => {
     const xo = fakeEntry("xo", { pages: [[summary("xo", "m1")]], books: { state: "needs_cockpit", what: "XO order books" } });
     const { container } = await mount(<MarketsView />, fakeServices([xo], { mode: "standalone" }));
-    const limitless = tile(container, "needs-cockpit", "limitless");
-    expect(limitless).not.toBeNull();
-    expect(allText(limitless as Element)).toContain("Limitless: needs the Cockpit");
-    expect(allText(limitless as Element)).toContain("different from an empty book");
+    // No Cockpit tile for Limitless: this build reads it through our markets API (here with no reader in the fakes).
+    expect(tile(container, "needs-cockpit", "limitless")).toBeNull();
+    expect(allText(container)).not.toContain("Limitless: needs the Cockpit");
     const kalshi = tile(container, "restricted", "kalshi");
     expect(allText(kalshi as Element)).toContain("Kalshi: off, restricted terms");
     expect(allText(kalshi as Element)).toContain("nothing was requested");

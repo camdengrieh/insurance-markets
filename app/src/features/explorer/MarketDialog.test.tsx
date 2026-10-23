@@ -347,9 +347,11 @@ describe("what the modal refuses to request", () => {
     expect(allText(dialog())).toContain("Kalshi: off, restricted terms");
   });
 
-  it("a Cockpit-only venue in the standalone build is a tile, not a request", async () => {
+  it("a venue with no reader in the build is a tile, not a request", async () => {
+    // Limitless is read through our markets API in the standalone build; these fakes hold no reader for it.
     await mount(show("limitless"), fakeServices([fakeEntry("xo")]));
-    expect(allText(dialog())).toContain("Limitless: needs the Cockpit");
+    expect(allText(dialog())).toContain("Limitless: no reader in this release");
+    expect(allText(dialog())).not.toContain("needs the Cockpit");
   });
 
   it("a reader that answers for a different market is refused", async () => {

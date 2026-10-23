@@ -1,14 +1,14 @@
 # pm-recorder, pm-linker and pm-api on AWS
 
 Replaces the two Railway services (`deploy/recorder`, `deploy/linker`) with one small AWS stack, and
-hosts the markets API (`deploy/api`, with the XO order relay switched on) on the same host behind
+hosts the markets API (`deploy/api`, with the XO and Limitless order relays switched on) on the same host behind
 CloudFront:
 
 | Piece | AWS | Why this shape |
 |---|---|---|
 | recorder (continuous, SQLite on a volume) | one Graviton EC2 host (`t4g.small`, Amazon Linux 2023), container managed by systemd, **EBS gp3 volume at `/data`** | SQLite needs a real block device: EFS (NFS) breaks its locking, and Fargate's ephemeral or task-scoped storage loses the 30-day series on every redeploy |
 | linker (every two hours, exits) | same host, systemd **timer** `*-*-* 00/2:00:00` UTC running the container once | identical to the Railway cron service, no second host |
-| markets API with the XO relay (`pm-api`) | same host, container managed by systemd on port 8790, data in `/data/api`, `API_XO_RELAY=on`, `API_TRUST_PROXY_HOPS=1`, `API_INDEXER=off` | the relay must answer the dApp's browser with CORS, which XO's order book and bundler do not; one more container is cheaper than a second host |
+| markets API with the XO and Limitless relays (`pm-api`) | same host, container managed by systemd on port 8790, data in `/data/api`, `API_XO_RELAY=on`, `API_LIMITLESS_RELAY=on`, `API_TRUST_PROXY_HOPS=1`, `API_INDEXER=off` | the relays must answer the dApp's browser with CORS, which XO's order book and bundler and Limitless's API do not; one more container is cheaper than a second host |
 | HTTPS for the API | a **CloudFront** distribution (default `*.cloudfront.net` certificate), HTTPS to the browser, plain HTTP to the host; caching disabled | the API speaks plain HTTP and a page on https may only call https; no domain, certificate or load balancer to run |
 | stable origin | an **Elastic IP** on the host; CloudFront's origin is its public DNS name `ec2-a-b-c-d.eu-north-1.compute.amazonaws.com` | the auto-assigned public address changes on stop/start; associating the Elastic IP replaces it in place, without a restart |
 | API host setup | an **SSM document and association** that writes the `pm-api` unit and new `pm-pull` / `pm-deploy` on the running host | changing the instance's first-boot script would stop and start the host (and cloud-init would not re-run it); the association runs now, and again whenever its script changes |
@@ -135,6 +135,42 @@ repository root with the AWS profile and region the scripts default to:
    the association and the repository. The `pm-pull` /
    `pm-deploy` the association wrote stay on the host and keep working without an API image.
 
+## Add the Limitless relay
+
+The Limitless relay (`api/limitless-relay.ts`, `API_LIMITLESS_RELAY=on`) forwards the requests the visitor's browser
+signed with the visitor's own Limitless API token; like the XO relay it holds no key or token and stores nothing
+(`api/README.md`). It needs a stack change: an origin request policy takes at most 10 headers (CloudFront quota
+"Headers per origin request policy", 10, read 2026-10-23 with `aws service-quotas`), the XO relay's policy already lists
+10, so `stack.yaml` adds a second policy (`LimitlessRelayOriginRequestPolicy`: `Origin`, the two CORS request headers,
+`content-type`, `lmts-api-key`, `lmts-timestamp`, `lmts-signature`) and a `/v1/relay/limitless/*` cache behaviour
+listed before `/v1/relay/*`, and the `pm-api` unit gains `-e API_LIMITLESS_RELAY=on`. From the repository root:
+
+1. **Update the stack.** `deploy/aws/up.sh`. CloudFormation adds the policy, updates the distribution (about 5 to 15
+   minutes) and updates the SSM document, whose association re-runs on the host, rewrites the `pm-api` unit and
+   restarts `pm-api` with the new variable (on the image the host already has). Nothing else is stopped.
+2. **Push the API image that has the relay.** `deploy/aws/push.sh api`. Until it runs, the restarted container is the
+   old image, which does not know `/v1/relay/limitless/` (it answers those paths as the XO relay's 404).
+3. **Check it from outside** (no order, cancel or token request; the market read is a public one):
+
+   ```sh
+   D="$(aws cloudformation describe-stacks --stack-name pm-workers --query "Stacks[0].Outputs[?OutputKey=='ApiCloudFrontDomain'].OutputValue" --output text)"
+   curl -i -X OPTIONS "https://$D/v1/relay/limitless/orders" \
+     -H 'Origin: https://xo-markets-explorer.vercel.app' -H 'Access-Control-Request-Method: POST' \
+     -H 'Access-Control-Request-Headers: content-type, lmts-api-key, lmts-timestamp, lmts-signature'
+   curl -s "https://$D/v1/markets?venue=limitless&limit=1" | head -c 300
+   ```
+
+   The first answers 204 with `access-control-allow-origin: https://xo-markets-explorer.vercel.app` and the four
+   request headers granted; the second is the markets API's own Limitless list (the dApp's standalone build reads
+   Limitless from it). A market's record through the relay: `curl -s -H 'Origin: https://xo-markets-explorer.vercel.app'
+   "https://$D/v1/relay/limitless/markets/<a slug from that list>" -D - -o /dev/null` shows `x-limitless-relay: upstream`.
+4. **The dApp** needs no change of origin: it already names this API (`MARKETS_API_ORIGIN`, CSP `connect-src`). Deploy
+   the dApp build that has the Limitless ticket. Without step 2 the ticket's token check answers 404 from the relay and
+   the page says so; nothing reaches Limitless.
+5. **Rolling back.** `-e API_LIMITLESS_RELAY=on` removed from the unit (deploy the previous `stack.yaml` with `up.sh`)
+   turns the relay off: every `/v1/relay/limitless/` path then answers `403 relay_not_enabled` without contacting
+   Limitless. The Limitless reads (`/v1/markets?venue=limitless`) are not part of the relay and keep working.
+
 The container runs with `API_INDEXER=off` to keep the shared `t4g.small` light. To index chains too,
 change `-e API_INDEXER=off` to `on` in the `ApiHostDocument` script in `stack.yaml` and run `up.sh` (the
 association re-runs and restarts `pm-api`); consider a larger instance first. Other API variables
@@ -174,7 +210,7 @@ study is over (`aws ec2 delete-volume --volume-id <DataVolumeId>`, `aws s3 rb s3
 
 | File | Purpose |
 |---|---|
-| `stack.yaml` | the CloudFormation template: ECR x3, S3 transfer bucket, log groups, IAM role, security group (one ingress rule: the API port from CloudFront's prefix list), EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`), the Elastic IP, the SSM document and association for `pm-api`, the relay's origin request policy and the CloudFront distribution |
+| `stack.yaml` | the CloudFormation template: ECR x3, S3 transfer bucket, log groups, IAM role, security group (one ingress rule: the API port from CloudFront's prefix list), EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`), the Elastic IP, the SSM document and association for `pm-api`, the two relays' origin request policies (XO, Limitless) and the CloudFront distribution with a cache behaviour for each |
 | `up.sh` | resolves the default VPC/subnet/AZ and CloudFront's prefix list, guards against a host replacement, and runs `aws cloudformation deploy` |
 | `push.sh` | builds the images for arm64 (`both` = recorder and linker, or `recorder`, `linker`, `api`, `all`), pushes to ECR, runs `pm-deploy` over SSM |
 | `migrate-volume.sh` | the four-step copy of the Railway volume to the host |
@@ -202,3 +238,9 @@ no Elastic IP is on the host yet, the security group has no ingress rule (the Cl
 CloudFront forwarding the `xo-*` headers and `Origin` through the origin request policy, the Elastic IP's DNS
 name resolving for CloudFront, and the 10-header quota of an origin request policy being enough (the relay's
 policy lists exactly 10) are all unproven until `up.sh` runs.
+
+For the Limitless relay (2026-10-23): `aws cloudformation validate-template` accepts the changed template, and the
+quota of 10 headers per origin request policy was read with `aws service-quotas` (hence the second policy). The relay
+itself is covered by `test/api/limitless-relay.test.ts` against a fake Limitless. Not verified: nothing was deployed,
+and no order, cancel or token request has reached Limitless through it; CloudFront forwarding the `lmts-*` headers is
+unproven until `up.sh` and `push.sh api` run.

@@ -5,6 +5,7 @@ import type { AddressInfo, Socket } from "node:net";
 import { ApiError, ERROR_STATUS, type Api, type ErrorCode } from "./app.js";
 import type { ApiConfig, RateLimitSpec } from "./config.js";
 import type { Gate, Meter, Ticket } from "./metering.js";
+import { createLimitlessRelay } from "./limitless-relay.js";
 import { createXoRelay } from "./xo-relay.js";
 
 // The API's HTTP server: node:http, no framework (relay/server.ts is the pattern).
@@ -21,8 +22,9 @@ import { createXoRelay } from "./xo-relay.js";
 //   6. the route and its query or body, validated; on a paid route the metering gate (a key's tier, or an x402 payment
 //      verified before the handler runs); then the handler;
 //   7. a paid call is settled only after a good answer, and never after a failed one.
-// A path under /v1/relay/ is handed whole to the XO order relay (xo-relay.ts) right after step 1: it has its own
-// methods, CORS rule, size limit and rate limit, takes no key and is never metered.
+// A path under /v1/relay/ is handed whole to an order relay right after step 1: /v1/relay/limitless/ to the Limitless
+// relay (limitless-relay.ts), anything else under /v1/relay/ to the XO relay (xo-relay.ts). Each has its own methods,
+// CORS rule, size limit and rate limit, takes no key and is never metered.
 // Errors are JSON with a fixed code: { "error": { "code", "message" } }; a 402 carries the x402 PaymentRequired object as
 // its body and, base64, in PAYMENT-REQUIRED. Every answer carries x-request-id, cache-control no-store (no shared cache may
 // present an old answer as new), nosniff and no-referrer; CORS headers only for a configured origin.
@@ -81,7 +83,7 @@ export interface ServerOptions {
   readonly meter: Meter;
   readonly nowMs?: () => number;
   readonly log?: (line: string) => void;
-  // The XO relay's outbound fetch (globalThis.fetch in main.ts; a fake upstream in tests). Without one the relay
+  // The order relays' outbound fetch (globalThis.fetch in main.ts; a fake upstream in tests). Without one a relay
   // answers upstream_unreachable for every forwarded call.
   readonly relayFetch?: typeof fetch;
   // Tests only: the relay's upstream deadline (XO_RELAY_LIMITS in xo-relay.ts otherwise).
@@ -207,6 +209,13 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     ...(options.relayUpstreamTimeoutMs === undefined ? {} : { upstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
     fetchImpl: options.relayFetch ?? (async () => Promise.reject(new Error("no relay fetch"))),
   });
+  const limitlessRelay = createLimitlessRelay({
+    enabled: config.limitlessRelay,
+    limit: limits.relay,
+    maxUrlChars: limits.maxUrlChars,
+    ...(options.relayUpstreamTimeoutMs === undefined ? {} : { upstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
+    fetchImpl: options.relayFetch ?? (async () => Promise.reject(new Error("no relay fetch"))),
+  });
   const inflight = new Set<Promise<void>>();
   let closing = false;
 
@@ -245,8 +254,9 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     const method = req.method ?? "";
     const rawUrl = req.url ?? "";
     const path = normalPath(rawUrl);
-    if (relay.owns(path)) {
-      return relay.handle(req, res, path, {
+    const owner = limitlessRelay.owns(path) ? limitlessRelay : relay.owns(path) ? relay : null;
+    if (owner !== null) {
+      return owner.handle(req, res, path, {
         requestId,
         client: clientAddress(req, config.trustProxyHops),
         nowMs,

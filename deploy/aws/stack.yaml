@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   insurance-markets research workers: one Graviton EC2 host running pm-recorder (continuous, one
   EBS data volume), pm-linker (systemd timer every two hours) and pm-api (the markets API with the
-  XO order relay, behind CloudFront). The only inbound port is the API's, open to CloudFront's
+  XO and Limitless order relays, behind CloudFront). The only inbound port is the API's, open to CloudFront's
   origin-facing addresses alone; shell access through SSM Session Manager. Images live in three ECR
   repositories; container logs go to CloudWatch.
 
@@ -458,7 +458,7 @@ Resources:
 
                     cat > /etc/systemd/system/pm-api.service <<'UNIT'
                     [Unit]
-                    Description=pm-api (markets API and XO order relay, behind CloudFront)
+                    Description=pm-api (markets API and the XO and Limitless order relays, behind CloudFront)
                     After=docker.service data.mount
                     Requires=docker.service
                     RequiresMountsFor=/data
@@ -472,7 +472,7 @@ Resources:
                     ExecStart=/usr/bin/docker run --rm --name pm-api --stop-timeout 10 --memory 640m \
                       -p ${!API_PORT}:8790 \
                       --log-driver awslogs --log-opt awslogs-region=${!AWS_REGION} --log-opt awslogs-group=${!API_LOGS} --log-opt awslogs-stream=api \
-                      -e API_XO_RELAY=on -e API_TRUST_PROXY_HOPS=1 -e API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app -e API_INDEXER=off \
+                      -e API_XO_RELAY=on -e API_LIMITLESS_RELAY=on -e API_TRUST_PROXY_HOPS=1 -e API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app -e API_INDEXER=off \
                       -v /data/api:/data ${!API_IMAGE}
                     ExecStop=/usr/bin/docker stop -t 10 pm-api
                     TimeoutStopSec=30
@@ -530,6 +530,30 @@ Resources:
             - xo-address
             - xo-nonce
 
+  # The Limitless relay's own policy: an origin request policy takes at most 10 headers (CloudFront quota "Headers per
+  # origin request policy", 10, read 2026-10-23) and the XO one above uses all ten, so Limitless's three scoped-token
+  # headers get this policy and the /v1/relay/limitless/* behaviour below. No cookies.
+  LimitlessRelayOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${AWS::StackName}-limitless-relay"
+        Comment: Limitless relay - Origin, CORS preflight, content-type and the lmts scoped-token headers; no cookies
+        CookiesConfig:
+          CookieBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: all
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - origin
+            - access-control-request-method
+            - access-control-request-headers
+            - content-type
+            - lmts-api-key
+            - lmts-timestamp
+            - lmts-signature
+
   ApiDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -565,7 +589,16 @@ Resources:
           # PAYMENT-SIGNATURE, and CloudFront forwards Authorization only through an all-viewer-headers origin
           # request policy (with caching disabled) or a cache key; it cannot be listed on its own.
           OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        # Behaviours are matched in order: the Limitless relay's path first, then every other relay path.
         CacheBehaviors:
+          - PathPattern: /v1/relay/limitless/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref LimitlessRelayOriginRequestPolicy
           - PathPattern: /v1/relay/*
             TargetOriginId: pm-api
             ViewerProtocolPolicy: https-only

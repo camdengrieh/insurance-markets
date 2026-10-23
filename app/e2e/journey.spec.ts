@@ -4,13 +4,14 @@ import { DIST } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { unknownViolations } from "./support/known-issues";
 import { pagePairedToken } from "./support/session";
+import { MOCK_LIMITLESS_TITLE } from "./support/markets-api";
 import { HERO_H1, observe, openMarketDetails, openVenuePanel, waitForMarkets } from "./support/world";
 
 // A full read journey against the local mock XO, in a real browser, in both builds.
 //
-//   standalone: the page reads XO's Data API directly (the request is answered by the mock XO), lists, filters, opens a market
-//               in the modal over the table, shows its rules and its fee ceiling, and says "needs the Cockpit" where a browser
-//               cannot read.
+//   standalone: the page reads XO's Data API directly (the request is answered by the mock XO) and Limitless through our
+//               markets API (answered by its mock), lists, filters, opens a market in the modal over the table, shows its
+//               rules and its fee ceiling, and says "needs the Cockpit" where a browser cannot read.
 //   cockpit:    the page pairs itself with the real daemon and reads the same data through the daemon's allowlisted proxy,
 //               including the order book that only the daemon can fetch. The proxy's checks are driven with the page's own token;
 //               the Markets screen is then driven as a person would.
@@ -25,7 +26,7 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   const seen = await observe(page, { target: "standalone", mock: daemon.mock });
   await page.goto(`${standalone.url}#/markets`);
   const shown = await waitForMarkets(page);
-  expect(shown, "the mock's active markets (3 default, 13 hostile)").toBe(16);
+  expect(shown, "the mock XO's active markets (3 default, 13 hostile) and the mock markets API's one Limitless market").toBe(17);
 
   // The hero band carries the one h1 and computed facts, never sample counts.
   await expect(page.locator("h1")).toHaveText(HERO_H1);
@@ -41,7 +42,9 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(page.getByText("XO Market: needs the Cockpit").first()).toBeVisible();
   await expect(page.getByText(/different from an empty book/).first()).toBeVisible();
   await expect(page.getByText("Kalshi: off, restricted terms")).toBeVisible();
-  await expect(page.getByText("Limitless: needs the Cockpit")).toBeVisible();
+  // Limitless is read through our markets API, never from its own host (which sends no CORS headers for the page).
+  await expect(page.locator("li.explorer-venue", { hasText: "Limitless" }).first()).toContainText("1 loaded");
+  await expect(page.getByText("Limitless: needs the Cockpit")).toHaveCount(0);
   await expect(page.getByText("Polymarket: The venue did not answer in time").or(page.getByText(/Polymarket: This venue is paused/))).toBeVisible();
 
   // The table: an XO row says its book needs the Cockpit and carries no price and no executable spread. Its display
@@ -79,6 +82,12 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   // XO trades with the visitor's own wallet through the markets API's relay; the inspector offers it.
   await expect(aside.getByRole("button", { name: /Trade with your wallet/ })).toBeEnabled();
 
+  // A Limitless row says where it came from, and trades with the visitor's wallet through the same API's relay.
+  await table.getByRole("button", { name: new RegExp(`^Inspect ${MOCK_LIMITLESS_TITLE.replace(/[()]/g, "\\$&")}`) }).click();
+  await expect(aside).toContainText(MOCK_LIMITLESS_TITLE);
+  await expect(aside).toContainText("via our markets API");
+  await expect(aside.getByRole("button", { name: /Trade with your wallet/ })).toBeEnabled();
+
   // Open a market from the list: the modal opens over the table as it is (no route change, so the loaded rows and the
   // selection survive). The title link still carries the market's own address for a new tab or a bookmark.
   const titleLink = table.getByRole("link", { name: /Mock market A/ });
@@ -100,6 +109,8 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   // Over the whole journey: XO's host was answered by the mock, every other listed host was a stub, nothing outside the CSP.
   const external = seen.external();
   expect(external.some((entry) => entry.origin === "https://api-mainnet.xo.market" && entry.outcome === "mock-xo")).toBe(true);
+  expect(external.some((entry) => entry.outcome === "mock-api"), "Limitless was read through the markets API").toBe(true);
+  expect(external.some((entry) => entry.origin === "https://api.limitless.exchange"), "the standalone build never asks Limitless's own host").toBe(false);
   expect(external.filter((entry) => entry.outcome === "refused")).toEqual([]);
   expect(external.some((entry) => entry.origin === "https://orderbooks.xo.market"), "the standalone build never asks for XO's order book").toBe(false);
   expect(unknownViolations(await seen.violations())).toEqual([]);

@@ -27,6 +27,13 @@ describe("the venue port", () => {
     expect(calls[0]?.init).toMatchObject({ method: "POST", headers: { POLY_ADDRESS: "0x1" }, body: "{}", credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", mode: "cors" });
   });
 
+  it("reads back the one marker header a request names, and no other header", async () => {
+    const { fetch } = recorder(async () => ({ status: 201, text: async () => "{}", headers: new Headers({ "x-limitless-relay": "upstream", "set-cookie": "a=b" }) }));
+    const http = createVenueHttp({ fetch, origins: [CLOB] });
+    expect(await http({ method: "POST", url: `${CLOB}/x`, body: "{}", marker: "x-limitless-relay" })).toEqual({ status: 201, text: "{}", marker: "upstream" });
+    expect(await http({ method: "POST", url: `${CLOB}/x`, body: "{}" })).toEqual({ status: 201, text: "{}" });
+  });
+
   it("refuses any other origin, plain http, a port or credentials in the URL before a request", async () => {
     const { calls, fetch } = recorder();
     const http = createVenueHttp({ fetch, origins: [CLOB] });

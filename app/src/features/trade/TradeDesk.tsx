@@ -35,8 +35,9 @@ import { useTradeServices, type OwnerChoice, type TradeServices } from "./servic
 // under one disclosure, still in the page and still read by a screen reader. Not paired, the pairing notice takes the
 // bar's place: it is the reason there is no bar.
 //
-// The standalone build has no daemon. There, a Polymarket market's ticket is the direct one (direct/DirectClobTicket):
-// the visitor's own connected wallet signs and the page sends the order to the venue itself. Everything else on the desk
+// The standalone build has no daemon. There, a Polymarket or Limitless market's ticket is the direct one
+// (direct/DirectClobTicket, which routes Limitless to direct/limitless): the visitor's own connected wallet signs and the
+// page sends the order to the venue itself (Limitless through our markets API's relay). Everything else on the desk
 // still needs the Cockpit and says so.
 //
 // Pairing is the page's one shared hook (features/terminal/usePairing), the same the dock and the inspector use, so

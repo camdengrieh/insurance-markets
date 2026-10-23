@@ -8,7 +8,7 @@ wallet, no signer, no private key and no venue credential, and it submits nothin
 
 **Where it runs:** nowhere yet; nothing has been deployed. The image follows `deploy/recorder` and `deploy/linker`.
 `deploy/aws` is ready to host it beside them on the same EC2 host (`pm-api` under systemd, data at `/data/api`, the image
-in ECR) behind CloudFront for HTTPS (the API speaks plain HTTP), with `API_XO_RELAY=on`, `API_TRUST_PROXY_HOPS=1`,
+in ECR) behind CloudFront for HTTPS (the API speaks plain HTTP), with `API_XO_RELAY=on`, `API_LIMITLESS_RELAY=on`, `API_TRUST_PROXY_HOPS=1`,
 `API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app` and `API_INDEXER=off`; the steps are in
 `deploy/aws/README.md` ("Deploy the markets API and the XO relay").
 
@@ -24,6 +24,7 @@ in ECR) behind CloudFront for HTTPS (the API speaks plain HTTP), with `API_XO_RE
 | `GET /v1/quote?group=&side=&size=&outcome=` | paid: the engine's depth-walked fill of a size on each leg of a group, after fees, best venue first, each number with its source and age |
 | `POST /v1/route/prepare` | paid, and off unless `API_ROUTE_PREPARE` is set: unsigned typed-data orders per leg with the decoded view and what the signer must check |
 | `/v1/relay/xo/clob/...`, `/v1/relay/xo/bundler` | free, and off unless `API_XO_RELAY=on`: the XO order relay, eight allowlisted order-book calls the dApp's browser signed, and five allowlisted JSON-RPC methods of XO's bundler (the visitor's own account setup, one signed user operation), forwarded unchanged (`api/README.md`) |
+| `/v1/relay/limitless/...` | free, and off unless `API_LIMITLESS_RELAY=on`: the Limitless order relay, five allowlisted calls (the market record, the token's profile, place, cancel, the token's orders on one market) the dApp's browser signed with the visitor's own Limitless API token, forwarded unchanged (`api/README.md`) |
 
 The contract of the two paid routes, the metering rules and the listing steps are in `api/README.md`.
 
@@ -72,6 +73,7 @@ Without Docker: `node deploy/api/build.mjs && API_DATA_DIR=./data node deploy/ap
 | `API_CANDIDATES_BUNDLE`, `API_CANDIDATES_PIN` | none | the linker's `candidates.bundle.json` and `candidates.bundle.pin` (on the AWS host, the linker's `/data/out`) |
 | `API_ROUTE_PREPARE` | `off` | `off` (the route answers `route_prepare_not_enabled`), `free` (no charge) or `paid` (a key of tier `full`, or x402) |
 | `API_XO_RELAY` | `off` | `on` serves the XO order relay under `/v1/relay/xo/clob/` and its bundler route `/v1/relay/xo/bundler` (`api/README.md`); off, every relay path answers `403 relay_not_enabled` and nothing is forwarded. Its CORS origins are compiled in (the dApp and localhost dev servers), not taken from `API_CORS_ORIGINS` |
+| `API_LIMITLESS_RELAY` | `off` | `on` serves the Limitless order relay under `/v1/relay/limitless/` (`api/README.md`); off, every path under it answers `403 relay_not_enabled` and nothing is forwarded. Independent of `API_XO_RELAY`; the same compiled-in CORS origins |
 | `API_PUBLIC_URL` | none | the https origin clients reach the API at (the x402 resource URL); required once any payment variable is set |
 | `API_X402_FACILITATOR_URL` | none | the x402 facilitator's base URL (`/verify` and `/settle` are appended); https, no query or credentials; called without a credential |
 | `API_X402_PAY_TO` | none, never defaulted | the address that receives payments (20-byte hex, EIP-55 checksum if mixed case, not zero) |

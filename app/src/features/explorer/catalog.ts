@@ -6,6 +6,7 @@
 
 import { VENUE_IDS, venuePolicy, venueState, type BuildKind, type VenueSwitches } from "../../core/venue-policy";
 import type { VenueId } from "../../core/ports";
+import { readsViaMarketsApi } from "./adapters";
 
 // Display order of the venues this screen reports on. Built readers first, then the venues that are shown as tiles
 // only (daemon-only and restricted-terms venues).
@@ -40,9 +41,11 @@ export type VenueStatus =
   | { readonly kind: "switched_off" }
   | { readonly kind: "not_available" };
 
-export function venueStatusOf(id: VenueId, switches: VenueSwitches, build: BuildKind, hasReader: boolean): VenueStatus {
+// A venue the standalone build reads through our markets API (adapters.ts readsViaMarketsApi) is read like a browser-
+// direct one there: its switches still apply, but it does not need the Cockpit.
+export function venueStatusOf(id: VenueId, switches: VenueSwitches, build: BuildKind, hasReader: boolean, viaMarketsApi: boolean = readsViaMarketsApi(id)): VenueStatus {
   const state = venueState(id, switches, build);
-  if (state.enabled) return hasReader ? { kind: "active" } : { kind: "no_reader" };
+  if (state.enabled || (state.reason === "needs_cockpit" && build === "standalone" && viaMarketsApi)) return hasReader ? { kind: "active" } : { kind: "no_reader" };
   switch (state.reason) {
     case "restricted_off":
       return { kind: "restricted_off", clause: venuePolicy(id).clause ?? "its terms restrict collecting, caching or aggregating its data" };

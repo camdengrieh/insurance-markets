@@ -1,15 +1,16 @@
 import type { BrowserContext, Locator, Page, Request, Route } from "@playwright/test";
 
-import { cspDirectives, type BuildTarget } from "../../headers.config";
+import { BROWSER_DIRECT_ORIGINS, cspDirectives, type BuildTarget } from "../../headers.config";
 import { hostileDetail } from "../../../bridge/test/e2e/corpus";
 import type { MockUrls } from "../../../bridge/test/e2e/harness";
+import { mockMarketsApi } from "./markets-api";
 
 // The offline world a page runs in, and the instruments that watch it.
 //
 //   - Requests to 127.0.0.1 go where they say (the static servers and the daemon of the test).
 //   - A request to any other host is intercepted before it can leave: XO's Data API host is answered from the local mock
-//     XO, every other host the build's CSP lists is answered "503, offline" (as if that venue were down), and anything
-//     else is refused. The browser cannot resolve those hosts anyway (HOST_RESOLVER_RULES).
+//     XO, our markets API's Limitless reads from its mock (markets-api.ts), every other host the build's CSP lists is
+//     answered "503, offline" (as if that venue were down), and anything else is refused. The browser cannot resolve those hosts anyway (HOST_RESOLVER_RULES).
 //   - Every request, every securitypolicyviolation event, every console message and every page error is recorded, so a
 //     test can assert on all of them: zero violations, no request to an origin outside the CSP.
 
@@ -26,7 +27,7 @@ export interface Observed {
   // Every request the page and its frames made, in order.
   requests(): readonly { readonly url: string; readonly method: string; readonly type: string }[];
   // Requests to hosts other than 127.0.0.1, as {origin, outcome}.
-  external(): readonly { readonly origin: string; readonly method: string; readonly outcome: "mock-xo" | "offline-stub" | "refused" | "continued" }[];
+  external(): readonly { readonly origin: string; readonly method: string; readonly outcome: Outcome }[];
   // securitypolicyviolation events seen in the page (all documents, all navigations).
   violations(): Promise<readonly CspViolation[]>;
   consoleErrors(): readonly string[];
@@ -53,6 +54,10 @@ const CORS = {
 } as const;
 
 const XO_DATA_HOST = "api-mainnet.xo.market";
+// Our markets API (the standalone build reads Limitless through it).
+const MARKETS_API = BROWSER_DIRECT_ORIGINS.find((entry) => entry.service === "markets_api")?.origin ?? null;
+
+type Outcome = "mock-xo" | "mock-api" | "offline-stub" | "refused" | "continued";
 
 export function allowedConnectOrigins(target: BuildTarget): ReadonlySet<string> {
   const connect = cspDirectives(target)["connect-src"] ?? [];
@@ -95,7 +100,7 @@ export async function observe(page: Page, options: ObserveOptions): Promise<Obse
   const context: BrowserContext = page.context();
   const allowed = allowedConnectOrigins(options.target);
   const requests: { url: string; method: string; type: string }[] = [];
-  const external: { origin: string; method: string; outcome: "mock-xo" | "offline-stub" | "refused" | "continued" }[] = [];
+  const external: { origin: string; method: string; outcome: Outcome }[] = [];
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -110,7 +115,7 @@ export async function observe(page: Page, options: ObserveOptions): Promise<Obse
     (url) => url.hostname !== "127.0.0.1",
     async (route, request) => {
       const url = new URL(request.url());
-      const record = (outcome: "mock-xo" | "offline-stub" | "refused" | "continued"): void => void external.push({ origin: url.origin, method: request.method(), outcome });
+      const record = (outcome: Outcome): void => void external.push({ origin: url.origin, method: request.method(), outcome });
       if ((options.continueHosts ?? []).includes(url.hostname)) {
         record("continued");
         return void (await route.continue());
@@ -126,6 +131,13 @@ export async function observe(page: Page, options: ObserveOptions): Promise<Obse
       if (url.hostname === XO_DATA_HOST && options.mock !== undefined && options.mock !== null) {
         record("mock-xo");
         return void (await answerFromMock(route, request, options.mock, options.hostileRules === true));
+      }
+      if (url.origin === MARKETS_API && request.method() === "GET") {
+        const body = mockMarketsApi(url.pathname, url.searchParams, Date.now());
+        if (body !== null) {
+          record("mock-api");
+          return void (await route.fulfill({ status: 200, headers: { ...CORS, "cache-control": "no-store" }, contentType: "application/json", body: JSON.stringify(body) }));
+        }
       }
       record("offline-stub");
       await route.fulfill({ status: 503, headers: CORS, contentType: "application/json", body: '{"error":"offline in the test world"}' });
