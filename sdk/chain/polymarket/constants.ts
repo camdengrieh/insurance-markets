@@ -49,6 +49,16 @@ export const POLYMARKET_BINARY_MODULE_IMPLEMENTATION = "0xf6428c0B5fa9361c0708CD
 export const POLYMARKET_NEG_RISK_MODULE = "0x200000900045e3B6259600682756002200028933" as const;
 export const POLYMARKET_NEG_RISK_MODULE_IMPLEMENTATION = "0x39a5B01a100edF811f2748aa37B1313715Ded70e" as const;
 
+// ---- the collateral every Polymarket order book settles in ----
+// pUSD ("Polymarket USD", 6 decimals; sdk/trade/clob/venues.ts CLOB_COLLATERAL_SYMBOL). Read on 2026-10-23 over the
+// public RPC below: getCollateral() of the CTF Exchange and of the Neg Risk CTF Exchange and COLLATERAL_TOKEN() of
+// Exchange V3 all returned it, and its symbol(), name() and decimals() answered "pUSD", "Polymarket USD" and 6. A BUY
+// spends it from the maker through the exchange the order is signed for, so the page's direct path reads the maker's
+// balance of it and its allowance to that exchange. Not pinned by code hash: nothing here trusts a value it returns
+// beyond a balance and an allowance, and the exchange itself decides what it accepts.
+export const POLYMARKET_PUSD = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB" as const;
+export const POLYMARKET_PUSD_DECIMALS = 6;
+
 // ---- Wallet factories (the list's "Wallet Factory Contracts") ----
 // An owner's positions are usually held by a wallet one of these created for the owner by CREATE2
 // (sdk/chain/polymarket/wallets.ts). The Deposit Wallet factory is in sdk/chain/xo/constants.ts with its derivation.

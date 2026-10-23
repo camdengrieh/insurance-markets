@@ -12,6 +12,8 @@ import { ActionPanelsInOrder } from "./ActionPanelsInOrder";
 import { ClobOrderPanel } from "./ClobOrderPanel";
 import type { ClobMarketFacts } from "./clob-ticket";
 import { KeyValues, Mono } from "./components";
+import { hasDirectExecutor } from "./direct";
+import { DirectClobTicket } from "./direct/DirectClobTicket";
 import type { PanelContext } from "./context";
 import { mergeFacts, type GateInput } from "./facts";
 import { useAccount } from "./hooks";
@@ -32,6 +34,10 @@ import { useTradeServices, type OwnerChoice, type TradeServices } from "./servic
 // then everything secondary (what this page does and does not do, the owner chooser, the account or maker panel)
 // under one disclosure, still in the page and still read by a screen reader. Not paired, the pairing notice takes the
 // bar's place: it is the reason there is no bar.
+//
+// The standalone build has no daemon. There, a Polymarket market's ticket is the direct one (direct/DirectClobTicket):
+// the visitor's own connected wallet signs and the page sends the order to the venue itself. Everything else on the desk
+// still needs the Cockpit and says so.
 //
 // Pairing is the page's one shared hook (features/terminal/usePairing), the same the dock and the inspector use, so
 // the desk never holds a pairing state of its own that could disagree with the strip.
@@ -184,6 +190,15 @@ export function TradeDesk({ services: provided, panels = "all", tokenChoices, cl
   const ctx: PanelContext = useMemo(() => ({ services, owner, account, facts, gateInput, refreshAccount: refresh }), [services, owner, account, facts, gateInput, refresh]);
 
   if (mode !== "cockpit") {
+    // The standalone build: a venue with a direct executor trades with the visitor's own wallet (direct/); everything
+    // else on the desk prepares through the local daemon, which this build has none of.
+    if (clobMarket !== undefined && hasDirectExecutor(clobMarket.venue)) {
+      return (
+        <div className={panels === "order" ? "tr-root tr-compact" : "tr-root ui-stack"}>
+          <DirectClobTicket facts={clobMarket} tokenChoices={tokenChoices} heading={heading} />
+        </div>
+      );
+    }
     return <NeedsCockpitTile what="the trade desk, which prepares items through the local daemon" heading={below(heading)} />;
   }
   const clobFlag = clobMarket === undefined ? null : clobMarket.venue === "polymarket" ? "ENABLE_CLOB_POLYMARKET" : "ENABLE_CLOB_LIMITLESS";

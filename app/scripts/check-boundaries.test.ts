@@ -68,6 +68,12 @@ describe("check-boundaries", () => {
     expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/a.test.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/a.test.ts"]);
   });
 
+  it("lets a parity test, and only a test, import the Node Polymarket L2 signer", async () => {
+    const files = { "sdk/node/trade/clob/polymarket/l2.ts": 'import { createHmac } from "node:crypto";\nexport const l2 = createHmac;\n' };
+    expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/l2.test.ts": 'import { l2 } from "@sdk/node/trade/clob/polymarket/l2";\nexport const t = l2;\n' })).toEqual([]);
+    expect(await rules({ ...files, "app/src/main.ts": 'import { l2 } from "@sdk/node/trade/clob/polymarket/l2";\nexport const x = l2;\n' })).toEqual(["forbidden-import:app/src/main.ts"]);
+  });
+
   it("fails an import outside app/ that is not on the shared allowlist", async () => {
     const found = await rules({
       "src/other.ts": "export const o = 1;\n",

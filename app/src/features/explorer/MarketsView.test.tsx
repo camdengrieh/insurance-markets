@@ -661,10 +661,10 @@ describe("the inspector", () => {
     expect(allText(aside)).toContain("No approved link.");
     expect(must(aside, "[data-quotient]").getAttribute("data-quotient")).toBe("off");
     expect(allText(aside)).toContain("licence first");
-    // Actions: open, prepare (a Polymarket row has a ticket, but only the Cockpit build can prepare), watch.
+    // Actions: open, trade (a Polymarket row trades with the visitor's own wallet in the standalone build), watch.
     expect(buttonWith(aside, /^Open market$/).disabled).toBe(false);
-    expect(buttonWith(aside, /Prepare order/).disabled).toBe(true);
-    expect(buttonWith(aside, /Prepare order/).textContent).toBe("Prepare order: needs the Cockpit");
+    expect(buttonWith(aside, /Trade with your wallet/).disabled).toBe(false);
+    expect(buttonWith(aside, /Trade with your wallet/).getAttribute("data-prepare")).toBe("direct");
   });
 
   it("Watch marks the row in memory and sends nothing", async () => {

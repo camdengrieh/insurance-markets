@@ -10,7 +10,7 @@ This file is for people who build, check or change the page. If you only want to
 
 | Build | `import.meta.env.MODE` | Who serves it | What it can reach | Output |
 |---|---|---|---|---|
-| **Standalone explorer** | `standalone` | You, from any static host or `pnpm --dir app run serve:standalone`. The author deploys nothing. | Only the CORS-open hosts listed in `headers.config.ts` (`BROWSER_DIRECT_ORIGINS`), directly from the browser. No connection to any daemon. Read-only. | `app/dist/standalone` |
+| **Standalone explorer** | `standalone` | You, from any static host or `pnpm --dir app run serve:standalone`. The author deploys nothing. | Only the CORS-open hosts listed in `headers.config.ts` (`BROWSER_DIRECT_ORIGINS`), directly from the browser. No connection to any daemon. Read-only, except the direct path (`src/features/trade/direct/`): with the visitor's own connected wallet it signs and sends a Polymarket order from the visitor's browser to `clob.polymarket.com`, with the visitor's own credential kept in that tab's `sessionStorage`. | `app/dist/standalone` |
 | **Local Cockpit** | `cockpit` | The Cockpit daemon (`node dist/local.mjs serve`) from `127.0.0.1`. | `connect-src 'self'` only: every upstream read goes through the daemon's read proxy (`GET` and `POST /ui/read/<service>/...`). | `app/dist/cockpit` |
 
 Both builds use the same venue readers; each reader takes an injected `fetch`. A venue the current build cannot reach shows "needs the Cockpit", never an empty book (design 4.1 principle 4).

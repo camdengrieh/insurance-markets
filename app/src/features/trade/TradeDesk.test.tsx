@@ -94,8 +94,9 @@ describe("first sight: everything is off and unproven", () => {
     expect(button(container, /Prepare revoking trading/).disabled).toBe(false);
   });
 
-  it("says it needs the Cockpit in the standalone build and sends nothing", async () => {
-    // The shell never mounts this screen there; if it were mounted, it still reaches nothing.
+  it("says it needs the Cockpit in the standalone build for every panel but a direct venue's ticket, and sends nothing", async () => {
+    // The XO panels prepare through the daemon, which the standalone build has none of. A Polymarket market's ticket
+    // is the direct one there (direct/DirectClobTicket.test.tsx drives it through this desk).
     const rig = makeRig();
     const { render } = await import("../../ui/testing/dom");
     const { ModeProvider } = await import("../../ui");

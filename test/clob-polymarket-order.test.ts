@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { concatHex, encodeAbiParameters, hashTypedData, keccak256, recoverAddress, recoverTypedDataAddress, sliceHex, stringToHex, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { safeAddress } from "../sdk/chain/polymarket/wallets.js";
 import { depositWalletAddress } from "../src/clob/polymarket/deposit-wallet.js";
 import {
   POLYMARKET_DEPOSIT_WALLET_SIGNATURE_BYTES,
@@ -18,6 +19,7 @@ import {
   polymarketOrderDomain,
   polymarketOrderSignTypedData,
   polymarketOrderToWire,
+  polymarketOrderWalletTypedData,
   polymarketSigningDigest,
   wrapDepositWalletSignatureForDomain,
   wrapPolymarketDepositWalletSignature,
@@ -133,10 +135,45 @@ describe("Polymarket order typehash and digest, derived here (not verified again
 });
 
 describe("Polymarket order assertions", () => {
-  it("accepts EOA (0) and Deposit Wallet (3) orders and refuses Proxy (1), Safe (2) and any other type", () => {
+  it("accepts EOA (0), Safe (2) and Deposit Wallet (3) orders and refuses Proxy (1) and any other type", () => {
     assert.equal(assertPolymarketOrder(sample()).signatureType, 0);
     assert.equal(assertPolymarketOrder(sample({ signatureType: 3 })).signatureType, 3);
-    for (const type of [1, 2, 4]) assert.throws(() => assertPolymarketOrder(sample({ signatureType: type })), (error: unknown) => error instanceof SigningError && error.code === "invalid_order");
+    assert.equal(assertPolymarketOrder(sample({ signatureType: 2, maker: safeAddress(MAKER.address) })).signatureType, 2);
+    for (const type of [1, 4]) assert.throws(() => assertPolymarketOrder(sample({ signatureType: type })), (error: unknown) => error instanceof SigningError && error.code === "invalid_order");
+  });
+
+  it("refuses a Safe order whose maker is not the Safe derived from its signer", () => {
+    // maker == signer (an EOA spelled as a Safe order), another owner's Safe, and an arbitrary address.
+    for (const maker of [MAKER.address, safeAddress(ANVIL_TEST_ACCOUNTS[1]!.address), ANVIL_TEST_ACCOUNTS[2]!.address]) {
+      assert.throws(() => assertPolymarketOrder(sample({ signatureType: 2, maker })), /Polymarket Safe derived from order.signer/);
+    }
+  });
+
+  it("derives the Safe Exchange V3 itself names for the public Hardhat test address (getSafeWalletAddress, read 2026-10-23)", () => {
+    assert.equal(safeAddress(MAKER.address), "0xd93B25cb943D14d0d34FBaF01Fc93a0f8b5F6E47");
+  });
+
+  it("asks the wallet to sign the Order for types 0 and 2 and the TypedDataSign wrapper for type 3, each hashing to the signing digest", async () => {
+    const safe = sample({ signatureType: 2, maker: safeAddress(MAKER.address) });
+    for (const [order, primaryType] of [
+      [sample(), "Order"],
+      [safe, "Order"],
+      [walletOrder(), "TypedDataSign"],
+    ] as const) {
+      for (const book of ["v2", "ctf", "neg_risk"] as const) {
+        const typed = polymarketOrderWalletTypedData(order, book);
+        assert.equal(typed.primaryType, primaryType);
+        assert.equal(hashTypedData(typed as never), polymarketSigningDigest(order, book));
+      }
+    }
+    // A Safe order's signer is the owner: its signature over the order hash recovers to the owner, and the order id is
+    // that same hash.
+    const typed = polymarketOrderWalletTypedData(safe, "ctf");
+    const signature = await MAKER.signTypedData(typed as never);
+    assert.equal(await recoverAddress({ hash: hashPolymarketOrder(safe, "ctf"), signature }), MAKER.address);
+    assert.equal(polymarketOrderToWire(safe, 0n).maker, safeAddress(MAKER.address));
+    assert.equal(polymarketOrderToWire(safe, 0n).signer, MAKER.address);
+    assert.equal(polymarketOrderToWire(safe, 0n).signatureType, 2);
   });
 
   it("refuses a signer that is not the maker, zero amounts, a zero salt and a salt above MAX_SAFE_INTEGER", () => {

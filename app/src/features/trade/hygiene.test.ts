@@ -10,6 +10,9 @@ import { TRADE_TOOLS } from "./tools";
 // M4-4 for the trade screens: the page contains no code path that sends a signature, a submit, a cancel or a
 // withdrawal. This is an AST scan of the screens' own source (not a text search): imports, identifiers, string
 // literals that name a tool or a path, calls and JSX attributes. The agent sends; this page prepares and reads.
+// The one exception lives in its own folder, direct/ (the standalone build's direct path, where the visitor's own
+// wallet signs and the page sends the order to the venue itself); direct/hygiene.test.ts holds it to its own rules,
+// and the files here only render it.
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEST_ONLY = new Set(["test-support.tsx", "clob-test-support.ts"]);
