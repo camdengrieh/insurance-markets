@@ -1,8 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   insurance-markets research workers: one Graviton EC2 host running pm-recorder (continuous, one
-  EBS data volume) and pm-linker (systemd timer every two hours). No inbound ports; shell access
-  through SSM Session Manager. Images live in two ECR repositories; container logs go to CloudWatch.
+  EBS data volume), pm-linker (systemd timer every two hours) and pm-api (the markets API with the
+  XO order relay, behind CloudFront). The only inbound port is the API's, open to CloudFront's
+  origin-facing addresses alone; shell access through SSM Session Manager. Images live in three ECR
+  repositories; container logs go to CloudWatch.
 
 Parameters:
   SubnetId:
@@ -28,6 +30,16 @@ Parameters:
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  CloudFrontPrefixListId:
+    Type: String
+    AllowedPattern: "^pl-[0-9a-f]+$"
+    Description: >-
+      The AWS-managed prefix list com.amazonaws.global.cloudfront.origin-facing in this region
+      (deploy/aws/up.sh looks it up). CloudFormation has no lookup for it, hence a parameter.
+  ApiPort:
+    Type: Number
+    Default: 8790
+    Description: The API container's port on the host; CloudFront's origin port.
 
 Resources:
   RecorderRepo:
@@ -43,6 +55,15 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Sub "${AWS::StackName}/pm-linker"
+      ImageTagMutability: MUTABLE
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep last 10","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
+  ApiRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AWS::StackName}/pm-api"
       ImageTagMutability: MUTABLE
       EmptyOnDelete: true
       LifecyclePolicy:
@@ -83,6 +104,12 @@ Resources:
       LogGroupName: !Sub "/${AWS::StackName}/pm-linker"
       RetentionInDays: !Ref LogRetentionDays
 
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/pm-api"
+      RetentionInDays: !Ref LogRetentionDays
+
   InstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -105,6 +132,7 @@ Resources:
                 Resource:
                   - !GetAtt RecorderLogGroup.Arn
                   - !GetAtt LinkerLogGroup.Arn
+                  - !GetAtt ApiLogGroup.Arn
               - Effect: Allow
                 Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
                 Resource: !Sub "${TransferBucket.Arn}/*"
@@ -304,6 +332,249 @@ Resources:
             echo "pm-setup done $(date -u +%FT%TZ)"
           - {}
 
+  # ---- the markets API (pm-api) and its HTTPS front ------------------------------------------------
+  #
+  # The API speaks plain HTTP on ApiPort. Browsers on the dApp's https page reach it through CloudFront
+  # (HTTPS to the viewer, HTTP to this host). The host's security group opens ApiPort to CloudFront's
+  # origin-facing addresses only, so nothing else on the internet can talk to the API directly, and the
+  # API trusts exactly one X-Forwarded-For hop (CloudFront appends the viewer's address).
+
+  ApiIngressFromCloudFront:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref ApiPort
+      ToPort: !Ref ApiPort
+      SourcePrefixListId: !Ref CloudFrontPrefixListId
+      Description: pm-api from CloudFront origin-facing addresses only
+
+  # A stable public address for CloudFront's origin. Associating an Elastic IP replaces the instance's
+  # auto-assigned public IPv4 in place (no stop, no restart) and keeps the public DNS name the same across
+  # stop/start and instance replacement. It costs the same hourly public-IPv4 price as the address it replaces.
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Host
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-host" }
+
+  # Why an SSM document plus an association and not the instance's UserData: changing UserData on this
+  # EBS-backed instance makes CloudFormation stop and start it (the recorder pauses and, without an
+  # Elastic IP, the public address changes), and cloud-init would not run the new script on that boot
+  # anyway. The association runs this script on the running host now, and again whenever the document
+  # changes (a changed document is replaced, which updates the association) or the host is replaced.
+  # It is idempotent. It waits for cloud-init first, so on a fresh host it runs after the first-boot
+  # script, and its pm-pull and pm-deploy (written below) supersede the first-boot ones.
+  ApiHostDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      UpdateMethod: Replace
+      Content:
+        schemaVersion: "2.2"
+        description: Install or update the pm-api systemd unit and the deploy helpers on the pm workers host.
+        mainSteps:
+          - action: aws:runShellScript
+            name: installPmApi
+            inputs:
+              timeoutSeconds: "900"
+              runCommand:
+                - !Sub
+                  - |
+                    #!/bin/bash
+                    set -euo pipefail
+                    exec > >(tee -a /var/log/pm-api-setup.log) 2>&1
+                    echo "pm-api setup start $(date -u +%FT%TZ)"
+                    cloud-init status --wait >/dev/null 2>&1 || true
+                    mountpoint -q /data || { echo "/data is not mounted; the first-boot script has not finished"; exit 1; }
+                    mkdir -p /data/api
+                    chown 1000:1000 /data/api
+
+                    cat > /etc/pm-api.env <<ENV
+                    AWS_REGION=${AWS::Region}
+                    API_IMAGE=${ApiImage}
+                    API_LOGS=${ApiLogGroup}
+                    API_PORT=${ApiPort}
+                    ENV
+
+                    cat > /usr/local/bin/pm-pull <<'SH'
+                    #!/bin/bash
+                    # Log in to ECR with the instance role and pull the images. Prints "api changed", "api unchanged"
+                    # or "api absent" (not pushed yet), then, last, "changed" or "unchanged" for the recorder image.
+                    set -euo pipefail
+                    . /etc/pm-workers.env
+                    [ -f /etc/pm-api.env ] && . /etc/pm-api.env
+                    REGISTRY="$(echo "$RECORDER_IMAGE" | cut -d/ -f1)"
+                    aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
+                    before="$(docker image inspect --format '{{.Id}}' "$RECORDER_IMAGE" 2>/dev/null || true)"
+                    docker pull -q "$RECORDER_IMAGE"
+                    docker pull -q "$LINKER_IMAGE" || echo "linker image not pushed yet"
+                    if [ -n "${!API_IMAGE:-}" ]; then
+                      api_before="$(docker image inspect --format '{{.Id}}' "$API_IMAGE" 2>/dev/null || true)"
+                      if docker pull -q "$API_IMAGE" >/dev/null 2>&1; then
+                        api_after="$(docker image inspect --format '{{.Id}}' "$API_IMAGE")"
+                        if [ "$api_before" != "$api_after" ]; then echo "api changed"; else echo "api unchanged"; fi
+                      else
+                        echo "api absent"
+                      fi
+                    fi
+                    after="$(docker image inspect --format '{{.Id}}' "$RECORDER_IMAGE")"
+                    [ "$before" != "$after" ] && echo changed || echo unchanged
+                    SH
+
+                    cat > /usr/local/bin/pm-deploy <<'SH'
+                    #!/bin/bash
+                    # Pull the latest images; restart the recorder only if its image changed, and pm-api only if its
+                    # image changed (or it is not running and its image exists). The linker picks up a new image on
+                    # its next timer run. Run by deploy/aws/push.sh through SSM.
+                    set -euo pipefail
+                    out="$(/usr/local/bin/pm-pull)"
+                    recorder="$(printf '%s\n' "$out" | tail -1)"
+                    api="$(printf '%s\n' "$out" | grep '^api ' | tail -1 || true)"
+                    if [ "$recorder" = changed ] || ! systemctl is-active --quiet pm-recorder; then
+                      systemctl reset-failed pm-recorder || true
+                      systemctl restart pm-recorder
+                      echo "pm-recorder restarted"
+                    else
+                      echo "pm-recorder unchanged"
+                    fi
+                    if [ -z "$api" ] || [ "$api" = "api absent" ]; then
+                      echo "pm-api image not pushed yet"
+                    elif [ "$api" = "api changed" ] || ! systemctl is-active --quiet pm-api; then
+                      systemctl reset-failed pm-api || true
+                      systemctl restart pm-api
+                      echo "pm-api restarted"
+                    else
+                      echo "pm-api unchanged"
+                    fi
+                    systemctl enable --now pm-linker.timer
+                    docker image prune -f >/dev/null
+                    systemctl --no-pager status pm-recorder | head -5
+                    if [ -n "$api" ] && [ "$api" != "api absent" ]; then systemctl --no-pager status pm-api | head -5; fi
+                    SH
+                    chmod 0755 /usr/local/bin/pm-pull /usr/local/bin/pm-deploy
+
+                    cat > /etc/systemd/system/pm-api.service <<'UNIT'
+                    [Unit]
+                    Description=pm-api (markets API and XO order relay, behind CloudFront)
+                    After=docker.service data.mount
+                    Requires=docker.service
+                    RequiresMountsFor=/data
+                    StartLimitIntervalSec=3600
+                    StartLimitBurst=10
+
+                    [Service]
+                    EnvironmentFile=/etc/pm-api.env
+                    ExecStartPre=-/usr/bin/docker rm -f pm-api
+                    ExecStartPre=/usr/bin/docker image inspect ${!API_IMAGE}
+                    ExecStart=/usr/bin/docker run --rm --name pm-api --stop-timeout 10 --memory 640m \
+                      -p ${!API_PORT}:8790 \
+                      --log-driver awslogs --log-opt awslogs-region=${!AWS_REGION} --log-opt awslogs-group=${!API_LOGS} --log-opt awslogs-stream=api \
+                      -e API_XO_RELAY=on -e API_TRUST_PROXY_HOPS=1 -e API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app -e API_INDEXER=off \
+                      -v /data/api:/data ${!API_IMAGE}
+                    ExecStop=/usr/bin/docker stop -t 10 pm-api
+                    TimeoutStopSec=30
+                    Restart=on-failure
+                    RestartSec=10
+
+                    [Install]
+                    WantedBy=multi-user.target
+                    UNIT
+
+                    systemctl daemon-reload
+                    systemctl enable pm-api
+                    # pm-deploy starts it once the image is in ECR (deploy/aws/push.sh api). If the image is
+                    # already on the host, restart so a changed unit takes effect.
+                    if docker image inspect "${ApiImage}" >/dev/null 2>&1; then
+                      systemctl reset-failed pm-api || true
+                      systemctl restart pm-api
+                    fi
+                    echo "pm-api setup done $(date -u +%FT%TZ)"
+                  - ApiImage: !Sub "${ApiRepo.RepositoryUri}:latest"
+
+  ApiHostAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      Name: !Ref ApiHostDocument
+      AssociationName: !Sub "${AWS::StackName}-pm-api"
+      Targets:
+        - Key: InstanceIds
+          Values: [!Ref Host]
+      # CloudFormation waits for the script and fails the stack operation if it fails.
+      WaitForSuccessTimeoutSeconds: 900
+
+  # Requests for the relay forward exactly these viewer headers; no cookie reaches the API.
+  RelayOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${AWS::StackName}-xo-relay"
+        Comment: XO relay - Origin, CORS preflight, content-type and the XO L1 and L2 headers; no cookies
+        CookiesConfig:
+          CookieBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: all
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - origin
+            - access-control-request-method
+            - access-control-request-headers
+            - content-type
+            - xo-api-key
+            - xo-passphrase
+            - xo-timestamp
+            - xo-signature
+            - xo-address
+            - xo-nonce
+
+  ApiDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "${AWS::StackName} markets API and XO relay"
+        PriceClass: PriceClass_100
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - Id: pm-api
+            # The Elastic IP's public DNS name, ec2-a-b-c-d.<region>.compute.amazonaws.com (CloudFront needs a
+            # name, not an address). The VPC has DNS hostnames enabled.
+            DomainName: !Join
+              - ""
+              - - "ec2-"
+                - !Join ["-", !Split [".", !GetAtt ElasticIp.PublicIp]]
+                - !Sub ".${AWS::Region}.compute.amazonaws.com"
+            CustomOriginConfig:
+              HTTPPort: !Ref ApiPort
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 30
+              OriginKeepaliveTimeout: 5
+        DefaultCacheBehavior:
+          TargetOriginId: pm-api
+          ViewerProtocolPolicy: https-only
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          # Managed-CachingDisabled. The API answers no-store anyway.
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          # Managed-AllViewerExceptHostHeader: the paid routes need Authorization (a subscription key) and
+          # PAYMENT-SIGNATURE, and CloudFront forwards Authorization only through an all-viewer-headers origin
+          # request policy (with caching disabled) or a cache key; it cannot be listed on its own.
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        CacheBehaviors:
+          - PathPattern: /v1/relay/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref RelayOriginRequestPolicy
+
 Outputs:
   InstanceId:
     Value: !Ref Host
@@ -311,6 +582,15 @@ Outputs:
     Value: !GetAtt RecorderRepo.RepositoryUri
   LinkerRepositoryUri:
     Value: !GetAtt LinkerRepo.RepositoryUri
+  ApiRepositoryUri:
+    Value: !GetAtt ApiRepo.RepositoryUri
+  ApiLogGroup:
+    Value: !Ref ApiLogGroup
+  ElasticIp:
+    Value: !GetAtt ElasticIp.PublicIp
+  ApiCloudFrontDomain:
+    Description: Public HTTPS host of the markets API (set MARKETS_API_ORIGIN to https://<this>).
+    Value: !GetAtt ApiDistribution.DomainName
   TransferBucket:
     Value: !Ref TransferBucket
   DataVolumeId:
