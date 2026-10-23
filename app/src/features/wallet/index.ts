@@ -3,7 +3,10 @@
 export { WalletView, WalletPanels, WALLET_PANELS_SUMMARY, type WalletViewProps, type WalletHeading } from "./WalletView";
 export { BindingsPanel } from "./BindingsPanel";
 export { WalletChip, shortAddress, watchedAddress, WATCH_LABEL } from "./WalletChip";
-export { ConnectDialog, CONNECT_TABS, NOT_BUILT, DIALOG_TITLE, DIALOG_LEDE, FOOTER_TEXT, type ConnectTab, type ConnectDialogProps } from "./ConnectDialog";
+export { ConnectDialog, CONNECT_TABS, DIALOG_TITLE, DIALOG_LEDE, FOOTER_TEXT, defaultTab, type ConnectTab, type ConnectDialogProps } from "./ConnectDialog";
+export { WalletConnectionProvider, useWalletConnection, LAST_WALLET_KEY, type WalletConnection, type ConnectionPhase, type ConnectionError } from "./connect/WalletConnectionProvider";
+export { SignerProvider, useWalletSigner } from "./connect/context";
+export { defaultWalletEnvironment, NOT_CONFIGURED, COCKPIT_WALLETCONNECT_BLOCKED, type WalletEnvironment, type WalletConnectSetup, type KeyValueStorage } from "./connect/environment";
 export { AccountMapPanel, CapabilityList, useAccountMap } from "./AccountMapPanel";
 export { BalancesPanel } from "./BalancesPanel";
 export { FundingPanel } from "./FundingPanel";

@@ -11,7 +11,8 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const DIRS = ["wallet", "portfolio"];
 // There is no route file: the wallet panels live in the Connect modal (ConnectDialog.tsx, opened from the chip in
 // the top bar) and the portfolio screen is a view of the markets table (features/explorer); its readers stay here
-// as that view's library.
+// as that view's library. The files directly in wallet/ stay read-only; the one place that talks to a wallet is the
+// connect/ folder, held to its own rules at the end of this file.
 
 function sources(): Array<{ readonly file: string; readonly text: string }> {
   const out: Array<{ file: string; text: string }> = [];
@@ -96,5 +97,46 @@ describe("wallet and portfolio sources", () => {
         expect(code(text), file).not.toMatch(/\bstyle=\{/);
       }
     }
+  });
+});
+
+// connect/: the wallet connection. It asks a wallet to sign or send, but only through the wallet's own prompt, and it
+// holds no key: it never signs locally, never asks for a raw-digest signature, makes no request of its own (the
+// WalletConnect relay is the library's, in its own chunk) and renders wallet text only as text.
+describe("the connect sources", () => {
+  const CONNECT = join(ROOT, "wallet", "connect");
+  const connect = readdirSync(CONNECT)
+    .filter((name) => /\.(?:ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) && name !== "testkit.ts")
+    .map((name) => ({ file: `wallet/connect/${name}`, text: readFileSync(join(CONNECT, name), "utf8") }));
+
+  it("found the files it is supposed to scan", () => {
+    expect(connect.map((entry) => entry.file)).toEqual(expect.arrayContaining(["wallet/connect/WalletConnectionProvider.tsx", "wallet/connect/injected.ts", "wallet/connect/walletconnect-signer.ts", "wallet/connect/eip6963.ts"]));
+  });
+
+  it("have no string-to-HTML or string-to-code sink and no inline style", () => {
+    for (const { file, text } of connect) {
+      expect(code(text), file).not.toMatch(/\b(?:innerHTML|outerHTML|insertAdjacentHTML|dangerouslySetInnerHTML|document\.write|eval|new Function)\b/);
+      expect(code(text), file).not.toMatch(/\bstyle=\{/);
+    }
+  });
+
+  it("hold no key and never ask for a raw-digest or transaction signature", () => {
+    for (const { file, text } of connect) {
+      expect(code(text), file).not.toMatch(/privateKeyToAccount|mnemonicToAccount|generatePrivateKey|["'`]eth_sign["'`]|["'`]eth_signTransaction["'`]/);
+    }
+  });
+
+  it("make no request of their own", () => {
+    for (const { file, text } of connect) {
+      expect(code(text), file).not.toMatch(/\b(?:globalThis\.fetch|window\.fetch|XMLHttpRequest|new WebSocket|EventSource|sendBeacon|document\.cookie)\b/);
+      expect(code(text), file).not.toMatch(/(?<![.\w])fetch\(/);
+    }
+  });
+
+  it("load the WalletConnect library only lazily, from one file", () => {
+    const importers = connect.filter(({ text }) => code(text).includes("@walletconnect/sign-client"));
+    expect(importers.map((entry) => entry.file)).toEqual(["wallet/connect/walletconnect-client.ts"]);
+    expect(code(importers[0]?.text ?? "")).toMatch(/await import\("@walletconnect\/sign-client"\)/);
+    expect(code(importers[0]?.text ?? "")).not.toMatch(/^import .*@walletconnect/m);
   });
 });

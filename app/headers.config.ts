@@ -33,9 +33,27 @@ export { READ_SERVICES, BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS, type Daemon
 // Hosts that must appear nowhere in the app source or bundle, with the reason. The check fails on any hit.
 export const NEVER_IN_APP_HOSTS: Readonly<Record<string, string>> = /*#__PURE__*/ Object.freeze({
   "api.paybox.sh": "a browser page is never a PayBox client (its CORS answers only https://app.paybox.sh)",
-  "app.paybox.sh": "no PayBox web surface is used or embedded",
   "api.trueo.com": "Trueo's terms bar automation of its API; read Base on-chain instead",
 });
+
+// Hosts the page names only as the target of a link the visitor follows themselves (an <a href> into a new tab). The
+// page never requests them, so they may never be in a CSP; check-csp and check-origins hold both rules.
+export const LINK_ONLY_HOSTS: Readonly<Record<string, string>> = /*#__PURE__*/ Object.freeze({
+  "app.paybox.sh": "the WalletConnect tab's 'Open in PayBox' link (PayBox's own /wc page, which takes the pairing link); nothing is embedded or fetched",
+});
+
+// The wallet relay (docs/dapp-paybox-web.md route F). WalletConnect v2 carries the encrypted session messages between
+// this page and the visitor's wallet over one WebSocket to Reown's relay. It is the only non-https origin a CSP may
+// list, and only the standalone build lists it: the Cockpit build keeps connect-src 'self', so WalletConnect is off
+// there. The sign-client's other hosts are turned off or are never reached by a dApp (core/walletconnect.ts).
+export interface WalletRelayOrigin {
+  readonly origin: string;
+  readonly note: string;
+}
+
+export const WALLET_RELAY_ORIGINS: readonly WalletRelayOrigin[] = /*#__PURE__*/ Object.freeze([
+  { origin: "wss://relay.walletconnect.org", note: "WalletConnect v2 relay (Reown): end-to-end encrypted session messages to and from the visitor's wallet; @walletconnect/core's default relay" },
+]);
 
 export type CspDirectives = Readonly<Record<string, readonly string[]>>;
 
@@ -54,10 +72,13 @@ const COMMON_DIRECTIVES: CspDirectives = /*#__PURE__*/ Object.freeze({
 });
 
 // `upgrade-insecure-requests` is deliberately absent: both builds can be served over plain http from
-// 127.0.0.1, and every connect-src entry is https by construction (check-csp.mjs enforces that).
+// 127.0.0.1, and every connect-src entry is https by construction apart from the wallet relay's wss origin
+// (check-csp.mjs enforces both).
 export function cspDirectives(target: BuildTarget): CspDirectives {
   const connect =
-    target === "cockpit" ? ["'self'"] : ["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin)];
+    target === "cockpit"
+      ? ["'self'"]
+      : ["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin), ...WALLET_RELAY_ORIGINS.map((entry) => entry.origin)];
   return Object.freeze({ ...COMMON_DIRECTIVES, "connect-src": Object.freeze(connect) });
 }
 

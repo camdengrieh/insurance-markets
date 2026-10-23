@@ -6,9 +6,11 @@ import {
   BUILD_TARGETS,
   DAEMON_ONLY_ORIGINS,
   GENERATED_FILES,
+  LINK_ONLY_HOSTS,
   NEVER_IN_APP_HOSTS,
   PERMISSIONS_POLICY,
   READ_SERVICES,
+  WALLET_RELAY_ORIGINS,
   cspDirectives,
   renderGeneratedFiles,
   securityHeaders,
@@ -56,8 +58,10 @@ export function directiveViolations(target: BuildTarget, directives: CspDirectiv
       if (FORBIDDEN_SOURCES.includes(source) || source.includes("*")) bad("forbidden-source", `${name} contains ${source}`);
       if (/^(?:http|ws):/i.test(source)) bad("insecure-source", `${name} contains ${source}; only https origins are allowed`);
       if (/127\.0\.0\.1|localhost|\[::1\]/.test(source)) bad("loopback-source", `${name} contains ${source}; the page never names the daemon, it is same-origin ('self')`);
-      if (!KEYWORDS.has(source) && !(name === "connect-src" && /^https:\/\/[a-z0-9.-]+$/.test(source))) {
-        bad("malformed-source", `${name} contains ${source}, which is neither a keyword nor a bare https origin`);
+      // A wss origin is allowed only when it is one of the wallet relay origins of headers.config.ts.
+      const relay = name === "connect-src" && WALLET_RELAY_ORIGINS.some((entry) => entry.origin === source) && /^wss:\/\/[a-z0-9.-]+$/.test(source);
+      if (!KEYWORDS.has(source) && !relay && !(name === "connect-src" && /^https:\/\/[a-z0-9.-]+$/.test(source))) {
+        bad("malformed-source", `${name} contains ${source}, which is neither a keyword nor a bare https origin (nor a listed wallet relay)`);
       }
     }
   }
@@ -65,12 +69,13 @@ export function directiveViolations(target: BuildTarget, directives: CspDirectiv
   if (target === "cockpit") {
     only("connect-src", ["'self'"]);
   } else {
-    const expected = ["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin)];
+    const expected = ["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin), ...WALLET_RELAY_ORIGINS.map((entry) => entry.origin)];
     only("connect-src", expected);
     for (const source of connect) {
       if (DAEMON_ONLY_ORIGINS.some((entry) => entry.origin === source)) bad("daemon-only-in-csp", `${source} is blocked or restricted for browsers and may not be in a CSP`);
-      const host = source.replace(/^https:\/\//, "");
+      const host = source.replace(/^(?:https|wss):\/\//, "");
       if (Object.hasOwn(NEVER_IN_APP_HOSTS, host)) bad("never-host", `${host} may not be in a CSP`);
+      if (Object.hasOwn(LINK_ONLY_HOSTS, host)) bad("link-only-host", `${host} is only ever a link the visitor follows; the page never requests it, so it may not be in a CSP`);
     }
   }
   return violations;
@@ -102,8 +107,27 @@ export function registryViolations(): Violation[] {
   for (const service of READ_SERVICES) {
     if (!services.includes(service)) bad("service", `read service ${service} has no origin`);
   }
+  for (const entry of WALLET_RELAY_ORIGINS) {
+    let parsed: URL | undefined;
+    try {
+      parsed = new URL(entry.origin);
+    } catch {
+      bad("origin", `${entry.origin} is not a URL`);
+    }
+    if (parsed !== undefined && (parsed.protocol !== "wss:" || parsed.origin !== entry.origin || parsed.port !== "")) {
+      bad("origin", `${entry.origin} must be a bare wss origin without port, path or trailing slash`);
+    }
+    if (origins.has(entry.origin)) bad("duplicate-origin", `${entry.origin} is listed twice`);
+    origins.add(entry.origin);
+    if (entry.note.trim().length < 8) bad("note", `${entry.origin} needs a note saying why it is listed`);
+  }
+  const listedHosts = [...entries, ...WALLET_RELAY_ORIGINS].map((entry) => new URL(entry.origin).hostname);
   for (const host of Object.keys(NEVER_IN_APP_HOSTS)) {
-    if (entries.some((entry) => new URL(entry.origin).hostname === host)) bad("never-host", `${host} is both listed and forbidden`);
+    if (listedHosts.includes(host)) bad("never-host", `${host} is both listed and forbidden`);
+    if (Object.hasOwn(LINK_ONLY_HOSTS, host)) bad("never-host", `${host} is both a link target and forbidden`);
+  }
+  for (const host of Object.keys(LINK_ONLY_HOSTS)) {
+    if (listedHosts.includes(host)) bad("link-only-host", `${host} is a link target only and may not be a network origin`);
   }
   return violations;
 }
