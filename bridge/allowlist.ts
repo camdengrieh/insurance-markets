@@ -357,6 +357,8 @@ const ROUTES: Readonly<Record<ReadService, readonly Route[]>> = Object.freeze({
   rpc_base: rpcRoutes("/"),
   rpc_polygon: rpcRoutes("/"),
   rpc_bnb: rpcRoutes("/"),
+  // Our markets API's XO relay is for the hosted page's wallet path; the daemon reaches XO itself and proxies none of it.
+  markets_api: [],
 });
 
 // ---- origins ----------------------------------------------------------------------------------------------------------

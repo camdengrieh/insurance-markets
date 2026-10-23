@@ -31,6 +31,8 @@ const GOLDEN: Readonly<Record<string, readonly string[]>> = {
   rpc_base: ["POST jsonrpc /"],
   rpc_polygon: ["POST jsonrpc /"],
   rpc_bnb: ["POST jsonrpc /"],
+  // The markets API's XO relay serves the hosted page's wallet path; the daemon proxies none of it.
+  markets_api: [],
 };
 
 const ADDR = `0x${"cd".repeat(20)}`;

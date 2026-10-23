@@ -29,6 +29,7 @@ export const READ_SERVICES = [
   "rpc_base",
   "rpc_polygon",
   "rpc_bnb",
+  "markets_api",
 ] as const;
 export type ReadService = (typeof READ_SERVICES)[number];
 
@@ -56,6 +57,7 @@ export const BROWSER_DIRECT_ORIGINS: readonly OriginEntry[] = /*#__PURE__*/ Obje
   { origin: "https://data.pascal.trade", service: "pascal", venue: "pascal", transport: "T0", note: "Pascal markets, books, accounts by owner pubkey" },
   { origin: "https://api.hyperliquid.xyz", service: "hyperliquid_info", venue: "hyperliquid", transport: "T0", note: "Hyperliquid /info (POST response CORS untested)" },
   { origin: "https://rpc.hyperliquid.xyz", service: "hyperliquid_rpc", venue: "hyperliquid", transport: "T0-RPC", note: "HyperEVM public RPC" },
+  { origin: "https://d380ewgt5p205l.cloudfront.net", service: "markets_api", venue: "xo", transport: "T0", note: "Our markets API (deploy/aws, CloudFront): the XO order and bundler relay the wallet path trades through, CORS for this page only (measured 2026-10-23)" },
   { origin: "https://api.llama.fi", service: "defillama", venue: "defillama", transport: "T0", note: "DefiLlama protocols: liveness and 30-day volume" },
   { origin: "https://quotient-api-gateway.onrender.com", service: "quotient", venue: "quotient", transport: "T0", note: "Quotient gateway: OFF by default; free routes or a user-pasted key; licence clause shown first" },
   { origin: "https://api.novig.com", service: "novig", venue: "novig", transport: "T0", note: "Novig public catalog: restricted terms, flag OFF, memory-only" },

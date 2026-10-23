@@ -93,7 +93,7 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(modal.getByText(/Rules fingerprint \(sha256/)).toBeVisible();
   await expect(modal.getByText(/not an arbitrage|no links/i).first()).toBeVisible();
   // The XO ticket is the wallet one: without a relay in the build it says so; with one, it asks for a wallet first.
-  await expect(modal.getByText(/XO trading is not available in this build\.|Connect a wallet to trade on XO\./).first()).toBeVisible();
+  await expect(modal.getByText(/XO trading is not available in this build\.|Connect a wallet to trade on XO/).first()).toBeVisible();
   await modal.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.locator("h1")).toHaveText(HERO_H1);
 

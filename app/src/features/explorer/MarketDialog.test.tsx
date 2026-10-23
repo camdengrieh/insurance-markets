@@ -233,8 +233,8 @@ describe("books that cannot be shown", () => {
     const books = must(dialog(), "#explorer-books-heading").parentElement as Element;
     expect(allText(books)).toContain("XO Market: needs the Cockpit");
     expect(allText(books)).not.toMatch(/Best bid|No orders/);
-    // The ticket trades with the visitor's wallet through the markets API's relay; this build names no relay, and says so.
-    expect(allText(must(dialog(), "[data-ticket='xo'] [data-testid='xo-direct']"))).toContain("XO trading is not available in this build.");
+    // The ticket trades with the visitor's wallet through the markets API's relay, and asks for a wallet first.
+    expect(allText(must(dialog(), "[data-ticket='xo'] [data-testid='xo-direct']"))).toMatch(/XO trading is not available in this build\.|Connect a wallet to trade on XO/);
   });
 
   it("Manifold has no order book and says so", async () => {

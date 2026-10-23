@@ -48,7 +48,8 @@ describe("hosts come from headers.config.ts", () => {
       assert.equal(url.protocol, "https:");
       assert.equal(url.origin, origin, `${service} origin is not a bare origin`);
       assert.equal(url.port, "");
-      assert.ok(routesOf(service).length > 0, `${service} has no route table`);
+      // Every venue service has a daemon route table; our own markets API is reached by the hosted page only.
+      if (service !== "markets_api") assert.ok(routesOf(service).length > 0, `${service} has no route table`);
     }
   });
 
