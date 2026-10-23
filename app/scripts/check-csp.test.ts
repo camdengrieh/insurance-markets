@@ -7,7 +7,9 @@ import {
   BROWSER_DIRECT_ORIGINS,
   DAEMON_ONLY_ORIGINS,
   GENERATED_FILES,
+  LINK_ONLY_HOSTS,
   OUT_DIRS,
+  WALLET_RELAY_ORIGINS,
   cspDirectives,
   cspHeaderValue,
   renderGeneratedFiles,
@@ -40,11 +42,22 @@ describe("check-csp", () => {
     }
   });
 
-  it("lists exactly the browser-direct origins in the standalone build and none of the daemon-only ones", () => {
+  it("lists exactly the browser-direct origins and the wallet relay in the standalone build, and none of the daemon-only ones", () => {
     const connect = cspDirectives("standalone")["connect-src"] ?? [];
-    expect(connect).toEqual(["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin)]);
+    expect(connect).toEqual(["'self'", ...BROWSER_DIRECT_ORIGINS.map((entry) => entry.origin), ...WALLET_RELAY_ORIGINS.map((entry) => entry.origin)]);
     for (const entry of DAEMON_ONLY_ORIGINS) expect(connect).not.toContain(entry.origin);
-    expect(connect.every((source) => source === "'self'" || source.startsWith("https://"))).toBe(true);
+    // https everywhere, except the one WalletConnect relay, which is a WebSocket.
+    expect(WALLET_RELAY_ORIGINS.map((entry) => entry.origin)).toEqual(["wss://relay.walletconnect.org"]);
+    expect(connect.filter((source) => source !== "'self'" && !source.startsWith("https://"))).toEqual(["wss://relay.walletconnect.org"]);
+    expect(cspDirectives("cockpit")["connect-src"]).not.toContain("wss://relay.walletconnect.org");
+  });
+
+  it("allows a wss origin only when it is the listed wallet relay, and never a link-only host", () => {
+    expect(rulesFor("standalone", (d) => d["connect-src"]?.push("wss://relay.walletconnect.com"))).toContain("malformed-source");
+    expect(rulesFor("standalone", (d) => d["img-src"]?.push("wss://relay.walletconnect.org"))).toContain("malformed-source");
+    expect(rulesFor("cockpit", (d) => d["connect-src"]?.push("wss://relay.walletconnect.org"))).toContain("directive");
+    expect(rulesFor("standalone", (d) => d["connect-src"]?.push("https://app.paybox.sh"))).toContain("link-only-host");
+    expect(Object.keys(LINK_ONLY_HOSTS)).toEqual(["app.paybox.sh"]);
   });
 
   it("sends the same header set on both builds apart from the CSP", () => {

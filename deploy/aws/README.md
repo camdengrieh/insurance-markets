@@ -1,14 +1,20 @@
-# pm-recorder and pm-linker on AWS
+# pm-recorder, pm-linker and pm-api on AWS
 
-Replaces the two Railway services (`deploy/recorder`, `deploy/linker`) with one small AWS stack:
+Replaces the two Railway services (`deploy/recorder`, `deploy/linker`) with one small AWS stack, and
+hosts the markets API (`deploy/api`, with the XO order relay switched on) on the same host behind
+CloudFront:
 
 | Piece | AWS | Why this shape |
 |---|---|---|
 | recorder (continuous, SQLite on a volume) | one Graviton EC2 host (`t4g.small`, Amazon Linux 2023), container managed by systemd, **EBS gp3 volume at `/data`** | SQLite needs a real block device: EFS (NFS) breaks its locking, and Fargate's ephemeral or task-scoped storage loses the 30-day series on every redeploy |
 | linker (every two hours, exits) | same host, systemd **timer** `*-*-* 00/2:00:00` UTC running the container once | identical to the Railway cron service, no second host |
-| images | two **ECR** repositories, built locally for `linux/arm64` by `push.sh` | the Dockerfiles are unchanged; the build context is still the repository root |
-| logs | **CloudWatch Logs**, two groups, 30-day retention | `aws logs tail` replaces `railway logs` |
-| shell | **SSM Session Manager** | no SSH key, no inbound port; the security group has no ingress at all |
+| markets API with the XO relay (`pm-api`) | same host, container managed by systemd on port 8790, data in `/data/api`, `API_XO_RELAY=on`, `API_TRUST_PROXY_HOPS=1`, `API_INDEXER=off` | the relay must answer the dApp's browser with CORS, which XO's order book and bundler do not; one more container is cheaper than a second host |
+| HTTPS for the API | a **CloudFront** distribution (default `*.cloudfront.net` certificate), HTTPS to the browser, plain HTTP to the host; caching disabled | the API speaks plain HTTP and a page on https may only call https; no domain, certificate or load balancer to run |
+| stable origin | an **Elastic IP** on the host; CloudFront's origin is its public DNS name `ec2-a-b-c-d.eu-north-1.compute.amazonaws.com` | the auto-assigned public address changes on stop/start; associating the Elastic IP replaces it in place, without a restart |
+| API host setup | an **SSM document and association** that writes the `pm-api` unit and new `pm-pull` / `pm-deploy` on the running host | changing the instance's first-boot script would stop and start the host (and cloud-init would not re-run it); the association runs now, and again whenever its script changes |
+| images | three **ECR** repositories, built locally for `linux/arm64` by `push.sh` | the Dockerfiles are unchanged; the build context is still the repository root |
+| logs | **CloudWatch Logs**, three groups, 30-day retention | `aws logs tail` replaces `railway logs` |
+| shell | **SSM Session Manager** | no SSH key; the only ingress rule is the API port, open to CloudFront's origin-facing prefix list (`com.amazonaws.global.cloudfront.origin-facing`) and nothing else |
 | data moves | a private **S3 transfer bucket**, objects expire after 14 days | used once by `migrate-volume.sh`, later for copying reports out |
 
 Everything is in one CloudFormation template (`stack.yaml`) so there is nothing to install beyond the
@@ -18,6 +24,10 @@ replacing the instance keeps the recordings.
 Cost, on-demand eu-north-1 list prices read 2026-10-22, unmeasured: `t4g.small` about $12/month, the
 10 GiB gp3 volume under $1, logs and egress cents. Roughly double Railway's Hobby fee; a `t4g.micro`
 (1 GiB RAM, about $6) is enough for the recorder alone but tight when the linker pass overlaps.
+The API adds nothing for compute (same host, capped at 640 MiB of memory); the Elastic IP costs the
+same hourly public-IPv4 price as the auto-assigned address it replaces (about $3.6/month either way);
+CloudFront bills per request and per GB out (cents at the relay's volumes; the always-free tier covers
+1 TB and 10 million requests a month).
 
 ## One-time setup
 
@@ -75,14 +85,70 @@ If the linker was also deployed on Railway, copy `/data/registry.json` the same 
 host through a session). If it never ran there, nothing to move: the first timer run starts from an
 empty registry, exactly as on Railway.
 
+## Deploy the markets API and the XO relay
+
+The relay forwards requests the visitor's browser has already signed to XO's order book; it holds no
+key or credential and stores nothing about them (`api/README.md`). Steps, in order, from the
+repository root with the AWS profile and region the scripts default to:
+
+1. **Update the stack.** `deploy/aws/up.sh`. It looks up CloudFront's origin-facing prefix list, refuses
+   to run if a newer Amazon Linux image would replace the host (re-run with `ALLOW_HOST_REPLACE=1` only if
+   you want that), and adds: the `pm-api` ECR repository and log group, the Elastic IP on the host, the
+   security-group rule for port 8790 from CloudFront only, the SSM document and association that install
+   the `pm-api` unit and the new `pm-pull` / `pm-deploy` on the running host (CloudFormation waits for it
+   to succeed), the relay's origin request policy and the CloudFront distribution. Nothing is stopped or
+   restarted; the recorder's outbound address changes once when the Elastic IP is associated. CloudFront
+   takes about 5 to 15 minutes to deploy; the whole update usually finishes within 20. The outputs now
+   include `ApiCloudFrontDomain`, `ApiRepositoryUri`, `ApiLogGroup` and `ElasticIp`. To see the change
+   first, create a change set in the console (or `aws cloudformation deploy ... --no-execute-changeset`).
+2. **Build, push and start the API.** `deploy/aws/push.sh api`. It builds `deploy/api/Dockerfile` for
+   `linux/arm64`, pushes `:latest` and `:<git sha>`, and runs `pm-deploy` on the host, which pulls the
+   image and starts `pm-api` (and leaves the recorder alone unless its image changed). Later releases
+   are the same command; `push.sh all` builds all three images.
+3. **Check it from outside.**
+
+   ```sh
+   D="$(aws cloudformation describe-stacks --stack-name pm-workers --query "Stacks[0].Outputs[?OutputKey=='ApiCloudFrontDomain'].OutputValue" --output text)"
+   curl -s "https://$D/v1/health"
+   curl -i -X OPTIONS "https://$D/v1/relay/xo/clob/time" \
+     -H 'Origin: https://xo-markets-explorer.vercel.app' -H 'Access-Control-Request-Method: GET'
+   ```
+
+   The first answers the API's health JSON; the second answers 204 with
+   `access-control-allow-origin: https://xo-markets-explorer.vercel.app`. `curl -s "https://$D/v1/relay/xo/clob/time"`
+   returns XO's server time through the relay. On the host: `sudo systemctl status pm-api` and
+   `aws logs tail /pm-workers/pm-api --follow` (route, status and latency only; never a header value or body).
+   The API port is not reachable directly from the internet: `curl http://<ElasticIp>:8790/v1/health` times out.
+   The bundler route (the dApp's account setup) needs no stack change: the `/v1/relay/*` behaviour and its origin
+   request policy (`Origin`, `content-type`) already cover it; it arrives with the API image. `curl -i -X OPTIONS
+   "https://$D/v1/relay/xo/bundler" -H 'Origin: https://xo-markets-explorer.vercel.app' -H
+   'Access-Control-Request-Method: POST'` answers 204 with `access-control-allow-methods: POST, OPTIONS`. Do not POST a
+   user operation to it by hand.
+4. **Point the dApp at it.** Set `MARKETS_API_ORIGIN` in `app/src/core/markets-api.ts` to
+   `https://<ApiCloudFrontDomain>`, and add that origin to the dApp's CSP `connect-src` (`app/headers.config.ts`,
+   then regenerate `app/vercel.json` and `app/public/_headers` with the app's `headers:write` script); deploy the
+   dApp. Until both are done the page says XO trading is not available in this build.
+5. **Rolling back.** `sudo systemctl stop pm-api && sudo systemctl disable pm-api` on the host stops the API
+   at once (CloudFront then answers 502). To remove the pieces, deploy the previous `stack.yaml` with `up.sh`:
+   CloudFormation deletes the distribution, the rule, the Elastic IP (AWS gives the host a new auto-assigned
+   public IPv4 within a few minutes; check outbound traffic resumed with `sudo pm-recorder-cmd status`),
+   the association and the repository. The `pm-pull` /
+   `pm-deploy` the association wrote stay on the host and keep working without an API image.
+
+The container runs with `API_INDEXER=off` to keep the shared `t4g.small` light. To index chains too,
+change `-e API_INDEXER=off` to `on` in the `ApiHostDocument` script in `stack.yaml` and run `up.sh` (the
+association re-runs and restarts `pm-api`); consider a larger instance first. Other API variables
+(`deploy/api/README.md`) go on the same `docker run` line.
+
 ## Day to day
 
 ```sh
 aws ssm start-session --target <InstanceId>          # shell on the host (sudo -i)
 aws logs tail /pm-workers/pm-recorder --follow        # what the recorder prints
 aws logs tail /pm-workers/pm-linker --since 3h
+aws logs tail /pm-workers/pm-api --follow             # route, status, latency per request
 sudo pm-recorder-cmd status | verify | gaps | report  # on the host: the read commands against the live volume
-sudo systemctl status pm-recorder pm-linker.timer     # on the host
+sudo systemctl status pm-recorder pm-linker.timer pm-api   # on the host
 sudo systemctl start pm-linker                        # on the host: one linker pass now
 ```
 
@@ -100,17 +166,17 @@ deploy/aws/up.sh` followed by `sudo xfs_growfs /data` on the host.
 
 ## Tearing down
 
-`aws cloudformation delete-stack --stack-name pm-workers` removes the host, repositories (emptied) and
-log groups. The data volume and the transfer bucket are retained on purpose; delete them by hand when the
+`aws cloudformation delete-stack --stack-name pm-workers` removes the host, repositories (emptied),
+log groups, the Elastic IP and the CloudFront distribution. The data volume and the transfer bucket are retained on purpose; delete them by hand when the
 study is over (`aws ec2 delete-volume --volume-id <DataVolumeId>`, `aws s3 rb s3://<bucket> --force`).
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `stack.yaml` | the CloudFormation template: ECR x2, S3 transfer bucket, log groups, IAM role, security group, EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`) |
-| `up.sh` | resolves the default VPC/subnet/AZ and runs `aws cloudformation deploy` |
-| `push.sh` | builds both images for arm64, pushes to ECR, runs `pm-deploy` over SSM |
+| `stack.yaml` | the CloudFormation template: ECR x3, S3 transfer bucket, log groups, IAM role, security group (one ingress rule: the API port from CloudFront's prefix list), EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`), the Elastic IP, the SSM document and association for `pm-api`, the relay's origin request policy and the CloudFront distribution |
+| `up.sh` | resolves the default VPC/subnet/AZ and CloudFront's prefix list, guards against a host replacement, and runs `aws cloudformation deploy` |
+| `push.sh` | builds the images for arm64 (`both` = recorder and linker, or `recorder`, `linker`, `api`, `all`), pushes to ECR, runs `pm-deploy` over SSM |
 | `migrate-volume.sh` | the four-step copy of the Railway volume to the host |
 | `transfer/` | git-ignored scratch space for the copied database |
 
@@ -122,3 +188,17 @@ recorder and linker images build for `linux/arm64` with the unchanged Dockerfile
 the first-boot script, the volume appearing under `/dev/disk/by-id/`, SSM command output, CloudWatch log
 delivery, the `railway ssh` transport for `migrate-volume.sh` (binary goes through base64 for that reason,
 and the sha256 is checked on both sides).
+
+For the API (2026-10-23): the `deploy/api` image builds for `linux/arm64` with `docker buildx` (not pushed), and a
+local run of it with `API_XO_RELAY=on API_INDEXER=off` answered `/v1/health`, a relay preflight from the dApp's origin
+(204 with the CORS grant) and refused another origin (403) without contacting XO. `cfn-lint` 1.58.0 passes on the template and `aws cloudformation validate-template`
+accepts it; `up.sh` and `push.sh` pass `bash -n` and shellcheck; the association's script, rendered with
+sample values, passes `bash -n` and shellcheck (only the informational "not following /etc/pm-workers.env").
+Read-only checks of the running stack: the host has an auto-assigned public IPv4 whose DNS name has the
+`ec2-a-b-c-d.eu-north-1.compute.amazonaws.com` form the origin is built from, the VPC has DNS hostnames on,
+no Elastic IP is on the host yet, the security group has no ingress rule (the CloudFront prefix list counts as
+55 rules against the quota of 60), and the running host's image is the current Amazon Linux 2023 image, so
+`up.sh` would not replace it today. Not verified: nothing was deployed. The association's run on the host,
+CloudFront forwarding the `xo-*` headers and `Origin` through the origin request policy, the Elastic IP's DNS
+name resolving for CloudFront, and the 10-header quota of an origin request policy being enough (the relay's
+policy lists exactly 10) are all unproven until `up.sh` runs.

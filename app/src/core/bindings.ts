@@ -9,6 +9,7 @@
 // and positions are world-readable by address anyway. So a binding queries NO venue until the user selects it.
 
 import { openDB } from "idb";
+import { isAddress, verifyMessage, type Hex } from "viem";
 import * as z from "zod/v4";
 
 import { deriveAccount } from "@shared/xo/account/derive";
@@ -25,8 +26,27 @@ export const BINDING_PRIVACY_NOTICE =
 export const BINDING_KINDS = ["eoa", "kernel", "venue_proxy", "solana", "venue_account"] as const;
 export type BindingKind = (typeof BINDING_KINDS)[number];
 
-export const BINDING_SOURCES = ["pasted", "agent_import", "derived"] as const;
+// "wallet_signed": the connected wallet signed a short text proving it controls the address (connect/proof.ts).
+export const BINDING_SOURCES = ["pasted", "agent_import", "derived", "wallet_signed"] as const;
 export type BindingSource = (typeof BINDING_SOURCES)[number];
+
+export const MAX_PROOF_MESSAGE_CHARS = 1000;
+// An EOA signature is 132 characters; a smart account's (ERC-1271, ERC-6492) can be much longer.
+export const MAX_PROOF_SIGNATURE_CHARS = 20_000;
+
+// The signed proof behind a "wallet_signed" binding. `verified` is true only when the signature recovers to the address
+// as a plain key signature (EIP-191). A smart account signs through its contract (ERC-1271), which this page cannot
+// check without a chain read, so its proof is kept with verified false rather than refused.
+export const bindingProofSchema = z
+  .object({
+    method: z.literal("eip191_personal_sign"),
+    verified: z.boolean(),
+    signedAt: z.string().max(40),
+    message: z.string().min(1).max(MAX_PROOF_MESSAGE_CHARS),
+    signature: z.string().regex(/^0x[0-9a-fA-F]+$/).max(MAX_PROOF_SIGNATURE_CHARS),
+  })
+  .strict();
+export type BindingProof = z.infer<typeof bindingProofSchema>;
 
 const STATUSES = ["derived", "code-present", "venue-registered", "trading-enabled", "rpc-unreachable", "foreign-code"] as const satisfies readonly AccountStatus[];
 
@@ -49,8 +69,11 @@ export const addressBindingSchema = z
     status: z.enum(STATUSES),
     venues: z.array(z.enum(VENUE_IDS as [VenueId, ...VenueId[]])).max(30),
     source: z.enum(BINDING_SOURCES),
+    proof: bindingProofSchema.optional(),
   })
-  .strict();
+  .strict()
+  // A proof belongs to a wallet-signed EOA binding and to nothing else.
+  .refine((binding) => (binding.source === "wallet_signed") === (binding.proof !== undefined) && (binding.proof === undefined || binding.kind === "eoa"));
 export type AddressBinding = z.infer<typeof addressBindingSchema>;
 
 // ---- storage backends ----------------------------------------------------------------------------------------------------
@@ -247,6 +270,35 @@ export class BindingsStore {
     return { ok: true, binding, warnings: checked.warnings };
   }
 
+  // The connected wallet's address with the signed proof behind it (connect/proof.ts made and checked the proof; this
+  // re-checks the shape and the address). An address already saved as a pasted EOA keeps its label and venue choice
+  // and gains the proof; a newer proof replaces an older one.
+  async addSigned(input: { readonly address: string; readonly proof: BindingProof; readonly label?: string }): Promise<BindingResult> {
+    const proof = bindingProofSchema.safeParse(input.proof);
+    if (!proof.success) return failure("invalid_address", "The signed proof is not in the expected form.");
+    const checked = checkEvmAddress(input.address, [], { role: "wallet" });
+    if (!checked.ok) return failure("invalid_address", checked.message);
+    if (!proof.data.message.includes(checked.address)) return failure("invalid_address", "The signed text does not name this address.");
+    const id = bindingId("eoa", "evm", checked.address);
+    const existing = (await this.list()).find((binding) => binding.id === id);
+    if (existing !== undefined) return this.#update(id, (binding) => ({ ...binding, source: "wallet_signed", proof: proof.data }));
+    const others = await this.list();
+    if (others.length >= MAX_BINDINGS) return failure("too_many", "Too many saved addresses.");
+    const binding: AddressBinding = {
+      id,
+      label: cleanLabel(input.label, "Connected wallet"),
+      kind: "eoa",
+      chain: "evm",
+      address: checked.address,
+      status: "derived",
+      venues: [],
+      source: "wallet_signed",
+      proof: proof.data,
+    };
+    await this.#store.put(binding);
+    return { ok: true, binding, warnings: checked.warnings };
+  }
+
   // The Kernel account derived from an EOA binding, one binding per requested chain (M2-8). The address is
   // recomputed here from the owner; nothing from outside is trusted.
   async addDerivedKernel(eoaBindingId: string, chainIds: readonly number[] = ACCOUNT_CHAINS.map((entry) => entry.chainId)): Promise<readonly BindingResult[]> {
@@ -367,6 +419,13 @@ export class BindingsStore {
         }
       }
       const kernel = incoming.kind === "kernel";
+      // A wallet-signed proof survives an import only when it checks out again here as a plain key signature over a
+      // text that names the address. Anything else (an unverified smart-account proof included) comes in as pasted.
+      const proof = incoming.proof;
+      if (proof !== undefined && incoming.address !== null && proof.verified && proof.message.includes(incoming.address) && (await proofRecovers(incoming.address, proof))) {
+        accepted.push({ id: incoming.id, label: cleanLabel(incoming.label, "Imported address"), kind: "eoa", chain: incoming.chain, address: incoming.address, status: "derived", venues: [], source: "wallet_signed", proof });
+        continue;
+      }
       accepted.push({
         id: incoming.id,
         label: cleanLabel(incoming.label, kernel ? "Derived account" : "Imported address"),
@@ -382,6 +441,17 @@ export class BindingsStore {
     }
     for (const binding of accepted) await this.#store.put(binding);
     return { ok: true, imported: accepted.length, skipped };
+  }
+}
+
+// Whether an EIP-191 signature over the proof text recovers to the address. Offline (ecrecover only); a malformed
+// signature is false, never an exception.
+export async function proofRecovers(address: string, proof: Pick<BindingProof, "message" | "signature">): Promise<boolean> {
+  if (!isAddress(address, { strict: false }) || !/^0x[0-9a-fA-F]+$/.test(proof.signature)) return false;
+  try {
+    return await verifyMessage({ address, message: proof.message, signature: proof.signature as Hex });
+  } catch {
+    return false;
   }
 }
 

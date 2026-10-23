@@ -6,10 +6,11 @@ and x402), and the chain indexer of section 7, in one Node process. It needs no 
 prices are public values, keys are stored as hashes, and the facilitator is called without a credential. It holds no
 wallet, no signer, no private key and no venue credential, and it submits nothing.
 
-**Where it runs:** nowhere yet; nothing has been deployed. The image follows `deploy/recorder` and `deploy/linker`. The
-AWS layout in `deploy/aws` (one EC2 host, the image in ECR, an EBS volume at `/data`, systemd) can host it beside them;
-`deploy/aws` is not changed here. Before the first deployment, put a TLS-terminating proxy in front (the API speaks
-plain HTTP) and set `API_TRUST_PROXY_HOPS` to match it.
+**Where it runs:** nowhere yet; nothing has been deployed. The image follows `deploy/recorder` and `deploy/linker`.
+`deploy/aws` is ready to host it beside them on the same EC2 host (`pm-api` under systemd, data at `/data/api`, the image
+in ECR) behind CloudFront for HTTPS (the API speaks plain HTTP), with `API_XO_RELAY=on`, `API_TRUST_PROXY_HOPS=1`,
+`API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app` and `API_INDEXER=off`; the steps are in
+`deploy/aws/README.md` ("Deploy the markets API and the XO relay").
 
 ## What it serves
 
@@ -22,6 +23,7 @@ plain HTTP) and set `API_TRUST_PROXY_HOPS` to match it.
 | `GET /v1/groups` | approved links (approved by a person) and linker candidates, always labelled `proposed` with their score band |
 | `GET /v1/quote?group=&side=&size=&outcome=` | paid: the engine's depth-walked fill of a size on each leg of a group, after fees, best venue first, each number with its source and age |
 | `POST /v1/route/prepare` | paid, and off unless `API_ROUTE_PREPARE` is set: unsigned typed-data orders per leg with the decoded view and what the signer must check |
+| `/v1/relay/xo/clob/...`, `/v1/relay/xo/bundler` | free, and off unless `API_XO_RELAY=on`: the XO order relay, eight allowlisted order-book calls the dApp's browser signed, and five allowlisted JSON-RPC methods of XO's bundler (the visitor's own account setup, one signed user operation), forwarded unchanged (`api/README.md`) |
 
 The contract of the two paid routes, the metering rules and the listing steps are in `api/README.md`.
 
@@ -69,6 +71,7 @@ Without Docker: `node deploy/api/build.mjs && API_DATA_DIR=./data node deploy/ap
 | `API_LINKS_BUNDLE`, `API_LINKS_PIN` | none | the shipped link bundle (`pm/links/data/links.bundle.json`) and its pin file |
 | `API_CANDIDATES_BUNDLE`, `API_CANDIDATES_PIN` | none | the linker's `candidates.bundle.json` and `candidates.bundle.pin` (on the AWS host, the linker's `/data/out`) |
 | `API_ROUTE_PREPARE` | `off` | `off` (the route answers `route_prepare_not_enabled`), `free` (no charge) or `paid` (a key of tier `full`, or x402) |
+| `API_XO_RELAY` | `off` | `on` serves the XO order relay under `/v1/relay/xo/clob/` and its bundler route `/v1/relay/xo/bundler` (`api/README.md`); off, every relay path answers `403 relay_not_enabled` and nothing is forwarded. Its CORS origins are compiled in (the dApp and localhost dev servers), not taken from `API_CORS_ORIGINS` |
 | `API_PUBLIC_URL` | none | the https origin clients reach the API at (the x402 resource URL); required once any payment variable is set |
 | `API_X402_FACILITATOR_URL` | none | the x402 facilitator's base URL (`/verify` and `/settle` are appended); https, no query or credentials; called without a credential |
 | `API_X402_PAY_TO` | none, never defaulted | the address that receives payments (20-byte hex, EIP-55 checksum if mixed case, not zero) |

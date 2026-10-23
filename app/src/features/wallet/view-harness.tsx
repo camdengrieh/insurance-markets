@@ -9,6 +9,9 @@ import { AnnouncerProvider } from "../../ui/a11y";
 import { ClockProvider, ModeProvider, type AppMode } from "../../ui/context";
 import { PortfolioAdaptersProvider } from "../portfolio/usePortfolio";
 import type { PortfolioAdapters } from "../portfolio/readers";
+import type { WalletEnvironment } from "./connect/environment";
+import { testEnvironment } from "./connect/testkit";
+import { WalletConnectionProvider } from "./connect/WalletConnectionProvider";
 import type { FakeNetwork } from "./testkit";
 import { WalletServicesProvider, type WalletServices } from "./services";
 
@@ -22,8 +25,11 @@ export interface Harness {
   readonly wrap: (children: ReactNode) => ReactElement;
 }
 
-export function harness(options: { net: FakeNetwork; mode?: AppMode; nowMs?: number; facts?: CapabilityFacts; adapters?: PortfolioAdapters; path?: string }): Harness {
+// `wallet`: the wallet connection's environment (connect/testkit.ts testEnvironment). The default finds no browser
+// wallet and has no WalletConnect project id, so nothing connects unless a test sets it up.
+export function harness(options: { net: FakeNetwork; mode?: AppMode; nowMs?: number; facts?: CapabilityFacts; adapters?: PortfolioAdapters; path?: string; wallet?: WalletEnvironment }): Harness {
   const mode = options.mode ?? "cockpit";
+  const wallet = options.wallet ?? testEnvironment({ target: null, projectId: null });
   const nowMs = options.nowMs ?? 1_760_875_200_000;
   const stores: OpenedStores = { bindings: createMemoryRecordStore(), settings: createMemoryRecordStore(), persistence: "memory" };
   const services: WalletServices = { mode, deps: { fetch: options.net.fetch, nowMs: () => nowMs }, stores: async () => stores, facts: options.facts ?? NO_FACTS };
@@ -36,7 +42,9 @@ export function harness(options: { net: FakeNetwork; mode?: AppMode; nowMs?: num
           <AnnouncerProvider>
             <Router hook={location.hook}>
               <WalletServicesProvider services={services}>
-                {options.adapters === undefined ? children : <PortfolioAdaptersProvider adapters={options.adapters}>{children}</PortfolioAdaptersProvider>}
+                <WalletConnectionProvider environment={wallet}>
+                  {options.adapters === undefined ? children : <PortfolioAdaptersProvider adapters={options.adapters}>{children}</PortfolioAdaptersProvider>}
+                </WalletConnectionProvider>
               </WalletServicesProvider>
             </Router>
           </AnnouncerProvider>

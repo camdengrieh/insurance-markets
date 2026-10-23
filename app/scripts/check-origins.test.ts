@@ -43,6 +43,15 @@ describe("check-origins", () => {
     expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const u = "wss://ws.example.com";\n' })).toEqual(["unknown-origin:app/src/a.ts"]);
   });
 
+  it("accepts the wallet relay over wss only, and a link-only host as an https link only", async () => {
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const relay = "wss://relay.walletconnect.org";\n' })).toEqual([]);
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const relay = "https://relay.walletconnect.org";\n' })).toEqual(["insecure-origin:app/src/a.ts"]);
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const link = "https://app.paybox.sh/wc?uri=";\n' })).toEqual([]);
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const link = "http://app.paybox.sh/wc";\n' })).toEqual(["insecure-origin:app/src/a.ts"]);
+    // A relay host that is not the listed one is unknown.
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": 'export const relay = "wss://relay.walletconnect.com";\n' })).toEqual(["unknown-origin:app/src/a.ts"]);
+  });
+
   it("ignores test files and recorded fixtures (hostile market text lives there)", async () => {
     expect(
       await rules({
@@ -76,6 +85,9 @@ describe("check-origins", () => {
     expect(classifyHost("orderbooks.xo.market")).toBe("network");
     expect(classifyHost("react.dev")).toBe("inert");
     expect(classifyHost("api.paybox.sh")).toBe("never");
+    expect(classifyHost("app.paybox.sh")).toBe("link");
+    expect(classifyHost("relay.walletconnect.org")).toBe("network");
+    expect(classifyHost("pulse.walletconnect.org")).toBe("inert");
     expect(classifyHost("evil.example")).toBe("unknown");
     expect(findUrls('x "https://a.example.com:8443/p" `http://[${host}]`').map((hit) => hit.host)).toEqual(["a.example.com"]);
     expect(stripComments("a // b\nc /* d */ e")).toBe("a \nc  e");

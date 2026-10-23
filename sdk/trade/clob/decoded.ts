@@ -101,6 +101,9 @@ export function buildDecodedClobOrder(input: BuildDecodedClobOrderInput): Decode
   };
   if (input.order.venue === "polymarket") {
     const o = input.order.order;
+    // The relay's decoded block names an EOA (0) or a Deposit Wallet (3) order only (sdk/trade/contract.ts). A Safe
+    // order (2) is built by the page's direct path, which shows its own card, and never by the relay.
+    if (o.signatureType !== POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET && o.signatureType !== 0) throw new SigningError("invalid_order", "the decoded block describes EOA (0) and Deposit Wallet (3) orders only");
     const expiresAt = input.order.expiration === 0n ? null : isoSecond(Number(input.order.expiration) * 1000);
     return {
       ...base,

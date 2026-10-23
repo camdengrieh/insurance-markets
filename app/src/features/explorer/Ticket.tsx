@@ -4,7 +4,9 @@
 //   XO, Polymarket, Limitless, Cockpit build   the trade desk's order ticket (features/trade): XO's prepares the Kernel
 //                                              order through the daemon; the other two prepare the venue's own EIP-712
 //                                              order for the wallet itself. All three sign and send nothing;
-//   the same three, standalone                 the caution tile: preparing needs the Cockpit;
+//   Polymarket, standalone                     the direct ticket (features/trade/direct): the visitor's own connected
+//                                              wallet signs, and the page sends the order to the venue itself;
+//   XO and Limitless, standalone               the caution tile: preparing needs the Cockpit;
 //   every other venue                          a WORKSHEET: it sizes a limit order against the book and the caps with
 //                                              exact arithmetic, prepares nothing and links nowhere. One honest sentence
 //                                              says why this build has no path to that venue; the venue's own site is
@@ -19,6 +21,8 @@ import { Button, Field, Missing, Num, Tile, UntrustedText, useAppMode, useNow, v
 import { usePairing } from "../terminal/usePairing";
 import { useTradeServices } from "../trade/services";
 import { TradeDesk, clobMarketFacts, type TokenChoice } from "../trade";
+import { XoTradePanel, tradesDirectly } from "../trade/direct";
+import { useWalletServices } from "../wallet/services";
 import { priceText } from "./display";
 import { isSafeMarketId } from "./ids";
 import { useExplorerServices } from "./services";
@@ -68,10 +72,12 @@ export const PREPARE_NO_PATH = "Prepare order: no path to this venue in this bui
 export const PREPARE_NEEDS_COCKPIT = "Prepare order: needs the Cockpit";
 export const PREPARE_NOT_PAIRED = "Prepare order: not paired with your Cockpit";
 export const PREPARE_LABEL = "Prepare order";
+// The standalone build, for a venue the visitor's own wallet trades directly (features/trade/direct).
+export const PREPARE_DIRECT = "Trade with your wallet";
 
-// The inspector's "Prepare order" action: enabled only for a row of a venue with a ticket when the page holds a
-// session with the daemon; otherwise disabled with the reason in its label. The standalone page never builds a daemon
-// client.
+// The inspector's "Prepare order" action: enabled for a row of a venue with a ticket when the page holds a session with
+// the daemon, or, in the standalone build, when the venue trades directly with the visitor's own wallet; otherwise
+// disabled with the reason in its label. The standalone page never builds a daemon client.
 export function PrepareOrderAction({ venue, onPrepare }: { readonly venue: MarketRef["venue"]; readonly onPrepare: () => void }) {
   const mode = useAppMode();
   if (!hasTicket(venue)) {
@@ -82,6 +88,13 @@ export function PrepareOrderAction({ venue, onPrepare }: { readonly venue: Marke
     );
   }
   if (mode !== "cockpit") {
+    if (tradesDirectly(venue)) {
+      return (
+        <Button onClick={onPrepare} data-prepare="direct">
+          {PREPARE_DIRECT}
+        </Button>
+      );
+    }
     return (
       <Button disabled data-prepare="needs-cockpit">
         {PREPARE_NEEDS_COCKPIT}
@@ -169,7 +182,8 @@ export function Ticket({ market }: { readonly market: Market }) {
   if (readState.kind !== "ok") {
     return <VenueStateTile venue={venue} state={readState} nowMs={nowMs} heading="h4" kept="No order is prepared while this lasts: there is no book to quote." />;
   }
-  if (mode !== "cockpit") {
+  // A venue with a direct executor trades from the standalone build with the visitor's own wallet (the desk routes it).
+  if (mode !== "cockpit" && !tradesDirectly(venue)) {
     return (
       <Tile tone="info" title="Prepare order: needs the Cockpit" heading="h4" dataKind="ticket" dataCode="needs-cockpit">
         <p>
@@ -177,6 +191,13 @@ export function Ticket({ market }: { readonly market: Market }) {
           never signs or sends.
         </p>
       </Tile>
+    );
+  }
+  if (venue === "xo" && mode !== "cockpit") {
+    return (
+      <div data-ticket="xo">
+        <XoWalletTicket market={market} />
+      </div>
     );
   }
   if (venue === "xo") {
@@ -197,6 +218,29 @@ export function Ticket({ market }: { readonly market: Market }) {
   return (
     <div data-ticket={venue}>
       <TradeDesk panels="order" tokenChoices={tokenChoicesOf(market)} clobMarket={facts} heading="h4" />
+    </div>
+  );
+}
+
+// The standalone build's XO ticket: the visitor's own wallet signs, through the markets API's relay (trade/direct/xo).
+// The panel trades one outcome; the visitor picks which.
+function XoWalletTicket({ market }: { readonly market: Market }) {
+  const { deps } = useWalletServices();
+  const choices = tokenChoicesOf(market);
+  const [tokenId, setTokenId] = useState<string | null>(choices[0]?.tokenId ?? null);
+  const chosen = choices.find((choice) => choice.tokenId === tokenId) ?? null;
+  return (
+    <div className="ui-stack">
+      {choices.length > 1 ? (
+        <div className="tr-toggle" role="group" aria-label="Outcome to trade">
+          {choices.map((choice) => (
+            <button key={choice.tokenId} type="button" className="tr-toggle-button" data-outcome={choice.outcome ?? "label"} aria-pressed={choice.tokenId === tokenId} onClick={() => setTokenId(choice.tokenId)}>
+              {choice.short ?? choice.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <XoTradePanel deps={deps} outcome={chosen === null ? null : { tokenId: chosen.tokenId, label: chosen.label }} />
     </div>
   );
 }

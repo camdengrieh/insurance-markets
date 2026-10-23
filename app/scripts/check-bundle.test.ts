@@ -86,6 +86,15 @@ describe("check-bundle", () => {
     expect(await inspect({ "index.html": PAGE, "a.js": "try{return Function(``),!0}catch{return!1}" })).toEqual([]);
   });
 
+  it("lets through lodash's global-object probe in exactly its minified shape, and nothing like it", async () => {
+    const probe = "var N=typeof global==`object`&&global&&global.Object===Object&&global,P=typeof self==`object`&&self&&self.Object===Object&&self,F=N||P||Function(`return this`)();";
+    expect(await inspect({ "index.html": PAGE, "a.js": probe })).toEqual([]);
+    // The same call without the self check before it, or with another body, is a sink.
+    expect(await inspect({ "index.html": PAGE, "a.js": "var F=N||P||Function(`return this`)();" })).toEqual(["code-sink:dist/a.js"]);
+    expect(await inspect({ "index.html": PAGE, "a.js": probe.replace("return this", "return fetch") })).toEqual(["code-sink:dist/a.js"]);
+    expect(await inspect({ "index.html": PAGE, "a.js": `${probe}Function(\`alert(1)\`)();` })).toEqual(["code-sink:dist/a.js"]);
+  });
+
   it("renders and re-renders a typical tree without touching a Trusted Types sink (React 19, W0-6 as far as a DOM without Trusted Types can show)", async () => {
     const build = await buildSmoke({ target: "cockpit" });
     try {

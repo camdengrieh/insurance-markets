@@ -169,6 +169,25 @@ function believable(value: unknown): value is bigint {
   return typeof value === "bigint" && value > 0n && value <= MAX_ESTIMATE_GAS_FIELD;
 }
 
+// ---- paymaster headroom ------------------------------------------------------------------------------------------
+
+// The paymaster validates every call of a batch, so its verification gas grows with the call count. The
+// userop library's one-call default (40,262) fails batches of eight or more (AA33, found against the real
+// paymaster code in test/userop-anvil.test.ts); a limit of 30,000 plus 3,000 per call covers every point
+// measured there. Fees are zero, so a higher limit costs nothing.
+export function paymasterVerificationFor(calls: number): bigint {
+  return 30_000n + 3_000n * BigInt(calls);
+}
+
+// A sponsored plan's paymaster verification limit raised to paymasterVerificationFor(calls) when below it. Used by the
+// relay's prepare (relay/userops.ts) and by the dApp's account setup, on the defaults and again after an estimate.
+export function withPaymasterHeadroom(plan: GasPlan, calls: number, sponsored: boolean): GasPlan {
+  if (!sponsored) return plan;
+  const wanted = paymasterVerificationFor(calls);
+  if (plan.limits.paymasterVerificationGasLimit >= wanted) return plan;
+  return { ...plan, limits: Object.freeze({ ...plan.limits, paymasterVerificationGasLimit: wanted }) };
+}
+
 // UO5 / [21 V4.1]. With an allowed, believable estimate: verification and preVerification as estimated,
 // callGasLimit +30%, paymaster limits as estimated but never below the observed floors. Otherwise the
 // plan is returned unchanged (with a note when an estimate was offered and refused).

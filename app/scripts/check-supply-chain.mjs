@@ -24,7 +24,10 @@ import { APP_DIR, REPO_DIR, isMain, report } from "./lib.ts";
 
 const REQUIRED_RELEASE_AGE_MINUTES = 14 * 24 * 60;
 // 111 packages at 2026-10-19. Real growth is possible, but only through the W0 owner (a dependencies.json entry), who raises this.
-export const MAX_LOCK_PACKAGES = 150;
+// 2026-10-23: 133 -> 248 with wallet connection. @walletconnect/sign-client 2.17.5 brings 114 packages (its logger, key-value
+// storage, relay transport and their transitive dependencies; dependencies.json says why that version) and uqr 1. The ceiling is
+// the new count plus a small margin, so the next dependency is again a reviewed change.
+export const MAX_LOCK_PACKAGES = 260;
 const LIFECYCLE_SCRIPTS = ["preinstall", "install", "postinstall", "prepare", "prepublish", "prepublishOnly", "prepack", "postpack", "dependencies"];
 const INSTALL_TIME_SCRIPTS = ["preinstall", "install", "postinstall"];
 const FORBIDDEN_PACKAGE_JSON_KEYS = ["overrides", "resolutions", "patchedDependencies", "bundledDependencies", "bundleDependencies", "optionalDependencies", "dependenciesMeta", "pnpm"];
@@ -65,7 +68,8 @@ export function lockPackageIds(lock) {
 
 /** Folder names in node_modules/.pnpm -> package id without the peer suffix: `@scope+name@1.2.3_peer@4` -> `@scope/name@1.2.3`. @param {string} folder */
 export function idOfPnpmFolder(folder) {
-  const withoutPeers = folder.replace(/_.*$/, "");
+  // The peer suffix starts at the first "_" after the version: a name may itself hold one (string_decoder@1.3.0).
+  const withoutPeers = folder.replace(/(@\d+\.\d+\.\d+[^_]*)_.*$/, "$1");
   const at = withoutPeers.lastIndexOf("@");
   if (at <= 0) return null;
   const name = withoutPeers.slice(0, at).replace("+", "/");

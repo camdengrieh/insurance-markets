@@ -76,7 +76,8 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(aside).toContainText("display price, not executable");
   await expect(aside).toContainText("XO Market: needs the Cockpit");
   await expect(aside).toContainText("candidates, not proof");
-  await expect(aside.getByRole("button", { name: /Prepare order/ })).toBeDisabled();
+  // XO trades with the visitor's own wallet through the markets API's relay; the inspector offers it.
+  await expect(aside.getByRole("button", { name: /Trade with your wallet/ })).toBeEnabled();
 
   // Open a market from the list: the modal opens over the table as it is (no route change, so the loaded rows and the
   // selection survive). The title link still carries the market's own address for a new tab or a bookmark.
@@ -91,7 +92,8 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(modal.getByText("XO Market: needs the Cockpit").first()).toBeVisible();
   await expect(modal.getByText(/Rules fingerprint \(sha256/)).toBeVisible();
   await expect(modal.getByText(/not an arbitrage|no links/i).first()).toBeVisible();
-  await expect(modal.getByText("Prepare order: needs the Cockpit")).toBeVisible();
+  // The XO ticket is the wallet one: without a relay in the build it says so; with one, it asks for a wallet first.
+  await expect(modal.getByText(/XO trading is not available in this build\.|Connect a wallet to trade on XO/).first()).toBeVisible();
   await modal.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.locator("h1")).toHaveText(HERO_H1);
 

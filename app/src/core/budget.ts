@@ -107,6 +107,8 @@ export const SERVICE_BUDGETS: Readonly<Record<ReadService, BudgetSpec>> = Object
   limitless: { burst: 4, perSecond: 2 },
   kalshi: { burst: 2, perSecond: 1 },
   // Public RPCs are shared and rate-limited.
+  // Our markets API's XO relay: 60 requests a minute per client (api/xo-relay.ts); the page stays under it.
+  markets_api: { burst: 10, perSecond: 0.9 },
   rpc_base: { burst: 10, perSecond: 5 },
   rpc_polygon: { burst: 10, perSecond: 5 },
   rpc_bnb: { burst: 10, perSecond: 5 },

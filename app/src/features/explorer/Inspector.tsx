@@ -19,6 +19,7 @@ import { DisplayPrices, type ExplorerRow } from "./MarketTable";
 import { QuotientLine, type QuotientState } from "./QuotientPanel";
 import { SameQuestion } from "./SameQuestion";
 import { FieldSourcesList, mixedSources, originText } from "./sources";
+import { tradesDirectly } from "../trade/direct";
 import { hasTicket, PREPARE_NEEDS_COCKPIT, PREPARE_NO_PATH, PrepareOrderAction } from "./Ticket";
 import { provForMode } from "./VenuePanel";
 import { quotientCovers } from "./views";
@@ -175,7 +176,7 @@ export function Inspector({ row, book, nowMs, linkLoad, readLeg, clock, quotient
               <Button disabled data-prepare="venue-not-read">
                 {PREPARE_VENUE_NOT_READ}
               </Button>
-            ) : mode === "cockpit" ? (
+            ) : mode === "cockpit" || tradesDirectly(row.summary.ref.venue) ? (
               <PrepareOrderAction venue={row.summary.ref.venue} onPrepare={() => onPrepare(row)} />
             ) : (
               <Button disabled data-prepare={hasTicket(row.summary.ref.venue) ? "needs-cockpit" : "no-path"}>

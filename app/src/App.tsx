@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Router, type BaseLocationHook } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 
+import type { WalletEnvironment } from "./features/wallet/connect/environment";
+import { WalletConnectionProvider } from "./features/wallet/connect/WalletConnectionProvider";
 import { AnnouncerProvider } from "./ui/a11y";
 import { appModeFromEnv, ClockProvider, ConnectActionProvider, ModeProvider, SearchProvider, ShellStatusProvider, systemClock, type AppMode, type Clock } from "./ui/context";
 import { createAppQueryClient } from "./ui/query-client";
@@ -28,6 +30,9 @@ export interface AppProps {
   readonly dock?: ReactNode;
   readonly onConnect?: () => void;
   readonly walletLabel?: string;
+  // The wallet connection's window, storage and WalletConnect client (features/wallet/connect). Production passes
+  // none: the real ones for this build.
+  readonly walletEnvironment?: WalletEnvironment;
 }
 
 function useResolvedRoutes(loaders: Readonly<Record<string, Loader>>): ResolvedRoute[] | null {
@@ -44,12 +49,14 @@ function useResolvedRoutes(loaders: Readonly<Record<string, Loader>>): ResolvedR
   return routes;
 }
 
-export function App({ loaders = discovered, mode = appModeFromEnv(), clock = systemClock, queryClient, locationHook = useHashLocation, statusBar, topBarEnd, dock, onConnect, walletLabel }: AppProps) {
+export function App({ loaders = discovered, mode = appModeFromEnv(), clock = systemClock, queryClient, locationHook = useHashLocation, statusBar, topBarEnd, dock, onConnect, walletLabel, walletEnvironment }: AppProps) {
   const [client] = useState(() => queryClient ?? createAppQueryClient());
   const routes = useResolvedRoutes(loaders);
   return (
     <ModeProvider mode={mode}>
       <ClockProvider clock={clock}>
+        {/* The one wallet connection, for both builds; it renders SignerProvider for every screen below. */}
+        <WalletConnectionProvider {...(walletEnvironment === undefined ? {} : { environment: walletEnvironment })}>
         <QueryClientProvider client={client}>
           <AnnouncerProvider>
             <SearchProvider>
@@ -69,6 +76,7 @@ export function App({ loaders = discovered, mode = appModeFromEnv(), clock = sys
             </SearchProvider>
           </AnnouncerProvider>
         </QueryClientProvider>
+        </WalletConnectionProvider>
       </ClockProvider>
     </ModeProvider>
   );
