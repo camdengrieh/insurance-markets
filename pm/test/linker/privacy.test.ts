@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { personalAccountName } from "../account.js";
 
 const PM = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO = join(PM, "..");
@@ -24,7 +25,7 @@ test("linker sources, docs, deploy files and tests contain no personal identifie
   assert.ok(mine.length > 15);
   const bad: string[] = [];
   const home = homedir();
-  const user = userInfo().username;
+  const user = personalAccountName() ?? "";
   for (const f of mine) {
     const text = readFileSync(f, "utf8");
     const rel = relative(REPO, f);

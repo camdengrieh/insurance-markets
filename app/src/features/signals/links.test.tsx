@@ -88,9 +88,10 @@ describe("the link dataset format (R2: ids and hashes, no text)", () => {
 });
 
 describe("loading the bundled file", () => {
-  it("answers 'absent' when no links.json is bundled (none is today)", async () => {
-    expect(await loadBundledLinks()).toEqual({ state: "absent" });
+  it("answers 'absent' when no links.json is bundled, and the file the linker commits always loads", async () => {
     expect(await loadBundledLinks({})).toEqual({ state: "absent" });
+    // The scheduled linker's pull request adds src/features/signals/data/links.json; before it lands there is none.
+    expect(["absent", "loaded"]).toContain((await loadBundledLinks()).state);
   });
 
   it("loads a valid file, rejects an invalid one whole, and never throws", async () => {

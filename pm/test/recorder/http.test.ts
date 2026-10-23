@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import { after, before, test } from "node:test";
 import { ManualClock, seededRandom } from "../../recorder/clock.js";
 import { mustConfig } from "../../recorder/config.js";
 import { PoliteClient, type HttpOutcome } from "../../recorder/http.js";
 import type { EventKind, RequestSpec } from "../../recorder/types.js";
 import { startHost, T0, type FakeHost } from "./helpers.js";
+import { personalAccountName } from "../account.js";
 
 const HOST = "orderbooks.xo.market";
 const spec: RequestSpec = { host: HOST, path: "/book", query: { token_id: "abc" }, purpose: "book" };
@@ -48,7 +49,7 @@ test("requests are GET only, carry the fixed generic user agent and nothing iden
   const blob = JSON.stringify(seen.headers).toLowerCase();
   assert.equal(blob.includes("@"), false);
   assert.equal(blob.includes(homedir().toLowerCase()), false);
-  const name = userInfo().username.toLowerCase();
+  const name = personalAccountName() ?? "";
   if (name.length >= 4) assert.equal(blob.includes(name), false);
 });
 

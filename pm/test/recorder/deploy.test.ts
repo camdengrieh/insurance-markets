@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { personalAccountName } from "../account.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEPLOY = join(REPO, "deploy", "recorder");
@@ -47,7 +48,7 @@ test("the deploy folder has the expected files and the Dockerfile keeps its prom
 test("deploy files contain no personal identifiers, machine paths, secrets or placeholder ids", () => {
   const bad: string[] = [];
   const home = homedir();
-  const user = userInfo().username;
+  const user = personalAccountName() ?? "";
   for (const f of sources(DEPLOY)) {
     const text = readFileSync(f, "utf8");
     const rel = relative(REPO, f);
@@ -74,7 +75,7 @@ test("the bundle builds deterministically as one file with no secrets or machine
   assert.equal(run(), a, "same sources, same bytes");
   assert.deepEqual(readdirSync(join(DEPLOY, "dist")), ["recorder.mjs"]);
   const text = bundle.toString("utf8");
-  const user = userInfo().username;
+  const user = personalAccountName() ?? "";
   assert.equal(/\/Users\/|\/home\/[a-z]|\/private\//.test(text), false);
   assert.equal(homedir().length > 4 && text.includes(homedir()), false);
   assert.equal(user.length >= 4 && text.toLowerCase().includes(user.toLowerCase()), false);

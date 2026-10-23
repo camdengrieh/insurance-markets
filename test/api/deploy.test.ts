@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { homedir, tmpdir, userInfo } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 import { API_READER_VENUES } from "../../api/markets.js";
+import { personalAccountName } from "../../pm/test/account.js";
 
 // deploy/api follows deploy/recorder and deploy/linker (pm/test/linker/deploy.test.ts is the pattern): the folder keeps
 // its promises, holds no personal identifier, machine path or secret, and the bundle builds deterministically as one
@@ -55,7 +56,7 @@ test("the deploy folder mirrors the recorder's and the Dockerfile keeps its prom
 test("deploy and api files contain no personal identifiers, machine paths, secrets or placeholder ids", () => {
   const bad: string[] = [];
   const home = homedir();
-  const user = userInfo().username;
+  const user = personalAccountName() ?? "";
   for (const f of [...sources(DEPLOY), ...sources(join(REPO, "api"))]) {
     const text = readFileSync(f, "utf8");
     const rel = relative(REPO, f);
@@ -82,7 +83,7 @@ test("the bundle builds deterministically as one file with no secrets, machine p
   assert.equal(run(), a, "same sources, same bytes");
   assert.deepEqual(readdirSync(join(DEPLOY, "dist")), ["api.mjs"]);
   const text = bundle.toString("utf8");
-  const user = userInfo().username;
+  const user = personalAccountName() ?? "";
   assert.equal(/\/Users\/|\/home\/[a-z]|\/private\//.test(text), false);
   assert.equal(homedir().length > 4 && text.includes(homedir()), false);
   assert.equal(user.length >= 4 && text.toLowerCase().includes(user.toLowerCase()), false);

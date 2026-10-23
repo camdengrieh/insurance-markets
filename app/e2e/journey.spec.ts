@@ -30,7 +30,8 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   // The hero band carries the one h1 and computed facts, never sample counts.
   await expect(page.locator("h1")).toHaveText(HERO_H1);
   await expect(page.locator(".ui-hero-facts")).toContainText("no address watched");
-  await expect(page.locator(".ui-hero-facts")).toContainText("no link dataset in this build");
+  // Before the linker's first pull request lands the build has no dataset; after it, counts of approved and proposed links.
+  await expect(page.locator(".ui-hero-facts")).toContainText(/no link dataset in this build|\d+ approved · \d+ proposed, not approved/);
   await expect(page.locator(".ui-hero-facts")).toContainText("licence first");
 
   // The venue panel, folded under the table: XO read; the rest of this build's venues are down in the test world and say so, not "empty".

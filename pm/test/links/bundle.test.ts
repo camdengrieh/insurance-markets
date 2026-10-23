@@ -7,7 +7,9 @@ import { buildBundle, serializeBundle, validateBundle, type Bundle } from "../..
 import { canonicalSha256 } from "../../links/canonical.js";
 import { loadShippedBundle } from "../../links/shipped.js";
 import { SHIPPED_BUNDLE_JSON, SHIPPED_BUNDLE_PIN } from "../../links/shipped-data.js";
-import { emptyRegistry } from "../../links/store.js";
+import { emptyRegistry, parseRegistry } from "../../links/store.js";
+import { isAutomationHandle } from "../../links/invariants.js";
+import { SYNTHETIC_PREFIX } from "../../links/schema.js";
 import { sampleRegistry } from "./fixtures.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -173,47 +175,55 @@ test("an empty registry makes a valid empty, non-synthetic bundle", () => {
   }
 });
 
-test("shipped bundle: EMPTY approved set, pinned, loads, matches the files on disk", () => {
+// The shipped bundle holds what the scheduled linker proposed from public market data (candidates, reviewed
+// by pull request) and what a person approved; never a synthetic fixture, and never an approval by automation.
+test("shipped bundle: real ids only, approvals by a person only, pinned, loads, matches the files on disk", () => {
   const loaded = loadShippedBundle();
   assert.equal(loaded.ok, true, loaded.ok ? "" : loaded.errors.join("; "));
   if (!loaded.ok) return;
-  assert.equal(loaded.value.manifest.counts.approved, 0);
-  assert.equal(loaded.value.manifest.counts.candidate, 0);
-  assert.equal(loaded.value.links.length, 0);
   assert.equal(loaded.value.manifest.synthetic, false);
+  for (const link of loaded.value.links) {
+    assert.equal(link.synthetic, false, link.linkId);
+    assert.equal(link.legs.some((l) => l.marketId.startsWith(SYNTHETIC_PREFIX)), false, link.linkId);
+    for (const a of link.approvals) assert.equal(isAutomationHandle(a.reviewer), false, `${link.linkId} approved by automation`);
+  }
+  assert.equal(loaded.value.manifest.counts.approved, loaded.value.links.filter((l) => l.state === "approved").length);
   assert.equal(loaded.value.manifestSha256, SHIPPED_BUNDLE_PIN);
   assert.equal(readFileSync(join(DATA, "links.bundle.json"), "utf8"), SHIPPED_BUNDLE_JSON);
   assert.equal(readFileSync(join(DATA, "links.bundle.pin"), "utf8").trim(), SHIPPED_BUNDLE_PIN);
 });
 
-test("no invented data ships: the raw shipped bundle lists no link, no manifest entry and no entity table", () => {
-  const raw = JSON.parse(SHIPPED_BUNDLE_JSON) as { links: unknown[]; manifest: { entries: unknown[]; entityTableSha256: unknown; counts: Record<string, number> } };
-  assert.deepEqual(raw.links, []);
-  assert.deepEqual(raw.manifest.entries, []);
-  assert.equal(raw.manifest.entityTableSha256, null);
-  assert.deepEqual(Object.values(raw.manifest.counts), [0, 0, 0, 0]);
+test("no invented data ships: the raw shipped bundle and the file on disk carry the same links, none synthetic", () => {
+  const raw = JSON.parse(SHIPPED_BUNDLE_JSON) as { links: { linkId: string; synthetic: boolean }[]; manifest: { synthetic: boolean } };
+  assert.equal(raw.manifest.synthetic, false);
+  assert.equal(raw.links.some((l) => l.synthetic), false);
   // The generated constant and the file on disk are the same, so neither can carry a link the other lacks.
-  const onDisk = JSON.parse(readFileSync(join(DATA, "links.bundle.json"), "utf8")) as { links: unknown[] };
-  assert.deepEqual(onDisk.links, []);
-  // The check has teeth: a bundle with one link is not empty.
-  const withLink = built();
-  assert.ok(withLink.links.length > 0);
+  const onDisk = JSON.parse(readFileSync(join(DATA, "links.bundle.json"), "utf8")) as { links: { linkId: string }[] };
+  assert.deepEqual(onDisk.links.map((l) => l.linkId), raw.links.map((l) => l.linkId));
+  // The check has teeth: the fixture bundle is synthetic, and the shipped loader refuses it.
+  const fixture = built();
+  assert.equal(fixture.manifest.synthetic, true);
+  assert.equal(loadShippedBundle({ json: serializeBundle(fixture), pin: fixture.manifestSha256 }).ok, false);
 });
 
-test("the working registry shipped in the repo is empty", () => {
-  const reg = JSON.parse(readFileSync(join(DATA, "registry.json"), "utf8")) as { links: unknown[]; events: unknown[] };
-  assert.equal(reg.links.length, 0);
-  assert.equal(reg.events.length, 0);
+test("the working registry in the repo parses, and holds no synthetic link and no approval by automation", () => {
+  const reg = parseRegistry(JSON.parse(readFileSync(join(DATA, "registry.json"), "utf8")));
+  assert.equal(reg.ok, true, reg.ok ? "" : reg.errors.join("; "));
+  if (!reg.ok) return;
+  for (const link of reg.value.links) {
+    assert.equal(link.synthetic, false, link.linkId);
+    for (const a of link.approvals) assert.equal(isAutomationHandle(a.reviewer), false, `${link.linkId} approved by automation`);
+  }
 });
 
 test("shipped bundle with a changed byte fails its pin", () => {
-  const tampered = SHIPPED_BUNDLE_JSON.replace('"createdAt": "2026-10-20T00:00:00Z"', '"createdAt": "2026-10-21T00:00:00Z"');
+  const tampered = SHIPPED_BUNDLE_JSON.replace(/"createdAt": "[^"]+"/, '"createdAt": "1999-01-01T00:00:00Z"');
   assert.notEqual(tampered, SHIPPED_BUNDLE_JSON);
   assert.equal(validateBundle(tampered, { expectedManifestSha256: SHIPPED_BUNDLE_PIN }).ok, false);
 });
 
 test("TM-17: the shipped loader enforces the pin itself: a tampered bundle, a wrong pin and a missing pin are all refused", () => {
-  const tampered = SHIPPED_BUNDLE_JSON.replace('"createdAt": "2026-10-20T00:00:00Z"', '"createdAt": "2026-10-21T00:00:00Z"');
+  const tampered = SHIPPED_BUNDLE_JSON.replace(/"createdAt": "[^"]+"/, '"createdAt": "1999-01-01T00:00:00Z"');
   assert.notEqual(tampered, SHIPPED_BUNDLE_JSON);
   assert.equal(loadShippedBundle({ json: tampered, pin: SHIPPED_BUNDLE_PIN }).ok, false);
   assert.equal(loadShippedBundle({ json: SHIPPED_BUNDLE_JSON, pin: "0".repeat(64) }).ok, false);

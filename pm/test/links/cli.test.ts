@@ -5,9 +5,11 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { APPROVAL_ACK } from "../../links/approve.js";
 import { runCli, type CliEnv } from "../../links/cli.js";
-import { SHIPPED_BUNDLE_PIN } from "../../links/shipped-data.js";
 import { NOW, TODAY, identityCandidate, nearIdentityCandidate } from "./fixtures.js";
 import { cliGoldSet, cliPredictions } from "./goldset-fixtures.js";
+
+// Manifest hash of the empty link set exported with --created-at 2026-10-20T00:00:00Z.
+const EMPTY_SET_PIN = "ee818dee51a4f8b78ddc9f0ce605c4003dc79657ec67f21834a2077856d635bd";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -209,8 +211,10 @@ test("export --write-shipped refuses synthetic fixtures and writes the pinned tr
   const e = makeEnv();
   assert.equal(await e.run("export", "--write-shipped", "--created-at", "2026-10-20T00:00:00Z"), 0, e.err.join(""));
   assert.equal(e.lastJson().counts.approved, 0);
-  assert.equal(e.files.get("/mem/data/links.bundle.pin")?.trim(), SHIPPED_BUNDLE_PIN);
-  assert.ok(e.files.get("/mem/shipped-data.ts")?.includes(SHIPPED_BUNDLE_PIN));
+  // The empty set exported at a fixed createdAt always pins to the same manifest hash.
+  const pin = e.files.get("/mem/data/links.bundle.pin")?.trim() ?? "";
+  assert.equal(pin, EMPTY_SET_PIN);
+  assert.ok(e.files.get("/mem/shipped-data.ts")?.includes(pin));
 });
 
 test("goldset validate and eval run on a built synthetic gold set", async () => {

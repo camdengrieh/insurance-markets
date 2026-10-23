@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { Collector } from "../../recorder/collector.js";
@@ -10,6 +10,7 @@ import type { Target } from "../../recorder/types.js";
 import { seededRandom } from "../../recorder/clock.js";
 import { HOSTILE, cond, market, startWorld, tempDir, totalSeen, T0, type MarketSpec, type World } from "./helpers.js";
 import { ALL_RECORDABLE_HOSTS } from "../../recorder/allowlist.js";
+import { personalAccountName } from "../account.js";
 
 const H = 3_600_000;
 const DAY = 24 * H;
@@ -293,7 +294,7 @@ test("third-party text never reaches the database: hostile titles are not stored
     assert.equal(bytes.includes("SEND FUNDS"), false);
     // and no personal identifiers either
     assert.equal(bytes.includes(homedir()), false);
-    const name = userInfo().username;
+    const name = personalAccountName() ?? "";
     if (name.length >= 4) assert.equal(bytes.toLowerCase().includes(name.toLowerCase()), false);
   } finally {
     dir.remove();
