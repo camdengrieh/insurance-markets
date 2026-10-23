@@ -9,6 +9,7 @@ import { BROWSER_DIRECT_ORIGINS, DAEMON_ONLY_ORIGINS } from "../../../headers.co
 import { SERVICE_BUDGETS } from "../../core/budget";
 import type { Env } from "../../core/env";
 import { FakeRaw, FakeTimers, rawResponse } from "../../core/fakes";
+import { MARKETS_API_ORIGIN } from "../../core/markets-api";
 import { act, allText, cleanup, must } from "../../ui/testing/dom";
 import { recorded, keysetEnvelope } from "@sdk/venues/polymarket/fixtures/load";
 import { MarketsView } from "./MarketsView";
@@ -48,7 +49,7 @@ function typeInto(input: HTMLInputElement, value: string): void {
 }
 
 describe("standalone build with the real readers", () => {
-  it("M0-4 and M0-2: reads only CORS-open hosts, never the XO book host, Limitless or Kalshi", async () => {
+  it("M0-4 and M0-2: reads only CORS-open hosts, never the XO book host, Limitless's own host or Kalshi", async () => {
     const raw = standaloneRaw();
     const services = createExplorerServices({ mode: "standalone", env: envFor(raw) });
     const { container } = await mount(<MarketsView />, services);
@@ -81,7 +82,10 @@ describe("standalone build with the real readers", () => {
     expect(allText(head)).toContain("display price, not executable");
     expect(allText(must(container, "aside.explorer-inspector"))).toContain("XO Market: needs the Cockpit");
     expect(container.querySelector('section[data-kind="needs-cockpit"][data-code="xo"]')).not.toBeNull();
-    expect(container.querySelector('section[data-kind="needs-cockpit"][data-code="limitless"]')).not.toBeNull();
+    // Limitless is read through our markets API (a CORS-open host of ours), never from its own host: no Cockpit tile.
+    expect(container.querySelector('section[data-kind="needs-cockpit"][data-code="limitless"]')).toBeNull();
+    expect(container.querySelector('li.explorer-venue[data-venue="limitless"]')).not.toBeNull();
+    expect(hostsOf(raw)).toContain(new URL(MARKETS_API_ORIGIN ?? "https://invalid").host);
     expect(container.querySelector('section[data-kind="restricted"][data-code="kalshi"]')).not.toBeNull();
 
     // The other venues answered 404: each is a typed error tile, and XO still rendered (the others do not hide it).

@@ -110,8 +110,8 @@ export function matchRelayRoute(upstreamPath: string): RouteSpec | null {
 }
 
 const HEADER_VALUE = /^[\x21-\x7e]{1,1024}$/;
-const JSON_TYPE = /^application\/json(\s*;\s*charset=utf-8)?$/i;
-const FORWARDED_TYPE = /^(?:application\/json|text\/plain)(?:\s*;\s*charset=[A-Za-z0-9_-]{1,20})?$/i;
+export const JSON_TYPE = /^application\/json(\s*;\s*charset=utf-8)?$/i;
+export const FORWARDED_TYPE = /^(?:application\/json|text\/plain)(?:\s*;\s*charset=[A-Za-z0-9_-]{1,20})?$/i;
 
 export interface RelayContext {
   readonly requestId: string;
@@ -144,9 +144,10 @@ function refusal(code: ErrorCode, message: string, headers?: Readonly<Record<str
   return { status: ERROR_STATUS[code], body: Buffer.from(JSON.stringify({ error: { code, message } }), "utf8"), contentType: "application/json; charset=utf-8", source: "refused", ...(headers === undefined ? {} : { headers }) };
 }
 
-class BodyTooLarge extends Error {}
+// Shared with the Limitless relay (limitless-relay.ts), which reads bodies and answers the same way.
+export class BodyTooLarge extends Error {}
 
-function readBody(req: IncomingMessage, max: number): Promise<Buffer> {
+export function readBody(req: IncomingMessage, max: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let total = 0;
@@ -175,7 +176,7 @@ function readBody(req: IncomingMessage, max: number): Promise<Buffer> {
   });
 }
 
-async function readCapped(response: Response, max: number): Promise<Buffer | null> {
+export async function readCapped(response: Response, max: number): Promise<Buffer | null> {
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > max) return null;
   if (response.body === null) return Buffer.alloc(0);
@@ -433,6 +434,7 @@ export function createXoRelay(options: XoRelayOptions): XoRelay {
 
   return {
     owns(path) {
+      // Everything under /v1/relay/ that the Limitless relay does not own (server.ts asks it first).
       return path === "/v1/relay" || path.startsWith("/v1/relay/");
     },
     async handle(req, res, path, context) {

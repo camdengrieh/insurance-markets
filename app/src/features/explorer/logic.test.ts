@@ -78,9 +78,12 @@ describe("venueStatusOf (M0-2)", () => {
     expect(status("gemini", "cockpit", false, withDisclosureAccepted(on, "gemini"))).toBe("no_reader");
   });
 
-  it("Limitless needs the Cockpit in the standalone build and has no reader in the Cockpit build", () => {
-    expect(status("limitless", "standalone", false)).toBe("needs_cockpit");
+  it("Limitless is read through our markets API in the standalone build, and needs the Cockpit there without one", () => {
+    expect(status("limitless", "standalone")).toBe("active");
+    expect(status("limitless", "standalone", false)).toBe("no_reader");
+    expect(venueStatusOf("limitless", DEFAULT_SWITCHES, "standalone", true, false).kind).toBe("needs_cockpit");
     expect(status("limitless", "cockpit", false)).toBe("no_reader");
+    expect(status("limitless", "standalone", true, withVenueEnabled(DEFAULT_SWITCHES, "limitless", false))).toBe("switched_off");
   });
 
   it("a read-capable venue is active; a venue switched off is not", () => {

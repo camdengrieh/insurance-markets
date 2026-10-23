@@ -81,6 +81,14 @@ describe("check-boundaries", () => {
     expect(await rules({ ...files, "app/src/features/trade/direct/xo/hmac.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/features/trade/direct/xo/hmac.ts"]);
   });
 
+  it("lets only the Limitless HMAC parity test import the Node Limitless signer", async () => {
+    const files = { "app/src/main.ts": "export const x = 1;\n", "sdk/node/trade/clob/limitless/hmac.ts": 'import { createHmac } from "node:crypto";\nexport const h = createHmac;\n' };
+    const importer = 'import { h } from "@sdk/node/trade/clob/limitless/hmac";\nexport const t = h;\n';
+    expect(await rules({ ...files, "app/src/features/trade/direct/limitless/hmac.test.ts": importer })).toEqual([]);
+    expect(await rules({ ...files, "app/src/features/trade/direct/limitless/executor.test.ts": importer })).toEqual(["forbidden-import:app/src/features/trade/direct/limitless/executor.test.ts"]);
+    expect(await rules({ ...files, "app/src/features/trade/direct/limitless/hmac.ts": importer })).toEqual(["forbidden-import:app/src/features/trade/direct/limitless/hmac.ts"]);
+  });
+
   it("lets a parity test, and only a test, import the Node Polymarket L2 signer", async () => {
     const files = { "sdk/node/trade/clob/polymarket/l2.ts": 'import { createHmac } from "node:crypto";\nexport const l2 = createHmac;\n' };
     expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/l2.test.ts": 'import { l2 } from "@sdk/node/trade/clob/polymarket/l2";\nexport const t = l2;\n' })).toEqual([]);

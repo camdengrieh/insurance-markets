@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 import { createPinGuard } from "@sdk/chain/pins";
+import { BASE_CHAIN_ID } from "@sdk/chain/limitless/constants";
 import { POLYGON_CHAIN_ID } from "@sdk/chain/polymarket/constants";
 import { createRpcPort, rpcPostFromFetch } from "@sdk/chain/rpc";
 
@@ -15,9 +16,10 @@ import type { ChainSession, DirectDeps } from "./types";
 // fake clock and an in-memory store. The page's own record is made on first use: nothing here runs at import.
 //
 //   http      the browser's fetch, limited to the browser-direct venue hosts the standalone CSP lists (never an RPC,
-//             never a daemon-only host); each executor names its own origin within that list;
-//   chain     the public JSON-RPC the CSP lists for the chain, through the page's guarded read port (eth_call,
-//             eth_getCode and eth_getStorageAt only), with a pin guard;
+//             never a daemon-only host); each executor names its own origin within that list (Limitless's is our
+//             markets API, whose relay reaches the venue);
+//   chain     the public JSON-RPC the CSP lists for the chain (Polygon for Polymarket, Base for Limitless), through the
+//             page's guarded read port (eth_call, eth_getCode and eth_getStorageAt only), with a pin guard;
 //   store     this tab's sessionStorage (credentials.ts), never localStorage;
 //   random    the browser's cryptographic random source.
 
@@ -59,7 +61,7 @@ export function createBrowserDirectDeps(): DirectDeps {
     http: createVenueHttp({ fetch: browserFetch, origins: BROWSER_DIRECT_ORIGINS.filter((entry) => entry.transport === "T0").map((entry) => entry.origin) }),
     chain: (chainId) => {
       if (sessions.has(chainId)) return sessions.get(chainId) ?? null;
-      const service = chainId === POLYGON_CHAIN_ID ? "rpc_polygon" : null;
+      const service = chainId === POLYGON_CHAIN_ID ? "rpc_polygon" : chainId === BASE_CHAIN_ID ? "rpc_base" : null;
       const row = service === null ? undefined : BROWSER_DIRECT_ORIGINS.find((entry) => entry.service === service && entry.transport === "T0-RPC");
       let session: ChainSession | null = null;
       if (row !== undefined) {

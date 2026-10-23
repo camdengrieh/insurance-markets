@@ -38,7 +38,7 @@ const ALL = files();
 describe("the direct path's source", () => {
   it("scans the files it should", () => {
     const names = ALL.map((file) => file.name);
-    for (const expected of ["index.ts", "types.ts", "http.ts", "credentials.ts", "services.tsx", "DirectClobTicket.tsx", "DirectCard.tsx", "polymarket/executor.ts", "polymarket/l2.ts", "polymarket/api.ts"]) expect(names).toContain(expected);
+    for (const expected of ["index.ts", "types.ts", "http.ts", "credentials.ts", "services.tsx", "DirectClobTicket.tsx", "DirectCard.tsx", "polymarket/executor.ts", "polymarket/l2.ts", "polymarket/api.ts", "limitless/executor.ts", "limitless/hmac.ts", "limitless/relay.ts", "limitless/token.ts", "limitless/LimitlessTicket.tsx"]) expect(names).toContain(expected);
   });
 
   it("names the browser's fetch and sessionStorage in services.tsx only, and never another store", () => {

@@ -16,7 +16,8 @@ import { XO_RPC_URL } from "../sdk/chain/xo/pins.js";
 //   - which venues are read is code (api/markets.ts, every SDK reader that needs no key), never configuration;
 //   - metering (step 9) has NO defaults for money: the payTo address and every price must be named, or the paid endpoints
 //     answer "payments_not_configured"; route prepare is off unless the operator turns it on (API_ROUTE_PREPARE);
-//   - the XO order relay (xo-relay.ts) is off unless the operator turns it on (API_XO_RELAY=on).
+//   - the XO order relay (xo-relay.ts) is off unless the operator turns it on (API_XO_RELAY=on), and so is the
+//     Limitless order relay (limitless-relay.ts, API_LIMITLESS_RELAY=on).
 
 export const API_VERSION = "0.1.0";
 export const DEFAULT_API_PORT = 8790;
@@ -40,6 +41,7 @@ export const API_ENV = Object.freeze({
   candidatesPin: "API_CANDIDATES_PIN",
   routePrepare: "API_ROUTE_PREPARE",
   xoRelay: "API_XO_RELAY",
+  limitlessRelay: "API_LIMITLESS_RELAY",
   publicUrl: "API_PUBLIC_URL",
   facilitatorUrl: "API_X402_FACILITATOR_URL",
   payTo: "API_X402_PAY_TO",
@@ -113,7 +115,8 @@ export interface ApiHttpLimits {
   readonly markets: RateLimitSpec;
   readonly reads: RateLimitSpec;
   readonly paid: RateLimitSpec;
-  // Per client address, every /v1/relay/ route together (xo-relay.ts).
+  // Per client address, every /v1/relay/xo/ route together (xo-relay.ts); the Limitless relay keeps its own bucket of the
+  // same size (limitless-relay.ts).
   readonly relay: RateLimitSpec;
   // How long the facilitator's /verify and /settle may take.
   readonly facilitatorTimeoutMs: number;
@@ -157,6 +160,8 @@ export interface ApiConfig {
   readonly routePrepare: RoutePrepareMode;
   // The XO order relay (xo-relay.ts): off unless API_XO_RELAY is on.
   readonly xoRelay: boolean;
+  // The Limitless order relay (limitless-relay.ts): off unless API_LIMITLESS_RELAY is on.
+  readonly limitlessRelay: boolean;
   // Null when no payment variable is set: the paid endpoints then answer payments_not_configured (a key still works).
   readonly payments: PaymentsConfig | null;
   readonly limits: ApiHttpLimits;
@@ -438,13 +443,16 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
     if ((ROUTE_PREPARE_MODES as readonly string[]).includes(rawRoute)) routePrepare = rawRoute as RoutePrepareMode;
     else fatal(API_ENV.routePrepare, "API_ROUTE_PREPARE must be off, free or paid.");
   }
-  let xoRelay = false;
-  const rawRelay = read(env, API_ENV.xoRelay);
-  if (rawRelay !== undefined) {
-    const word = rawRelay.toLowerCase();
-    if (TRUTHY.has(word)) xoRelay = true;
-    else if (!FALSY.has(word)) fatal(API_ENV.xoRelay, "API_XO_RELAY must be on or off.");
-  }
+  const onOff = (variable: string): boolean => {
+    const raw = read(env, variable);
+    if (raw === undefined) return false;
+    const word = raw.toLowerCase();
+    if (TRUTHY.has(word)) return true;
+    if (!FALSY.has(word)) fatal(variable, `${variable} must be on or off.`);
+    return false;
+  };
+  const xoRelay = onOff(API_ENV.xoRelay);
+  const limitlessRelay = onOff(API_ENV.limitlessRelay);
   const payments = loadPayments(env, fatal);
 
   const config: ApiConfig = Object.freeze({
@@ -460,6 +468,7 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
     candidates: pair(API_ENV.candidatesBundle, API_ENV.candidatesPin),
     routePrepare,
     xoRelay,
+    limitlessRelay,
     payments,
     limits: API_LIMITS,
   });
@@ -493,6 +502,7 @@ export function describeConfig(config: ApiConfig): string[] {
     `limits: markets ${config.limits.markets.capacity} burst, ${config.limits.markets.refillPerSecond * 60}/min; other reads ${config.limits.reads.capacity} burst, ${config.limits.reads.refillPerSecond * 60}/min per client`,
     `route prepare: ${config.routePrepare}`,
     `xo relay: ${config.xoRelay ? `on (${config.limits.relay.capacity} burst, ${config.limits.relay.refillPerSecond * 60}/min per client)` : "off"}`,
+    `limitless relay: ${config.limitlessRelay ? `on (${config.limits.relay.capacity} burst, ${config.limits.relay.refillPerSecond * 60}/min per client)` : "off"}`,
     `payments: ${
       config.payments === null
         ? "not configured (paid endpoints answer payments_not_configured unless a key is sent)"

@@ -4,7 +4,7 @@ The hosted API of `docs/sdk-and-api-design.md` section 4: the free read endpoint
 section 9), and the paid quote and route prepare endpoints with their metering: subscription keys and x402 (step 9).
 Built only from `sdk/` and its own code (no import from `pm/`, `src/`, `relay/`, `app/` or `bridge/`). It is an optional
 accelerator: `sdk/` stays runnable by anyone with no service of ours, and local mode never depends on it. It holds no
-wallet, no signer, no venue credential and no private key, and it submits nothing of its own (the XO relay below forwards
+wallet, no signer, no venue credential and no private key, and it submits nothing of its own (the XO and Limitless relays below forward
 requests a visitor's browser signed). The container and its run and environment table are in `deploy/api/README.md`.
 
 | File | Contents |
@@ -25,6 +25,7 @@ requests a visitor's browser signed). The container and its run and environment 
 | `groups.ts` | approved links and linker candidates from the hash-pinned link bundles; candidates always "proposed" with their band |
 | `upstream.ts` | the one outbound fetch: User-Agent `insurance-markets-api/0.1`, no Origin, cookie or credential, no redirect, a size cap and a deadline |
 | `xo-relay.ts` | the XO order relay under `/v1/relay/xo/clob/` and the bundler route `/v1/relay/xo/bundler` (off unless `API_XO_RELAY=on`): the route and JSON-RPC method allowlists, the forwarded XO headers, the 64 KiB body cap, its own CORS rule and per-client limit; it forwards what the visitor's browser signed and holds nothing |
+| `limitless-relay.ts` | the Limitless order relay under `/v1/relay/limitless/` (off unless `API_LIMITLESS_RELAY=on`): five allowlisted routes, the three `lmts-*` token headers, the query forwarded exactly, the XO relay's body cap, CORS rule and limit size (its own bucket); it forwards what the visitor's browser signed and holds nothing |
 | `store.ts` | `IndexStore`, the storage seam, and `SqliteIndexStore` over `node:sqlite` |
 | `indexer/chains.ts` | what is indexed per chain: the pinned exchanges (OrderFilled), Conditional Tokens (ConditionResolution, ConditionPreparation) and Polymarket's Protocol V2 modules (ConditionResolved) |
 | `indexer/indexer.ts` | one chain's indexer: pin checks, confirmation depth, reorg check and rewind, bounded adaptive ranges |
@@ -113,6 +114,41 @@ with the order-book routes) and the logs (method, route, status, time; never a b
 an `eth_sendUserOperation` that times out answers `upstream_timeout` saying the operation may or may not have been
 accepted, and the dApp looks it up by its hash instead of sending it again. The preflight grants `POST` and
 `content-type` only.
+
+## The Limitless order relay (`/v1/relay/limitless/...`)
+
+Limitless (`https://api.limitless.exchange`, Base 8453) sends no CORS headers for the dApp's origin either (measured
+2026-10-23: `OPTIONS /orders` answers 404 with no `access-control-allow-*`; `GET /markets/active` answers 200 without
+`access-control-allow-origin`), so a browser cannot read it. The relay lets the dApp
+(`app/src/features/trade/direct/limitless/`) trade with the visitor's own wallet and the visitor's own Limitless API
+token: the visitor creates a scoped token (`trading` scope) in Limitless's own app and pastes it into the page, which keeps
+it in that tab only and signs every request with it there (the three `lmts-*` headers, HMAC-SHA256 over timestamp,
+method, path with query and body); the wallet signs each order (EIP-712, an EOA order, signature type 0). The relay
+forwards the signed request unchanged. It holds no key, no token and no signer, and stores nothing about a request or an
+answer. Off by default: `API_LIMITLESS_RELAY=on` (`limitless-relay.ts`, `test/api/limitless-relay.test.ts`).
+
+| Relay route | Forwarded to `https://api.limitless.exchange` | Headers forwarded |
+|---|---|---|
+| `GET /v1/relay/limitless/markets/<slug>` | `GET /markets/<slug>`: the market record an order is built from (`venue.exchange`, the outcome tokens, `tradeType`, the fee flags), which `/v1/markets/limitless/:id` does not serve | none |
+| `GET /v1/relay/limitless/profiles/me` | `GET /profiles/me`: the token's own profile (its `id` is the order's `ownerId`; its account, trade wallet mode and effective fee rate) | `lmts-api-key`, `lmts-timestamp`, `lmts-signature` |
+| `POST /v1/relay/limitless/orders` | `POST /orders` (place) | the three `lmts-*` and `content-type` |
+| `DELETE /v1/relay/limitless/orders/<uuid>` | `DELETE /orders/<uuid>` (cancel) | the three `lmts-*` |
+| `GET /v1/relay/limitless/markets/<slug>/user-orders[?limit=1..200]` | `GET /markets/<slug>/user-orders` (the token's orders on one market, LIVE by default) | the three `lmts-*` |
+
+The book is not relayed: the dApp reads it from `GET /v1/markets/limitless/:id`. A slug is the SDK reader's form (no
+slash, no leading dot) and never one of the venue's listing words (`active`, `search`, `categories`, `timeline`,
+`stable`); an order id is a UUID. Anything else is 404 or 405 before anything is sent. The path must be sent exactly as
+matched (no dot segment, escape or trailing slash), and the one query a route takes is forwarded byte for byte, because
+the HMAC covers the path with its query. A signed route without all three `lmts-*` headers, or with one of the wrong form
+(the token id printable ASCII, the timestamp ISO-8601 UTC, the signature 44 base64 characters), is 400 before sending;
+a public read sends none of them upstream. Cookies, `Authorization`, the legacy `X-API-Key`, the viewer's `Origin` and
+every other header stay at the relay. Bodies: `POST /orders` only, a JSON object of at most 65,536 bytes, forwarded byte
+for byte; any other route with a body is 413. The answer is Limitless's status and body with only its content-type, plus
+`x-limitless-relay: upstream`; the relay's own refusals carry `x-limitless-relay: refused` and the same JSON errors as
+the XO relay. Limitless gets 10 s; nothing is retried, and a `POST /orders` or a `DELETE` that times out says it may or
+may not have taken effect. CORS and preflight caching are the XO relay's (the dApp and the dev servers only); the
+per-client limit is the same size (30 at once, then 60 a minute) in a bucket of its own. Logs: method, route label,
+status and time; never a header value, a slug, a query or a body.
 
 ## Paid endpoints (the contract)
 

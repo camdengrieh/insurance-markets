@@ -6,7 +6,9 @@
 //                                              order for the wallet itself. All three sign and send nothing;
 //   Polymarket, standalone                     the direct ticket (features/trade/direct): the visitor's own connected
 //                                              wallet signs, and the page sends the order to the venue itself;
-//   XO and Limitless, standalone               the caution tile: preparing needs the Cockpit;
+//   XO and Limitless, standalone               the wallet tickets (features/trade/direct/xo and /limitless): the
+//                                              visitor's own wallet signs, and the page sends the order through our
+//                                              markets API's relay, because neither venue sends CORS headers for it;
 //   every other venue                          a WORKSHEET: it sizes a limit order against the book and the caps with
 //                                              exact arithmetic, prepares nothing and links nowhere. One honest sentence
 //                                              says why this build has no path to that venue; the venue's own site is

@@ -1,7 +1,8 @@
 // The seven readers of this release behind one small interface the Markets screen uses (docs/dapp-design.md 7.2 M0).
 //
 // Each reader takes the page's injected `deps` (fetch and clock) and builds absolute upstream URLs; the same code runs
-// in the standalone build (direct to CORS-open hosts) and the Cockpit build (through the daemon's read proxy). This
+// in the standalone build (direct to CORS-open hosts) and the Cockpit build (through the daemon's read proxy). The one
+// exception is Limitless in the standalone build, read through our markets API (core/markets-api-limitless.ts). This
 // file only adapts their differently shaped extras (skipped-row counts, XO settlement, shape status) to one record.
 
 import { createLimitlessAdapter } from "@sdk/venues/limitless";
@@ -11,6 +12,8 @@ import { createPascalAdapter } from "@sdk/venues/pascal";
 import { createPolymarketAdapter } from "@sdk/venues/polymarket";
 import { createTrueoAdapter } from "@sdk/venues/trueo";
 import { createXoAdapter, xoBookAvailability, XO_FEE_STATUS, xoVariantForMode } from "@sdk/venues/xo";
+import { MARKETS_API_ORIGIN } from "../../core/markets-api";
+import { createMarketsApiLimitlessAdapter } from "../../core/markets-api-limitless";
 import type { AdapterDeps, ListMarketsQuery, Market, MarketRef, MarketSummary, Page, VenueId, VenueReadAdapter } from "../../core/ports";
 import type { AppMode } from "../../ui";
 
@@ -61,7 +64,14 @@ export interface ExplorerAdapter {
 
 const NO_FEE = null;
 
-export function createExplorerAdapters(deps: AdapterDeps, mode: AppMode): Partial<Record<VenueId, ExplorerAdapter>> {
+// Venues the standalone build reads through our markets API (core/markets-api-limitless.ts) because the venue sends no
+// CORS headers for this page: the Cockpit build reads them through the daemon instead. Empty when the build names no
+// markets API.
+export function readsViaMarketsApi(venue: VenueId, origin: string | null = MARKETS_API_ORIGIN): boolean {
+  return origin !== null && venue === "limitless";
+}
+
+export function createExplorerAdapters(deps: AdapterDeps, mode: AppMode, marketsApiOrigin: string | null = MARKETS_API_ORIGIN): Partial<Record<VenueId, ExplorerAdapter>> {
   const transport = mode === "cockpit" ? ("T1" as const) : ("T0" as const);
 
   const xo = createXoAdapter(deps, { variant: xoVariantForMode(mode) });
@@ -70,9 +80,11 @@ export function createExplorerAdapters(deps: AdapterDeps, mode: AppMode): Partia
   const hyperliquid = createHyperliquidAdapter(deps);
   const pascal = createPascalAdapter(deps, { transport });
   const manifold = createManifoldAdapter(deps);
-  // Daemon-fetch only: in the standalone build every call is refused before a request ("needs the Cockpit"); the
-  // screen never calls it there because the venue state says so first.
-  const limitless = createLimitlessAdapter(deps, { build: mode === "cockpit" ? "cockpit" : "standalone" });
+  // The Cockpit build reads Limitless through the daemon. The standalone build reads it through our markets API, which
+  // runs the same SDK reader on its server; without a markets API in the build the SDK reader stays, and refuses every
+  // call before a request ("needs the Cockpit"): the screen never calls it there because the venue state says so first.
+  const viaApi = mode !== "cockpit" && readsViaMarketsApi("limitless", marketsApiOrigin) && marketsApiOrigin !== null;
+  const limitless = viaApi ? createMarketsApiLimitlessAdapter(deps, marketsApiOrigin) : createLimitlessAdapter(deps, { build: mode === "cockpit" ? "cockpit" : "standalone" });
 
   const duration = (_nowMs: number, budgetMs: number): number => budgetMs;
   const absolute = (nowMs: number, budgetMs: number): number => nowMs + budgetMs;
@@ -178,7 +190,7 @@ export function createExplorerAdapters(deps: AdapterDeps, mode: AppMode): Partia
     {
       id: "limitless",
       adapter: limitless,
-      books: mode === "cockpit" ? { state: "available" } : { state: "needs_cockpit", what: "Limitless markets and order books" },
+      books: mode === "cockpit" || viaApi ? { state: "available" } : { state: "needs_cockpit", what: "Limitless markets and order books" },
       async list(q) {
         const page = await limitless.listMarkets(q);
         return { page, refused: limitless.lastReadReport().dropped, truncated: false };

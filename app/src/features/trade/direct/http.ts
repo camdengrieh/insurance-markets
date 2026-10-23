@@ -10,11 +10,16 @@ export interface VenueRequest {
   readonly headers?: Readonly<Record<string, string>>;
   // The exact bytes the venue receives (and the venue's request signature covers).
   readonly body?: string;
+  // A response header to read back: a relay's marker (x-limitless-relay) that says whether the venue answered or the
+  // relay refused. Nothing else of the answer's headers reaches the caller.
+  readonly marker?: string;
 }
 
 export interface VenueResponse {
   readonly status: number;
   readonly text: string;
+  // The marker header's value when the request named one (null when the answer carried none).
+  readonly marker?: string | null;
 }
 
 export type VenueHttp = (request: VenueRequest) => Promise<VenueResponse>;
@@ -81,7 +86,7 @@ export function createVenueHttp(options: VenueHttpOptions): VenueHttp {
       if (Number.isFinite(declared) && declared > maxBytes) throw new VenueHttpError("too_large", "the venue's answer is larger than this page reads");
       const text = await response.text();
       if (text.length > maxBytes) throw new VenueHttpError("too_large", "the venue's answer is larger than this page reads");
-      return { status: response.status, text };
+      return request.marker === undefined ? { status: response.status, text } : { status: response.status, text, marker: response.headers.get(request.marker) };
     } catch (error) {
       if (error instanceof VenueHttpError) throw error;
       if (controller.signal.aborted) throw new VenueHttpError("timeout", "the venue did not answer in time");

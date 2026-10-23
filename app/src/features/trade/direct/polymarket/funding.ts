@@ -89,14 +89,16 @@ export async function readPolymarketFunding(chain: ChainSession | null, account:
 }
 
 // What stops an order of this side and size, read from the funding: fixed words, or null when nothing does. A value
-// the chain did not give is a stop too (never assumed to be enough).
+// the chain did not give is a stop too (never assumed to be enough). Shared with Limitless (limitless/funding.ts): the
+// collateral is named by the funding's own symbol.
 export function fundingStop(funding: DirectFunding, side: "BUY" | "SELL", makerAmount: bigint): string | null {
   if (side === "BUY") {
+    const symbol = funding.collateralSymbol;
     const approval = funding.approvals.find((entry) => entry.id === "collateral");
-    if (funding.collateralBalance === null) return "Your pUSD balance could not be read, so the order is not signed. Read again.";
-    if (funding.collateralBalance < makerAmount) return `The maker holds ${atomicText(funding.collateralBalance, funding.collateralDecimals)} pUSD; this order needs ${atomicText(makerAmount, funding.collateralDecimals)}.`;
-    if (approval?.allowance === null || approval?.allowance === undefined) return "Your pUSD allowance could not be read, so the order is not signed. Read again.";
-    if (approval.allowance < makerAmount) return `The exchange may spend ${atomicText(approval.allowance, funding.collateralDecimals)} pUSD of the maker's; this order needs ${atomicText(makerAmount, funding.collateralDecimals)}. Approve first.`;
+    if (funding.collateralBalance === null) return `Your ${symbol} balance could not be read, so the order is not signed. Read again.`;
+    if (funding.collateralBalance < makerAmount) return `The maker holds ${atomicText(funding.collateralBalance, funding.collateralDecimals)} ${symbol}; this order needs ${atomicText(makerAmount, funding.collateralDecimals)}.`;
+    if (approval?.allowance === null || approval?.allowance === undefined) return `Your ${symbol} allowance could not be read, so the order is not signed. Read again.`;
+    if (approval.allowance < makerAmount) return `The exchange may spend ${atomicText(approval.allowance, funding.collateralDecimals)} ${symbol} of the maker's; this order needs ${atomicText(makerAmount, funding.collateralDecimals)}. Approve first.`;
     return null;
   }
   const approval = funding.approvals.find((entry) => entry.id === "positions");

@@ -1,7 +1,9 @@
 // The direct path: the visitor's own wallet signs, and the page sends the signed item to the venue itself, from the
-// visitor's browser, with the visitor's own venue credential. No daemon, no relay and no server of the author's is in
-// the way: the author holds no key, no credential and sees no request. It exists only in the standalone build (the
-// Cockpit build keeps every write behind the local daemon, and its CSP lets the page reach nothing but 'self').
+// visitor's browser, with the visitor's own venue credential. No daemon and no server of the author's holds a key or a
+// credential: for Polymarket nothing of the author's is in the way at all; for a venue that sends no CORS headers for
+// the page (Limitless) the signed request passes through our markets API's relay, which forwards it unchanged and keeps
+// nothing. It exists only in the standalone build (the Cockpit build keeps every write behind the local daemon, and its
+// CSP lets the page reach nothing but 'self').
 //
 // One executor per venue, behind the small interface below, so the trade desk asks every venue the same questions:
 //   ready        can this wallet trade here, and as which account (read from the chain, never assumed);
