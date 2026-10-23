@@ -2,7 +2,8 @@ import { concat, hashDomain, hashStruct, hashTypedData, size, stringToHex, type 
 
 import { SigningError } from "../../xo/errors.js";
 import { assertUint, normalizeAddress, normalizeBytes } from "../../xo/validate.js";
-import { CLOB_CHAIN_IDS, POLYMARKET_EXCHANGES, POLYMARKET_ORDER_DOMAIN_NAME, POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET, POLYMARKET_SIGNATURE_TYPE_EOA, type PolymarketBook } from "../venues.js";
+import { safeAddress } from "../../../chain/polymarket/wallets.js";
+import { CLOB_CHAIN_IDS, POLYMARKET_EXCHANGES, POLYMARKET_ORDER_DOMAIN_NAME, POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET, POLYMARKET_SIGNATURE_TYPE_EOA, POLYMARKET_SIGNATURE_TYPE_SAFE, type PolymarketBook } from "../venues.js";
 import { DEPOSIT_WALLET_DOMAIN_NAME, DEPOSIT_WALLET_DOMAIN_VERSION } from "./deposit-wallet.js";
 
 // The Polymarket CLOB order (Protocol V2 and the CTF books), as docs.polymarket.com/trading/place-orders.md defines it
@@ -11,8 +12,11 @@ import { DEPOSIT_WALLET_DOMAIN_NAME, DEPOSIT_WALLET_DOMAIN_VERSION } from "./dep
 // bytes32, builder bytes32". Eleven signed fields; `expiration` and `orderType` travel on the wire and are not signed
 // ("orderType is not part of the signed typed data"; the POST /order `order` object carries `expiration` as a string).
 //
-// Two makers are built:
+// Three makers are built:
 //   - signatureType 0 (EOA): maker = signer = the owner EOA, which signs the order's EIP-712 hash itself;
+//   - signatureType 2 (POLY_GNOSIS_SAFE, the Polymarket Safe): maker = the Safe derived from the owner
+//     (sdk/chain/polymarket/wallets.ts safeAddress), signer = the owner EOA, which signs the order's EIP-712 hash itself.
+//     Only the page's direct path builds it; the relay builds 0 and 3;
 //   - signatureType 3 (POLY_1271, the Deposit Wallet): maker = signer = the owner's Deposit Wallet
 //     (place-orders.md signature-type table: "Deposit Wallet | 3 | Deposit Wallet address | Deposit Wallet address").
 //     The owner EOA signs a Solady ERC-7739 nested EIP-712 `TypedDataSign` struct over the order, under the EXCHANGE's
@@ -92,16 +96,22 @@ export function polymarketOrderDomain(book: PolymarketBook) {
 
 // Returns a normalised copy (checksummed addresses, lower-case hex) or throws SigningError. Hashing always runs on
 // this copy. Whose wallet the maker is (the owner itself for type 0, the owner's derived Deposit Wallet for type 3) is
-// the caller's check: this function sees no owner.
+// the caller's check: this function sees no owner. A Safe order (type 2) names its owner as the signer, so the Safe is
+// derived here and the maker must be exactly it.
 export function assertPolymarketOrder(order: PolymarketOrder): PolymarketOrder {
   const signatureType = order.signatureType;
-  if (signatureType !== POLYMARKET_SIGNATURE_TYPE_EOA && signatureType !== POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET) {
-    throw new SigningError("invalid_order", "only EOA orders (signatureType 0) and Deposit Wallet orders (signatureType 3) are built here");
+  if (signatureType !== POLYMARKET_SIGNATURE_TYPE_EOA && signatureType !== POLYMARKET_SIGNATURE_TYPE_SAFE && signatureType !== POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET) {
+    throw new SigningError("invalid_order", "only EOA orders (signatureType 0), Safe orders (signatureType 2) and Deposit Wallet orders (signatureType 3) are built here");
   }
   const maker = normalizeAddress(order.maker, "order.maker");
   const signer = normalizeAddress(order.signer, "order.signer");
-  // Both kinds: the exchange checks `signer == maker` for an EOA and for a POLY_1271 order alike (Signatures.sol).
-  if (maker !== signer) throw new SigningError("invalid_order", `order.maker must equal order.signer for ${signatureType === POLYMARKET_SIGNATURE_TYPE_EOA ? "an EOA" : "a Deposit Wallet"} order`);
+  if (signatureType === POLYMARKET_SIGNATURE_TYPE_SAFE) {
+    // The exchange derives the Safe from the signer and requires it to be the maker; anything else is refused here first.
+    if (maker !== safeAddress(signer)) throw new SigningError("invalid_order", "order.maker must be the Polymarket Safe derived from order.signer for a Safe order");
+  } else if (maker !== signer) {
+    // EOA and Deposit Wallet alike: the exchange checks `signer == maker` for an EOA and for a POLY_1271 order (Signatures.sol).
+    throw new SigningError("invalid_order", `order.maker must equal order.signer for ${signatureType === POLYMARKET_SIGNATURE_TYPE_EOA ? "an EOA" : "a Deposit Wallet"} order`);
+  }
   if (order.side !== 0 && order.side !== 1) throw new SigningError("invalid_order", "order.side must be 0 (BUY) or 1 (SELL)");
   const makerAmount = assertUint(order.makerAmount, 256, "order.makerAmount");
   const takerAmount = assertUint(order.takerAmount, 256, "order.takerAmount");
@@ -223,7 +233,18 @@ export function wrapPolymarketDepositWalletSignature(innerSignature: string, ord
   return wrapDepositWalletSignatureForDomain(innerSignature, order, polymarketOrderDomain(book));
 }
 
-// What the owner's key signs for this order: the order hash itself (type 0) or its TypedDataSign wrapper (type 3).
+// The viem-shaped typed data (bigint values) the owner's wallet is asked to sign for this order: the Order itself
+// (types 0 and 2) or, for a Deposit Wallet order (type 3), the TypedDataSign struct with the order nested in
+// `contents`. It hashes to polymarketSigningDigest; the page hands it to a browser wallet as it is.
+export function polymarketOrderWalletTypedData(order: PolymarketOrder, book: PolymarketBook) {
+  const message = assertPolymarketOrder(order);
+  if (message.signatureType === POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET) {
+    return { domain: polymarketOrderDomain(book), types: POLYMARKET_TYPED_DATA_SIGN_TYPES, primaryType: "TypedDataSign" as const, message: typedDataSignMessage(message, CLOB_CHAIN_IDS.polymarket) };
+  }
+  return { domain: polymarketOrderDomain(book), types: POLYMARKET_ORDER_TYPES, primaryType: "Order" as const, message };
+}
+
+// What the owner's key signs for this order: the order hash itself (types 0 and 2) or its TypedDataSign wrapper (type 3).
 export function polymarketSigningDigest(order: PolymarketOrder, book: PolymarketBook): Hex {
   return assertPolymarketOrder(order).signatureType === POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET ? hashPolymarketDepositWalletOrder(order, book) : hashPolymarketOrder(order, book);
 }

@@ -11,8 +11,9 @@ import { REPO_DIR, SOURCE_FILE, TEST_FILE, isMain, lineOf, relPosix, report, wal
 // Zone A, the bundled code: every non-test file under app/src and everything it reaches. It may import only
 // the allowlisted shared files below. It may not import a Node module, the relay, the daemon's internals,
 // the HMAC signer or the audit writer, because the page must never hold an operator's secret or touch a file.
-// (The one credential the page does hold is the visitor's own XO API credential in the visitor's own browser,
-// features/trade/direct/xo, signed with WebCrypto in that folder; it never imports the Node signer.)
+// (The only credentials the page holds are the visitor's own venue API credentials, Polymarket and XO, derived from
+// the visitor's own wallet signature and kept in the visitor's own browser on the direct path (features/trade/direct),
+// signed with WebCrypto there; none of the Node signers is ever bundled.)
 // Zone B, the rest of app/ (tests, e2e, but not scripts/ or node_modules): free to use Node, but never
 // relay/, src/local, src/tools or the HMAC and audit modules.
 // Reverse rules: nothing in the plugin, the relay or the root tests imports app/, and the plugin graph does
@@ -42,7 +43,11 @@ const FORBIDDEN: ReadonlyArray<{ readonly pattern: RegExp; readonly reason: stri
   { pattern: /^src\/clob\/(?:polymarket\/l2|limitless\/hmac)\.ts$/, reason: "the venue request signers hold a credential; the page never does", bundledOnly: false },
   { pattern: /^src\/guardrails\/audit\.ts$/, reason: "the audit writer uses Node streams and files", bundledOnly: false },
   { pattern: /^src\/(?:plugin|local|paybox|config)\.ts$/, reason: "plugin entry points are Node-only", bundledOnly: false },
-  { pattern: /^sdk\/node\//, reason: "sdk/node holds the credentialed signers, the vault and the audit writer; the page never does", bundledOnly: false },
+  // One exception for tests only: the Node Polymarket L2 signer, which the page's WebCrypto twin
+  // (app/src/features/trade/direct/polymarket/l2.ts) is proven byte-identical against. That twin signs with the
+  // visitor's own credential in the visitor's own browser, the model polymarket.com uses; the author still holds none.
+  { pattern: /^sdk\/node\/trade\/clob\/polymarket\/l2\.ts$/, reason: "the Node L2 signer stays out of the bundle; only a parity test may import it", bundledOnly: true },
+  { pattern: /^sdk\/node\/(?!trade\/clob\/polymarket\/l2\.ts$)/, reason: "sdk/node holds the credentialed signers, the vault and the audit writer; the page never does", bundledOnly: false },
   { pattern: /^bridge\/(?!contract\.ts$)/, reason: "the daemon's internals never enter the page; only bridge/contract.ts is shared", bundledOnly: true },
 ];
 

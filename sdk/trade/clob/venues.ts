@@ -76,11 +76,18 @@ export function polymarketTickRule(tick: string): PolymarketTickRule | undefined
 
 // Signature types (trading/wallets-auth.md WalletType enum; place-orders.md "signatureType: 0 = EOA, 1 = Proxy, 2 = Safe,
 // 3 = Deposit Wallet"; Polymarket/ctf-exchange-v2 src/exchange/libraries/Structs.sol SignatureType: EOA, POLY_PROXY,
-// POLY_GNOSIS_SAFE, POLY_1271). Two are built: 0 (the owner EOA is the maker) and 3 (the owner's Deposit Wallet is the
-// maker; the owner signs an ERC-7739 TypedDataSign wrapper, sdk/trade/clob/polymarket/order.ts). Which one an owner gets is
-// read from Polygon by the relay (sdk/trade/clob/polymarket/deposit-wallet.ts, relay/clob.ts), never assumed. Proxy (1) and
-// Safe (2) accounts are not built and are refused.
+// POLY_GNOSIS_SAFE, POLY_1271). Three are built: 0 (the owner EOA is the maker), 3 (the owner's Deposit Wallet is the
+// maker; the owner signs an ERC-7739 TypedDataSign wrapper, sdk/trade/clob/polymarket/order.ts) and 2 (the owner's
+// Polymarket Safe is the maker and the owner EOA signs the order itself). Which one an owner gets is read from Polygon,
+// never assumed: the relay reads the Deposit Wallet (sdk/trade/clob/polymarket/deposit-wallet.ts, relay/clob.ts) and
+// builds 0 and 3 only; the page's direct path (app/src/features/trade/direct/polymarket) also reads the Safe
+// (sdk/chain/polymarket/wallets.ts) and builds 2. Proxy (1) accounts are not built and are refused.
 export const POLYMARKET_SIGNATURE_TYPE_EOA = 0;
+// The exchange accepts a Safe order when the signer's EIP-712 signature is over the order hash and the maker is the Safe
+// it derives from the signer (place-orders.md signature-type table: "Safe | 2 | Safe address | EOA address"). Exchange
+// V3's own getSafeWalletAddress(signer) returned sdk/chain/polymarket/wallets.ts safeAddress(signer) for the public
+// Hardhat test address on 2026-10-23 (test/clob-polymarket-order.test.ts keeps that pair).
+export const POLYMARKET_SIGNATURE_TYPE_SAFE = 2;
 export const POLYMARKET_SIGNATURE_TYPE_DEPOSIT_WALLET = 3;
 
 // Polymarket's documented geoblock (docs.polymarket.com llms-full geoblock section, read in docs/research/08 section

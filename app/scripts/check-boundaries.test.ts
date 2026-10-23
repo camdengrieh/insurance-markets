@@ -76,10 +76,15 @@ describe("check-boundaries", () => {
     };
     const parity = "app/src/features/trade/direct/xo/hmac.test.ts";
     expect(await rules({ ...files, [parity]: 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual([]);
-    expect(await rules({ ...files, [parity]: 'import { p } from "@sdk/node/trade/clob/polymarket/l2";\nexport const t = p;\n' })).toEqual([`forbidden-import:${parity}`]);
     expect(await rules({ ...files, "app/src/features/trade/direct/xo/other.test.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/features/trade/direct/xo/other.test.ts"]);
     // The page's own folder never may.
     expect(await rules({ ...files, "app/src/features/trade/direct/xo/hmac.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/features/trade/direct/xo/hmac.ts"]);
+  });
+
+  it("lets a parity test, and only a test, import the Node Polymarket L2 signer", async () => {
+    const files = { "sdk/node/trade/clob/polymarket/l2.ts": 'import { createHmac } from "node:crypto";\nexport const l2 = createHmac;\n' };
+    expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/l2.test.ts": 'import { l2 } from "@sdk/node/trade/clob/polymarket/l2";\nexport const t = l2;\n' })).toEqual([]);
+    expect(await rules({ ...files, "app/src/main.ts": 'import { l2 } from "@sdk/node/trade/clob/polymarket/l2";\nexport const x = l2;\n' })).toEqual(["forbidden-import:app/src/main.ts"]);
   });
 
   it("fails an import outside app/ that is not on the shared allowlist", async () => {
