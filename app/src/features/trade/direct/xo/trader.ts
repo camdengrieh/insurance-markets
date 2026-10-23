@@ -55,7 +55,7 @@ export function chainSupport(signer: WalletSigner): ChainSupport {
   return { ok: false, words: PAYBOX_CHAIN_WORDS };
 }
 
-function walletWords(error: unknown, doing: string): { readonly state: ActionState; readonly words: string } {
+export function walletWords(error: unknown, doing: string): { readonly state: ActionState; readonly words: string } {
   if (error instanceof WalletError) {
     if (error.code === "rejected") return { state: "declined", words: `You declined ${doing} in the wallet. Nothing was sent.` };
     if (error.code === "unsupported_chain") return { state: "refused", words: `The wallet would not switch to, or add, XO's chain (3223), so it cannot sign for XO. Nothing was sent.` };

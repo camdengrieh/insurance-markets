@@ -3,7 +3,8 @@
 //
 // The registry gets one object: `xoDirectExecutor()`. Its `availability` answers, without any request, whether this
 // build and this wallet session can trade on XO at all (and why not, in words); `Panel` is the whole XO surface
-// (readiness, login, ticket for one outcome, open orders and cancel, the Signature Card, XO's answers); `createTrader`
+// (readiness, the account setup, funding, login, ticket for one outcome, open orders and cancel, the Signature Cards,
+// XO's answers); `createTrader`
 // is the same flow without React, for a caller that renders its own.
 
 import type { WalletSigner } from "../../../../core/signer";
@@ -43,3 +44,5 @@ export function xoDirectExecutor(): XoDirectExecutor {
 
 export { XoTradePanel, NOT_AVAILABLE_TEXT, type XoTradePanelProps };
 export { XoTrader, chainSupport, PAYBOX_CHAIN_WORDS, type ActionResult, type VenueAnswer, type XoTraderOptions } from "./trader";
+// The account setup (deploy and enable trading, one user operation the wallet signs) without React.
+export { XoAccountSetup, RAW_SIGNING_WORDS, type AllowanceChoice, type XoSetupOptions } from "./setup";

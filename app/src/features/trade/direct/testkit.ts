@@ -34,7 +34,7 @@ export function fakeSigner(account: LocalAccount, options: FakeSignerOptions = {
   const transactions: TransactionRequest[] = [];
   const switches: number[] = [];
   let chain = 1;
-  const capabilities: WalletCapabilities = { sendTransaction: options.txHash !== undefined, chains: "any", ...options.capabilities };
+  const capabilities: WalletCapabilities = { sendTransaction: options.txHash !== undefined, rawMessage: true, chains: "any", ...options.capabilities };
   return {
     kind: "injected",
     name: options.name ?? "Test wallet",
@@ -59,6 +59,12 @@ export function fakeSigner(account: LocalAccount, options: FakeSignerOptions = {
     signMessage: async (message) => {
       if (account.signMessage === undefined) throw new WalletError("unsupported", "no messages");
       return account.signMessage({ message });
+    },
+    signRawMessage: async (raw) => {
+      if (!capabilities.rawMessage) throw new WalletError("unsupported", "This wallet does not sign raw bytes.");
+      if ((options.signs ?? "yes") === "reject") throw new WalletError("rejected", "User rejected the request.");
+      if (account.signMessage === undefined) throw new WalletError("unsupported", "no messages");
+      return account.signMessage({ message: { raw } });
     },
     sendTransaction: async (tx) => {
       if (options.txHash === undefined || !capabilities.sendTransaction) throw new WalletError("unsupported", "This wallet does not send transactions.");

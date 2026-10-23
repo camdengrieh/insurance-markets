@@ -180,7 +180,7 @@ describe("a WalletConnect connection", () => {
     const seen = mount(environment);
     await eventually(() => expect(seen.signer?.kind).toBe("walletconnect"), act);
     expect(environment.loads).toHaveLength(1);
-    expect(seen.signer?.capabilities).toEqual({ sendTransaction: false, chains: [137, 8453] });
+    expect(seen.signer?.capabilities).toEqual({ sendTransaction: false, rawMessage: true, chains: [137, 8453] });
     cleanup();
 
     const stale = fakeSignClient();

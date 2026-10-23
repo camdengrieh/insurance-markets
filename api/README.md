@@ -24,7 +24,7 @@ requests a visitor's browser signed). The container and its run and environment 
 | `chain-fields.ts` | the index's read functions: an outcome's last trade from its fills, a market's settlement from resolution events |
 | `groups.ts` | approved links and linker candidates from the hash-pinned link bundles; candidates always "proposed" with their band |
 | `upstream.ts` | the one outbound fetch: User-Agent `insurance-markets-api/0.1`, no Origin, cookie or credential, no redirect, a size cap and a deadline |
-| `xo-relay.ts` | the XO order relay under `/v1/relay/xo/clob/` (off unless `API_XO_RELAY=on`): the route allowlist, the forwarded XO headers, the 64 KiB body cap, its own CORS rule and per-client limit; it forwards what the visitor's browser signed and holds nothing |
+| `xo-relay.ts` | the XO order relay under `/v1/relay/xo/clob/` and the bundler route `/v1/relay/xo/bundler` (off unless `API_XO_RELAY=on`): the route and JSON-RPC method allowlists, the forwarded XO headers, the 64 KiB body cap, its own CORS rule and per-client limit; it forwards what the visitor's browser signed and holds nothing |
 | `store.ts` | `IndexStore`, the storage seam, and `SqliteIndexStore` over `node:sqlite` |
 | `indexer/chains.ts` | what is indexed per chain: the pinned exchanges (OrderFilled), Conditional Tokens (ConditionResolution, ConditionPreparation) and Polymarket's Protocol V2 modules (ConditionResolved) |
 | `indexer/indexer.ts` | one chain's indexer: pin checks, confirmation depth, reorg check and rewind, bounded adaptive ranges |
@@ -58,7 +58,7 @@ requests a visitor's browser signed). The container and its run and environment 
 - **Route prepare is off by default**, the operator's switch: `API_ROUTE_PREPARE=free` serves it at no charge; `paid`
   sells it.
 
-## The XO order relay (`/v1/relay/xo/clob/...`)
+## The XO order relay (`/v1/relay/xo/clob/...`, `/v1/relay/xo/bundler`)
 
 XO's order book (`orderbooks.xo.market`) sends no CORS headers for the dApp's origin, so a browser cannot read its
 answers. The relay lets the dApp (`app/src/features/trade/direct/xo/`) trade with the visitor's own wallet: the browser
@@ -90,10 +90,29 @@ dApp's dev servers) only; any other `Origin` is refused (403) before sending; pr
 credentials mode. Limit: 30 requests at once per client, then 60 a minute (429 with `Retry-After`). Logs: method, route
 label, status and time; never a header value, a query or a body (`test/api/relay.test.ts`).
 
-Not forwarded on purpose: XO's bundler (`mainnet-bundler.xo.market`). Deploying the visitor's account and enabling
-trading is one user operation signed over its 32-byte hash, and the dApp's wallet interface signs typed data and text
-only, so the dApp cannot build that signature; a bundler route would serve no caller (`app/src/features/trade/direct/xo/
-readiness.ts`).
+### The bundler route (`POST /v1/relay/xo/bundler`)
+
+XO's ERC-4337 bundler (`https://mainnet-bundler.xo.market/`) sends no CORS headers either. The dApp sets up the
+visitor's XO account from the page (`app/src/features/trade/direct/xo/setup.ts`): it builds ONE user operation with the
+shared SDK builders (deploy through initCode when the account has no code, then Enable Trading's two approvals), the
+visitor's wallet signs its 32-byte userOpHash with `personal_sign`, and the page sends it through this route. The relay
+adds nothing to it and holds no key.
+
+| Relay route | Forwarded to | Body |
+|---|---|---|
+| `POST /v1/relay/xo/bundler` | `POST https://mainnet-bundler.xo.market/` | one JSON-RPC 2.0 request, byte for byte |
+
+Only these methods, each with the params it takes: `eth_supportedEntryPoints` (`[]`), `eth_estimateUserOperationGas`
+and `eth_sendUserOperation` (`[userOperation, EntryPoint v0.7]`; any other entry point is refused),
+`eth_getUserOperationReceipt` and `eth_getUserOperationByHash` (`[userOpHash]`). No gas-price method: fees are zero on
+XO's chain, and the server-side flow asks for none. A batch array, any other method (`eth_chainId`, `debug_bundler_*`,
+`pimlico_*`, `eth_sendRawTransaction`, ...), an extra key, an odd `id`, a query, a body that is not `application/json`
+or is over 65,536 bytes is refused (400, 415 or 413) before anything is sent. Only `user-agent`, `accept` and
+`content-type` go upstream; the answer, the CORS rule, the 10 s deadline, the size cap, the per-client limit (shared
+with the order-book routes) and the logs (method, route, status, time; never a body) are as above. Nothing is retried:
+an `eth_sendUserOperation` that times out answers `upstream_timeout` saying the operation may or may not have been
+accepted, and the dApp looks it up by its hash instead of sending it again. The preflight grants `POST` and
+`content-type` only.
 
 ## Paid endpoints (the contract)
 

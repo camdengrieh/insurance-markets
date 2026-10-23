@@ -23,7 +23,7 @@ in ECR) behind CloudFront for HTTPS (the API speaks plain HTTP), with `API_XO_RE
 | `GET /v1/groups` | approved links (approved by a person) and linker candidates, always labelled `proposed` with their score band |
 | `GET /v1/quote?group=&side=&size=&outcome=` | paid: the engine's depth-walked fill of a size on each leg of a group, after fees, best venue first, each number with its source and age |
 | `POST /v1/route/prepare` | paid, and off unless `API_ROUTE_PREPARE` is set: unsigned typed-data orders per leg with the decoded view and what the signer must check |
-| `/v1/relay/xo/clob/...` | free, and off unless `API_XO_RELAY=on`: the XO order relay, eight allowlisted order-book calls the dApp's browser signed, forwarded unchanged (`api/README.md`) |
+| `/v1/relay/xo/clob/...`, `/v1/relay/xo/bundler` | free, and off unless `API_XO_RELAY=on`: the XO order relay, eight allowlisted order-book calls the dApp's browser signed, and five allowlisted JSON-RPC methods of XO's bundler (the visitor's own account setup, one signed user operation), forwarded unchanged (`api/README.md`) |
 
 The contract of the two paid routes, the metering rules and the listing steps are in `api/README.md`.
 
@@ -71,7 +71,7 @@ Without Docker: `node deploy/api/build.mjs && API_DATA_DIR=./data node deploy/ap
 | `API_LINKS_BUNDLE`, `API_LINKS_PIN` | none | the shipped link bundle (`pm/links/data/links.bundle.json`) and its pin file |
 | `API_CANDIDATES_BUNDLE`, `API_CANDIDATES_PIN` | none | the linker's `candidates.bundle.json` and `candidates.bundle.pin` (on the AWS host, the linker's `/data/out`) |
 | `API_ROUTE_PREPARE` | `off` | `off` (the route answers `route_prepare_not_enabled`), `free` (no charge) or `paid` (a key of tier `full`, or x402) |
-| `API_XO_RELAY` | `off` | `on` serves the XO order relay under `/v1/relay/xo/clob/` (`api/README.md`); off, every relay path answers `403 relay_not_enabled` and nothing is forwarded. Its CORS origins are compiled in (the dApp and localhost dev servers), not taken from `API_CORS_ORIGINS` |
+| `API_XO_RELAY` | `off` | `on` serves the XO order relay under `/v1/relay/xo/clob/` and its bundler route `/v1/relay/xo/bundler` (`api/README.md`); off, every relay path answers `403 relay_not_enabled` and nothing is forwarded. Its CORS origins are compiled in (the dApp and localhost dev servers), not taken from `API_CORS_ORIGINS` |
 | `API_PUBLIC_URL` | none | the https origin clients reach the API at (the x402 resource URL); required once any payment variable is set |
 | `API_X402_FACILITATOR_URL` | none | the x402 facilitator's base URL (`/verify` and `/settle` are appended); https, no query or credentials; called without a credential |
 | `API_X402_PAY_TO` | none, never defaulted | the address that receives payments (20-byte hex, EIP-55 checksum if mixed case, not zero) |

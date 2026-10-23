@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Address } from "viem";
 
 import { deriveAccount } from "@sdk/trade/xo/account/derive";
+import { kernelNonce } from "@sdk/trade/xo/userop/nonce";
 
 import type { AdapterDeps } from "../../../../core/ports";
 import { SignerProvider } from "../../../wallet/connect/context";
 import { act, allText, cleanup, click, must, render, settle } from "../../../../ui/testing/dom";
 import type { XoReadiness } from "./readiness";
-import { CREDENTIAL, fakeRelay, fakeSigner, fixedRandom, memoryStorage, RELAY_ORIGIN, TOKEN_ID, type FakeSigner } from "./testkit";
+import { RAW_SIGNING_WORDS } from "./setup";
+import { CREDENTIAL, fakeRelay, fakeSetupBundler, fakeSigner, fakeXoChain, fixedRandom, memoryStorage, RELAY_ORIGIN, TOKEN_ID, type FakeSigner } from "./testkit";
 import { PAYBOX_CHAIN_WORDS } from "./trader";
 import { NOT_AVAILABLE_TEXT, XoTradePanel } from "./XoTradePanel";
 
@@ -87,12 +89,19 @@ describe("the account and the login", () => {
     return { ...view, relay, storage };
   }
 
-  it("states an undeployed account and why this page cannot deploy it, with the login off", async () => {
-    const { container } = await mount(fakeSigner(), { overrides: { deployed: "no", registered: false, allowanceMicro: 0n, sellApproved: false, usdcMicro: 0n } });
+  it("states an undeployed account, offers to set it up here, says where to fund it, with the login off", async () => {
+    const signer = fakeSigner();
+    const { container } = await mount(signer, { overrides: { deployed: "no", registered: false, allowanceMicro: 0n, sellApproved: false, usdcMicro: 0n } });
     const text = allText(must(container, "[data-testid=xo-readiness]"));
     expect(text).toContain("is not deployed on XO's chain yet");
-    expect(text).toContain("signed over its 32-byte hash");
-    expect(text).toContain("XO's own app");
+    expect(text).toContain("sets it up from this page");
+    expect(text).toContain("Registration is XO's own step");
+    expect(text).not.toContain("XO's own app with this same wallet");
+    expect(must(container, "[data-testid=xo-setup]").getAttribute("data-action")).toBe("deploy_enable_trading");
+    expect(button(container, "setup-account").textContent).toBe("Set up XO account");
+    const funding = allText(must(container, "[data-testid=xo-funding]"));
+    expect(funding).toContain(deriveAccount(signer.address));
+    expect(funding).toContain("USDC.e in the account now: 0.");
     expect(button(container, "login").disabled).toBe(true);
   });
 
@@ -208,5 +217,83 @@ describe("the account and the login", () => {
     await until(() => allText(container).includes("XO cancelled the order"));
     expect(signer.calls.filter((call) => call.method === "signTypedData")).toHaveLength(signaturesBefore);
     expect(allText(container)).toContain("No open orders on XO for this account.");
+  });
+});
+
+describe("setting up the account from the panel", () => {
+  async function mountSetup(signer: FakeSigner, overrides: Partial<XoReadiness>) {
+    const bundler = fakeSetupBundler();
+    const relay = fakeRelay({ "POST /v1/relay/xo/bundler": bundler.route });
+    const node = fakeXoChain({ nonce: kernelNonce({ sequence: 2n }) });
+    let reads = 0;
+    let current: Partial<XoReadiness> = overrides;
+    const readReadiness = async (_relay: unknown, owner: Address, account: Address): Promise<XoReadiness> => {
+      reads += 1;
+      return { owner, account, deployed: "yes", registered: false, usdcMicro: 0n, allowanceMicro: 0n, sellApproved: false, ...current };
+    };
+    const view = render(<XoTradePanel deps={deps} relayOrigin={RELAY_ORIGIN} signer={signer} fetchImpl={relay.fetch} storage={memoryStorage()} random={fixedRandom} readReadiness={readReadiness} chainCall={node.call} sleep={async () => undefined} />);
+    await act(async () => {
+      await settle();
+    });
+    return {
+      ...view,
+      bundler,
+      reads: () => reads,
+      becomes: (next: Partial<XoReadiness>) => {
+        current = next;
+      },
+    };
+  }
+
+  it("asks for an allowance choice, shows the card before the wallet, sends once and reads the account again", async () => {
+    const signer = fakeSigner();
+    const { container, bundler, reads, becomes } = await mountSetup(signer, { deployed: "no" });
+    expect(button(container, "setup-account").disabled).toBe(true);
+    act(() => {
+      click(must(container, "input[type=radio][name=xo-allowance][value=unlimited]"));
+    });
+    expect(button(container, "setup-account").disabled).toBe(false);
+    await act(async () => {
+      click(button(container, "setup-account"));
+      await settle(10);
+    });
+    await until(() => container.querySelector("[data-testid=xo-setup-card]") !== null);
+    const card = must<HTMLElement>(container, "[data-testid=xo-setup-card]");
+    expect(card.getAttribute("data-action")).toBe("deploy_enable_trading");
+    expect(allText(card)).toContain("approve(address spender, uint256 amount)");
+    expect(allText(card)).toContain("setApprovalForAll(address operator, bool approved)");
+    expect(allText(card)).toContain("UNLIMITED");
+    expect(card.querySelector("li[data-unlimited=true]")).not.toBeNull();
+    expect(signer.calls.some((call) => call.method === "signRawMessage")).toBe(false);
+    expect(bundler.seen.map((request) => request.method)).toEqual(["eth_estimateUserOperationGas"]);
+    const readsBefore = reads();
+    becomes({ deployed: "yes", allowanceMicro: 2n ** 256n - 1n, sellApproved: true });
+    act(() => {
+      click(button(card, "sign"));
+    });
+    await until(() => container.querySelector("[data-testid=xo-answer]") !== null);
+    expect(must(container, "[data-testid=xo-answer]").getAttribute("data-state")).toBe("done");
+    expect(signer.calls.filter((call) => call.method === "signRawMessage")).toHaveLength(1);
+    expect(bundler.seen.filter((request) => request.method === "eth_sendUserOperation")).toHaveLength(1);
+    await until(() => reads() > readsBefore && container.querySelector("[data-testid=xo-setup]") === null);
+  });
+
+  it("offers Enable trading on a deployed account that lacks the approvals", async () => {
+    const { container } = await mountSetup(fakeSigner(), { deployed: "yes", allowanceMicro: 0n, sellApproved: true });
+    expect(must(container, "[data-testid=xo-setup]").getAttribute("data-action")).toBe("enable_trading");
+    expect(button(container, "setup-account").textContent).toBe("Enable trading");
+    act(() => {
+      click(must(container, "input[type=radio][name=xo-allowance][value=capped]"));
+    });
+    expect(button(container, "setup-account").disabled).toBe(true);
+  });
+
+  it("refuses in words where the wallet cannot sign raw bytes (a WalletConnect session, PayBox-like), and builds nothing", async () => {
+    const signer = fakeSigner({ kind: "walletconnect", chains: [3223], rawMessage: false });
+    const { container, bundler } = await mountSetup(signer, { deployed: "no" });
+    expect(allText(must(container, "[data-testid=xo-setup-unsupported]"))).toBe(RAW_SIGNING_WORDS);
+    expect(container.querySelector("button[data-action=setup-account]")).toBeNull();
+    expect(bundler.seen).toEqual([]);
+    expect(signer.calls).toEqual([]);
   });
 });

@@ -30,7 +30,7 @@ describe("the browser-wallet signer", () => {
     const wallet = fakeWallet({ chainId: 137 });
     const signer = createInjectedSigner({ provider: wallet, name: "Test Wallet", address: ACCOUNT_0.address });
     expect(signer.kind).toBe("injected");
-    expect(signer.capabilities).toEqual({ sendTransaction: true, chains: "any" });
+    expect(signer.capabilities).toEqual({ sendTransaction: true, rawMessage: true, chains: "any" });
     expect(await signer.chainId()).toBe(137);
     const signature = await signer.signMessage("hello");
     expect(await recoverMessageAddress({ message: "hello", signature })).toBe(ACCOUNT_0.address);
@@ -89,6 +89,23 @@ describe("the browser-wallet signer", () => {
     expect((await rejection(signer.signMessage("x"))).code).toBe("disconnected");
   });
 
+  it("signs raw bytes with personal_sign over the bytes themselves (EIP-191), not over their hex spelling", async () => {
+    const wallet = fakeWallet({ chainId: 137 });
+    const signer = createInjectedSigner({ provider: wallet, name: "Test Wallet", address: ACCOUNT_0.address });
+    const raw = `0x${"5a".repeat(32)}` as const;
+    const signature = await signer.signRawMessage(raw);
+    expect(wallet.calls.at(-1)).toEqual({ method: "personal_sign", params: [raw, ACCOUNT_0.address] });
+    expect(await recoverMessageAddress({ message: { raw }, signature })).toBe(ACCOUNT_0.address);
+    expect(await recoverMessageAddress({ message: raw, signature })).not.toBe(ACCOUNT_0.address);
+    expect(wallet.chainId).toBe(137);
+    const calls = wallet.calls.length;
+    expect((await rejection(signer.signRawMessage("0x123" as `0x${string}`))).code).toBe("failed");
+    expect((await rejection(signer.signRawMessage("0x" as `0x${string}`))).code).toBe("failed");
+    expect(wallet.calls).toHaveLength(calls);
+    wallet.failNext.set("personal_sign", new RpcFailure(4001, "User rejected"));
+    expect((await rejection(signer.signRawMessage(raw))).code).toBe("rejected");
+  });
+
   it("reads accounts and chain ids defensively", () => {
     expect(accountsOf([ACCOUNT_0.address.toLowerCase(), "0x1234", 5, ACCOUNT_0.address, ACCOUNT_1.address])).toEqual([ACCOUNT_0.address, ACCOUNT_1.address]);
     expect(accountsOf("nope")).toEqual([]);
@@ -108,7 +125,7 @@ describe("the WalletConnect signer", () => {
     expect(signer.kind).toBe("walletconnect");
     expect(signer.name).toBe("PayBox");
     expect(signer.address).toBe(ACCOUNT_0.address);
-    expect(signer.capabilities).toEqual({ sendTransaction: false, chains: [137, 8453] });
+    expect(signer.capabilities).toEqual({ sendTransaction: false, rawMessage: true, chains: [137, 8453] });
     expect(await signer.chainId()).toBe(137);
     const refused = await rejection(signer.sendTransaction({ chainId: 137, to: ACCOUNT_1.address, data: "0x" }));
     expect(refused.code).toBe("unsupported");
@@ -159,6 +176,43 @@ describe("the WalletConnect signer", () => {
     expect((await rejection(signer.signMessage("x"))).code).toBe("rejected");
     client.answer = () => "not hex";
     expect((await rejection(signer.signMessage("x"))).code).toBe("failed");
+  });
+
+  it("signs raw bytes only when the session approved personal_sign, and reads PayBox's refusal of binary data as unsupported", async () => {
+    const raw = `0x${"5a".repeat(32)}` as const;
+    const client = fakeSignClient();
+    const phone = createWalletConnectSigner({ client, session: session({ chains: ["eip155:3223"], accounts: [`eip155:3223:${ACCOUNT_0.address}`] }), name: "Phone" });
+    if (phone === null) throw new Error("fixture");
+    expect(phone.capabilities.rawMessage).toBe(true);
+    client.answer = (method, params) => (method === "personal_sign" ? ACCOUNT_0.signMessage({ message: { raw: (params as [`0x${string}`])[0] } }) : null);
+    const signature = await phone.signRawMessage(raw);
+    expect(client.requests.at(-1)).toEqual({ topic: SESSION_TOPIC, chainId: "eip155:3223", method: "personal_sign", params: [raw, ACCOUNT_0.address] });
+    expect(await recoverMessageAddress({ message: { raw }, signature })).toBe(ACCOUNT_0.address);
+
+    // PayBox approves personal_sign but signs valid UTF-8 text only: its error for bytes becomes "unsupported", in words.
+    const paybox = createWalletConnectSigner({ client, session: session(), name: "PayBox" });
+    if (paybox === null) throw new Error("fixture");
+    expect(paybox.capabilities.rawMessage).toBe(true);
+    client.answer = () => {
+      throw { code: -32603, message: "Message is not valid UTF-8" };
+    };
+    const refused = await rejection(paybox.signRawMessage(raw));
+    expect(refused.code).toBe("unsupported");
+    expect(refused.message).toContain("PayBox signs text only");
+    client.answer = () => {
+      throw { code: 5000, message: "User rejected." };
+    };
+    expect((await rejection(paybox.signRawMessage(raw))).code).toBe("rejected");
+    client.answer = () => "not hex";
+    expect((await rejection(paybox.signRawMessage(raw))).code).toBe("failed");
+
+    // A session without personal_sign offers no raw signing and asks the wallet nothing.
+    const typedOnly = createWalletConnectSigner({ client, session: session({ methods: ["eth_signTypedData_v4"] }), name: "Typed only" });
+    if (typedOnly === null) throw new Error("fixture");
+    expect(typedOnly.capabilities.rawMessage).toBe(false);
+    const before = client.requests.length;
+    expect((await rejection(typedOnly.signRawMessage(raw))).code).toBe("unsupported");
+    expect(client.requests).toHaveLength(before);
   });
 
   it("switches within the approved chains (asking the wallet only when it granted the method) and refuses others", async () => {

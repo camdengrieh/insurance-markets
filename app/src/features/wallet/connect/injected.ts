@@ -7,8 +7,8 @@ import { guard, rpcCodeOf, walletErrorOf } from "./errors";
 
 // A browser wallet (an EIP-1193 provider found through EIP-6963) as a WalletSigner, through viem's wallet client.
 // The wallet holds the key and shows its own prompt for every request; this object only forwards the request and
-// maps the answer. It can be asked to switch to, or add, any chain (capabilities.chains "any"), and it sends
-// transactions.
+// maps the answer. It can be asked to switch to, or add, any chain (capabilities.chains "any"), it sends transactions,
+// and it signs raw bytes with personal_sign (an XO user operation's 32-byte hash).
 
 // Accounts as a wallet returns them: the checksummed addresses that pass the format check, in order. Anything else
 // in the list is dropped (a wallet's answer is untrusted).
@@ -34,6 +34,11 @@ export function chainIdOf(raw: unknown): number | null {
 function hexOf(raw: unknown, what: string): Hex {
   if (typeof raw !== "string" || !/^0x[0-9a-fA-F]*$/.test(raw)) throw new WalletError("failed", `The wallet returned something that is not a ${what}.`);
   return raw as Hex;
+}
+
+// Whole bytes as 0x hex, at least one: what signRawMessage takes.
+export function isRawBytes(raw: unknown): raw is Hex {
+  return typeof raw === "string" && /^0x(?:[0-9a-fA-F]{2})+$/.test(raw);
 }
 
 export interface InjectedSignerInput {
@@ -79,7 +84,7 @@ export function createInjectedSigner({ provider, name, address }: InjectedSigner
     kind: "injected" as const,
     name,
     address,
-    capabilities: Object.freeze({ sendTransaction: true, chains: "any" as const }),
+    capabilities: Object.freeze({ sendTransaction: true, rawMessage: true, chains: "any" as const }),
     chainId,
     switchChain,
     async signTypedData(data: TypedDataDefinition): Promise<Hex> {
@@ -90,6 +95,11 @@ export function createInjectedSigner({ provider, name, address }: InjectedSigner
     },
     async signMessage(message: string): Promise<Hex> {
       return hexOf(await guard(() => client.signMessage({ account: address, message })), "signature");
+    },
+    async signRawMessage(raw: Hex): Promise<Hex> {
+      // viem sends personal_sign with the bytes as given (not the UTF-8 of their hex spelling), and the wallet shows them.
+      if (!isRawBytes(raw)) throw new WalletError("failed", "This page asked to sign something that is not bytes; nothing was sent to the wallet.");
+      return hexOf(await guard(() => client.signMessage({ account: address, message: { raw } })), "signature");
     },
     async sendTransaction(tx: TransactionRequest): Promise<Hex> {
       await ensureChain(tx.chainId);

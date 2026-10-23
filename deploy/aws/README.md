@@ -119,6 +119,11 @@ repository root with the AWS profile and region the scripts default to:
    returns XO's server time through the relay. On the host: `sudo systemctl status pm-api` and
    `aws logs tail /pm-workers/pm-api --follow` (route, status and latency only; never a header value or body).
    The API port is not reachable directly from the internet: `curl http://<ElasticIp>:8790/v1/health` times out.
+   The bundler route (the dApp's account setup) needs no stack change: the `/v1/relay/*` behaviour and its origin
+   request policy (`Origin`, `content-type`) already cover it; it arrives with the API image. `curl -i -X OPTIONS
+   "https://$D/v1/relay/xo/bundler" -H 'Origin: https://xo-markets-explorer.vercel.app' -H
+   'Access-Control-Request-Method: POST'` answers 204 with `access-control-allow-methods: POST, OPTIONS`. Do not POST a
+   user operation to it by hand.
 4. **Point the dApp at it.** Set `MARKETS_API_ORIGIN` in `app/src/core/markets-api.ts` to
    `https://<ApiCloudFrontDomain>`, and add that origin to the dApp's CSP `connect-src` (`app/headers.config.ts`,
    then regenerate `app/vercel.json` and `app/public/_headers` with the app's `headers:write` script); deploy the

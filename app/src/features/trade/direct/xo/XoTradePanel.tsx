@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 
 import { MARKETS_API_ORIGIN } from "../../../../core/markets-api";
 import type { AdapterDeps } from "../../../../core/ports";
@@ -7,18 +7,23 @@ import type { WalletSigner } from "../../../../core/signer";
 import { sanitizeText } from "../../../../core/untrusted";
 import { Badge, Button, Field, UntrustedText } from "../../../../ui";
 import { useWalletSigner } from "../../../wallet/connect/context";
+import { formatMicro } from "@sdk/trade/xo/amounts";
 import { tabSessionStorage, XoCredentialStore, type CredentialStorage } from "./credentials";
 import { browserRandom, type OpenOrderRow, type OrderSideWord } from "./order";
-import { readinessView, readXoReadiness, type XoReadiness } from "./readiness";
+import { readinessView, readXoReadiness, xoChainCalls, type XoReadiness } from "./readiness";
 import { XoRelayClient, type RelayFetch } from "./relay";
+import { parseAllowanceCap, RAW_SIGNING_WORDS, XoAccountSetup, type AllowanceChoice, type XoSetupCard, type XoSetupOptions } from "./setup";
 import type { XoSigningCard } from "./signing";
 import { chainSupport, XoTrader, type ActionResult } from "./trader";
+import { XoSetupCardView } from "./XoSetupCard";
 import { XoSignatureCard } from "./XoSignatureCard";
 
 // XO trading from this page with the visitor's own wallet, through the markets API's relay. What it shows, in order:
 // why it cannot trade (no relay in this build, no wallet, a session that cannot sign on chain 3223), the account's
-// readiness read fresh, the login, the order ticket for one outcome, the open orders with a cancel each, the Signature
-// Card while a signature is pending, and XO's answer after each action. It never fills in an amount, a price or a side.
+// readiness read fresh, the account setup when the account is not deployed or trading is not enabled (one user
+// operation the wallet signs, sent to XO's bundler through the relay), where to fund the account, the login, the order
+// ticket for one outcome, the open orders with a cancel each, the Signature Card while a signature is pending, and XO's
+// answer after each action. It never fills in an amount, an allowance, a price or a side.
 
 export const NOT_AVAILABLE_TEXT = "XO trading is not available in this build.";
 
@@ -34,14 +39,24 @@ export interface XoTradePanelProps {
   readonly storage?: CredentialStorage | null;
   readonly random?: (bytes: number) => Uint8Array;
   readonly readReadiness?: (relay: XoRelayClient, owner: Address, account: Address) => Promise<XoReadiness>;
+  // eth_call on XO's chain for the account setup (nonce, paymaster); the page's read port when left out.
+  readonly chainCall?: XoSetupOptions["call"];
+  // The account setup's receipt polling (tests shorten it).
+  readonly sleep?: (ms: number) => Promise<void>;
 }
 
 const pageFetch: RelayFetch = (url, init) => globalThis.fetch(url, init);
+const XO_CHAIN_LABEL = "chain id 3223";
 
-interface Pending {
-  readonly card: XoSigningCard;
-  readonly resolve: (sign: boolean) => void;
-}
+type Pending = { readonly kind: "sign"; readonly card: XoSigningCard; readonly resolve: (sign: boolean) => void } | { readonly kind: "setup"; readonly card: XoSetupCard; readonly resolve: (sign: boolean) => void };
+
+const BUSY_WORDS: Readonly<Record<string, string>> = {
+  login: "the login",
+  order: "the order",
+  cancel: "the cancel",
+  setup: "the account setup (XO's bundler, then the receipt)",
+  follow: "the operation's receipt",
+};
 
 function AnswerView({ result }: { readonly result: ActionResult<unknown> }) {
   const tone = result.state === "done" ? "ok" : result.state === "ambiguous" ? "warn" : result.state === "declined" ? "neutral" : "danger";
@@ -103,7 +118,7 @@ function OrdersTable({ rows, busy, onCancel }: { readonly rows: readonly OpenOrd
   );
 }
 
-export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOrigin = MARKETS_API_ORIGIN, fetchImpl = pageFetch, storage, random = browserRandom, readReadiness }: XoTradePanelProps) {
+export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOrigin = MARKETS_API_ORIGIN, fetchImpl = pageFetch, storage, random = browserRandom, readReadiness, chainCall, sleep }: XoTradePanelProps) {
   const contextSigner = useWalletSigner();
   const signer = signerProp === undefined ? contextSigner : signerProp;
   const [pending, setPending] = useState<Pending | null>(null);
@@ -116,6 +131,10 @@ export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOr
   const [side, setSide] = useState<OrderSideWord | null>(null);
   const [price, setPrice] = useState("");
   const [shares, setShares] = useState("");
+  const [allowanceKind, setAllowanceKind] = useState<AllowanceChoice["kind"] | null>(null);
+  const [capText, setCapText] = useState("");
+  // A sent user operation whose outcome is not settled yet: no second one is offered until it is.
+  const [pendingOp, setPendingOp] = useState<Hex | null>(null);
   const pendingRef = useRef<Pending | null>(null);
 
   const relay = useMemo(() => (relayOrigin === null ? null : new XoRelayClient(relayOrigin, fetchImpl)), [relayOrigin, fetchImpl]);
@@ -130,12 +149,27 @@ export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOr
       random,
       confirm: (card) =>
         new Promise<boolean>((resolve) => {
-          const entry = { card, resolve };
+          const entry: Pending = { kind: "sign", card, resolve };
           pendingRef.current = entry;
           setPending(entry);
         }),
     });
   }, [relay, signer, store, random]);
+  const setup = useMemo(() => {
+    if (relay === null || signer === null || !chainSupport(signer).ok) return null;
+    return new XoAccountSetup({
+      signer,
+      relay,
+      call: chainCall ?? xoChainCalls(deps),
+      ...(sleep === undefined ? {} : { sleep }),
+      confirm: (card) =>
+        new Promise<boolean>((resolve) => {
+          const entry: Pending = { kind: "setup", card, resolve };
+          pendingRef.current = entry;
+          setPending(entry);
+        }),
+    });
+  }, [relay, signer, deps, chainCall, sleep]);
 
   const decide = useCallback((sign: boolean) => {
     const entry = pendingRef.current;
@@ -192,10 +226,13 @@ export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOr
       </section>
     );
   }
-  if (trader === null) return null;
+  if (trader === null || setup === null) return null;
 
   const view = readiness === null ? null : readinessView(readiness);
   const working = busy !== null || pending !== null;
+  const cap = allowanceKind === "capped" ? parseAllowanceCap(capText) : null;
+  const choice: AllowanceChoice | null = allowanceKind === "unlimited" ? { kind: "unlimited" } : cap !== null && cap.ok ? { kind: "capped", amountMicro: cap.amountMicro } : null;
+  const setupAction = view?.setup ?? null;
 
   return (
     <section data-testid="xo-direct" data-state="ready" aria-label="Trade on XO">
@@ -215,6 +252,83 @@ export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOr
         <Button onClick={() => void readAccount()} disabled={working} data-action="read-account">
           Read the account again
         </Button>
+      </section>
+
+      {setupAction === null && pendingOp === null ? null : (
+        <section data-testid="xo-setup" data-action={setupAction ?? "pending"}>
+          <h4>{setupAction === "deploy_enable_trading" ? "Set up your XO account" : "Enable trading"}</h4>
+          {pendingOp !== null ? (
+            <>
+              <p data-testid="xo-setup-pending">
+                A user operation from this tab is not settled yet: <code>{pendingOp}</code>. Nothing new is offered until it is; check it again by its hash.
+              </p>
+              <Button
+                disabled={working}
+                onClick={() =>
+                  void run("follow", async () => {
+                    const done = await setup.follow(pendingOp);
+                    if (done.state !== "ambiguous") setPendingOp(null);
+                    void readAccount();
+                    return done;
+                  })
+                }
+                data-action="follow-setup"
+              >
+                Check the operation again
+              </Button>
+            </>
+          ) : !signer.capabilities.rawMessage ? (
+            <p data-testid="xo-setup-unsupported">{RAW_SIGNING_WORDS}</p>
+          ) : (
+            <>
+              <p>
+                {setupAction === "deploy_enable_trading"
+                  ? "One user operation deploys your XO account (the address above, derived from this wallet) and enables trading: it approves XO's exchange to use the account's USDC.e and to move its outcome shares. Your wallet signs it once; XO's paymaster pays the gas when it agrees to, and nothing is charged to your wallet."
+                  : "One user operation enables trading on your deployed XO account: it approves XO's exchange to use the account's USDC.e and to move its outcome shares. Your wallet signs it once; nothing is charged to your wallet."}
+              </p>
+              <fieldset>
+                <legend>USDC.e allowance for the exchange</legend>
+                <label>
+                  <input type="radio" name="xo-allowance" value="unlimited" checked={allowanceKind === "unlimited"} onChange={() => setAllowanceKind("unlimited")} /> Unlimited, as XO&apos;s own app sets it
+                </label>
+                <label>
+                  <input type="radio" name="xo-allowance" value="capped" checked={allowanceKind === "capped"} onChange={() => setAllowanceKind("capped")} /> Capped at an amount I choose
+                </label>
+              </fieldset>
+              {allowanceKind === "capped" ? (
+                <Field label="Allowance cap in USDC.e">{(id) => <input id={id} className="ui-input" inputMode="decimal" autoComplete="off" value={capText} onChange={(event) => setCapText(event.target.value)} />}</Field>
+              ) : null}
+              {cap !== null && !cap.ok && capText.trim() !== "" ? <p data-testid="xo-setup-cap-error">{cap.words}</p> : null}
+              <Button
+                variant="primary"
+                disabled={working || choice === null || readiness === null}
+                onClick={() => {
+                  if (choice === null || readiness === null) return;
+                  void run("setup", async () => {
+                    const done = await setup.run(readiness, choice);
+                    if (done.state === "ambiguous" && done.value !== undefined) setPendingOp(done.value.userOpHash);
+                    if (done.state === "done") void readAccount();
+                    return done;
+                  });
+                }}
+                data-action="setup-account"
+              >
+                {setupAction === "deploy_enable_trading" ? "Set up XO account" : "Enable trading"}
+              </Button>
+              <p>The card shows every call, the allowance and the 32 bytes your wallet signs before it is asked.</p>
+            </>
+          )}
+        </section>
+      )}
+
+      <section data-testid="xo-funding">
+        <h4>Fund the account</h4>
+        <p>
+          Send USDC.e on XO&apos;s chain ({XO_CHAIN_LABEL}) to your XO account: <code>{trader.account}</code>. Only USDC.e on that chain counts; the same address on another chain is not this account. To bring USDC from Base, use the Wallet screen.
+        </p>
+        <p data-testid="xo-funding-balance">
+          {readiness === null ? "Reading the account's USDC.e balance." : readiness.usdcMicro === null ? "The account's USDC.e balance could not be read." : `USDC.e in the account now: ${formatMicro(readiness.usdcMicro)}.`}
+        </p>
       </section>
 
       <section data-testid="xo-login" data-logged-in={loggedIn ? "true" : "false"}>
@@ -320,8 +434,12 @@ export function XoTradePanel({ deps, outcome = null, signer: signerProp, relayOr
         <p>A cancel is signed with this tab&apos;s XO credential only; your wallet is not asked.</p>
       </section>
 
-      {pending === null ? null : <XoSignatureCard card={pending.card} onSign={() => decide(true)} onDecline={() => decide(false)} />}
-      {busy !== null && pending === null ? <p data-testid="xo-busy">Waiting for {busy === "login" ? "the login" : busy === "order" ? "the order" : busy === "cancel" ? "the cancel" : "XO"}…</p> : null}
+      {pending === null ? null : pending.kind === "sign" ? (
+        <XoSignatureCard card={pending.card} onSign={() => decide(true)} onDecline={() => decide(false)} />
+      ) : (
+        <XoSetupCardView card={pending.card} onSign={() => decide(true)} onDecline={() => decide(false)} />
+      )}
+      {busy !== null && pending === null ? <p data-testid="xo-busy">Waiting for {BUSY_WORDS[busy] ?? "XO"}…</p> : null}
       {result === null ? null : <AnswerView result={result} />}
     </section>
   );

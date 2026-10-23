@@ -37,6 +37,11 @@ export interface WalletCapabilities {
   // and EIP-712 typed data only, docs/dapp-paybox-web.md section 0), and a WalletConnect session that did not
   // grant eth_sendTransaction does not either.
   readonly sendTransaction: boolean;
+  // Whether the wallet can be asked to personal_sign raw bytes (signRawMessage). Browser wallets can. A WalletConnect
+  // session can only when it approved personal_sign, and even then the wallet may refuse bytes that are not text:
+  // PayBox signs valid UTF-8 text only (docs/dapp-paybox-web.md section 0) and answers such a request with a refusal,
+  // which the signer reports as WalletError("unsupported").
+  readonly rawMessage: boolean;
   // The chains the wallet will sign for: the session's approved chains for WalletConnect, "any" for a browser
   // wallet (it can be asked to switch to, or add, a chain).
   readonly chains: readonly number[] | "any";
@@ -63,6 +68,12 @@ export interface WalletSigner {
   // whose chainId differs from the active chain).
   signTypedData(data: TypedDataDefinition): Promise<Hex>;
   signMessage(message: string): Promise<Hex>;
+  // EIP-191 personal_sign of the given bytes as bytes, not of their hex spelling as text: the signature is over
+  // keccak256("\x19Ethereum Signed Message:\n" + len + bytes). This is what an ERC-4337 user operation for an XO (Kernel
+  // v3.1) account is signed with: the owner signs the 32-byte userOpHash this way, as XO's own app does, and the
+  // account's ECDSA validator accepts it (sdk/trade/xo/userop/verify.ts). Rejects with WalletError("unsupported") when
+  // capabilities.rawMessage is false or the wallet refuses binary data.
+  signRawMessage(raw: Hex): Promise<Hex>;
   // Rejects with WalletError("unsupported") when capabilities.sendTransaction is false. Returns the transaction hash.
   sendTransaction(tx: TransactionRequest): Promise<Hex>;
 }

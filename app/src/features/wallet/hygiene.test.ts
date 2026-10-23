@@ -101,8 +101,9 @@ describe("wallet and portfolio sources", () => {
 });
 
 // connect/: the wallet connection. It asks a wallet to sign or send, but only through the wallet's own prompt, and it
-// holds no key: it never signs locally, never asks for a raw-digest signature, makes no request of its own (the
-// WalletConnect relay is the library's, in its own chunk) and renders wallet text only as text.
+// holds no key: it never signs locally, never asks for an unprefixed raw-digest signature (eth_sign; signRawMessage is
+// personal_sign, which the wallet prefixes with EIP-191 and shows), makes no request of its own (the WalletConnect relay
+// is the library's, in its own chunk) and renders wallet text only as text.
 describe("the connect sources", () => {
   const CONNECT = join(ROOT, "wallet", "connect");
   const connect = readdirSync(CONNECT)

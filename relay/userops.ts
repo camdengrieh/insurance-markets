@@ -51,7 +51,7 @@ import {
 import { BundlerClient, BundlerError, type BundlerTransport } from "../src/xo/userop/bundler.js";
 import { enableTradingCalls, redeemCalls, revokeTradingCalls, withdrawCalls } from "../src/xo/userop/calls.js";
 import { UserOpError, decodeExecute, type Call } from "../src/xo/userop/encode.js";
-import { applyBundlerEstimate, defaultGasFor, type GasPlan } from "../src/xo/userop/gas.js";
+import { applyBundlerEstimate, defaultGasFor, paymasterVerificationFor, withPaymasterHeadroom, type GasPlan } from "../src/xo/userop/gas.js";
 import { userOpHash } from "../src/xo/userop/hash.js";
 import { decodeGetNonceResult, firstOpNonce, getNonceCallData, laneKeyFor, nextNonceAfter } from "../src/xo/userop/nonce.js";
 import { packedFromJson, packedToJson, type PackedUserOpJson } from "../src/xo/userop/pack.js";
@@ -842,20 +842,9 @@ async function noteSponsorRefused(env: UserOpEnv, account: Address): Promise<voi
   }
 }
 
-// The paymaster validates every call of a batch, so its verification gas grows with the call count. The
-// userop library's one-call default (40,262) fails batches of eight or more (AA33, found against the real
-// paymaster code in test/userop-anvil.test.ts); a limit of 30,000 plus 3,000 per call covers every point
-// measured there. Fees are zero, so a higher limit costs nothing.
-export function paymasterVerificationFor(calls: number): bigint {
-  return 30_000n + 3_000n * BigInt(calls);
-}
-
-function withPaymasterHeadroom(plan: GasPlan, calls: number, sponsored: boolean): GasPlan {
-  if (!sponsored) return plan;
-  const wanted = paymasterVerificationFor(calls);
-  if (plan.limits.paymasterVerificationGasLimit >= wanted) return plan;
-  return { ...plan, limits: Object.freeze({ ...plan.limits, paymasterVerificationGasLimit: wanted }) };
-}
+// The paymaster headroom rule (30,000 plus 3,000 verification gas per call) lives in the SDK's gas module so the
+// dApp's own account setup applies the same one; re-exported here for the callers that import it from the relay.
+export { paymasterVerificationFor };
 
 // The bundler's host name as configured, for the upstream client's per-host state.
 function bundlerHostOf(env: UserOpEnv): string {

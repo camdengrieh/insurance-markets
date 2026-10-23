@@ -4,10 +4,13 @@ import { WalletError, type TransactionRequest, type WalletSigner } from "../../.
 import { sessionFacts, type SessionFacts, type SessionLike } from "../../../core/walletconnect";
 import { chainName } from "./chains";
 import { guard } from "./errors";
+import { isRawBytes } from "./injected";
 
 // A WalletConnect v2 session as a WalletSigner. The wallet (PayBox, or a phone wallet) holds the key; every request
 // goes to it through the relay, end-to-end encrypted, and it answers or refuses. What the session approved is what
-// the signer offers: its chains, and eth_sendTransaction only when the wallet granted it (PayBox does not).
+// the signer offers: its chains, eth_sendTransaction only when the wallet granted it (PayBox does not), and raw-byte
+// signing only when it granted personal_sign. PayBox grants personal_sign but signs valid UTF-8 text only and refuses
+// binary data (docs/dapp-paybox-web.md section 0), so a raw request it refuses comes back as WalletError("unsupported").
 //
 // WalletConnect has no "current chain" of its own: each request names its chain. The signer keeps one, starting at
 // the first approved chain; switchChain moves it within the approved chains (asking the wallet too when the session
@@ -77,7 +80,7 @@ export function createWalletConnectSigner({ client, session, address, chainId, n
     address: account,
     topic: session.topic,
     facts,
-    capabilities: Object.freeze({ sendTransaction: facts.sendTransaction, chains: Object.freeze([...facts.chains]) }),
+    capabilities: Object.freeze({ sendTransaction: facts.sendTransaction, rawMessage: facts.methods.includes("personal_sign"), chains: Object.freeze([...facts.chains]) }),
     noteChain(next: number): void {
       if (facts.chains.includes(next)) current = next;
     },
@@ -115,6 +118,21 @@ export function createWalletConnectSigner({ client, session, address, chainId, n
       // personal_sign takes the UTF-8 text hex-encoded, then the address. PayBox signs only text that is valid UTF-8,
       // which a JavaScript string always encodes to.
       return hexOf(await ask(current, "personal_sign", [stringToHex(message), account]), "signature");
+    },
+    async signRawMessage(raw: Hex): Promise<Hex> {
+      if (!isRawBytes(raw)) throw new WalletError("failed", "This page asked to sign something that is not bytes; nothing was sent to the wallet.");
+      if (!facts.methods.includes("personal_sign")) throw new WalletError("unsupported", "Your wallet did not approve message signing (personal_sign) for this connection.");
+      // personal_sign takes the bytes hex-encoded, then the address; the wallet signs the bytes themselves.
+      let answer: unknown;
+      try {
+        answer = await ask(current, "personal_sign", [raw.toLowerCase(), account]);
+      } catch (error) {
+        // A person declining, or a session that ended, keeps its meaning. Anything else from the wallet is read as "it
+        // will not sign binary data": PayBox, for one, answers a non-text personal_sign with an error, not a prompt.
+        if (error instanceof WalletError && (error.code === "rejected" || error.code === "disconnected" || error.code === "unsupported_chain")) throw error;
+        throw new WalletError("unsupported", "Your wallet refused to sign raw bytes over this connection (PayBox signs text only). Use a wallet that signs a 32-byte message, such as a browser wallet.");
+      }
+      return hexOf(answer, "signature");
     },
     async sendTransaction(tx: TransactionRequest): Promise<Hex> {
       if (!facts.sendTransaction) {

@@ -97,7 +97,7 @@ test("the relay is off by default: every relay path answers relay_not_enabled an
   assert.equal(loadApiConfig({ API_DATA_DIR: "/data", API_XO_RELAY: "maybe" }).fatal[0]?.variable, "API_XO_RELAY");
   const { h, upstream } = await relayHarness({ on: false });
   try {
-    for (const [method, path] of [["GET", "/v1/relay/xo/clob/time"], ["POST", "/v1/relay/xo/clob/order"], ["GET", "/v1/relay/anything"]] as const) {
+    for (const [method, path] of [["GET", "/v1/relay/xo/clob/time"], ["POST", "/v1/relay/xo/clob/order"], ["POST", "/v1/relay/xo/bundler"], ["GET", "/v1/relay/anything"]] as const) {
       const answer = await raw(h.server.origin, method, path, { origin: XO_RELAY_DAPP_ORIGIN, "content-type": "application/json" }, method === "POST" ? "{}" : undefined);
       assert.deepEqual([answer.status, codeOf(answer.text)], [403, "relay_not_enabled"], path);
     }
@@ -118,7 +118,8 @@ test("only the allowlisted methods, paths and query keys are forwarded", async (
       ["GET", "/v1/relay/xo/clob/orders/123", 404, "not_found"],
       ["GET", "/v1/relay/xo/clob/../time", 404, "not_found"],
       ["GET", "/v1/relay/xo/clob", 404, "not_found"],
-      ["GET", "/v1/relay/xo/bundler", 404, "not_found"],
+      ["GET", "/v1/relay/xo/bundler", 405, "method_not_allowed"],
+      ["POST", "/v1/relay/xo/bundlers", 404, "not_found"],
       ["GET", "/v1/relay/xo/clob/%74ime", 404, "not_found"],
       ["DELETE", "/v1/relay/xo/clob/orders", 405, "method_not_allowed"],
       ["PUT", "/v1/relay/xo/clob/order", 405, "method_not_allowed"],
@@ -359,6 +360,139 @@ test("log lines carry the method, the route, the status and the time, and never 
     }
     assert.ok(logs.includes("GET /v1/relay/xo/clob/orders/:hash 200 0ms"));
     assert.ok(logs.includes("GET /v1/relay/xo/clob/balance-allowance 200 0ms"));
+  } finally {
+    await h.close();
+  }
+});
+
+// ---- the bundler route ----------------------------------------------------------------------------------------------
+
+const BUNDLER = "https://mainnet-bundler.xo.market/";
+const ENTRY_POINT = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+// A user operation's fields as the page sends them; the relay does not read inside it, only that it is an object.
+const USEROP = { sender: `0x${"34".repeat(20)}`, nonce: "0x0", callData: "0x", signature: `0x${"ef".repeat(65)}` };
+const rpc = (method: string, params: unknown[], id: unknown = 1): string => JSON.stringify({ jsonrpc: "2.0", id, method, params });
+const JSON_POST = { origin: XO_RELAY_DAPP_ORIGIN, "content-type": "application/json" };
+
+test("the bundler route forwards one allowlisted JSON-RPC request byte for byte, with no header of the visitor's", async () => {
+  const upstream = fakeOrderBook((seen) => ({ body: JSON.stringify({ jsonrpc: "2.0", id: 1, result: seen.body === null ? null : HASH }), headers: { "set-cookie": "a=b", server: "bundler" } }));
+  const { h } = await relayHarness({ upstream });
+  try {
+    const bodies = [
+      rpc("eth_supportedEntryPoints", []),
+      rpc("eth_estimateUserOperationGas", [USEROP, ENTRY_POINT]),
+      rpc("eth_sendUserOperation", [USEROP, ENTRY_POINT.toLowerCase()], 7),
+      rpc("eth_getUserOperationReceipt", [HASH], "poll-1"),
+      rpc("eth_getUserOperationByHash", [HASH]),
+    ];
+    for (const body of bodies) {
+      const answer = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler", { ...JSON_POST, cookie: SECRETS.cookie, authorization: SECRETS.bearer, "xo-api-key": SECRETS.apiKey, "x-forwarded-for": "203.0.113.9" }, body);
+      assert.equal(answer.status, 200, body);
+      assert.equal(answer.headers["x-xo-relay"], "upstream");
+      assert.equal(answer.headers["access-control-allow-origin"], XO_RELAY_DAPP_ORIGIN);
+      assert.equal(answer.headers["set-cookie"], undefined);
+      assert.equal(answer.headers["server"], undefined);
+      assert.equal(JSON.parse(answer.text).result, HASH);
+      const sent = upstream.seen.at(-1) as Seen;
+      assert.equal(sent.url, BUNDLER);
+      assert.equal(sent.method, "POST");
+      assert.equal(sent.body?.toString("utf8"), body, "the body byte for byte");
+      assert.deepEqual(Object.keys(sent.headers).sort(), ["accept", "content-type", "user-agent"]);
+      assert.equal(sent.headers["user-agent"], "insurance-markets-api/0.1");
+    }
+    assert.equal(upstream.seen.length, bodies.length);
+  } finally {
+    await h.close();
+  }
+});
+
+test("the bundler route refuses batches, other methods, other params and other entry points before sending", async () => {
+  const { h, upstream } = await relayHarness();
+  try {
+    const refused: Array<[string, Record<string, string>, string, number, string]> = [
+      ["batch", JSON_POST, `[${rpc("eth_supportedEntryPoints", [])}]`, 400, "invalid_request"],
+      ["eth_chainId", JSON_POST, rpc("eth_chainId", []), 400, "invalid_request"],
+      ["a debug method", JSON_POST, rpc("debug_bundler_dumpMempool", []), 400, "invalid_request"],
+      ["a gas-price method", JSON_POST, rpc("pimlico_getUserOperationGasPrice", []), 400, "invalid_request"],
+      ["a raw transaction", JSON_POST, rpc("eth_sendRawTransaction", ["0x00"]), 400, "invalid_request"],
+      ["another entry point", JSON_POST, rpc("eth_sendUserOperation", [USEROP, `0x${"55".repeat(20)}`]), 400, "invalid_request"],
+      ["no entry point", JSON_POST, rpc("eth_sendUserOperation", [USEROP]), 400, "invalid_request"],
+      ["an operation that is not an object", JSON_POST, rpc("eth_estimateUserOperationGas", ["0x00", ENTRY_POINT]), 400, "invalid_request"],
+      ["a short hash", JSON_POST, rpc("eth_getUserOperationReceipt", ["0x12"]), 400, "invalid_request"],
+      ["params on a read", JSON_POST, rpc("eth_supportedEntryPoints", [1]), 400, "invalid_request"],
+      ["params not an array", JSON_POST, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_supportedEntryPoints", params: {} }), 400, "invalid_request"],
+      ["an extra key", JSON_POST, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_supportedEntryPoints", params: [], extra: 1 }), 400, "invalid_request"],
+      ["an odd id", JSON_POST, rpc("eth_supportedEntryPoints", [], "<script>"), 400, "invalid_request"],
+      ["JSON-RPC 1.0", JSON_POST, JSON.stringify({ jsonrpc: "1.0", id: 1, method: "eth_supportedEntryPoints", params: [] }), 400, "invalid_request"],
+      ["not JSON", JSON_POST, "eth_sendUserOperation", 400, "invalid_request"],
+      ["text/plain", { ...JSON_POST, "content-type": "text/plain" }, rpc("eth_supportedEntryPoints", []), 415, "unsupported_media_type"],
+      ["over the cap", JSON_POST, rpc("eth_estimateUserOperationGas", [{ pad: "x".repeat(XO_RELAY_LIMITS.maxBodyBytes) }, ENTRY_POINT]), 413, "payload_too_large"],
+    ];
+    for (const [what, headers, body, status, code] of refused) {
+      const answer = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler", headers, body);
+      assert.deepEqual([answer.status, codeOf(answer.text)], [status, code], what);
+      assert.equal(answer.headers["x-xo-relay"], "refused", what);
+      assert.equal(answer.text.includes(USEROP.signature), false, "a refusal never echoes a value");
+    }
+    const query = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler?x=1", JSON_POST, rpc("eth_supportedEntryPoints", []));
+    assert.deepEqual([query.status, codeOf(query.text)], [400, "invalid_request"]);
+    const elsewhere = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler", { ...JSON_POST, origin: "https://evil.example.org" }, rpc("eth_supportedEntryPoints", []));
+    assert.deepEqual([elsewhere.status, codeOf(elsewhere.text)], [403, "origin_not_allowed"]);
+    assert.equal(upstream.seen.length, 0, "nothing refused was sent");
+  } finally {
+    await h.close();
+  }
+});
+
+test("the bundler route's preflight grants POST and content-type to the dApp only", async () => {
+  const { h, upstream } = await relayHarness();
+  try {
+    const preflight = await raw(h.server.origin, "OPTIONS", "/v1/relay/xo/bundler", { origin: XO_RELAY_DAPP_ORIGIN, "access-control-request-method": "POST", "access-control-request-headers": "content-type" });
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers["access-control-allow-origin"], XO_RELAY_DAPP_ORIGIN);
+    assert.equal(preflight.headers["access-control-allow-methods"], "POST, OPTIONS");
+    assert.equal(preflight.headers["access-control-allow-headers"], "content-type");
+    assert.equal(preflight.headers["access-control-allow-credentials"], undefined);
+    const evil = await raw(h.server.origin, "OPTIONS", "/v1/relay/xo/bundler", { origin: "https://evil.example.org", "access-control-request-method": "POST" });
+    assert.equal(evil.headers["access-control-allow-origin"], undefined);
+    assert.equal(upstream.seen.length, 0);
+  } finally {
+    await h.close();
+  }
+  const off = await relayHarness({ on: false });
+  try {
+    const preflight = await raw(off.h.server.origin, "OPTIONS", "/v1/relay/xo/bundler", { origin: XO_RELAY_DAPP_ORIGIN, "access-control-request-method": "POST" });
+    assert.equal(preflight.headers["access-control-allow-origin"], undefined, "no CORS grant while off");
+  } finally {
+    await off.h.close();
+  }
+});
+
+test("a send the bundler does not answer in time is reported as maybe accepted, never retried; logs hold no body", async () => {
+  const upstream = fakeOrderBook(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return { body: "{}" };
+  });
+  const realFetch = upstream.fetch;
+  const abortable = (async (input: string | URL | Request, init?: RequestInit) =>
+    new Promise<Response>((resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+      void realFetch(input, init).then(resolve, reject);
+    })) as typeof fetch;
+  const { h, logs } = await relayHarness({ upstream: { fetch: abortable, seen: upstream.seen }, timeoutMs: 50 });
+  try {
+    const send = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler", JSON_POST, rpc("eth_sendUserOperation", [USEROP, ENTRY_POINT]));
+    assert.deepEqual([send.status, codeOf(send.text)], [504, "upstream_timeout"]);
+    assert.match(send.text, /may or may not have been accepted/);
+    const read = await raw(h.server.origin, "POST", "/v1/relay/xo/bundler", JSON_POST, rpc("eth_getUserOperationReceipt", [HASH]));
+    assert.deepEqual([read.status, codeOf(read.text)], [504, "upstream_timeout"]);
+    assert.doesNotMatch(read.text, /accepted/);
+    assert.equal(upstream.seen.length, 2, "one request each, nothing retried");
+    assert.deepEqual(
+      logs.map((line) => line.replace(/\d+ms$/, "ms")),
+      ["POST /v1/relay/xo/bundler 504 ms", "POST /v1/relay/xo/bundler 504 ms"],
+    );
+    for (const line of logs) for (const value of [USEROP.signature, USEROP.sender, HASH, "eth_"]) assert.equal(line.includes(value), false, line);
   } finally {
     await h.close();
   }

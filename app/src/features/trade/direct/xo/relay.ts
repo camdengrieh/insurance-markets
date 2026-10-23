@@ -1,6 +1,7 @@
 // The page's side of the XO order relay (api/xo-relay.ts on the markets API, at MARKETS_API_ORIGIN). XO's order book
 // sends no CORS headers for this page, so every order-book call goes through the relay, which forwards what the
-// browser signed and adds nothing. This client:
+// browser signed and adds nothing. XO's bundler sends none either, so the account setup's JSON-RPC calls (a gas
+// estimate, the one signed user operation, its receipt) go through the relay's bundler route the same way. This client:
 //   - builds the request for exactly one of the relay's routes, with XO's headers under their hyphen names
 //     (xo-api-key ...): a proxy in front may drop a header name with an underscore, and the relay maps them back;
 //   - sends no cookie or credential (credentials "omit"), no referrer, follows no redirect and caches nothing;
@@ -12,6 +13,8 @@ import type { L1Headers } from "@sdk/trade/xo/clobauth";
 import type { L2Headers } from "./hmac";
 
 export const RELAY_BASE_PATH = "/v1/relay/xo/clob";
+// XO's ERC-4337 bundler behind the same relay: one JSON-RPC request per POST (the account setup, setup.ts).
+export const BUNDLER_RELAY_PATH = "/v1/relay/xo/bundler";
 const TIMEOUT_MS = 15_000;
 const MAX_ANSWER_CHARS = 1_048_576;
 
@@ -78,14 +81,28 @@ export class XoRelayClient {
     return `${this.origin}${RELAY_BASE_PATH}${path}${search === "" ? "" : `?${search}`}`;
   }
 
+  bundlerUrl(): string {
+    return `${this.origin}${BUNDLER_RELAY_PATH}`;
+  }
+
   async send(request: RelayRequest): Promise<RelayAnswer> {
+    return this.#exchange(this.urlOf(request.path, request.query), request);
+  }
+
+  // One JSON-RPC request to XO's bundler through the relay. `body` is the exact JSON text; the relay checks the method
+  // against its list and forwards the bytes unchanged.
+  bundler(body: string): Promise<RelayAnswer> {
+    return this.#exchange(this.bundlerUrl(), { method: "POST", path: BUNDLER_RELAY_PATH, body });
+  }
+
+  async #exchange(url: string, request: RelayRequest): Promise<RelayAnswer> {
     const headers: Record<string, string> = { accept: "application/json", ...relayHeaders(request.headers ?? {}) };
     if (request.body !== undefined) headers["content-type"] = "application/json";
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     let response: Response;
     try {
-      response = await this.#fetch(this.urlOf(request.path, request.query), {
+      response = await this.#fetch(url, {
         method: request.method,
         headers,
         ...(request.body === undefined ? {} : { body: request.body }),
