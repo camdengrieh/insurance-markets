@@ -68,6 +68,20 @@ describe("check-boundaries", () => {
     expect(await rules({ ...files, "app/src/main.ts": "export const x = 1;\n", "app/src/a.test.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/a.test.ts"]);
   });
 
+  it("lets only the XO HMAC parity tests import the Node XO signer, and nothing else from sdk/node", async () => {
+    const files = {
+      "app/src/main.ts": "export const x = 1;\n",
+      "sdk/node/trade/xo/hmac.ts": 'import { createHmac } from "node:crypto";\nexport const h = createHmac;\n',
+      "sdk/node/trade/clob/polymarket/l2.ts": "export const p = 1;\n",
+    };
+    const parity = "app/src/features/trade/direct/xo/hmac.test.ts";
+    expect(await rules({ ...files, [parity]: 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual([]);
+    expect(await rules({ ...files, [parity]: 'import { p } from "@sdk/node/trade/clob/polymarket/l2";\nexport const t = p;\n' })).toEqual([`forbidden-import:${parity}`]);
+    expect(await rules({ ...files, "app/src/features/trade/direct/xo/other.test.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/features/trade/direct/xo/other.test.ts"]);
+    // The page's own folder never may.
+    expect(await rules({ ...files, "app/src/features/trade/direct/xo/hmac.ts": 'import { h } from "@sdk/node/trade/xo/hmac";\nexport const t = h;\n' })).toEqual(["forbidden-import:app/src/features/trade/direct/xo/hmac.ts"]);
+  });
+
   it("fails an import outside app/ that is not on the shared allowlist", async () => {
     const found = await rules({
       "src/other.ts": "export const o = 1;\n",

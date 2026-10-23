@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Build both images for linux/arm64 from the repository root, push them to ECR tagged :latest and
-# :<git sha>, then run pm-deploy on the host through SSM (pulls, restarts the recorder if its image
-# changed, enables the linker timer).
+# Build images for linux/arm64 from the repository root, push them to ECR tagged :latest and
+# :<git sha>, then run pm-deploy on the host through SSM (pulls, restarts the recorder and pm-api if
+# their images changed, enables the linker timer).
 #
-#   deploy/aws/push.sh              # both
-#   deploy/aws/push.sh recorder     # one of them
+#   deploy/aws/push.sh              # both workers (recorder and linker)
+#   deploy/aws/push.sh recorder     # one of them: recorder | linker | api
+#   deploy/aws/push.sh all          # recorder, linker and api
 #   NO_DEPLOY=1 deploy/aws/push.sh  # push only
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -21,6 +22,17 @@ LINKER_URI="$(out LinkerRepositoryUri)"
 INSTANCE_ID="$(out InstanceId)"
 REGISTRY="${RECORDER_URI%%/*}"
 
+# Only read when an api build is asked for: a stack not yet updated by up.sh has no such output.
+api_uri() {
+  local uri
+  uri="$(out ApiRepositoryUri)"
+  if [ -z "$uri" ] || [ "$uri" = None ]; then
+    echo "the stack has no ApiRepositoryUri output; run deploy/aws/up.sh first" >&2
+    exit 1
+  fi
+  echo "$uri"
+}
+
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
 
 build() { # name uri
@@ -31,7 +43,9 @@ case "$WHICH" in
   both) build recorder "$RECORDER_URI"; build linker "$LINKER_URI" ;;
   recorder) build recorder "$RECORDER_URI" ;;
   linker) build linker "$LINKER_URI" ;;
-  *) echo "usage: push.sh [both|recorder|linker]"; exit 2 ;;
+  api) API_URI="$(api_uri)"; build api "$API_URI" ;;
+  all) API_URI="$(api_uri)"; build recorder "$RECORDER_URI"; build linker "$LINKER_URI"; build api "$API_URI" ;;
+  *) echo "usage: push.sh [both|recorder|linker|api|all]"; exit 2 ;;
 esac
 
 [ -n "${NO_DEPLOY:-}" ] && exit 0

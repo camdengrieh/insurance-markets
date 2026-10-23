@@ -114,6 +114,10 @@ export interface HarnessOptions {
   readonly facilitatorFetch?: FetchLike;
   readonly assetRpcFetch?: FetchLike;
   readonly random?: (bytes: number) => Buffer;
+  // The XO relay's upstream (a fake; never XO itself), its deadline, and a sink for the server's log lines.
+  readonly relayFetch?: typeof fetch;
+  readonly relayUpstreamTimeoutMs?: number;
+  readonly log?: (line: string) => void;
 }
 
 const refuse = (what: string): FetchLike => async () => {
@@ -139,7 +143,15 @@ export async function startHarness(options: HarnessOptions): Promise<Harness> {
   });
   const parts = paymentParts(config, options.facilitatorFetch ?? refuse("facilitator"), options.assetRpcFetch ?? refuse("Base RPC"), options.clock.read);
   const meter = createMeter({ config, store: metering, ...parts, nowMs: options.clock.read });
-  const server = await startApiServer({ api, config, meter, nowMs: options.clock.read });
+  const server = await startApiServer({
+    api,
+    config,
+    meter,
+    nowMs: options.clock.read,
+    ...(options.relayFetch === undefined ? {} : { relayFetch: options.relayFetch }),
+    ...(options.relayUpstreamTimeoutMs === undefined ? {} : { relayUpstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
+    ...(options.log === undefined ? {} : { log: options.log }),
+  });
   return {
     api,
     server,

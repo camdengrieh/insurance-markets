@@ -35,7 +35,12 @@ export type ErrorCode =
   | "unsupported_media_type"
   | "group_not_found"
   | "group_not_quotable"
-  | "route_prepare_not_enabled";
+  | "route_prepare_not_enabled"
+  | "relay_not_enabled"
+  | "origin_not_allowed"
+  | "upstream_unreachable"
+  | "upstream_timeout"
+  | "upstream_invalid";
 
 export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = Object.freeze({
   invalid_request: 400,
@@ -54,6 +59,11 @@ export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = Object.freeze({
   group_not_found: 404,
   group_not_quotable: 422,
   route_prepare_not_enabled: 403,
+  relay_not_enabled: 403,
+  origin_not_allowed: 403,
+  upstream_unreachable: 502,
+  upstream_timeout: 504,
+  upstream_invalid: 502,
 });
 
 export class ApiError extends Error {

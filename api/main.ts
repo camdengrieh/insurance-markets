@@ -22,7 +22,8 @@ import { createHonestFetch } from "./upstream.js";
 const USAGE = `insurance-markets-api ${API_VERSION}
 
   serve     answer GET /v1/health, /v1/venues, /v1/markets, /v1/markets/:venue/:id, /v1/groups, the paid GET /v1/quote and
-            POST /v1/route/prepare, and run the chain indexer
+            POST /v1/route/prepare, the XO order relay under /v1/relay/xo/clob/ when API_XO_RELAY=on, and run
+            the chain indexer
   keys      keys issue --label <text> --tier quote|full [--per-minute N] [--burst N] [--days N] | keys list | keys revoke <id>
   listing   print the x402 listing manifest (paid endpoints, prices, rail) as JSON
   --help    this text
@@ -56,7 +57,9 @@ async function serve(config: ApiConfig): Promise<void> {
   const facilitatorFetch = createHonestFetch({ fetchImpl: globalThis.fetch, timeoutMs: config.limits.facilitatorTimeoutMs, maxBytes: 64 * 1024 });
   const api = createApi({ config, store, fetchFor: () => honest, rpcFetch: honest, nowMs: Date.now, log: stamp });
   const meter = createMeter({ config, store: metering, ...paymentParts(config, facilitatorFetch, honest, Date.now), nowMs: Date.now, log: stamp });
-  const server = await startApiServer({ api, config, meter, log: stamp });
+  // The XO relay (off unless API_XO_RELAY=on) forwards with the platform fetch; xo-relay.ts sets its own User-Agent,
+  // deadline and caps.
+  const server = await startApiServer({ api, config, meter, log: stamp, relayFetch: globalThis.fetch });
   stamp(`listening on ${config.host}:${server.port}`);
 
   let stopping = false;
