@@ -60,7 +60,8 @@ export interface PolymarketRelayerClient {
   submit(body: string, proof: string | null): Promise<RelayerAnswer>;
   params(owner: Address): Promise<RelayerAnswer>;
   transaction(id: string): Promise<RelayerAnswer>;
-  deposit(wallet: Address): Promise<RelayerAnswer>;
+  // The bridge's deposit addresses for `wallet`, the Deposit Wallet of `sender` (the trading key).
+  deposit(sender: Address, wallet: Address): Promise<RelayerAnswer>;
 }
 
 function parsed(text: string): unknown {
@@ -85,7 +86,7 @@ export function createPolymarketRelayerClient(http: VenueHttp, origin: string): 
     submit: (body, proof) => send("POST", `${POLYMARKET_RELAY_PATH}/submit`, body, proof),
     params: (owner) => send("GET", `${POLYMARKET_RELAY_PATH}/v1/account/transactions/params?${new URLSearchParams({ address: owner, type: "WALLET" }).toString()}`),
     transaction: (id) => send("GET", `${POLYMARKET_RELAY_PATH}/v1/account/transactions/${encodeURIComponent(id)}`),
-    deposit: (wallet) => send("POST", `${POLYMARKET_BRIDGE_PATH}/deposit`, JSON.stringify({ address: wallet })),
+    deposit: (sender, wallet) => send("POST", `${POLYMARKET_BRIDGE_PATH}/deposit`, JSON.stringify({ sender, address: wallet })),
   };
 }
 

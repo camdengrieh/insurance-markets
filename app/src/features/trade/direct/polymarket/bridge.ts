@@ -51,7 +51,7 @@ export async function fundPolymarketFromBase(deps: DirectDeps, relayer: Polymark
   if (balance.value < amountAtomic) return refuse("invalid_order", `Your trading account holds ${atomicText(balance.value, USDC_DECIMALS)} USDC on Base; moving ${atomicText(amountAtomic, USDC_DECIMALS)} needs more.`);
   let answer;
   try {
-    answer = await relayer.deposit(account.value.maker);
+    answer = await relayer.deposit(acct.address, account.value.maker);
   } catch (error) {
     return relayerTransport(error, "Polymarket's deposit address");
   }

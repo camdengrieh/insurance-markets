@@ -212,7 +212,7 @@ describe("the Polymarket wallet's balance and funding from Base", () => {
     const { deps, relayer, acct, signer, venue } = rig({ deployed: true, approved: true, usdc: 10_000_000n });
     const funded = await fundPolymarketFromBase(deps, relayer, acct, 5_000_000n);
     expect(funded).toEqual({ ok: true, value: { depositAddress: DEPOSIT, transactionHash: TX } });
-    expect(JSON.parse(venue.requests.find((request) => request.url.endsWith("/deposit"))?.body ?? "{}")).toEqual({ address: WALLET });
+    expect(JSON.parse(venue.requests.find((request) => request.url.endsWith("/deposit"))?.body ?? "{}")).toEqual({ sender: OWNER.address, address: WALLET });
     expect(signer.transactions).toHaveLength(1);
     const sent = signer.transactions[0]!;
     expect(sent).toMatchObject({ chainId: 8453, to: LIMITLESS_USDC });
