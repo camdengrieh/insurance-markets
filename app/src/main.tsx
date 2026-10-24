@@ -4,8 +4,10 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AccountChip } from "./features/account/AccountChip";
 import { Dock } from "./features/terminal/Dock";
+import { registerVenues } from "./features/trade/direct/services";
 import { WalletChip } from "./features/wallet/WalletChip";
 import { startPageSession } from "./session";
+import { appModeFromEnv } from "./ui/context";
 import { initTheme } from "./ui/theme";
 import { takePairingFragment } from "./ui/pairing-fragment";
 import "./ui/theme.css";
@@ -17,11 +19,14 @@ import "./ui/components.css";
 //   3. start the Cockpit session (exchange the pairing code, if the page was opened with one);
 //   4. render: the shell with the trading account chip and the wallet chip in its top bar and the terminal dock in its
 //      footer. The dock says whether the page is paired; the wallet chip opens the Connect modal, the account chip the
-//      trading account panel (hosted build only; it renders nothing in the Cockpit build).
+//      trading account panel (hosted build only; it renders nothing in the Cockpit build). The hosted build registers
+//      the three venues' activations and balance sources with the trading account first (features/trade/direct), which
+//      requests nothing by itself.
 // Nothing else happens at load: apart from that one exchange, no request is made until a screen asks for data.
 takePairingFragment();
 initTheme();
 const session = startPageSession();
+if (appModeFromEnv() === "standalone") registerVenues();
 
 const element = document.getElementById("root");
 if (element === null) {

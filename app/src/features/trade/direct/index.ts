@@ -1,28 +1,22 @@
-// The direct executors, by venue id: a venue listed here trades from the standalone build with the visitor's own
-// wallet (types.ts says what an executor does). Adding a venue is one line here and its folder beside polymarket/.
-// Limitless sends no CORS headers for the page, so its executor reaches the venue through our markets API's relay
-// (limitless/relay.ts), with the visitor's own pasted API token signing every request in the tab.
+// The direct path: the trading account (docs/unified-account-design.md) trades on XO, Polymarket and Limitless from the
+// standalone build. The trading key E signs in the visitor's browser; each venue is reached from the browser itself
+// (Polymarket's order book) or through our markets API's relays (XO's order book and bundler, Limitless's partner
+// relay, Polymarket's relayer and bridge), which add our operator credentials and never see a key.
+//
+// What the rest of the page uses:
+//   TradeTicket            the one ticket for every tradable market (outcome, side, amount and price, order type, a
+//                          summary, Place order, the open orders with a cancel each);
+//   venueActivations       each venue's activation, for the trading account's "Activate trading";
+//   venueBalanceSources    what each venue holds for the account, for the one balance.
+// The executors (polymarket/, limitless/, xo/) keep the interface in types.ts and receive the account's signer as
+// their wallet.
 
-import { createLimitlessExecutor } from "./limitless/executor";
-import { createPolymarketExecutor } from "./polymarket/executor";
-import type { DirectDeps, DirectExecutor } from "./types";
+export { TradeTicket, type TradeTicketProps } from "./TradeTicket";
+export { registerVenues, venueActivations, venueBalanceSources, VenueKitProvider, useVenueKit, createBrowserVenueKit } from "./services";
+export { createVenueKit, type VenueKit, type VenueKitOptions } from "./kit";
+export { TRADE_VENUES, isTradeVenue, VENUE_NAME, type TradeVenue, type TicketMarket, type TicketOutcome } from "./routes";
 
-export const DIRECT_EXECUTORS = {
-  polymarket: createPolymarketExecutor,
-  limitless: (deps: DirectDeps) => createLimitlessExecutor(deps),
-} as const satisfies Readonly<Record<string, (deps: DirectDeps) => DirectExecutor<never>>>;
-
-export type DirectVenue = keyof typeof DIRECT_EXECUTORS;
-
-export function hasDirectExecutor(venue: string): venue is DirectVenue {
-  return Object.prototype.hasOwnProperty.call(DIRECT_EXECUTORS, venue);
-}
-
-// XO trades from the standalone build too, through the markets API's relay and its own panel (xo/index.ts): its shape
-// differs from the CLOB executors above (one panel owns readiness, login, ticket and orders), so it is not in the map.
-export { xoDirectExecutor, XoTradePanel } from "./xo";
-
-// Whether the standalone build offers a venue's ticket with the visitor's own wallet.
+// Whether the standalone build offers a venue's ticket to the trading account.
 export function tradesDirectly(venue: string): boolean {
-  return hasDirectExecutor(venue) || venue === "xo";
+  return venue === "xo" || venue === "polymarket" || venue === "limitless";
 }

@@ -8,8 +8,8 @@ import { NO_PATH_REASON, TICKET_VENUES, hasTicket } from "./Ticket";
 import { PAIR_CODE } from "../terminal/test-support";
 import { book, fakeEntry, fakeServices, flush, market, mount, summary } from "./test-support";
 
-// The market modal's footer per venue and build: a ticket for XO, Polymarket and Limitless (the direct ticket for
-// Polymarket and the caution tile for the other two in the
+// The market modal's footer per venue and build: a ticket for XO, Polymarket and Limitless (the trading account's one
+// ticket in the
 // standalone build, the desk in the Cockpit build), and a worksheet with one honest sentence for every other venue.
 
 afterEach(cleanup);
@@ -43,15 +43,15 @@ describe("which venues have a ticket", () => {
 
 describe("the standalone build", () => {
   // Limitless is a daemon-only venue: its markets cannot even be read standalone, so the modal shows the venue tile
-  // before any ticket (that case is the Cockpit one below). Polymarket reads standalone and trades with the visitor's own
-  // wallet (features/trade/direct): with none connected, the ticket asks for one.
+  // before any ticket (that case is the Cockpit one below). Polymarket reads standalone and trades with the trading
+  // account (features/trade/direct): with none set up, the ticket asks for one.
   for (const venue of ["polymarket"] as const) {
-    it(`shows the direct ticket, asking for a wallet, for a ${venue} market, no worksheet and no "Trade on" words`, async () => {
+    it(`shows the one ticket, asking for the account, for a ${venue} market, no worksheet and no "Trade on" words`, async () => {
       const root = await open(venue, "standalone");
       expect(allText(must(root, "#explorer-ticket-heading"))).toBe("Order ticket");
-      expect(allText(root)).toContain("Connect a wallet to trade");
+      expect(allText(root)).toContain("Set up your account");
       expect(allText(root)).not.toContain("needs the Cockpit");
-      expect(must(root, "[data-testid='direct-ticket']").getAttribute("data-direct")).toBe("no-wallet");
+      expect(must(root, "[data-testid='trade-ticket']").getAttribute("data-state")).toBe("no-account");
       expect(root.querySelector("[data-ticket='worksheet']")).toBeNull();
       expect(allText(root)).not.toMatch(/Trade on (Polymarket|Limitless)/);
       expect(root.querySelectorAll("a[href^='http']")).toHaveLength(0);

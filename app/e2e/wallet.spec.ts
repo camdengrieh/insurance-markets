@@ -41,7 +41,7 @@ test("standalone: a browser wallet announced through EIP-6963 connects, and the 
   // Discovery asked the wallet for nothing.
   expect(await page.evaluate(() => (window as unknown as { __testWallet: { calls: string[] } }).__testWallet.calls)).toEqual([]);
 
-  await page.locator("button.ui-wallet-chip").click();
+  await page.locator("button.ui-wallet-chip:not(.ac-chip)").click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("tab", { name: "Browser wallet" })).toHaveAttribute("aria-selected", "true");
   const wallet = dialog.getByRole("button", { name: "E2E Wallet" });
@@ -49,12 +49,12 @@ test("standalone: a browser wallet announced through EIP-6963 connects, and the 
   await expect(wallet.locator("img")).toHaveAttribute("src", /^data:image\/svg\+xml;base64,/);
   await wallet.click();
 
-  await expect(page.locator("button.ui-wallet-chip")).toHaveAttribute("data-connected", "injected");
-  await expect(page.locator("button.ui-wallet-chip")).toContainText("0xf39F…2266");
+  await expect(page.locator("button.ui-wallet-chip:not(.ac-chip)")).toHaveAttribute("data-connected", "injected");
+  await expect(page.locator("button.ui-wallet-chip:not(.ac-chip)")).toContainText("0xf39F…2266");
   await expect(dialog.locator('[data-kind="connected"]')).toContainText(ADDRESS);
   await dialog.locator('button[data-action="not-now"]').click();
   await page.locator('button[data-action="chip-disconnect"]').click();
-  await expect(page.locator("button.ui-wallet-chip")).not.toHaveAttribute("data-connected", /.+/);
+  await expect(page.locator("button.ui-wallet-chip:not(.ac-chip)")).not.toHaveAttribute("data-connected", /.+/);
 
   expect(unknownViolations(await seen.violations()), "securitypolicyviolation events").toEqual([]);
   expect(seen.pageErrors(), "uncaught errors").toEqual([]);
@@ -89,7 +89,7 @@ test("standalone: WalletConnect loads on demand, reaches only the listed relay, 
   const before = scripts.length;
   expect(sockets).toEqual([]);
 
-  await page.locator("button.ui-wallet-chip").click();
+  await page.locator("button.ui-wallet-chip:not(.ac-chip)").click();
   const dialog = page.getByRole("dialog");
   // No browser wallet in this browser: the modal opens on WalletConnect.
   await expect(dialog.getByRole("tab", { name: "WalletConnect (PayBox, phone wallets)" })).toHaveAttribute("aria-selected", "true");
@@ -140,7 +140,7 @@ test("cockpit: WalletConnect is off and says why; nothing is loaded and no socke
   const sockets: string[] = [];
   page.on("websocket", (socket) => sockets.push(socket.url()));
   await page.goto(`${cockpitStatic.url}#/`);
-  await page.locator("button.ui-wallet-chip").click();
+  await page.locator("button.ui-wallet-chip:not(.ac-chip)").click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("tab", { name: "WalletConnect (PayBox, phone wallets)" }).click();
   await expect(dialog.locator('button[data-action="walletconnect-start"]')).toBeDisabled();

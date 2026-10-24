@@ -74,6 +74,12 @@ export function fakeSigner(account: LocalAccount, options: FakeSignerOptions = {
   };
 }
 
+// The same fake as the trading account's own signer (kind "local"), for a TradingAccount in a test. The arrays it
+// records into are shared with the original.
+export function asLocal<T extends WalletSigner>(signer: T): T & { readonly kind: "local" } {
+  return { ...signer, kind: "local" };
+}
+
 // ---- the venue ----------------------------------------------------------------------------------------------------------
 
 export type Route = (request: VenueRequest) => VenueResponse | Promise<VenueResponse>;
