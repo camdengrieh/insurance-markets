@@ -137,6 +137,11 @@ repository root with the AWS profile and region the scripts default to:
 
 ## Add the Limitless relay
 
+Superseded on 2026-10-24: the Limitless relay is now the partner relay of `docs/unified-account-design.md` (the
+operator's partner token, no visitor token; its CloudFront policy forwards `x-im-proof`, not the `lmts-*` headers). Its
+setup is in "Operator credentials for the unified account (SSM)" below; the steps here are kept as the record of the
+first rollout.
+
 The Limitless relay (`api/limitless-relay.ts`, `API_LIMITLESS_RELAY=on`) forwards the requests the visitor's browser
 signed with the visitor's own Limitless API token; like the XO relay it holds no key or token and stores nothing
 (`api/README.md`). It needs a stack change: an origin request policy takes at most 10 headers (CloudFront quota
@@ -176,6 +181,82 @@ change `-e API_INDEXER=off` to `on` in the `ApiHostDocument` script in `stack.ya
 association re-runs and restarts `pm-api`); consider a larger instance first. Other API variables
 (`deploy/api/README.md`) go on the same `docker run` line.
 
+## Operator credentials for the unified account (SSM)
+
+The trading account of `docs/unified-account-design.md` needs four API features on the host: the gas sponsor
+(`/v1/paymaster/:chainId`, with `/v1/relay/polymarket-bridge/deposit`), the Polymarket builder relay
+(`/v1/relay/polymarket/...`), the Limitless partner relay (`/v1/relay/limitless/...`) and the account backup store
+(`/v1/account-backup/...`). The unit turns all of them on (`API_PAYMASTER=on`, `API_POLYMARKET_RELAY=on`,
+`API_LIMITLESS_RELAY=on`, `API_ACCOUNT_BACKUP=on`); each one that needs an operator credential answers
+`503 {"error":{"code":"not_configured",...}}` until its SSM parameters exist, and the rest keep working. The backup store
+needs none.
+
+**Where they live.** SSM Parameter Store, type `SecureString`, under `/pm-workers/api/`, in `eu-north-1`. The host role may
+`ssm:GetParameter(s)` on that path only and `kms:Decrypt` only through SSM for a parameter on that path (`stack.yaml`,
+`InstanceRole`). `/usr/local/bin/pm-api-secrets` (written by the `ApiHostDocument` association) reads each name below
+before `pm-api` starts (`ExecStartPre`) and on every `pm-deploy`, and writes the ones that exist to
+`/etc/pm-api.secrets.env` (root only, mode 0600), which `docker run --env-file` hands to the container. It prints names,
+never values; a parameter that is absent is left out; if SSM cannot be read it keeps the previous file. Nothing is in the
+repository, the image, the unit's command line or the logs (the API's start-up banner says "configured" or "not
+configured" per feature, and nothing more).
+
+| Parameter | What it is | How to get it |
+|---|---|---|
+| `PIMLICO_API_KEY` | bundler and paymaster on Polygon 137, Base 8453 and BNB 56 | dashboard.pimlico.io: switch to pay as you go (card), set the overdraft alert, create one API key limited to bundler and paymaster methods, IP allowlist = this host's Elastic IP (the `ElasticIp` stack output) |
+| `PIMLICO_SPONSORSHIP_POLICY_ID` | the caps: chains 137, 8453, 56; a global, a per-user and a per-operation USD limit | same dashboard, Sponsorship Policies: create one, copy its id (`sp_...`) |
+| `POLY_BUILDER_API_KEY`, `POLY_BUILDER_SECRET`, `POLY_BUILDER_PASSPHRASE` | Polymarket relayer access for gasless Deposit Wallets (unverified tier: 100 relayer transactions a day for everyone) | polymarket.com, Settings, Builders (`/settings?tab=builder`): create the builder profile, "+ Create New" key; the three values are shown once |
+| `POLY_BUILDER_CODE` | the public builder code (bytes32 hex), sent as `X-Builder-Code` to the bridge | same page; public, stored here for one place of configuration |
+| `LIMITLESS_PARTNER_TOKEN_ID`, `LIMITLESS_PARTNER_SECRET` | the partner HMAC token with scopes `trading`, `account_creation`, `delegated_signing` | sign in at limitless.exchange with an operator wallet, apply for partner access (the form linked from docs.limitless.exchange programmatic-api), and after approval create the scoped token in the API token dialog; `tokenId` and `secret` are shown once |
+
+**Set them** (the exact commands; run each once, add `--overwrite` to rotate a value later):
+
+```sh
+aws ssm put-parameter --type SecureString --name /pm-workers/api/PIMLICO_API_KEY --value '<Pimlico API key>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/PIMLICO_SPONSORSHIP_POLICY_ID --value '<sp_ policy id>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/POLY_BUILDER_API_KEY --value '<Builder API key>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/POLY_BUILDER_SECRET --value '<Builder secret>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/POLY_BUILDER_PASSPHRASE --value '<Builder passphrase>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/POLY_BUILDER_CODE --value '<0x builder code, 64 hex>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/LIMITLESS_PARTNER_TOKEN_ID --value '<partner tokenId>' --profile insurance-markets --region eu-north-1
+aws ssm put-parameter --type SecureString --name /pm-workers/api/LIMITLESS_PARTNER_SECRET --value '<partner secret>' --profile insurance-markets --region eu-north-1
+```
+
+To keep a value out of the shell history, read it first and pass the variable:
+`read -rs V && aws ssm put-parameter --type SecureString --name /pm-workers/api/PIMLICO_API_KEY --value "$V" --profile insurance-markets --region eu-north-1; unset V`.
+The API checks each value's form at start (printable, no spaces; the two HMAC secrets base64; the builder code 0x and 64
+hex) and leaves a malformed one out with a note naming the variable.
+
+**Roll it out.** Once, for this change: `deploy/aws/up.sh` (the role's SSM and KMS permissions, the new unit and
+`pm-api-secrets`, the CloudFront behaviours and origin request policies for `/v1/paymaster/*`, `/v1/relay/polymarket/*`,
+`/v1/relay/polymarket-bridge/*`, `/v1/account-backup/*` and the Limitless relay's new headers), then
+`deploy/aws/push.sh api` (the image with the routes). After that, a new or rotated parameter is picked up by the next
+`deploy/aws/push.sh api` (its `pm-deploy` restarts `pm-api` when the secrets file changed), or at once on the host with
+`sudo systemctl restart pm-api`.
+
+**Check them** (from anywhere; nothing here spends, deploys, registers or signs):
+
+```sh
+D="$(aws cloudformation describe-stacks --stack-name pm-workers --profile insurance-markets --region eu-north-1 --query "Stacks[0].Outputs[?OutputKey=='ApiCloudFrontDomain'].OutputValue" --output text)"
+O='Origin: https://xo-markets-explorer.vercel.app'
+curl -s -H "$O" -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' "https://$D/v1/paymaster/8453"
+curl -s -H "$O" "https://$D/v1/relay/polymarket/deployed?address=0x00000000000Fb5C9ADea0298D729A0CB3823Cc07&type=WALLET"
+curl -s -H "$O" "https://$D/v1/relay/limitless/signing-message"
+curl -s -H "$O" "https://$D/v1/account-backup/00000000000000000000000000000000"
+```
+
+| Route | Not configured | Ready |
+|---|---|---|
+| paymaster | `{"error":{"code":"not_configured",...}}` (HTTP 503) | `{"jsonrpc":"2.0","id":1,"result":"0x2105"}` from Pimlico |
+| Polymarket relay | `not_configured` (503) | the relayer's own answer, e.g. `{"deployed":false}` |
+| Limitless relay | `not_configured` (503) | the "Welcome to Limitless Exchange! ... Nonce: 0x..." text |
+| account backup | (needs no credential) | `{"error":{"code":"not_found",...}}` (404): the store answers |
+
+`relay_not_enabled` (403) on any of them means the running unit predates this change (run `up.sh`), and a 404 from the
+XO relay for `/v1/relay/polymarket/...` means the image does (run `push.sh api`). On the host,
+`sudo /usr/local/bin/pm-api-secrets` prints which names it found, and `aws logs tail /pm-workers/pm-api --since 10m`
+shows the banner lines `paymaster: on, pimlico configured`, `polymarket relay: on, builder credentials configured, ...`
+and `limitless relay: on, partner token configured`.
+
 ## Day to day
 
 ```sh
@@ -210,7 +291,7 @@ study is over (`aws ec2 delete-volume --volume-id <DataVolumeId>`, `aws s3 rb s3
 
 | File | Purpose |
 |---|---|
-| `stack.yaml` | the CloudFormation template: ECR x3, S3 transfer bucket, log groups, IAM role, security group (one ingress rule: the API port from CloudFront's prefix list), EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`), the Elastic IP, the SSM document and association for `pm-api`, the two relays' origin request policies (XO, Limitless) and the CloudFront distribution with a cache behaviour for each |
+| `stack.yaml` | the CloudFormation template: ECR x3, S3 transfer bucket, log groups, IAM role, security group (one ingress rule: the API port from CloudFront's prefix list), EBS volume + attachment, EC2 host with the first-boot script (Docker, mount, systemd units, `pm-pull`, `pm-deploy`, `pm-recorder-cmd`), the Elastic IP, the SSM document and association for `pm-api`, the origin request policies (XO relay; Limitless and Polymarket relays with the ownership proof; paymaster, bridge route and backup store), the CloudFront distribution with a cache behaviour for each, `pm-api-secrets` and the role's read of `/pm-workers/api/*` in SSM |
 | `up.sh` | resolves the default VPC/subnet/AZ and CloudFront's prefix list, guards against a host replacement, and runs `aws cloudformation deploy` |
 | `push.sh` | builds the images for arm64 (`both` = recorder and linker, or `recorder`, `linker`, `api`, `all`), pushes to ECR, runs `pm-deploy` over SSM |
 | `migrate-volume.sh` | the four-step copy of the Railway volume to the host |
@@ -244,3 +325,11 @@ quota of 10 headers per origin request policy was read with `aws service-quotas`
 itself is covered by `test/api/limitless-relay.test.ts` against a fake Limitless. Not verified: nothing was deployed,
 and no order, cancel or token request has reached Limitless through it; CloudFront forwarding the `lmts-*` headers is
 unproven until `up.sh` and `push.sh api` run.
+
+For the unified-account routes (2026-10-24): the routes are covered by `test/api/paymaster.test.ts`,
+`polymarket-relay.test.ts`, `limitless-relay.test.ts`, `account-backup.test.ts`, `proof.test.ts` and
+`sponsor-policy.test.ts` against fake upstreams. The association's script, rendered with sample values, passes `bash -n`;
+`pm-api-secrets` was run against a stand-in `aws` command (values written mode 0600, absent names left out, the previous
+file kept when SSM fails, nothing printed but names). Not verified: `aws cloudformation validate-template` (no AWS session
+was available), `cfn-lint` and shellcheck (not installed here); nothing was deployed; no parameter exists yet; no request
+has reached Pimlico, Polymarket's relayer or bridge, or Limitless through these routes.

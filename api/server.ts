@@ -5,8 +5,19 @@ import type { AddressInfo, Socket } from "node:net";
 import { ApiError, ERROR_STATUS, type Api, type ErrorCode } from "./app.js";
 import type { ApiConfig, RateLimitSpec } from "./config.js";
 import type { Gate, Meter, Ticket } from "./metering.js";
+import { BASE_RPC_URL } from "../sdk/chain/limitless/constants.js";
+import { POLYGON_RPC_URL } from "../sdk/chain/polymarket/constants.js";
+import { createAccountBackup } from "./account-backup.js";
+import { SqliteAccountStore, type AccountStore } from "./account-store.js";
 import { createLimitlessRelay } from "./limitless-relay.js";
+import { createPaymaster } from "./paymaster.js";
+import { createPolymarketBridge } from "./polymarket-bridge.js";
+import { createPolymarketRelay } from "./polymarket-relay.js";
 import { createXoRelay } from "./xo-relay.js";
+
+// The BNB Chain public RPC the paymaster reads a sender's delegation from (sdk/venues/origins.ts rpc_bnb). Polygon and
+// Base use the operator's API_RPC_POLYGON / API_RPC_BASE when set, else the SDK's public RPCs.
+export const BNB_RPC_URL = "https://bsc-rpc.publicnode.com/";
 
 // The API's HTTP server: node:http, no framework (relay/server.ts is the pattern).
 //
@@ -23,8 +34,10 @@ import { createXoRelay } from "./xo-relay.js";
 //      verified before the handler runs); then the handler;
 //   7. a paid call is settled only after a good answer, and never after a failed one.
 // A path under /v1/relay/ is handed whole to an order relay right after step 1: /v1/relay/limitless/ to the Limitless
-// relay (limitless-relay.ts), anything else under /v1/relay/ to the XO relay (xo-relay.ts). Each has its own methods,
-// CORS rule, size limit and rate limit, takes no key and is never metered.
+// partner relay (limitless-relay.ts), /v1/relay/polymarket-bridge/ to the bridge address route (polymarket-bridge.ts),
+// /v1/relay/polymarket/ to the Polymarket builder relay (polymarket-relay.ts), anything else under /v1/relay/ to the XO
+// relay (xo-relay.ts); /v1/paymaster/ goes to the gas sponsor (paymaster.ts) and /v1/account-backup/ to the backup store
+// (account-backup.ts). Each has its own methods, CORS rule, size limit and rate limit, takes no key and is never metered.
 // Errors are JSON with a fixed code: { "error": { "code", "message" } }; a 402 carries the x402 PaymentRequired object as
 // its body and, base64, in PAYMENT-REQUIRED. Every answer carries x-request-id, cache-control no-store (no shared cache may
 // present an old answer as new), nosniff and no-referrer; CORS headers only for a configured origin.
@@ -88,6 +101,9 @@ export interface ServerOptions {
   readonly relayFetch?: typeof fetch;
   // Tests only: the relay's upstream deadline (XO_RELAY_LIMITS in xo-relay.ts otherwise).
   readonly relayUpstreamTimeoutMs?: number;
+  // The unified-account tables (account-store.ts). main.ts opens them in API_DATA_DIR; without one the server keeps an
+  // in-memory store of its own (tests), closed with the server.
+  readonly accountStore?: AccountStore;
 }
 
 export interface RunningServer {
@@ -209,13 +225,54 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     ...(options.relayUpstreamTimeoutMs === undefined ? {} : { upstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
     fetchImpl: options.relayFetch ?? (async () => Promise.reject(new Error("no relay fetch"))),
   });
+  const relayFetch = options.relayFetch ?? (async () => Promise.reject(new Error("no relay fetch")));
+  const timeout = options.relayUpstreamTimeoutMs === undefined ? {} : { upstreamTimeoutMs: options.relayUpstreamTimeoutMs };
+  const ownStore = options.accountStore === undefined ? SqliteAccountStore.open(":memory:") : null;
+  const accountStore = options.accountStore ?? (ownStore as AccountStore);
+  const firstRpc = (chain: "polygon" | "base", fallback: string): string => config.chains.find((entry) => entry.chain === chain)?.rpcUrls[0] ?? fallback;
   const limitlessRelay = createLimitlessRelay({
     enabled: config.limitlessRelay,
+    partner: config.operator.limitlessPartner,
+    store: accountStore,
+    limit: limits.relay,
+    accountLimit: limits.accountWrites,
+    maxUrlChars: limits.maxUrlChars,
+    ...timeout,
+    fetchImpl: relayFetch,
+  });
+  const polymarketBridge = createPolymarketBridge({
+    enabled: config.paymaster,
+    builderCode: config.operator.polyBuilderCode,
+    store: accountStore,
+    fetchImpl: relayFetch,
     limit: limits.relay,
     maxUrlChars: limits.maxUrlChars,
-    ...(options.relayUpstreamTimeoutMs === undefined ? {} : { upstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
-    fetchImpl: options.relayFetch ?? (async () => Promise.reject(new Error("no relay fetch"))),
+    ...timeout,
   });
+  const polymarketRelay = createPolymarketRelay({
+    enabled: config.polymarketRelay,
+    credentials: config.operator.polyBuilder,
+    fetchImpl: relayFetch,
+    limit: limits.relay,
+    accountLimit: limits.accountWrites,
+    maxUrlChars: limits.maxUrlChars,
+    ...timeout,
+  });
+  const paymaster = createPaymaster({
+    enabled: config.paymaster,
+    pimlico: config.operator.pimlico,
+    store: accountStore,
+    fetchImpl: relayFetch,
+    rpcUrls: { 137: firstRpc("polygon", POLYGON_RPC_URL), 8453: firstRpc("base", BASE_RPC_URL), 56: BNB_RPC_URL },
+    clientLimit: limits.paymasterClient,
+    senderLimit: limits.paymasterSender,
+    withdrawalsPerDay: limits.withdrawalsPerDay,
+    maxUrlChars: limits.maxUrlChars,
+    ...timeout,
+  });
+  const backup = createAccountBackup({ enabled: config.accountBackup, store: accountStore, limit: limits.backup, maxUrlChars: limits.maxUrlChars });
+  // In order: the first owner that claims a path takes it (the XO relay claims everything else under /v1/relay/).
+  const owners = [limitlessRelay, polymarketBridge, polymarketRelay, relay, paymaster, backup];
   const inflight = new Set<Promise<void>>();
   let closing = false;
 
@@ -254,8 +311,8 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
     const method = req.method ?? "";
     const rawUrl = req.url ?? "";
     const path = normalPath(rawUrl);
-    const owner = limitlessRelay.owns(path) ? limitlessRelay : relay.owns(path) ? relay : null;
-    if (owner !== null) {
+    const owner = owners.find((candidate) => candidate.owns(path));
+    if (owner !== undefined) {
       return owner.handle(req, res, path, {
         requestId,
         client: clientAddress(req, config.trustProxyHops),
@@ -439,6 +496,7 @@ export async function startApiServer(options: ServerOptions): Promise<RunningSer
       await Promise.race([Promise.allSettled([...inflight]).then(() => undefined), deadline]);
       server.closeAllConnections();
       await Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 1_000).unref())]);
+      ownStore?.close();
     },
   };
 }

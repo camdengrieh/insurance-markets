@@ -1,390 +1,308 @@
 import assert from "node:assert/strict";
-import { request } from "node:http";
 import { test } from "node:test";
 
+import { stringToHex } from "viem";
+
 import { loadApiConfig } from "../../api/config.js";
-import { LIMITLESS_RELAY_LIMITS, LIMITLESS_RELAY_ROUTES } from "../../api/limitless-relay.js";
-import { XO_RELAY_DAPP_ORIGIN } from "../../api/xo-relay.js";
+import { ACCOUNT_EXISTS_MESSAGE, LIMITLESS_RELAY_LIMITS } from "../../api/limitless-relay.js";
 import { buildLimitlessHeaders } from "../../sdk/node/trade/clob/limitless/hmac.js";
-import { absentVenue, Clock, startHarness, testConfig, type Harness } from "./helpers.js";
+import { LIMITLESS_CTF_EXCHANGE } from "../../sdk/chain/limitless/constants.js";
+import { closeHarness, codeOf, DAPP, fakeUpstream, nowSeconds, postJson, proof, raw, testKey, unifiedHarness, type FakeAnswer, type Seen } from "./unified-helpers.js";
 
-// The Limitless order relay (api/limitless-relay.ts) against a fake Limitless: off by default, the allowlist of methods,
-// paths and queries (the query forwarded exactly, as the HMAC covers it), the three lmts-* headers and nothing else
-// going on, only content-type coming back, the 64 KiB body cap, CORS for the dApp and the dev server only, its own
-// per-client limit, the deadline, and that no header value, slug or body reaches a log line. Nothing here talks to
-// Limitless.
+// The Limitless partner relay (api/limitless-relay.ts) against a fake Limitless: off by default; the market read without
+// a token and 503 not_configured for everything else until the operator's partner token is set; the signing message;
+// registration (the wallet's signature checked here, the operator's HMAC and the x-account / x-signing-message /
+// x-signature headers upstream, the profile id stored, a 409 recovered as ours or answered "already has a Limitless
+// account"); orders with ownerId and onBehalfOf from the store only; cancel and open orders behind the ownership proof;
+// the visitor-token routes gone; deadlines; and log lines without values. Nothing here talks to Limitless.
 
-const LIMITLESS = "https://api.limitless.exchange";
-const NOW = Date.parse("2026-10-23T12:00:00Z");
+// Made-up partner token for these tests only.
+const TOKEN = { tokenId: "partner-test-token-id-made-up", secret: "cGFydG5lci10ZXN0LXNlY3JldC1tYWRlLXVwLTAxMjM=" };
+const ON = { API_LIMITLESS_RELAY: "on", LIMITLESS_PARTNER_TOKEN_ID: TOKEN.tokenId, LIMITLESS_PARTNER_SECRET: TOKEN.secret };
+const E = testKey("limitless-e");
+const OTHER = testKey("limitless-other");
 const SLUG = "will-it-rain-in-test-city-1792756800000";
 const ORDER_ID = "6f52b6d2-6c9e-4a5c-8a4f-28ab4b7ff203";
-const TOKEN = { tokenId: "relay-test-token-id-4b7e", secret: "cmVsYXktdGVzdC1zZWNyZXQtb25seS0wMTIzNDU2Nzg5" };
+const PROFILE = 4242;
+// The live text's form (research note 44 section 2.1) with a made-up nonce.
+const SIGNING_MESSAGE = `Welcome to Limitless Exchange!\n\nThis request will not trigger a blockchain transaction or cost any gas fees.\n\nSignature is required to authenticate an upcoming API request.\n\nNonce: 0x${"5a".repeat(32)}`;
 
-// The headers a browser makes for one request: the same signer the server-side flow uses, with a test token.
-function signed(method: "GET" | "POST" | "DELETE", pathWithQuery: string, body = ""): Record<string, string> {
-  return buildLimitlessHeaders({ token: TOKEN, timestampIso: "2026-10-23T12:00:00Z", method, pathWithQuery, body });
+interface LimitlessWorld {
+  create: FakeAnswer;
+  list: FakeAnswer;
+  delay: number;
 }
 
-interface Seen {
-  readonly url: string;
-  readonly method: string;
-  readonly headers: Record<string, string>;
-  readonly body: Buffer | null;
-}
-
-interface FakeAnswer {
-  readonly status?: number;
-  readonly body?: string;
-  readonly headers?: Record<string, string>;
-}
-
-function fakeLimitless(answer: (seen: Seen) => FakeAnswer | Promise<FakeAnswer> = () => ({ body: "{}" })): { readonly fetch: typeof fetch; readonly seen: Seen[] } {
-  const seen: Seen[] = [];
-  const impl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-    const headers: Record<string, string> = {};
-    new Headers(init?.headers).forEach((value, key) => {
-      headers[key] = value;
-    });
-    const body = init?.body === undefined || init.body === null ? null : Buffer.from(init.body as Uint8Array);
-    const entry: Seen = { url: String(input), method: init?.method ?? "GET", headers, body };
-    seen.push(entry);
-    if (init?.signal?.aborted === true) throw new Error("aborted");
-    const out = await answer(entry);
-    return new Response(out.body ?? "{}", { status: out.status ?? 200, headers: { "content-type": "application/json; charset=utf-8", ...out.headers } });
-  };
-  return { fetch: impl as typeof fetch, seen };
-}
-
-async function relayHarness(options: { readonly on?: boolean; readonly upstream?: ReturnType<typeof fakeLimitless>; readonly timeoutMs?: number; readonly xo?: boolean } = {}): Promise<{ h: Harness; upstream: ReturnType<typeof fakeLimitless>; logs: string[] }> {
-  const upstream = options.upstream ?? fakeLimitless();
-  const logs: string[] = [];
-  const env: Record<string, string> = {};
-  if (options.on !== false) env["API_LIMITLESS_RELAY"] = "on";
-  if (options.xo === true) env["API_XO_RELAY"] = "on";
-  const h = await startHarness({
-    config: testConfig(env),
-    fetchFor: (venue) => absentVenue(venue),
-    clock: new Clock(NOW),
-    relayFetch: upstream.fetch,
-    log: (line) => logs.push(line),
-    ...(options.timeoutMs === undefined ? {} : { relayUpstreamTimeoutMs: options.timeoutMs }),
-  });
-  return { h, upstream, logs };
-}
-
-function raw(origin: string, method: string, path: string, headers: Record<string, string> = {}, body?: string | Buffer): Promise<{ status: number; headers: Record<string, string | string[] | undefined>; text: string }> {
-  const url = new URL(origin);
-  const framed = body === undefined || headers["transfer-encoding"] !== undefined ? headers : { ...headers, "content-length": String(Buffer.byteLength(body)) };
-  return new Promise((resolve, reject) => {
-    const req = request({ host: url.hostname, port: url.port, method, path, headers: framed }, (res) => {
-      let text = "";
-      res.setEncoding("utf8");
-      res.on("data", (chunk: string) => (text += chunk));
-      res.on("end", () => resolve({ status: res.statusCode ?? 0, headers: res.headers, text }));
-    });
-    req.on("error", reject);
-    if (body !== undefined) req.write(body);
-    req.end();
+function limitless(state: LimitlessWorld = { create: { status: 201, body: JSON.stringify({ profileId: PROFILE, account: "" }) }, list: { body: JSON.stringify({ data: [], limit: 25, page: 1, hasMore: false }) }, delay: 0 }) {
+  return fakeUpstream(async (seen: Seen): Promise<FakeAnswer> => {
+    if (state.delay > 0) await new Promise((resolve) => setTimeout(resolve, state.delay));
+    const url = new URL(seen.url);
+    if (url.pathname === "/auth/signing-message") return { body: SIGNING_MESSAGE, contentType: "text/plain; charset=utf-8" };
+    if (url.pathname === "/profiles/partner-accounts" && seen.method === "POST") return state.create;
+    if (url.pathname === "/profiles/partner-accounts" && seen.method === "GET") return state.list;
+    if (url.pathname === "/orders") return { status: 201, body: '{"order":{"id":"6f52b6d2-6c9e-4a5c-8a4f-28ab4b7ff203"}}' };
+    return { body: JSON.stringify({ slug: SLUG, venue: { exchange: LIMITLESS_CTF_EXCHANGE } }) };
   });
 }
 
-const codeOf = (text: string): unknown => (JSON.parse(text) as { error?: { code?: unknown } }).error?.code;
-const DAPP = { origin: XO_RELAY_DAPP_ORIGIN };
+// The headers the operator's token makes for one upstream call at the harness's clock.
+function expectedHmac(seconds: number, method: "GET" | "POST" | "DELETE", pathWithQuery: string, body = ""): Record<string, string> {
+  const timestampIso = new Date(seconds * 1000).toISOString().replace(/\.000Z$/, "Z");
+  return buildLimitlessHeaders({ token: TOKEN, timestampIso, method, pathWithQuery, body });
+}
 
-test("the Limitless relay is off by default: every path answers relay_not_enabled and nothing is sent", async () => {
+async function registration(key = E): Promise<{ account: string; signingMessageHex: string; signature: string }> {
+  return { account: key.address, signingMessageHex: stringToHex(SIGNING_MESSAGE), signature: await key.signMessage({ message: SIGNING_MESSAGE }) };
+}
+
+async function signedOrder(key = E, overrides: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+  return { salt: "12345", maker: key.address, signer: key.address, taker: "0x0000000000000000000000000000000000000000", tokenId: "1", makerAmount: "1000000", takerAmount: "2000000", expiration: "0", nonce: 0, price: 0.5, feeRateBps: 0, side: 0, signature: `0x${"cd".repeat(65)}`, signatureType: 0, ...overrides };
+}
+
+test("off by default; the market read needs no token; everything else is 503 not_configured until the partner token is set", async () => {
   assert.equal(loadApiConfig({ API_DATA_DIR: "/data" }).config.limitlessRelay, false);
-  assert.equal(loadApiConfig({ API_DATA_DIR: "/data", API_LIMITLESS_RELAY: "on" }).config.limitlessRelay, true);
   assert.equal(loadApiConfig({ API_DATA_DIR: "/data", API_LIMITLESS_RELAY: "maybe" }).fatal[0]?.variable, "API_LIMITLESS_RELAY");
-  // The XO relay being on does not turn this one on.
-  const { h, upstream } = await relayHarness({ on: false, xo: true });
+  assert.equal(loadApiConfig({ API_DATA_DIR: "/data", LIMITLESS_PARTNER_TOKEN_ID: TOKEN.tokenId }).config.operator.limitlessPartner, null);
+  const upstream = limitless();
+  const off = await unifiedHarness({}, upstream);
   try {
-    for (const [method, path] of [["GET", `/v1/relay/limitless/markets/${SLUG}`], ["POST", "/v1/relay/limitless/orders"], ["GET", "/v1/relay/limitless/anything"]] as const) {
-      const answer = await raw(h.server.origin, method, path, { ...DAPP, "content-type": "application/json" }, method === "POST" ? "{}" : undefined);
-      assert.deepEqual([answer.status, codeOf(answer.text)], [403, "relay_not_enabled"], path);
-      assert.equal(answer.headers["x-limitless-relay"], "refused");
-    }
-    const preflight = await raw(h.server.origin, "OPTIONS", "/v1/relay/limitless/orders", { ...DAPP, "access-control-request-method": "POST" });
-    assert.equal(preflight.headers["access-control-allow-origin"], undefined, "no CORS grant while off");
-    assert.equal(upstream.seen.length, 0);
+    const answer = await raw(off.h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
+    assert.deepEqual([answer.status, codeOf(answer.text), answer.headers["x-limitless-relay"]], [403, "relay_not_enabled", "refused"]);
   } finally {
-    await h.close();
+    await closeHarness(off);
+  }
+  const bare = await unifiedHarness({ API_LIMITLESS_RELAY: "on" }, upstream);
+  try {
+    const market = await raw(bare.h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
+    assert.equal(market.status, 200);
+    assert.equal(market.headers["x-limitless-relay"], "upstream");
+    assert.equal(upstream.seen[0]?.url, `https://api.limitless.exchange/markets/${SLUG}`);
+    assert.equal(upstream.seen[0]?.headers["lmts-api-key"], undefined, "a public read is sent unsigned");
+    for (const [method, path] of [["GET", "/v1/relay/limitless/signing-message"], ["POST", "/v1/relay/limitless/register"], ["POST", "/v1/relay/limitless/orders"], ["POST", "/v1/relay/limitless/orders/cancel"], ["GET", `/v1/relay/limitless/orders?account=${E.address}&marketSlug=${SLUG}`]] as const) {
+      const r = await raw(bare.h.server.origin, method, path, { ...DAPP, "content-type": "application/json" }, method === "POST" ? "{}" : undefined);
+      assert.deepEqual([r.status, codeOf(r.text)], [503, "not_configured"], path);
+    }
+    assert.equal(upstream.seen.length, 1);
+  } finally {
+    await closeHarness(bare);
   }
 });
 
-test("only the allowlisted methods, paths and queries are forwarded, the query exactly as sent", async () => {
-  const { h, upstream } = await relayHarness();
+test("the signing message is passed through as text, unsigned", async () => {
+  const upstream = limitless();
+  const u = await unifiedHarness(ON, upstream);
   try {
-    const me = signed("GET", "/profiles/me");
-    const refused: Array<[string, string, number, string]> = [
-      ["GET", "/v1/relay/limitless/markets/active", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/markets/active?limit=25", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/markets/search", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/markets/categories/user-orders", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/markets", 404, "not_found"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/orderbook`, 404, "not_found"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/events`, 404, "not_found"],
-      ["GET", "/v1/relay/limitless/portfolio/positions", 404, "not_found"],
-      ["POST", "/v1/relay/limitless/portfolio/withdraw", 404, "not_found"],
-      ["POST", "/v1/relay/limitless/orders/cancel-batch", 404, "not_found"],
-      ["DELETE", `/v1/relay/limitless/orders/all/${SLUG}`, 404, "not_found"],
-      ["DELETE", "/v1/relay/limitless/orders/123", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/auth/api-tokens", 404, "not_found"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/../../profiles/me`, 404, "not_found"],
-      ["GET", "/v1/relay/limitless/profiles/%6De", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/profiles/me/", 400, "invalid_request"],
-      ["GET", "/v1/relay/limitless/markets/.hidden", 404, "not_found"],
-      ["GET", "/v1/relay/limitless", 404, "not_found"],
-      ["GET", "/v1/relay/limitless/orders", 405, "method_not_allowed"],
-      ["PUT", "/v1/relay/limitless/orders", 405, "method_not_allowed"],
-      ["HEAD", `/v1/relay/limitless/markets/${SLUG}`, 405, "method_not_allowed"],
-      ["POST", "/v1/relay/limitless/profiles/me", 405, "method_not_allowed"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}?x=1`, 400, "invalid_request"],
-      ["GET", "/v1/relay/limitless/profiles/me?x=1", 400, "invalid_request"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?limit=0`, 400, "invalid_request"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?limit=201`, 400, "invalid_request"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?statuses=MATCHED`, 400, "invalid_request"],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?limit=5&limit=6`, 400, "invalid_request"],
+    const answer = await raw(u.h.server.origin, "GET", "/v1/relay/limitless/signing-message", DAPP);
+    assert.equal(answer.status, 200);
+    assert.equal(answer.text, SIGNING_MESSAGE);
+    assert.match(String(answer.headers["content-type"]), /^text\/plain/);
+    assert.equal(upstream.seen[0]?.url, "https://api.limitless.exchange/auth/signing-message");
+    assert.equal(upstream.seen[0]?.headers["lmts-signature"], undefined);
+    assert.equal((await raw(u.h.server.origin, "GET", "/v1/relay/limitless/signing-message?x=1", DAPP)).status, 400);
+  } finally {
+    await closeHarness(u);
+  }
+});
+
+test("register: the wallet's own signature, the operator's HMAC and the three x- headers; the profile id stored and reused", async () => {
+  const state: LimitlessWorld = { create: { status: 201, body: JSON.stringify({ profileId: PROFILE, account: E.address }) }, list: { body: '{"data":[]}' }, delay: 0 };
+  const upstream = limitless(state);
+  const u = await unifiedHarness(ON, upstream);
+  try {
+    const good = await registration();
+    // Someone else's signature over the message, or a signature over another message, never reaches Limitless.
+    const forged = { ...good, signature: await OTHER.signMessage({ message: SIGNING_MESSAGE }) };
+    assert.deepEqual([(await postJson(u.h.server.origin, "/v1/relay/limitless/register", forged)).status, upstream.seen.length], [401, 0]);
+    const otherText = { ...good, signingMessageHex: stringToHex(`${SIGNING_MESSAGE}0`) };
+    assert.equal((await postJson(u.h.server.origin, "/v1/relay/limitless/register", otherText)).status, 401);
+    for (const bad of [{ ...good, account: "0x12" }, { ...good, signingMessageHex: "0xzz" }, { ...good, signature: "0x12" }, { ...good, extra: 1 }, { ...good, signingMessageHex: stringToHex("x".repeat(LIMITLESS_RELAY_LIMITS.maxSigningMessageBytes + 1)) }]) {
+      assert.equal((await postJson(u.h.server.origin, "/v1/relay/limitless/register", bad)).status, 400, JSON.stringify(bad).slice(0, 60));
+    }
+    assert.equal(upstream.seen.length, 0);
+
+    const answer = await postJson(u.h.server.origin, "/v1/relay/limitless/register", good);
+    assert.equal(answer.status, 200, answer.text);
+    assert.deepEqual(JSON.parse(answer.text), { profileId: PROFILE });
+    assert.equal(answer.headers["x-limitless-relay"], "server");
+    const [sent] = upstream.seen;
+    assert.equal(sent?.url, "https://api.limitless.exchange/profiles/partner-accounts");
+    assert.equal(sent?.method, "POST");
+    assert.equal(sent?.body?.toString("utf8"), "{}");
+    assert.equal(sent?.headers["x-account"], E.address);
+    assert.equal(sent?.headers["x-signing-message"], good.signingMessageHex);
+    assert.equal(sent?.headers["x-signature"], good.signature);
+    const expected = expectedHmac(nowSeconds(u.clock), "POST", "/profiles/partner-accounts", "{}");
+    for (const name of ["lmts-api-key", "lmts-timestamp", "lmts-signature"]) assert.equal(sent?.headers[name], expected[name], name);
+    assert.equal(u.store.limitlessProfile(E.address), PROFILE);
+    // Registering again answers from the store.
+    const again = await postJson(u.h.server.origin, "/v1/relay/limitless/register", good);
+    assert.deepEqual([again.status, JSON.parse(again.text), upstream.seen.length], [200, { profileId: PROFILE }, 1]);
+  } finally {
+    await closeHarness(u);
+  }
+});
+
+test("register: a 409 is ours when the partner list names the account, otherwise 'already has a Limitless account'", async () => {
+  const state: LimitlessWorld = { create: { status: 409, body: '{"message":"exists"}' }, list: { body: JSON.stringify({ data: [{ profileId: 77, account: E.address.toLowerCase(), displayName: "x" }], limit: 25, page: 1, hasMore: false }) }, delay: 0 };
+  const upstream = limitless(state);
+  const u = await unifiedHarness(ON, upstream);
+  try {
+    const ours = await postJson(u.h.server.origin, "/v1/relay/limitless/register", await registration());
+    assert.deepEqual([ours.status, JSON.parse(ours.text)], [200, { profileId: 77 }]);
+    const lookup = upstream.seen[1];
+    assert.equal(lookup?.url, `https://api.limitless.exchange/profiles/partner-accounts?account=${E.address}`);
+    assert.equal(lookup?.headers["lmts-signature"], expectedHmac(nowSeconds(u.clock), "GET", `/profiles/partner-accounts?account=${E.address}`)["lmts-signature"]);
+    // Someone else's profile: the list does not name it.
+    const theirs = await postJson(u.h.server.origin, "/v1/relay/limitless/register", await registration(OTHER));
+    assert.deepEqual([theirs.status, codeOf(theirs.text)], [409, "account_exists"]);
+    assert.equal(JSON.parse(theirs.text).error.message, ACCOUNT_EXISTS_MESSAGE);
+    assert.equal(u.store.limitlessProfile(OTHER.address), null);
+    // A malformed creation answer is not stored.
+    state.create = { status: 201, body: '{"account":"x"}' };
+    const third = testKey("limitless-third");
+    const bad = await postJson(u.h.server.origin, "/v1/relay/limitless/register", await registration(third));
+    assert.deepEqual([bad.status, codeOf(bad.text)], [502, "upstream_invalid"]);
+    // Any other refusal passes through.
+    state.create = { status: 403, body: '{"message":"missing scope account_creation"}' };
+    const scope = await postJson(u.h.server.origin, "/v1/relay/limitless/register", await registration(third));
+    assert.deepEqual([scope.status, scope.text, scope.headers["x-limitless-relay"]], [403, '{"message":"missing scope account_creation"}', "upstream"]);
+  } finally {
+    await closeHarness(u);
+  }
+});
+
+test("orders: ownerId and onBehalfOf come from the store only, for an EOA order the account signed", async () => {
+  const upstream = limitless();
+  const u = await unifiedHarness(ON, upstream);
+  try {
+    const body = { account: E.address, order: await signedOrder(), orderType: "GTC", marketSlug: SLUG, postOnly: true, clientOrderId: "ticket-1" };
+    const unregistered = await postJson(u.h.server.origin, "/v1/relay/limitless/orders", body);
+    assert.deepEqual([unregistered.status, codeOf(unregistered.text)], [409, "not_registered"]);
+    u.store.setLimitlessProfile(E.address, PROFILE, u.clock.now);
+    for (const bad of [
+      { ...body, order: await signedOrder(OTHER) },
+      { ...body, order: await signedOrder(E, { signer: OTHER.address }) },
+      { ...body, order: await signedOrder(E, { signatureType: 3 }) },
+      { ...body, order: await signedOrder(E, { signature: undefined }) },
+      { ...body, orderType: "IOC" },
+      { ...body, marketSlug: "active" },
+      { ...body, ownerId: 1 },
+      { ...body, onBehalfOf: 1 },
+      { ...body, postOnly: "yes" },
+    ]) {
+      assert.equal((await postJson(u.h.server.origin, "/v1/relay/limitless/orders", bad)).status, 400, JSON.stringify(bad).slice(0, 100));
+    }
+    assert.equal(upstream.seen.length, 0);
+    const placed = await postJson(u.h.server.origin, "/v1/relay/limitless/orders", body);
+    assert.equal(placed.status, 201, placed.text);
+    const [sent] = upstream.seen;
+    assert.equal(sent?.url, "https://api.limitless.exchange/orders");
+    const forwarded = JSON.parse(sent?.body?.toString("utf8") ?? "{}") as Record<string, unknown>;
+    assert.deepEqual(forwarded, { order: body.order, ownerId: PROFILE, onBehalfOf: PROFILE, orderType: "GTC", marketSlug: SLUG, postOnly: true, clientOrderId: "ticket-1" });
+    assert.equal(sent?.headers["lmts-signature"], expectedHmac(nowSeconds(u.clock), "POST", "/orders", sent?.body?.toString("utf8"))["lmts-signature"]);
+    assert.equal(sent?.headers["lmts-api-key"], TOKEN.tokenId);
+  } finally {
+    await closeHarness(u);
+  }
+});
+
+test("cancel and open orders need the account's ownership proof; the delegated call goes out with the stored profile id", async () => {
+  const upstream = limitless();
+  const u = await unifiedHarness(ON, upstream);
+  try {
+    u.store.setLimitlessProfile(E.address, PROFILE, u.clock.now);
+    const seconds = nowSeconds(u.clock);
+    const path = "/v1/relay/limitless/orders/cancel";
+    const body = JSON.stringify({ account: E.address, orderId: ORDER_ID });
+    assert.deepEqual([(await postJson(u.h.server.origin, path, body)).status, upstream.seen.length], [401, 0]);
+    const wrongSigner = await postJson(u.h.server.origin, path, body, { "x-im-proof": (await proof(OTHER, "POST", path, body, seconds)).replace(OTHER.address, E.address) });
+    assert.deepEqual([wrongSigner.status, codeOf(wrongSigner.text)], [401, "proof_invalid"]);
+    const expired = await postJson(u.h.server.origin, path, body, { "x-im-proof": await proof(E, "POST", path, body, seconds - 600) });
+    assert.equal(expired.status, 401);
+    const otherBody = await postJson(u.h.server.origin, path, body, { "x-im-proof": await proof(E, "POST", path, JSON.stringify({ account: E.address, orderId: "7f52b6d2-6c9e-4a5c-8a4f-28ab4b7ff203" }), seconds) });
+    assert.equal(otherBody.status, 401);
+    assert.equal(upstream.seen.length, 0);
+    const cancelled = await postJson(u.h.server.origin, path, body, { "x-im-proof": await proof(E, "POST", path, body, seconds) });
+    assert.equal(cancelled.status, 200);
+    const [cancel] = upstream.seen;
+    assert.equal(cancel?.method, "DELETE");
+    assert.equal(cancel?.url, `https://api.limitless.exchange/orders/${ORDER_ID}?onBehalfOf=${PROFILE}`);
+    assert.equal(cancel?.headers["lmts-signature"], expectedHmac(seconds, "DELETE", `/orders/${ORDER_ID}?onBehalfOf=${PROFILE}`)["lmts-signature"]);
+    // An account without a profile here, with its own good proof.
+    const otherCancel = JSON.stringify({ account: OTHER.address, orderId: ORDER_ID });
+    const none = await postJson(u.h.server.origin, path, otherCancel, { "x-im-proof": await proof(OTHER, "POST", path, otherCancel, seconds) });
+    assert.deepEqual([none.status, codeOf(none.text)], [409, "not_registered"]);
+
+    const query = `?account=${E.address}&marketSlug=${SLUG}&limit=5`;
+    const list = "/v1/relay/limitless/orders";
+    assert.equal((await raw(u.h.server.origin, "GET", `${list}${query}`, DAPP)).status, 401);
+    const listed = await raw(u.h.server.origin, "GET", `${list}${query}`, { ...DAPP, "x-im-proof": await proof(E, "GET", `${list}${query}`, "", seconds) });
+    assert.equal(listed.status, 200);
+    const read = upstream.seen.at(-1);
+    assert.equal(read?.url, `https://api.limitless.exchange/markets/${SLUG}/user-orders?limit=5`);
+    assert.equal(read?.headers["x-on-behalf-of"], String(PROFILE));
+    assert.equal(read?.headers["lmts-signature"], expectedHmac(seconds, "GET", `/markets/${SLUG}/user-orders?limit=5`)["lmts-signature"]);
+    // A proof of the path alone is accepted too; a proof by someone else for E's orders is not.
+    assert.equal((await raw(u.h.server.origin, "GET", `${list}${query}`, { ...DAPP, "x-im-proof": await proof(E, "GET", list, "", seconds) })).status, 200);
+    assert.equal((await raw(u.h.server.origin, "GET", `${list}${query}`, { ...DAPP, "x-im-proof": await proof(OTHER, "GET", `${list}${query}`, "", seconds) })).status, 401);
+    for (const bad of [`?account=${E.address}`, `?account=${E.address}&marketSlug=${SLUG}&limit=500`, `?account=${E.address}&marketSlug=${SLUG}&statuses=ALL`]) {
+      assert.equal((await raw(u.h.server.origin, "GET", `${list}${bad}`, { ...DAPP, "x-im-proof": await proof(E, "GET", `${list}${bad}`, "", seconds) })).status, 400, bad);
+    }
+  } finally {
+    await closeHarness(u);
+  }
+});
+
+test("the visitor-token routes are gone and no browser lmts-* header is ever forwarded", async () => {
+  const upstream = limitless();
+  const u = await unifiedHarness(ON, upstream);
+  try {
+    const visitor = buildLimitlessHeaders({ token: { tokenId: "visitor-token", secret: TOKEN.secret }, timestampIso: "2026-10-24T12:00:00Z", method: "GET", pathWithQuery: "/profiles/me", body: "" });
+    const refused: Array<[string, string, number]> = [
+      ["GET", "/v1/relay/limitless/profiles/me", 404],
+      ["DELETE", `/v1/relay/limitless/orders/${ORDER_ID}`, 404],
+      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders`, 404],
+      ["GET", "/v1/relay/limitless/markets/active", 404],
+      ["POST", "/v1/relay/limitless/portfolio/withdraw", 404],
+      ["PUT", "/v1/relay/limitless/orders", 405],
+      ["GET", "/v1/relay/limitless/register", 405],
     ];
-    for (const [method, path, status, code] of refused) {
-      const answer = await raw(h.server.origin, method, path, { ...DAPP, ...me });
-      assert.equal(answer.status, status, `${method} ${path}`);
-      if (method !== "HEAD") assert.equal(codeOf(answer.text), code, `${method} ${path}`);
-      assert.equal(answer.headers["x-limitless-relay"], "refused");
-    }
-    assert.equal(upstream.seen.length, 0, "nothing refused was sent");
-
-    const allowed: Array<[string, string, Record<string, string>, string]> = [
-      ["GET", `/v1/relay/limitless/markets/${SLUG}`, {}, `${LIMITLESS}/markets/${SLUG}`],
-      ["GET", "/v1/relay/limitless/profiles/me", me, `${LIMITLESS}/profiles/me`],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders`, signed("GET", `/markets/${SLUG}/user-orders`), `${LIMITLESS}/markets/${SLUG}/user-orders`],
-      ["GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?limit=100`, signed("GET", `/markets/${SLUG}/user-orders?limit=100`), `${LIMITLESS}/markets/${SLUG}/user-orders?limit=100`],
-      ["DELETE", `/v1/relay/limitless/orders/${ORDER_ID}`, signed("DELETE", `/orders/${ORDER_ID}`), `${LIMITLESS}/orders/${ORDER_ID}`],
-    ];
-    for (const [method, path, headers, url] of allowed) {
-      const answer = await raw(h.server.origin, method, path, { ...DAPP, ...headers });
-      assert.equal(answer.status, 200, path);
-      assert.equal(answer.headers["x-limitless-relay"], "upstream");
-      assert.equal(upstream.seen.at(-1)?.url, url);
-      assert.equal(upstream.seen.at(-1)?.method, method);
-    }
-    assert.deepEqual(LIMITLESS_RELAY_ROUTES.map((route) => `${route.methods.join("|")} ${route.label}${route.signed ? " signed" : ""}`), [
-      "GET /markets/:slug",
-      "GET /profiles/me signed",
-      "POST /orders signed",
-      "DELETE /orders/:id signed",
-      "GET /markets/:slug/user-orders signed",
-    ]);
+    for (const [method, path, status] of refused) assert.equal((await raw(u.h.server.origin, method, path, { ...DAPP, ...visitor })).status, status, `${method} ${path}`);
+    await raw(u.h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, { ...DAPP, ...visitor });
+    assert.equal(upstream.seen.length, 1);
+    assert.equal(upstream.seen[0]?.headers["lmts-api-key"], undefined);
+    const preflight = await raw(u.h.server.origin, "OPTIONS", "/v1/relay/limitless/orders", { ...DAPP, "access-control-request-method": "POST" });
+    assert.deepEqual([preflight.headers["access-control-allow-methods"], preflight.headers["access-control-allow-headers"]], ["GET, POST, OPTIONS", "content-type, x-im-proof"]);
+    const cancel = await raw(u.h.server.origin, "OPTIONS", "/v1/relay/limitless/orders/cancel", { ...DAPP, "access-control-request-method": "POST" });
+    assert.equal(cancel.headers["access-control-allow-headers"], "content-type, x-im-proof");
+    const evil = await raw(u.h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, { origin: "https://evil.example" });
+    assert.deepEqual([evil.status, codeOf(evil.text)], [403, "origin_not_allowed"]);
   } finally {
-    await h.close();
+    await closeHarness(u);
   }
 });
 
-test("a signed route needs all three lmts-* headers of the right form; a public read sends none of them", async () => {
-  const { h, upstream } = await relayHarness();
-  try {
-    const me = signed("GET", "/profiles/me");
-    for (const missing of ["lmts-api-key", "lmts-timestamp", "lmts-signature"]) {
-      const headers: Record<string, string> = Object.fromEntries(Object.entries({ ...DAPP, ...me }).filter(([name]) => name !== missing));
-      const answer = await raw(h.server.origin, "GET", "/v1/relay/limitless/profiles/me", headers);
-      assert.deepEqual([answer.status, codeOf(answer.text)], [400, "invalid_request"], missing);
-    }
-    for (const [name, value] of [["lmts-timestamp", "1792756800"], ["lmts-signature", "not-base64"], ["lmts-api-key", "has space"]] as const) {
-      const answer = await raw(h.server.origin, "GET", "/v1/relay/limitless/profiles/me", { ...DAPP, ...me, [name]: value });
-      assert.deepEqual([answer.status, codeOf(answer.text)], [400, "invalid_request"], name);
-      assert.equal(answer.text.includes(value), false, "a refusal never echoes a value");
-      assert.equal(answer.text.includes(TOKEN.tokenId), false);
-    }
-    assert.equal(upstream.seen.length, 0);
-    await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, { ...DAPP, ...me });
-    assert.deepEqual(Object.keys(upstream.seen[0]?.headers ?? {}).sort(), ["accept", "user-agent"], "a public read carries no token header");
-  } finally {
-    await h.close();
-  }
-});
-
-test("POST /orders: the lmts-* headers and the body go on unchanged; nothing else goes on, and only content-type comes back", async () => {
-  const upstream = fakeLimitless(() => ({ status: 201, body: '{"order":{"id":"x"},"execution":{}}', headers: { "set-cookie": "a=b", "x-upstream-internal": "1", server: "upstream", "access-control-allow-origin": "*" } }));
-  const { h } = await relayHarness({ upstream });
-  try {
-    const body = JSON.stringify({ order: { salt: "1", side: 0, signature: `0x${"ab".repeat(65)}` }, ownerId: 42, orderType: "GTC", marketSlug: SLUG });
-    const headers = signed("POST", "/orders", body);
-    const answer = await raw(
-      h.server.origin,
-      "POST",
-      "/v1/relay/limitless/orders",
-      { ...headers, ...DAPP, "content-type": "application/json", cookie: "session=relay-test-cookie", authorization: "Bearer relay-test-bearer", "x-forwarded-for": "203.0.113.9", "lmts-extra": "1", "x-api-key": "lmts_relay-test-legacy", referer: "https://elsewhere.invalid/" },
-      body,
-    );
-    assert.equal(answer.status, 201);
-    assert.equal(answer.text, '{"order":{"id":"x"},"execution":{}}');
-    assert.equal(answer.headers["content-type"], "application/json; charset=utf-8");
-    assert.equal(answer.headers["set-cookie"], undefined);
-    assert.equal(answer.headers["x-upstream-internal"], undefined);
-    assert.equal(answer.headers["server"], undefined);
-    assert.equal(answer.headers["access-control-allow-origin"], XO_RELAY_DAPP_ORIGIN, "the relay's own CORS, never the upstream's");
-    assert.equal(answer.headers["access-control-expose-headers"], "x-request-id, retry-after, x-limitless-relay");
-    assert.equal(answer.headers["x-limitless-relay"], "upstream");
-    const sent = upstream.seen[0] as Seen;
-    assert.equal(sent.url, `${LIMITLESS}/orders`);
-    assert.equal(sent.method, "POST");
-    assert.equal(sent.body?.toString("utf8"), body, "the body byte for byte");
-    assert.deepEqual(Object.keys(sent.headers).sort(), ["accept", "content-type", "lmts-api-key", "lmts-signature", "lmts-timestamp", "user-agent"]);
-    assert.equal(sent.headers["lmts-api-key"], TOKEN.tokenId);
-    assert.equal(sent.headers["lmts-signature"], headers["lmts-signature"]);
-    assert.equal(sent.headers["user-agent"], "insurance-markets-api/0.1");
-  } finally {
-    await h.close();
-  }
-});
-
-test("bodies: a JSON object only, at most 64 KiB, and none on a GET or a DELETE", async () => {
-  const { h, upstream } = await relayHarness();
-  try {
-    const post = { ...DAPP, ...signed("POST", "/orders", "{}"), "content-type": "application/json" };
-    const atCap = `{"pad":"${"x".repeat(LIMITLESS_RELAY_LIMITS.maxBodyBytes - 10)}"}`;
-    assert.equal(Buffer.byteLength(atCap), LIMITLESS_RELAY_LIMITS.maxBodyBytes);
-    const cap = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", post, atCap);
-    assert.equal(cap.status, 200, cap.text);
-    const over = `{"pad":"${"x".repeat(LIMITLESS_RELAY_LIMITS.maxBodyBytes - 9)}"}`;
-    const declared = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", post, over);
-    assert.deepEqual([declared.status, codeOf(declared.text)], [413, "payload_too_large"]);
-    const chunked = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", { ...post, "transfer-encoding": "chunked" }, over);
-    assert.deepEqual([chunked.status, codeOf(chunked.text)], [413, "payload_too_large"]);
-    const text = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", { ...post, "content-type": "text/plain" }, "{}");
-    assert.deepEqual([text.status, codeOf(text.text)], [415, "unsupported_media_type"]);
-    for (const bad of ["not json", "[1,2]", '"text"', "null"]) {
-      const answer = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", post, bad);
-      assert.deepEqual([answer.status, codeOf(answer.text)], [400, "invalid_request"], bad);
-    }
-    const deleteBody = await raw(h.server.origin, "DELETE", `/v1/relay/limitless/orders/${ORDER_ID}`, { ...DAPP, ...signed("DELETE", `/orders/${ORDER_ID}`), "content-type": "application/json" }, "{}");
-    assert.deepEqual([deleteBody.status, codeOf(deleteBody.text)], [413, "payload_too_large"]);
-    const getBody = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, { ...DAPP }, "{}");
-    assert.deepEqual([getBody.status, codeOf(getBody.text)], [413, "payload_too_large"]);
-    assert.equal(upstream.seen.length, 1, "only the body at the cap was sent");
-  } finally {
-    await h.close();
-  }
-});
-
-test("CORS: the dApp and the dev server only, preflight cached, any other Origin refused before sending", async () => {
-  const { h, upstream } = await relayHarness();
-  try {
-    for (const origin of [XO_RELAY_DAPP_ORIGIN, "http://localhost:5173", "http://127.0.0.1:4173"]) {
-      const preflight = await raw(h.server.origin, "OPTIONS", "/v1/relay/limitless/orders", { origin, "access-control-request-method": "POST", "access-control-request-headers": "content-type, lmts-api-key, lmts-timestamp, lmts-signature" });
-      assert.equal(preflight.status, 204);
-      assert.equal(preflight.headers["access-control-allow-origin"], origin);
-      assert.equal(preflight.headers["access-control-allow-methods"], "POST, OPTIONS");
-      assert.equal(preflight.headers["access-control-allow-headers"], "content-type, lmts-api-key, lmts-timestamp, lmts-signature");
-      assert.equal(preflight.headers["access-control-max-age"], "7200");
-      assert.equal(preflight.headers["access-control-allow-credentials"], undefined);
-      assert.equal(preflight.headers["vary"], "Origin");
-    }
-    const cancel = await raw(h.server.origin, "OPTIONS", `/v1/relay/limitless/orders/${ORDER_ID}`, { ...DAPP, "access-control-request-method": "DELETE" });
-    assert.deepEqual([cancel.headers["access-control-allow-methods"], cancel.headers["access-control-allow-headers"]], ["DELETE, OPTIONS", "lmts-api-key, lmts-timestamp, lmts-signature"]);
-    const market = await raw(h.server.origin, "OPTIONS", `/v1/relay/limitless/markets/${SLUG}`, { ...DAPP, "access-control-request-method": "GET" });
-    assert.equal(market.headers["access-control-allow-methods"], "GET, OPTIONS");
-    for (const origin of ["https://evil.example.org", "https://xo-markets-explorer.vercel.app.evil.org", "http://localhost.evil.org:5173", "null"]) {
-      const preflight = await raw(h.server.origin, "OPTIONS", "/v1/relay/limitless/orders", { origin, "access-control-request-method": "POST" });
-      assert.equal(preflight.headers["access-control-allow-origin"], undefined, origin);
-      const actual = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, { origin });
-      assert.deepEqual([actual.status, codeOf(actual.text)], [403, "origin_not_allowed"], origin);
-      assert.equal(actual.headers["access-control-allow-origin"], undefined);
-    }
-    const unknownPath = await raw(h.server.origin, "OPTIONS", "/v1/relay/limitless/portfolio/withdraw", { ...DAPP, "access-control-request-method": "POST" });
-    assert.equal(unknownPath.headers["access-control-allow-origin"], undefined);
-    assert.equal(upstream.seen.length, 0);
-  } finally {
-    await h.close();
-  }
-});
-
-test("its own per-client limit: 30 at once, then 429 with Retry-After, apart from the XO relay's", async () => {
-  const { h, upstream } = await relayHarness({ xo: true });
-  try {
-    const statuses: number[] = [];
-    for (let i = 0; i < 30; i++) statuses.push((await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP)).status);
-    assert.deepEqual(statuses, Array.from({ length: 30 }, () => 200));
-    const last = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    assert.deepEqual([last.status, codeOf(last.text)], [429, "rate_limited"]);
-    assert.equal(last.headers["retry-after"], "1");
-    assert.equal(last.headers["x-limitless-relay"], "refused");
-    // The XO relay's bucket is untouched.
-    const xo = await raw(h.server.origin, "GET", "/v1/relay/xo/clob/time", DAPP);
-    assert.equal(xo.headers["x-xo-relay"], "upstream");
-    assert.equal(upstream.seen.length, 31);
-  } finally {
-    await h.close();
-  }
-});
-
-test("upstream failures: a deadline (an order post may have been placed), a redirect, an oversized or HTML answer, a refusal passed through", async () => {
-  let mode = "slow";
-  const upstream = fakeLimitless(async (): Promise<FakeAnswer> => {
-    if (mode === "slow") {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      return { body: "{}" };
-    }
-    if (mode === "redirect") return { status: 302, headers: { location: "https://elsewhere.invalid/" } };
-    if (mode === "big") return { body: `"${"x".repeat(LIMITLESS_RELAY_LIMITS.maxResponseBytes)}"` };
-    if (mode === "html") return { status: 200, body: "<html>hi</html>", headers: { "content-type": "text/html" } };
-    return { status: 400, body: '{"message":"FEE_RATE_MISMATCH"}' };
-  });
-  const realFetch = upstream.fetch;
+test("a deadline on an order post says it may have been placed; log lines carry no value", async () => {
+  const state: LimitlessWorld = { create: { status: 201, body: "{}" }, list: { body: "{}" }, delay: 0 };
+  const base = limitless(state);
   const abortable = (async (input: string | URL | Request, init?: RequestInit) =>
     new Promise<Response>((resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
-      void realFetch(input, init).then(resolve, reject);
+      void base.fetch(input, init).then(resolve, reject);
     })) as typeof fetch;
-  const { h } = await relayHarness({ upstream: { fetch: abortable, seen: upstream.seen }, timeoutMs: 50 });
+  const u = await unifiedHarness(ON, { fetch: abortable, seen: base.seen }, { timeoutMs: 50 });
   try {
-    const post = { ...DAPP, ...signed("POST", "/orders", "{}"), "content-type": "application/json" };
-    const slow = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", post, "{}");
+    u.store.setLimitlessProfile(E.address, PROFILE, u.clock.now);
+    state.delay = 200;
+    const slow = await postJson(u.h.server.origin, "/v1/relay/limitless/orders", { account: E.address, order: await signedOrder(), orderType: "FAK", marketSlug: SLUG });
     assert.deepEqual([slow.status, codeOf(slow.text)], [504, "upstream_timeout"]);
     assert.match(slow.text, /may or may not have been placed/);
-    const slowCancel = await raw(h.server.origin, "DELETE", `/v1/relay/limitless/orders/${ORDER_ID}`, { ...DAPP, ...signed("DELETE", `/orders/${ORDER_ID}`) });
-    assert.match(slowCancel.text, /may or may not have been cancelled/);
-    const slowRead = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    assert.doesNotMatch(slowRead.text, /placed|cancelled/);
-    assert.equal(upstream.seen.length, 3, "one request each, nothing retried");
-    mode = "redirect";
-    const redirect = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    assert.deepEqual([redirect.status, codeOf(redirect.text)], [502, "upstream_invalid"]);
-    assert.equal(redirect.headers["location"], undefined);
-    mode = "big";
-    const big = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    assert.deepEqual([big.status, codeOf(big.text)], [502, "upstream_invalid"]);
-    mode = "html";
-    const html = await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    assert.equal(html.headers["content-type"], "text/plain; charset=utf-8", "relabelled, never served as a page");
-    assert.equal(html.headers["x-content-type-options"], "nosniff");
-    mode = "refuse";
-    const refused = await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", post, "{}");
-    assert.deepEqual([refused.status, refused.text, refused.headers["x-limitless-relay"]], [400, '{"message":"FEE_RATE_MISMATCH"}', "upstream"]);
-  } finally {
-    await h.close();
-  }
-});
-
-test("log lines carry the method, the route, the status and the time, and never a header value, slug, query or body", async () => {
-  const upstream = fakeLimitless(() => ({ body: JSON.stringify({ id: 42, account: `0x${"12".repeat(20)}` }) }));
-  const { h, logs } = await relayHarness({ upstream });
-  try {
-    const body = JSON.stringify({ order: { signature: `0x${"cd".repeat(65)}` }, ownerId: 42, marketSlug: SLUG });
-    const me = signed("GET", "/profiles/me");
-    await raw(h.server.origin, "GET", "/v1/relay/limitless/profiles/me", { ...DAPP, ...me, cookie: "session=relay-test-cookie" });
-    await raw(h.server.origin, "POST", "/v1/relay/limitless/orders", { ...DAPP, ...signed("POST", "/orders", body), "content-type": "application/json" }, body);
-    await raw(h.server.origin, "DELETE", `/v1/relay/limitless/orders/${ORDER_ID}`, { ...DAPP, ...signed("DELETE", `/orders/${ORDER_ID}`) });
-    await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}/user-orders?limit=100`, { ...DAPP, ...signed("GET", `/markets/${SLUG}/user-orders?limit=100`) });
-    await raw(h.server.origin, "GET", `/v1/relay/limitless/markets/${SLUG}`, DAPP);
-    await raw(h.server.origin, "OPTIONS", "/v1/relay/limitless/orders", { ...DAPP, "access-control-request-method": "POST" });
-    assert.equal(logs.length, 6);
-    for (const line of logs) {
-      assert.match(line, /^(GET|POST|DELETE|OPTIONS) \/v1\/relay\/limitless\/[a-z/:-]+ \d{3} \d+ms$/, line);
-      for (const value of [TOKEN.tokenId, TOKEN.secret, me["lmts-signature"] ?? "?", "2026-10-23T12:00:00Z", SLUG, ORDER_ID, "limit=100", "relay-test-cookie", "cdcdcd"]) assert.equal(line.includes(value), false, `${line} holds a value`);
+    assert.equal(base.seen.length, 1, "nothing retried");
+    for (const line of u.logs) {
+      for (const value of [TOKEN.tokenId, TOKEN.secret, E.address, SLUG, String(PROFILE)]) assert.equal(line.includes(value), false, `${line} holds a value`);
+      assert.match(line, /^(GET|POST|OPTIONS) \/v1\/relay\/limitless\/[a-z/:-]+ \d{3} \d+ms$/);
     }
-    assert.ok(logs.includes("DELETE /v1/relay/limitless/orders/:id 200 0ms"));
-    assert.ok(logs.includes("GET /v1/relay/limitless/markets/:slug/user-orders 200 0ms"));
   } finally {
-    await h.close();
+    await closeHarness(u);
   }
 });
