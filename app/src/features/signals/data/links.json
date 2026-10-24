@@ -1,5 +1,5 @@
 {
-  "contentSha256": "5f498fa83b6537e581ef29e49a50cf1a48bf4d9683216e72b65172158893ebaf",
+  "contentSha256": "1219b8e08ada0f39fb3004c3bf338c3a1772748eb372541e19fa9c03a7c88a44",
   "links": [
     {
       "band": "strong",
@@ -282,7 +282,7 @@
       "validUntil": "2027-01-01T23:59:00Z"
     }
   ],
-  "release": "2026-10-23",
+  "release": "2026-10-24",
   "rulesRecipe": "rules-v2",
   "schemaVersion": 1
 }
