@@ -1,11 +1,13 @@
-// What the page reads from Limitless's answers, checked field by field: the market record an order is built from, the
-// visitor's own profile, and the visitor's orders on one market. Anything that does not have the expected shape is a
-// refusal in fixed words, never a guess. The same reads and rules as the server-side flow (relay/clob.ts
-// readLimitlessMarket), plus the profile, which the order's `ownerId` and, on a fee-enabled market, its signed fee
-// rate come from (docs.limitless.exchange/api-reference/trading/create-order, read 2026-10-23: "ownerId ... is the `id`
-// field returned by GET /profiles/me"; "On fee-enabled markets (`metadata.fee: true`), a signed order's `feeRateBps`
-// must equal the order owner's `effectiveFeeRateBps` ... On fee-disabled markets, sign with `feeRateBps: 0`. On new
-// trading venues (`venue.feeModuleType: "COLLATERAL"`), sign with `feeRateBps: 0` on every order").
+// What the page reads from the answers of Limitless and of our partner relay, checked field by field: the market record
+// an order is built from, the sign-in text the trading key signs once, the profile id the relay registered, the
+// account's orders on one market, and a fee-rate refusal. Anything that does not have the expected shape is a refusal in
+// fixed words, never a guess. The market rules are the server-side flow's (relay/clob.ts readLimitlessMarket); the fee
+// rule is Limitless's (docs.limitless.exchange/api-reference/trading/create-order, read 2026-10-23: "On fee-enabled
+// markets (`metadata.fee: true`), a signed order's `feeRateBps` must equal the order owner's `effectiveFeeRateBps` ...
+// On fee-disabled markets, sign with `feeRateBps: 0`. On new trading venues (`venue.feeModuleType: "COLLATERAL"`), sign
+// with `feeRateBps: 0` on every order"). A partner cannot read a sub-account's rate, so on a fee-enabled market the
+// executor signs the rate it last learned for the account (0 at first) and re-signs once with the rate a
+// FEE_RATE_MISMATCH refusal names (note 44 section 3.1 step 3).
 
 import { formatMicro } from "@sdk/trade/clob/amounts";
 import { isPinnedLimitlessExchange } from "@sdk/trade/clob/venues";
@@ -29,7 +31,7 @@ export interface LimitlessMarketFacts {
   readonly yesToken: string;
   readonly noToken: string;
   // "collateral": a COLLATERAL fee-module venue (sign 0); "off": metadata.fee false (sign 0); "on": metadata.fee true
-  // (sign the owner's effectiveFeeRateBps).
+  // (sign the owner's effective fee rate).
   readonly fee: "collateral" | "off" | "on";
 }
 
@@ -53,28 +55,33 @@ export function readLimitlessMarket(json: unknown, slug: string, tokenId: string
   return ok({ slug, exchange: getAddress(exchange), yesToken: yes, noToken: no, fee });
 }
 
-export interface LimitlessProfile {
-  readonly id: number;
-  readonly account: Address;
-  // null when the profile has no rank (it cannot sign on a fee-enabled market).
-  readonly feeRateBps: number | null;
+// GET /auth/signing-message, through the relay: Limitless's own ownership text with its nonce (note 44 section 2.1:
+// "Sign the live text, not a template"). The relay passes it on as plain text; a JSON {message} is read too. Anything
+// that is not printable text of a sane length is refused: it is about to be signed.
+const SIGNING_TEXT = /^[\x20-\x7e\n\r\t]{16,2000}$/;
+
+export function readSigningMessage(text: string, json: unknown): DirectResult<string> {
+  const fromJson = record(json)?.["message"];
+  const message = typeof fromJson === "string" ? fromJson : json === undefined ? text : null;
+  if (message === null || !SIGNING_TEXT.test(message)) return refuse("venue_refused", "Limitless's sign-in text could not be read, so nothing was signed.");
+  return ok(message);
 }
 
-// The token's own profile, checked to be this wallet's and in EOA trading mode (a smart-wallet profile makes the venue
-// refuse self-signed orders: eip712-signing "Trading wallet mode").
-export function readLimitlessProfile(json: unknown, wallet: Address): DirectResult<LimitlessProfile> {
-  const profile = record(json);
-  const id = profile?.["id"];
-  const account = profile?.["account"];
-  if (profile === null || typeof id !== "number" || !Number.isSafeInteger(id) || id < 1 || typeof account !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(account)) {
-    return refuse("venue_refused", "Limitless's answer about this token's profile could not be read.");
-  }
-  if (account.toLowerCase() !== wallet.toLowerCase()) return refuse("account_refused", `This token belongs to another Limitless account (${getAddress(account)}), not the connected wallet. Create a token while signed in to Limitless with this wallet.`);
-  if (profile["tradeWalletOption"] === "smartWallet") return refuse("account_refused", "Your Limitless profile trades from its smart wallet, and Limitless refuses orders your own wallet signs in that mode. Switch the profile to EOA trading in Limitless's own app, then try again.");
-  const rate = profile["effectiveFeeRateBps"];
-  const feeRateBps = typeof rate === "number" && Number.isSafeInteger(rate) && rate >= 0 && rate <= 10_000 ? rate : null;
-  if (rate !== null && rate !== undefined && feeRateBps === null) return refuse("venue_refused", "Limitless's answer gives a fee rate this page does not read.");
-  return ok({ id, account: getAddress(account), feeRateBps });
+// POST register: {profileId}, a positive whole number (the sub-account's Limitless profile id).
+export function readProfileId(json: unknown): DirectResult<number> {
+  const id = record(json)?.["profileId"];
+  const value = typeof id === "string" && /^[1-9][0-9]{0,15}$/.test(id) ? Number(id) : id;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) return refuse("venue_refused", "Our markets API's answer about your Limitless registration could not be read.");
+  return ok(value);
+}
+
+// 400 {"code":"FEE_RATE_MISMATCH","expectedFeeRateBps":n} on a legacy fee market: the rate the venue expects. null when
+// the answer is anything else.
+export function feeRateMismatch(json: unknown): number | null {
+  const body = record(json);
+  const rate = body?.["expectedFeeRateBps"];
+  if (body?.["code"] !== "FEE_RATE_MISMATCH" || typeof rate !== "number" || !Number.isSafeInteger(rate) || rate < 0 || rate > 10_000) return null;
+  return rate;
 }
 
 // A raw 6-decimal amount Limitless serialises as a decimal string ("20000000"), as micro units; null when it is not one.
@@ -87,11 +94,14 @@ function priceText(raw: unknown): string | null {
   return typeof raw === "string" && /^[0-9](?:\.[0-9]{1,6})?$/.test(raw) ? raw : null;
 }
 
-// GET /markets/{slug}/user-orders: "a bare, newest-first array" of UserOrder (OpenAPI, read 2026-10-23).
+// The account's orders on one market: "a bare, newest-first array" of UserOrder (OpenAPI, read 2026-10-23), passed on
+// by the relay; a {data | orders: [...]} wrapper is read too.
 export function readLimitlessOrders(json: unknown, limit: number): DirectResult<{ readonly orders: readonly DirectOpenOrder[]; readonly more: boolean }> {
-  if (!Array.isArray(json)) return refuse("venue_refused", "Limitless's order list could not be read.");
+  const wrapped = record(json);
+  const list = Array.isArray(json) ? json : (wrapped?.["data"] ?? wrapped?.["orders"]);
+  if (!Array.isArray(list)) return refuse("venue_refused", "Limitless's order list could not be read.");
   const orders: DirectOpenOrder[] = [];
-  for (const entry of json) {
+  for (const entry of list) {
     const row = record(entry);
     const id = row?.["id"];
     if (row === null || typeof id !== "string" || !LIMITLESS_ORDER_ID.test(id)) continue;
@@ -110,11 +120,11 @@ export function readLimitlessOrders(json: unknown, limit: number): DirectResult<
       outcome: null,
     });
   }
-  return ok({ orders, more: json.length >= limit });
+  return ok({ orders, more: list.length >= limit });
 }
 
 // A venue's refusal, as the words it gave: OpenAPI "Validation failures use a `message` array; business failures usually
-// use a string".
+// use a string". The relay's own refusals carry {error: {message}}.
 export function limitlessMessage(json: unknown, text: string): string | null {
   const body = record(json);
   const message = body?.["message"];
@@ -122,5 +132,7 @@ export function limitlessMessage(json: unknown, text: string): string | null {
   if (Array.isArray(message)) return venueText(message.filter((part) => typeof part === "string").join("; "));
   const error = body?.["error"];
   if (typeof error === "string") return venueText(error);
+  const nested = record(error)?.["message"];
+  if (typeof nested === "string") return venueText(nested);
   return venueText(text);
 }

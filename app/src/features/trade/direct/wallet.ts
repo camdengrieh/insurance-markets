@@ -7,6 +7,7 @@ import { verifyDigestSignature } from "@sdk/trade/xo/userop/verify";
 import type { Hex } from "viem";
 
 import { WalletError, type WalletSigner } from "../../../core/signer";
+import { ownershipProof } from "../../account/proof";
 import { venueText } from "./text";
 import { ok, refuse, type DirectResult } from "./types";
 
@@ -41,4 +42,14 @@ export async function checkedSignature(signer: WalletSigner, digest: Hex, signat
   }
   if (verified.form !== "raw") return refuse("signature_mismatch", "Your wallet signed the digest as a personal message (EIP-191), which the venue would not accept. Nothing was sent.");
   return ok(verified.signature);
+}
+
+// The account's ownership proof for one request to our markets API (features/account/proof.ts, design section 3.3), as a
+// result: a key that will not sign is a refusal, never a throw. `path` is the request path with its query, as sent.
+export async function proofFor(signer: WalletSigner, request: { readonly method: "GET" | "POST"; readonly path: string; readonly body?: string }, nowMs: number): Promise<DirectResult<string>> {
+  try {
+    return ok(await ownershipProof(signer, { ...request, nowMs }));
+  } catch (error) {
+    return walletRefusal(error, "the proof that this account is yours");
+  }
 }

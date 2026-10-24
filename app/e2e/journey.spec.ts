@@ -79,14 +79,14 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(aside).toContainText("display price, not executable");
   await expect(aside).toContainText("XO Market: needs the Cockpit");
   await expect(aside).toContainText("candidates, not proof");
-  // XO trades with the visitor's own wallet through the markets API's relay; the inspector offers it.
-  await expect(aside.getByRole("button", { name: /Trade with your wallet/ })).toBeEnabled();
+  // XO trades with the trading account through the markets API's relay; the inspector offers it.
+  await expect(aside.getByRole("button", { name: "Trade", exact: true })).toBeEnabled();
 
-  // A Limitless row says where it came from, and trades with the visitor's wallet through the same API's relay.
+  // A Limitless row says where it came from, and trades with the trading account through the same API's relay.
   await table.getByRole("button", { name: new RegExp(`^Inspect ${MOCK_LIMITLESS_TITLE.replace(/[()]/g, "\\$&")}`) }).click();
   await expect(aside).toContainText(MOCK_LIMITLESS_TITLE);
   await expect(aside).toContainText("via our markets API");
-  await expect(aside.getByRole("button", { name: /Trade with your wallet/ })).toBeEnabled();
+  await expect(aside.getByRole("button", { name: "Trade", exact: true })).toBeEnabled();
 
   // Open a market from the list: the modal opens over the table as it is (no route change, so the loaded rows and the
   // selection survive). The title link still carries the market's own address for a new tab or a bookmark.
@@ -101,8 +101,9 @@ test("standalone: list, filter, open a market, read its rules, see what a browse
   await expect(modal.getByText("XO Market: needs the Cockpit").first()).toBeVisible();
   await expect(modal.getByText(/Rules fingerprint \(sha256/)).toBeVisible();
   await expect(modal.getByText(/not an arbitrage|no links/i).first()).toBeVisible();
-  // The XO ticket is the wallet one: without a relay in the build it says so; with one, it asks for a wallet first.
-  await expect(modal.getByText(/XO trading is not available in this build\.|Connect a wallet to trade on XO/).first()).toBeVisible();
+  // The XO ticket is the trading account's one ticket: with no account set up it asks for one first.
+  await expect(modal.locator("[data-testid='trade-ticket'][data-state='no-account']")).toBeVisible();
+  await expect(modal.getByRole("button", { name: "Set up your account" })).toBeVisible();
   await modal.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.locator("h1")).toHaveText(HERO_H1);
 

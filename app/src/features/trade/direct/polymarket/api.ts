@@ -345,3 +345,14 @@ export async function cancelPolymarketOrder(context: L2Context, orderId: string)
     .map(([id, reason]) => ({ id: id.toLowerCase(), reason: venueText(typeof reason === "string" ? reason : JSON.stringify(reason)) ?? "no reason given" }));
   return ok({ canceled, notCanceled });
 }
+
+// GET /balance-allowance/update: asks the CLOB to read the account's collateral balance and allowances again, after the
+// Deposit Wallet's approvals land (note 45 section 9 step 7). Its answer changes nothing here; a refusal is reported.
+export async function refreshPolymarketAllowances(context: L2Context, signatureType: number): Promise<DirectResult<void>> {
+  const outcome = await l2Request(context, "GET", "/balance-allowance/update", `?asset_type=COLLATERAL&signature_type=${signatureType}`, "");
+  if (!outcome.result.ok) return outcome.result;
+  const response = outcome.result.value;
+  if (response.status === 401 || response.status === 403) return refuse("not_logged_in", "Polymarket refused the credential held in this tab.", venueWordsOf(response));
+  if (response.status < 200 || response.status >= 300) return refuse("venue_refused", `Polymarket did not read the allowances again (HTTP ${response.status}).`, venueWordsOf(response));
+  return ok(undefined);
+}

@@ -4,8 +4,136 @@ The hosted API of `docs/sdk-and-api-design.md` section 4: the free read endpoint
 section 9), and the paid quote and route prepare endpoints with their metering: subscription keys and x402 (step 9).
 Built only from `sdk/` and its own code (no import from `pm/`, `src/`, `relay/`, `app/` or `bridge/`). It is an optional
 accelerator: `sdk/` stays runnable by anyone with no service of ours, and local mode never depends on it. It holds no
-wallet, no signer, no venue credential and no private key, and it submits nothing of its own (the XO and Limitless relays below forward
-requests a visitor's browser signed). The container and its run and environment table are in `deploy/api/README.md`.
+wallet, no private key and no visitor credential. The free tier needs no secret; the unified-account routes below use the
+operator's own credentials (a Pimlico key and sponsorship policy, Polymarket Builder credentials, a Limitless partner
+token), each from the environment only and each optional (its feature answers 503 `not_configured` without it). Nothing
+it forwards moves a visitor's funds without the visitor's own signature. The container and its run and environment table
+are in `deploy/api/README.md`.
+
+## Unified account routes
+
+The server half of `docs/unified-account-design.md` (sections 2, 3.2 and 3.3). Every route here answers the dApp's origin
+and the localhost dev servers only (the XO relay's CORS rule), takes no subscription key, is never metered, and is off
+unless its switch is on. A route whose operator credential is absent answers **503 `not_configured`**; nothing is sent
+upstream. Operator credentials come from the environment only (on AWS, SSM SecureString parameters under
+`/pm-workers/api/`, `deploy/aws/README.md` "Operator credentials for the unified account"), are never printed, and are
+added to upstream requests only.
+
+**Where this deviates from, or settles, the design's wording** (the browser half must follow these):
+
+1. Errors keep the API's envelope: `not_configured` is HTTP 503 with `{"error":{"code":"not_configured","message":"..."}}`,
+   not `{"error":"not_configured"}`. New codes: `not_configured` 503, `proof_required` 401, `proof_invalid` 401,
+   `not_sponsored` 403, `not_registered` 409, `account_exists` 409, `already_stored` 409. The paymaster's own refusals are
+   these JSON errors with their HTTP status, not JSON-RPC error objects (viem raises them as `HttpRequestError` with the
+   body); Pimlico's own answers, errors included, pass through with Pimlico's status.
+2. Ownership proof (`proof.ts`): the signed text is `insurance-markets <METHOD> <path> <unix-seconds> <sha256hex>`, the
+   lower-case hex sha256 of the exact body bytes, and for a body-less request the sha256 of the empty string
+   (`e3b0c442...b855`); that is the form the browser sends. Tolerated as well: an empty field after the last space, or no
+   last space. `<path>` is the path on this API as sent; a route with a query accepts the path with its query exactly as
+   sent, or the path alone. The window is 300 s either side. A proof may be presented again inside its window (every
+   route that takes one is safe to repeat).
+3. Limitless cancel: body `{ "account", "orderId" }` (the order's UUID) with `x-im-proof`; the relay calls
+   `DELETE /orders/<orderId>?onBehalfOf=<profileId>` (the venue's OpenAPI; the design named no body). Open orders:
+   `GET /v1/relay/limitless/orders?account=<0x>&marketSlug=<slug>[&limit=1..200]` with `x-im-proof`, read as
+   `GET /markets/<slug>/user-orders` with `x-on-behalf-of`.
+4. Limitless register checks the signature against the decoded message here before calling Limitless, answers from its
+   store (no call) for an account it already registered, and on a 409 looks the account up in the partner's own list:
+   ours is stored and returned (200), anyone else's is `409 account_exists` ("This wallet already has a Limitless
+   account ..."). `profileId` is the venue's integer.
+5. Limitless answers keep the `x-limitless-relay` marker header the dApp already reads (`upstream`, `refused`, and now
+   `server` for an answer this relay made itself, the stored profile id); every other route here uses `x-im-relay` with
+   the same values.
+6. Polymarket relay: `WALLET-CREATE` needs the proof for `from`; `WALLET` needs none (the owner's batch signature is
+   checked on chain) but its `depositWalletParams.depositWallet` must be one of the two addresses derived from `from` and
+   every call must pass the target rule below; the session-signer routes need an `Idempotency-Key` header. Besides the
+   design's status and nonce reads, `GET /deployed` and the older `GET /transaction` are mirrored.
+7. Bridge addresses: `POST /v1/relay/polymarket-bridge/deposit` takes `{ "sender": "<E>", "address": "<E's Deposit
+   Wallet>" }` (one of the two derived addresses, so the uncapped route only funds E's own wallet), returns the bridge's
+   answer unchanged, and is on with `API_PAYMASTER=on` (it serves the paymaster; it needs no credential).
+8. The account backup store has its own switch, `API_ACCOUNT_BACKUP`; its `PUT` carries `x-im-proof` for the record's
+   `address` and the record `{ version, credentialId, address, iv, ciphertext }` (see below).
+9. **Not sponsored** (the address is not in the repository, so it is not on the allowlist; a call to it is
+   `not_sponsored` until it is pinned with its source): Limitless's per-venue fee modules (`venue.feeModule`, the USDC
+   approval a non-`postOnly` order on a new-fee venue needs, research note 44 section 3.1), Polymarket's
+   NegRiskCtfCollateralAdapter (`0xadA2…eAab` in note 45, full address not recorded), BNB USDT (Predict.fun's collateral)
+   and Predict.fun's Conditional Tokens.
+
+### `POST /v1/paymaster/:chainId` (137, 8453, 56) — `paymaster.ts`, `sponsor-policy.ts`
+
+The page's viem bundler and paymaster clients point here. One JSON-RPC 2.0 request per POST (no batch), forwarded to
+`https://api.pimlico.io/v2/<chainId>/rpc` with the operator's key in the upstream URL. Methods: `eth_chainId`,
+`eth_supportedEntryPoints`, `pimlico_getUserOperationGasPrice` (`[]`), `eth_getUserOperationReceipt`,
+`eth_getUserOperationByHash` (`[hash]`), `eth_estimateUserOperationGas`, `eth_sendUserOperation`
+(`[userOperation, EntryPoint 0.8]`), `pm_getPaymasterStubData`, `pm_getPaymasterData`
+(`[userOperation, EntryPoint 0.8, <route's chain id>, context?]`; the server replaces the context with
+`{ "sponsorshipPolicyId": <PIMLICO_SPONSORSHIP_POLICY_ID> }`). Every user operation must:
+
+- have only v0.7/v0.8 fields, no factory but EIP-7702's `0x7702` marker, and a `callData` that is Simple7702Account
+  `execute` or `executeBatch` (at most 16 calls), each call with no native value and one of: `approve` of a listed token
+  to a listed venue contract; `setApprovalForAll` on a listed position contract to a listed venue contract; an EIP-3009
+  `transferWithAuthorization` / `receiveWithAuthorization` (both signature forms) on USDC that pays the sender (a gasless
+  deposit from the funding wallet); a `transfer` of a listed token (to a bridge address this server fetched for the
+  sender: free; to anything else: a withdrawal);
+- come from a sender delegated to viem's Simple7702Account `0xe6Cae83BdE06E4c305530e199D7217f42808555B` (read from the
+  installed viem 2.57.2): an `eip7702Auth` for that implementation, for this chain or chain 0, signed by the sender; or,
+  without one, the sender's code on chain equal to `0xef0100` and that address (`eth_getCode` on `API_RPC_POLYGON` /
+  `API_RPC_BASE` or the SDK's public RPCs, BNB's public RPC; a positive answer is remembered ten minutes).
+
+Listed per chain (sources on each line of `sponsor-policy.ts`): **137** pUSD, USDC.e, native USDC (EIP-3009); spenders
+the CTF Exchange, Neg Risk CTF Exchange, Exchange V3, Neg Risk Adapter, CtfCollateralAdapter and the Collateral Onramp;
+position contracts Conditional Tokens and PositionManager. **8453** USDC (EIP-3009); the six Limitless exchanges and three
+NegRisk adapters; Limitless Conditional Tokens. **56** Binance-Peg USDC; Predict.fun's four exchanges. Limits: 60 calls at
+once then 60 a minute per client; 10 at once then 6 a minute per sender for `pm_getPaymasterData` and
+`eth_sendUserOperation`; 10 sponsored operations with withdrawals per sender per UTC day (counted once per chain and
+nonce at `pm_getPaymasterData`; the stub and estimate calls refuse early once the day is spent). Pimlico's own policy caps
+apply on top. Body at most 64 KiB; answer at most 256 KiB; 15 s; nothing retried.
+
+### `POST /v1/relay/polymarket-bridge/deposit` — `polymarket-bridge.ts`
+
+`{ "sender", "address" }` as in point 7; this server calls `POST https://bridge.polymarket.com/deposit {"address"}`
+(with `X-Builder-Code` when `POLY_BUILDER_CODE` is set), returns its status and body, and remembers the `address.evm`
+deposit address for the sender for 30 days (`account-store.ts`).
+
+### `/v1/relay/polymarket/<relayer path>` — `polymarket-relay.ts`, `builder-signing.ts`
+
+A mirror of `https://relayer-v2.polymarket.com` for: `POST /submit` (`WALLET-CREATE`, `WALLET`), `GET
+/v1/account/transactions/params?address=&type=WALLET`, `GET /v1/account/transactions/<id>`, `GET
+/deployed?address=&type=WALLET`, `GET /transaction?id=`, `POST /v1/session-signers/authorizations` and `/revocations`.
+Every forwarded request carries `POLY_BUILDER_API_KEY`, `POLY_BUILDER_PASSPHRASE`, `POLY_BUILDER_TIMESTAMP` and
+`POLY_BUILDER_SIGNATURE` = url-safe base64 (padding kept) of HMAC-SHA256(base64-decoded secret, seconds + METHOD + path
+without query + exact body). Bodies are forwarded byte for byte; the query as sent. `to` must be the Deposit Wallet
+factory `0x00000000000Fb5C9ADea0298D729A0CB3823Cc07`. A `WALLET` call may target: pUSD, USDC.e, native USDC (`approve` to a
+listed spender, `transfer` only back to `from`), and Conditional Tokens, PositionManager (any call; `setApprovalForAll`
+only to a listed operator), the Neg Risk Adapter, CtfCollateralAdapter and Collateral Onramp (any call). Limits: the
+relay bucket per client, and 20 at once then 30 a minute per signer for every write (the relayer's daily quota is shared).
+The CLOB and the bridge's other calls are not relayed: the page calls them itself (note 45 section 8: CLOB orders must
+carry the visitor's own IP).
+
+### `/v1/relay/limitless/...` — `limitless-relay.ts`
+
+| Route | Request | Upstream (`https://api.limitless.exchange`, signed with the partner token unless public) |
+|---|---|---|
+| `GET /signing-message` | none | `GET /auth/signing-message` (public) |
+| `POST /register` | `{ account, signingMessageHex, signature }` | `POST /profiles/partner-accounts` with `x-account` (EIP-55), `x-signing-message`, `x-signature`, body `{}`; on 409 `GET /profiles/partner-accounts?account=`; answers `{ profileId }` |
+| `POST /orders` | `{ account, order, orderType: GTC/FAK/FOK, marketSlug, postOnly?, clientOrderId? }` | `POST /orders` with `ownerId` = `onBehalfOf` = the stored profile id; `order.maker` = `order.signer` = `account`, `signatureType` 0, a 65-byte signature |
+| `POST /orders/cancel` | `{ account, orderId }` + `x-im-proof` | `DELETE /orders/<orderId>?onBehalfOf=<profileId>` |
+| `GET /orders?account=&marketSlug=[&limit=]` | `x-im-proof` | `GET /markets/<slug>/user-orders[?limit=]` with `x-on-behalf-of` |
+| `GET /markets/<slug>` | none | `GET /markets/<slug>` (public, unchanged) |
+
+The visitor-token routes (`/profiles/me`, `DELETE /orders/<id>`, `/markets/<slug>/user-orders` with the visitor's
+`lmts-*` headers) are gone, and no browser `lmts-*` header is read or forwarded. Limits: the relay bucket per client, and
+20 at once then 30 a minute per account for registration, orders and cancels. Body at most 64 KiB; 10 s; nothing retried.
+
+### `PUT` / `GET /v1/account-backup/<credentialIdHex>` — `account-backup.ts`
+
+The passkey-encrypted copy of a generated trading key. `credentialIdHex`: lower-case hex, 16 to 512 bytes. `PUT` with
+`x-im-proof` and the JSON record `{ "version", "credentialId", "address", "iv", "ciphertext" }`, at most 4,096 bytes:
+the proof's account must be `address`, `credentialId` the path's (the same hex in any case with an optional 0x, or the
+same bytes in base64url), `iv` and `ciphertext` 0x hex or base64, `version` a whole number or a short word. 201
+`{ credentialId, stored: true }` the first time, 200 for the same record again, 409 `already_stored` for another (never
+replaced, whoever asks). `GET`: 200 with the record (those five fields, `address` EIP-55) or 404 `not_found`. 10 at once
+then 6 a minute per client. The browser reads 404, 405, 501 and 503 as "not available".
+
 
 | File | Contents |
 |---|---|
@@ -25,7 +153,15 @@ requests a visitor's browser signed). The container and its run and environment 
 | `groups.ts` | approved links and linker candidates from the hash-pinned link bundles; candidates always "proposed" with their band |
 | `upstream.ts` | the one outbound fetch: User-Agent `insurance-markets-api/0.1`, no Origin, cookie or credential, no redirect, a size cap and a deadline |
 | `xo-relay.ts` | the XO order relay under `/v1/relay/xo/clob/` and the bundler route `/v1/relay/xo/bundler` (off unless `API_XO_RELAY=on`): the route and JSON-RPC method allowlists, the forwarded XO headers, the 64 KiB body cap, its own CORS rule and per-client limit; it forwards what the visitor's browser signed and holds nothing |
-| `limitless-relay.ts` | the Limitless order relay under `/v1/relay/limitless/` (off unless `API_LIMITLESS_RELAY=on`): five allowlisted routes, the three `lmts-*` token headers, the query forwarded exactly, the XO relay's body cap, CORS rule and limit size (its own bucket); it forwards what the visitor's browser signed and holds nothing |
+| `limitless-relay.ts` | the Limitless partner relay under `/v1/relay/limitless/` (off unless `API_LIMITLESS_RELAY=on`): signing message, register, orders, cancel and open orders with the operator's partner token, the account to profile id store, the ownership proof on cancel and reads |
+| `paymaster.ts` | `POST /v1/paymaster/:chainId` (off unless `API_PAYMASTER=on`): the JSON-RPC pass-through to Pimlico, the user operation checks, the EIP-7702 delegation rule, the withdrawal cap |
+| `sponsor-policy.ts` | what is sponsored per chain (every address with its source), the Simple7702Account callData decoder, the Deposit Wallet batch rule |
+| `polymarket-bridge.ts` | `POST /v1/relay/polymarket-bridge/deposit`: the bridge's deposit address for the sender's own Deposit Wallet, remembered for the paymaster |
+| `polymarket-relay.ts`, `builder-signing.ts` | the Polymarket relayer mirror under `/v1/relay/polymarket/` (off unless `API_POLYMARKET_RELAY=on`) and the Builder HMAC headers |
+| `account-backup.ts` | `PUT`/`GET /v1/account-backup/<credentialIdHex>` (off unless `API_ACCOUNT_BACKUP=on`): write-once encrypted key backups |
+| `proof.ts` | the ownership proof (`x-im-proof`) of design section 3.3 |
+| `account-store.ts` | the `limitless_profiles`, `bridge_deposits`, `sponsored_withdrawals` and `account_backups` tables in the same SQLite file |
+| `relay-http.ts` | what the unified-account routes share: answers, CORS, preflight, body reading, the one-request upstream forward |
 | `store.ts` | `IndexStore`, the storage seam, and `SqliteIndexStore` over `node:sqlite` |
 | `indexer/chains.ts` | what is indexed per chain: the pinned exchanges (OrderFilled), Conditional Tokens (ConditionResolution, ConditionPreparation) and Polymarket's Protocol V2 modules (ConditionResolved) |
 | `indexer/indexer.ts` | one chain's indexer: pin checks, confirmation depth, reorg check and rewind, bounded adaptive ranges |
@@ -115,40 +251,11 @@ an `eth_sendUserOperation` that times out answers `upstream_timeout` saying the 
 accepted, and the dApp looks it up by its hash instead of sending it again. The preflight grants `POST` and
 `content-type` only.
 
-## The Limitless order relay (`/v1/relay/limitless/...`)
+## The Limitless relay (`/v1/relay/limitless/...`)
 
-Limitless (`https://api.limitless.exchange`, Base 8453) sends no CORS headers for the dApp's origin either (measured
-2026-10-23: `OPTIONS /orders` answers 404 with no `access-control-allow-*`; `GET /markets/active` answers 200 without
-`access-control-allow-origin`), so a browser cannot read it. The relay lets the dApp
-(`app/src/features/trade/direct/limitless/`) trade with the visitor's own wallet and the visitor's own Limitless API
-token: the visitor creates a scoped token (`trading` scope) in Limitless's own app and pastes it into the page, which keeps
-it in that tab only and signs every request with it there (the three `lmts-*` headers, HMAC-SHA256 over timestamp,
-method, path with query and body); the wallet signs each order (EIP-712, an EOA order, signature type 0). The relay
-forwards the signed request unchanged. It holds no key, no token and no signer, and stores nothing about a request or an
-answer. Off by default: `API_LIMITLESS_RELAY=on` (`limitless-relay.ts`, `test/api/limitless-relay.test.ts`).
-
-| Relay route | Forwarded to `https://api.limitless.exchange` | Headers forwarded |
-|---|---|---|
-| `GET /v1/relay/limitless/markets/<slug>` | `GET /markets/<slug>`: the market record an order is built from (`venue.exchange`, the outcome tokens, `tradeType`, the fee flags), which `/v1/markets/limitless/:id` does not serve | none |
-| `GET /v1/relay/limitless/profiles/me` | `GET /profiles/me`: the token's own profile (its `id` is the order's `ownerId`; its account, trade wallet mode and effective fee rate) | `lmts-api-key`, `lmts-timestamp`, `lmts-signature` |
-| `POST /v1/relay/limitless/orders` | `POST /orders` (place) | the three `lmts-*` and `content-type` |
-| `DELETE /v1/relay/limitless/orders/<uuid>` | `DELETE /orders/<uuid>` (cancel) | the three `lmts-*` |
-| `GET /v1/relay/limitless/markets/<slug>/user-orders[?limit=1..200]` | `GET /markets/<slug>/user-orders` (the token's orders on one market, LIVE by default) | the three `lmts-*` |
-
-The book is not relayed: the dApp reads it from `GET /v1/markets/limitless/:id`. A slug is the SDK reader's form (no
-slash, no leading dot) and never one of the venue's listing words (`active`, `search`, `categories`, `timeline`,
-`stable`); an order id is a UUID. Anything else is 404 or 405 before anything is sent. The path must be sent exactly as
-matched (no dot segment, escape or trailing slash), and the one query a route takes is forwarded byte for byte, because
-the HMAC covers the path with its query. A signed route without all three `lmts-*` headers, or with one of the wrong form
-(the token id printable ASCII, the timestamp ISO-8601 UTC, the signature 44 base64 characters), is 400 before sending;
-a public read sends none of them upstream. Cookies, `Authorization`, the legacy `X-API-Key`, the viewer's `Origin` and
-every other header stay at the relay. Bodies: `POST /orders` only, a JSON object of at most 65,536 bytes, forwarded byte
-for byte; any other route with a body is 413. The answer is Limitless's status and body with only its content-type, plus
-`x-limitless-relay: upstream`; the relay's own refusals carry `x-limitless-relay: refused` and the same JSON errors as
-the XO relay. Limitless gets 10 s; nothing is retried, and a `POST /orders` or a `DELETE` that times out says it may or
-may not have taken effect. CORS and preflight caching are the XO relay's (the dApp and the dev servers only); the
-per-client limit is the same size (30 at once, then 60 a minute) in a bucket of its own. Logs: method, route label,
-status and time; never a header value, a slug, a query or a body.
+Replaced on 2026-10-24 by the partner relay in "Unified account routes" above: the visitor no longer pastes a Limitless
+API token; the relay signs with the operator's partner token, registers the visitor's trading key as a partner
+sub-account, and fills `ownerId`/`onBehalfOf` itself (`limitless-relay.ts`, `test/api/limitless-relay.test.ts`).
 
 ## Paid endpoints (the contract)
 

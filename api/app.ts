@@ -40,7 +40,14 @@ export type ErrorCode =
   | "origin_not_allowed"
   | "upstream_unreachable"
   | "upstream_timeout"
-  | "upstream_invalid";
+  | "upstream_invalid"
+  | "not_configured"
+  | "proof_required"
+  | "proof_invalid"
+  | "not_sponsored"
+  | "not_registered"
+  | "account_exists"
+  | "already_stored";
 
 export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = Object.freeze({
   invalid_request: 400,
@@ -64,6 +71,17 @@ export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = Object.freeze({
   upstream_unreachable: 502,
   upstream_timeout: 504,
   upstream_invalid: 502,
+  // The unified-account routes (paymaster.ts, polymarket-relay.ts, limitless-relay.ts, account-backup.ts): a feature
+  // whose operator credential is absent; a missing or bad ownership proof (proof.ts); a user operation call outside the
+  // sponsor's allowlist; a Limitless account this server has not registered; a wallet that already has a Limitless
+  // profile of its own; a backup slot already written.
+  not_configured: 503,
+  proof_required: 401,
+  proof_invalid: 401,
+  not_sponsored: 403,
+  not_registered: 409,
+  account_exists: 409,
+  already_stored: 409,
 });
 
 export class ApiError extends Error {

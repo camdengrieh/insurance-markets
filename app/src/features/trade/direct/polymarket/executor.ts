@@ -10,8 +10,8 @@
 //                 over the card's digest, and POSTs /order once with the L2 headers (l2.ts). A prepared order is sent at
 //                 most once and only within PREPARED_TTL_MS of being built;
 //   openOrders, cancel   GET /data/orders and DELETE /order with the same credential.
-// Balances and approvals (funding.ts) are read for the account the visitor picked; an approval transaction is offered
-// only when that account is the wallet itself and the wallet can send transactions.
+// Balances and approvals (funding.ts) are read for the account picked. A Deposit Wallet's approvals are one batch the
+// owner signs and Polymarket's relayer sends (activation.ts), never a transaction from here.
 
 import { buildPolymarketClobAuthTypedData, buildPolymarketL1Headers, hashPolymarketClobAuth } from "@sdk/trade/clob/polymarket/clobauth";
 import { CLOB_CHAIN_IDS, type PolymarketBook } from "@sdk/trade/clob/venues";
@@ -19,11 +19,11 @@ import type { Hex } from "viem";
 
 import type { WalletSigner } from "../../../../core/signer";
 import type { ClobMarketFacts, ClobTicket } from "../../clob-ticket";
-import { ok, refuse, type DirectAccount, type DirectApproval, type DirectDeps, type DirectExecutor, type DirectFunding, type DirectPreparedOrder, type DirectResult, type DirectSession, type DirectTransaction } from "../types";
+import { ok, refuse, type DirectAccount, type DirectDeps, type DirectExecutor, type DirectFunding, type DirectPreparedOrder, type DirectResult, type DirectSession } from "../types";
 import { checkedSignature, walletCovers, walletRefusal } from "../wallet";
-import { cancelPolymarketOrder, createVenueClock, deriveOrCreateCredentials, getPolymarketOpenOrders, postPolymarketOrder, readPolymarketBook, type L2Context } from "./api";
+import { cancelPolymarketOrder, createVenueClock, deriveOrCreateCredentials, getPolymarketOpenOrders, postPolymarketOrder, readPolymarketBook, refreshPolymarketAllowances, type L2Context } from "./api";
 import { polymarketOrderCard } from "./card";
-import { approvalBlocker, buildApprovalTransaction, readPolymarketFunding, type ApprovalAmount } from "./funding";
+import { readPolymarketFunding } from "./funding";
 import { parsePolymarketCredentials, polymarketKeyTag, type PolymarketCredentials } from "./l2";
 import { POLYMARKET_VENUE, readPolymarketAccounts } from "./maker";
 import { decideBook, microText, planPolymarketOrder, polymarketOrderBody, saltFrom, type PolymarketOrderPlan } from "./order";
@@ -43,11 +43,8 @@ export interface PolymarketExecutor extends DirectExecutor<PolymarketOrderInput>
   // The book the market's record names, before any live read (funding is read against its exchange).
   bookOf(facts: ClobMarketFacts): PolymarketBook;
   funding(account: DirectAccount, book: PolymarketBook, tokenId: string | null): Promise<DirectResult<DirectFunding>>;
-  // Why the page cannot send an approval for this account and wallet, in words; null when it can.
-  approvalBlocker(signer: WalletSigner, account: DirectAccount): string | null;
-  approval(account: DirectAccount, approval: DirectApproval, amount: ApprovalAmount): DirectTransaction;
-  // Asks the wallet to send the transaction; returns its hash. Nothing else is sent.
-  sendApproval(signer: WalletSigner, account: DirectAccount, transaction: DirectTransaction): Promise<DirectResult<Hex>>;
+  // Asks the CLOB to read the account's balance and allowances again (after its approvals land).
+  refreshAllowances(signer: WalletSigner, account: DirectAccount): Promise<DirectResult<void>>;
 }
 
 interface Held {
@@ -195,24 +192,10 @@ export function createPolymarketExecutor(deps: DirectDeps): PolymarketExecutor {
       return readPolymarketFunding(deps.chain(POLYGON), account, book, tokenId);
     },
 
-    approvalBlocker(signer, account) {
-      return approvalBlocker(account, signer.capabilities.sendTransaction);
-    },
-
-    approval(account, approval, amount) {
-      return buildApprovalTransaction(account, approval, amount);
-    },
-
-    async sendApproval(signer, account, transaction) {
-      const blocked = approvalBlocker(account, signer.capabilities.sendTransaction);
-      if (blocked !== null) return refuse("account_refused", blocked);
-      if (account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The connected wallet changed. Read your account again.");
-      try {
-        if ((await signer.chainId()) !== POLYGON) await signer.switchChain(POLYGON);
-        return ok(await signer.sendTransaction(transaction.request));
-      } catch (error) {
-        return walletRefusal(error, "the approval");
-      }
+    async refreshAllowances(signer, account) {
+      const credentials = credentialsOf(signer);
+      if (credentials === null) return refuse("not_logged_in", "Polymarket trading is not activated for this account yet.");
+      return refreshPolymarketAllowances(l2(signer, credentials), account.signatureType);
     },
   };
   return executor;

@@ -38,16 +38,26 @@ const ALL = files();
 describe("the direct path's source", () => {
   it("scans the files it should", () => {
     const names = ALL.map((file) => file.name);
-    for (const expected of ["index.ts", "types.ts", "http.ts", "credentials.ts", "services.tsx", "DirectClobTicket.tsx", "DirectCard.tsx", "polymarket/executor.ts", "polymarket/l2.ts", "polymarket/api.ts", "limitless/executor.ts", "limitless/hmac.ts", "limitless/relay.ts", "limitless/token.ts", "limitless/LimitlessTicket.tsx"]) expect(names).toContain(expected);
+    for (const expected of ["index.ts", "types.ts", "http.ts", "credentials.ts", "services.tsx", "kit.ts", "routes.ts", "wallet.ts", "TradeTicket.tsx", "polymarket/executor.ts", "polymarket/l2.ts", "polymarket/api.ts", "polymarket/relayer.ts", "polymarket/batch.ts", "polymarket/activation.ts", "polymarket/bridge.ts", "limitless/executor.ts", "limitless/relay.ts", "limitless/activation.ts", "xo/venue.ts"]) expect(names).toContain(expected);
+  });
+
+  it("holds no Limitless API token: the page signs no Limitless request and asks for no pasted credential", () => {
+    const names = ALL.map((file) => file.name);
+    for (const gone of ["limitless/hmac.ts", "limitless/token.ts", "limitless/words.ts", "limitless/LimitlessTicket.tsx"]) expect(names).not.toContain(gone);
+    for (const { name, text } of ALL) {
+      const source = code(text);
+      expect(source, name).not.toMatch(/lmts-(?:api-key|signature|timestamp)/);
+      expect(source, name).not.toMatch(/\bpaste\b/i);
+    }
   });
 
   it("names the browser's fetch and sessionStorage in services.tsx only, and never another store", () => {
     for (const { name, text } of ALL) {
       const source = code(text);
       expect(source, name).not.toMatch(/\b(?:localStorage|indexedDB|document\.cookie|clipboard|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/);
-      // The wiring points: services.tsx for the CLOB executors; for XO, the panel (the page's fetch for its relay
-      // client) and its credential store (the tab's sessionStorage); each takes fakes in tests.
-      if (name === "services.tsx" || name === "xo/XoTradePanel.tsx" || name === "xo/credentials.ts") continue;
+      // The wiring points: services.tsx (the page's fetch for every executor, and for the XO relay client); for XO,
+      // its credential store (the tab's sessionStorage) too; each takes fakes in tests.
+      if (name === "services.tsx" || name === "xo/credentials.ts") continue;
       expect(source, name).not.toMatch(/\bsessionStorage\b/);
       expect(source, name).not.toMatch(/(?:globalThis|window)\.fetch\b|(?<![.\w#])fetch\s*\(/);
     }

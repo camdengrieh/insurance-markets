@@ -1,50 +1,50 @@
-// The Limitless executor: the server-side flow (relay/clob.ts), moved into the visitor's browser and signed by the
-// visitor's own wallet and the visitor's own Limitless API token. Limitless sends no CORS headers for this page, so
-// every call to it goes through our markets API's relay (api/limitless-relay.ts), which forwards what this tab signed
-// and adds nothing.
+// The Limitless executor: the trading key E trades as our partner sub-account (note 44 section 3.1; design section 3.2).
+// The visitor never sees a Limitless credential: every authenticated call is made by our markets API's partner relay
+// with our own token, and the key signs only what proves its own intent.
 //
-//   ready         the wallet must cover Base (8453) and be an EOA there (an order is EOA-signed: signatureType 0, maker
-//                 = signer = the wallet); read with eth_getCode on Base;
-//   connect       the visitor pastes the token id and secret they created in Limitless's own app (scope `trading`);
-//                 this page signs GET /profiles/me with it and keeps it for this tab only when Limitless answers with a
-//                 profile for this very wallet in EOA trading mode (token.ts, venue.ts). `login` itself has nothing to
-//                 sign: Limitless issues tokens only in its own UI;
-//   prepareOrder  reads the market record (its exchange, tokens and fee flags) and the profile (ownerId, fee rate)
-//                 through the relay, and the book from our markets API for the card; builds the order with the SDK and
-//                 its card; signs nothing;
-//   placeOrder    asks the wallet to sign exactly the typed data on the card, checks the signature recovers to the wallet
-//                 over the card's digest, and POSTs /orders once through the relay. A prepared order is sent at most once
-//                 and only within PREPARED_TTL_MS of being built;
-//   openOrders, cancel   GET /markets/{slug}/user-orders and DELETE /orders/{id} with the same token.
-// Balances and approvals (funding.ts) are read on Base for the wallet; an approval transaction is offered only when the
-// wallet can send transactions.
+//   ready         E must be an EOA on Base (no code, or an EIP-7702 delegation: an order is EOA-signed, signatureType 0,
+//                 maker = signer = E); read with eth_getCode on Base;
+//   login         registration, once per address: the relay reads Limitless's sign-in text, E personal_signs it, the
+//                 relay registers E and answers its profile id. 409 means the address already has a Limitless account
+//                 of its own, which no partner can reach (note 44 section 0 point 3). This tab remembers the profile id
+//                 (credentials.ts), so the session survives a reload;
+//   prepareOrder  reads the market record (its exchange, tokens and fee flags) through the relay and builds the order;
+//                 signs nothing;
+//   placeOrder    E signs exactly the typed data built, the signature is checked to recover to E over the digest, and
+//                 the order is posted once through the relay. On a FEE_RATE_MISMATCH refusal (a legacy fee market,
+//                 where a partner cannot read the account's rate) it is signed once more at the rate Limitless named and
+//                 posted once more: the refused order was not placed. A prepared order is sent at most once and only
+//                 within PREPARED_TTL_MS of being built;
+//   openOrders, cancel   through the relay, each with an ownership proof (features/account/proof.ts), since neither carries a
+//                 signature of its own and the relay's token could otherwise act for any of our accounts.
+// Balances and approvals (funding.ts) are read on Base for E; the approvals are calls E sends once, at activation.
 
 import { CLOB_CHAIN_IDS } from "@sdk/trade/clob/venues";
-import type { Hex } from "viem";
+import { stringToHex, type Hex } from "viem";
 
 import { MARKETS_API_ORIGIN } from "../../../../core/markets-api";
-import { booksOfApiAnswer } from "../../../../core/markets-api-limitless";
 import type { WalletSigner } from "../../../../core/signer";
 import type { ClobMarketFacts, ClobTicket } from "../../clob-ticket";
 import { isVenueHttpError } from "../http";
-import type { ApprovalAmount } from "../polymarket/funding";
 import { saltFrom } from "../polymarket/order";
+import { proofFor } from "../wallet";
 import { venueText } from "../text";
-import { ok, refuse, type DirectAccount, type DirectApproval, type DirectDeps, type DirectExecutor, type DirectFunding, type DirectPreparedOrder, type DirectResult, type DirectSession, type DirectTransaction } from "../types";
-import { checkedSignature, walletCovers, walletRefusal } from "../wallet";
-import { limitlessOrderCard, type LimitlessCardInput } from "./card";
-import { buildLimitlessApproval, limitlessApprovalBlocker, readLimitlessFunding } from "./funding";
-import type { LimitlessToken } from "./hmac";
-import { limitlessOrderBody, planLimitlessOrder, type LimitlessOrderPlan } from "./order";
-import { createLimitlessRelayClient, OPEN_ORDERS_LIMIT, type LimitlessAnswer, type LimitlessRelayClient } from "./relay";
-import { LIMITLESS_VENUE, limitlessKeyTag, parseLimitlessToken, serializeLimitlessToken, tokenFromInput } from "./token";
-import { LIMITLESS_ORDER_ID, LIMITLESS_SLUG, limitlessMessage, readLimitlessMarket, readLimitlessOrders, readLimitlessProfile, type LimitlessProfile } from "./venue";
+import { ok, refuse, type DirectAccount, type DirectDeps, type DirectExecutor, type DirectFunding, type DirectPreparedOrder, type DirectResult, type DirectSession } from "../types";
+import { checkedSignature, walletRefusal } from "../wallet";
+import { limitlessOrderCard } from "./card";
+import { limitlessApprovalCalls, readLimitlessFunding, type ApprovalCall } from "./funding";
+import { limitlessOrderBody, planLimitlessOrder, withFeeRate, type LimitlessOrderPlan } from "./order";
+import { createLimitlessRelayClient, type LimitlessAnswer, type LimitlessRelayClient } from "./relay";
+import { feeRateMismatch, LIMITLESS_ORDER_ID, LIMITLESS_SLUG, limitlessMessage, readLimitlessMarket, readLimitlessOrders, readProfileId, readSigningMessage } from "./venue";
 
+export const LIMITLESS_VENUE = "limitless";
 export const BASE = CLOB_CHAIN_IDS.limitless;
-// A prepared order older than this is not sent: the market, the profile and the book were read then.
+// A prepared order older than this is not sent: the market record was read then.
 export const PREPARED_TTL_MS = 120_000;
+// The most orders one listing reads (the venue's user-orders route takes 1 to 200).
+export const OPEN_ORDERS_LIMIT = 200;
 export const NOT_AVAILABLE = "Limitless trading is not available in this build: it names no markets API to relay through.";
-const BOOK_UNREAD = "The book was not read: our markets API did not answer for it.";
+export const ALREADY_HAS_ACCOUNT = "This wallet already has its own Limitless account, and Limitless does not let a partner trade for an account it did not create. Trade on Limitless's own site with that account.";
 
 // An EIP-7702 delegated account (0xef0100 + the delegate) still signs with its own key: an EOA for this purpose.
 const DELEGATED_CODE = /^0xef0100[0-9a-fA-F]{40}$/;
@@ -59,14 +59,13 @@ export interface LimitlessOrderInput {
 export interface LimitlessExecutor extends DirectExecutor<LimitlessOrderInput> {
   // Whether this build names a markets API to relay through; without one nothing is ever requested.
   readonly available: boolean;
-  // Checks a pasted token with Limitless (GET /profiles/me through the relay) and keeps it for this tab when it is this
-  // wallet's. The pasted values are never returned, shown or logged.
-  connect(signer: WalletSigner, tokenId: string, secret: string): Promise<DirectResult<DirectSession>>;
+  // Whether Limitless answered, in this tab, that the address already has a Limitless account of its own.
+  foreign(signer: WalletSigner): boolean;
   funding(account: DirectAccount, tokenId: string | null): Promise<DirectResult<DirectFunding>>;
-  // Why the page cannot send an approval from this wallet, in words; null when it can.
-  approvalBlocker(signer: WalletSigner): string | null;
-  approval(account: DirectAccount, approval: DirectApproval, amount: ApprovalAmount): DirectTransaction;
-  sendApproval(signer: WalletSigner, account: DirectAccount, transaction: DirectTransaction): Promise<DirectResult<Hex>>;
+  // The approvals the chain does not show as granted, as calls; nothing is sent here.
+  approvalCalls(account: DirectAccount): Promise<DirectResult<readonly ApprovalCall[]>>;
+  // Sends one approval call from E (the trading account's signer routes it through its gas sponsor).
+  sendApproval(signer: WalletSigner, call: ApprovalCall): Promise<DirectResult<Hex>>;
 }
 
 interface Held {
@@ -74,14 +73,18 @@ interface Held {
   readonly preparedAtMs: number;
 }
 
+interface Registration {
+  readonly profileId: number;
+}
+
 // What a failed exchange with the relay means, in fixed words: the relay refused (nothing reached Limitless), or
 // Limitless said no in its own words.
 function answerRefusal<T>(answer: LimitlessAnswer, what: string): DirectResult<T> {
   if (answer.from === "relay") {
     if (answer.status === 504 || answer.status === 502) return refuse("venue_unreachable", `Our markets API's relay could not get an answer from Limitless (HTTP ${answer.status}) for ${what}.`, limitlessMessage(answer.json, ""));
+    if (answer.status === 401 || answer.status === 403) return refuse("not_logged_in", `Our markets API did not accept this account's proof for ${what} (HTTP ${answer.status}). Check this computer's clock, then try again.`, limitlessMessage(answer.json, ""));
     return refuse("venue_refused", `Our markets API's relay refused ${what} (HTTP ${answer.status}). Nothing reached Limitless.`, limitlessMessage(answer.json, ""));
   }
-  if (answer.status === 401 || answer.status === 403) return refuse("not_logged_in", `Limitless refused this token for ${what} (HTTP ${answer.status}). Check it has the trading scope and that this computer's clock is right, or paste a new one.`, limitlessMessage(answer.json, answer.text));
   return refuse("venue_refused", `Limitless did not accept ${what} (HTTP ${answer.status}).`, limitlessMessage(answer.json, answer.text));
 }
 
@@ -90,46 +93,48 @@ function transportRefusal<T>(error: unknown, what: string): DirectResult<T> {
   return refuse("venue_unreachable", `Our markets API could not be reached for ${what}.`);
 }
 
+function parseRegistration(stored: string | null): Registration | null {
+  if (stored === null) return null;
+  try {
+    const value = JSON.parse(stored) as unknown;
+    const id = typeof value === "object" && value !== null ? (value as Record<string, unknown>)["profileId"] : undefined;
+    return typeof id === "number" && Number.isSafeInteger(id) && id > 0 ? { profileId: id } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | null = MARKETS_API_ORIGIN): LimitlessExecutor {
-  const relay: LimitlessRelayClient | null = relayOrigin === null ? null : createLimitlessRelayClient(deps.http, relayOrigin, deps.nowMs);
+  const relay: LimitlessRelayClient | null = relayOrigin === null ? null : createLimitlessRelayClient(deps.http, relayOrigin);
   // Prepared orders this page built and has not sent: the handle the UI holds is only a key into this map.
   const held = new WeakMap<DirectPreparedOrder, Held>();
+  // The fee rate Limitless last named for an account on a fee-enabled market (lower-case address -> bps).
+  const feeRates = new Map<string, number>();
 
-  function tokenOf(signer: WalletSigner): LimitlessToken | null {
-    return parseLimitlessToken(deps.store.get(LIMITLESS_VENUE, signer.address));
+  function registrationOf(signer: WalletSigner): Registration | null {
+    return parseRegistration(deps.store.get(LIMITLESS_VENUE, signer.address));
   }
 
-  function needsBase<T>(signer: WalletSigner): DirectResult<T> | null {
-    return walletCovers(signer, BASE) ? null : refuse("wallet_wrong_chain", "Your wallet's session does not include Base (chain 8453), where Limitless settles. Connect a session that does.");
+  function accountOf(signer: WalletSigner): DirectAccount {
+    return { venue: LIMITLESS_VENUE, chainId: BASE, signer: signer.address, maker: signer.address, label: "your trading account", signatureType: 0, makerIsSigner: true };
   }
 
-  async function profileOf(client: LimitlessRelayClient, signer: WalletSigner, token: LimitlessToken): Promise<DirectResult<LimitlessProfile>> {
-    let answer: LimitlessAnswer;
+  async function postOnce(client: LimitlessRelayClient, body: string): Promise<DirectResult<LimitlessAnswer>> {
     try {
-      answer = await client.profile(token);
-    } catch (error) {
-      return transportRefusal(error, "your token's profile");
-    }
-    if (answer.from !== "limitless" || answer.status !== 200) return answerRefusal(answer, "your token's profile");
-    return readLimitlessProfile(answer.json, signer.address);
-  }
-
-  // The book our markets API last read for the outcome, for the card: never blocks the order, and never shown as live.
-  async function bookFor(slug: string, tokenId: string): Promise<LimitlessCardInput["book"]> {
-    if (relayOrigin === null) return { unread: BOOK_UNREAD };
-    try {
-      const answer = await deps.http({ method: "GET", url: `${new URL(relayOrigin).origin}/v1/markets/limitless/${slug}` });
-      const books = answer.status === 200 ? booksOfApiAnswer(JSON.parse(answer.text) as unknown) : null;
-      const found = books?.find((entry) => entry.tokenId === tokenId);
-      if (found === undefined) return { unread: BOOK_UNREAD };
-      if (found.book === null) return { unread: `The book was not read: ${found.reason ?? "our markets API holds none"}` };
-      const best = (levels: readonly { readonly price: string }[], pick: "max" | "min"): string | null =>
-        levels.length === 0 ? null : levels.map((level) => level.price).reduce((a, b) => ((pick === "max" ? Number(b) > Number(a) : Number(b) < Number(a)) ? b : a));
-      const ageS = Math.max(0, Math.round((deps.nowMs() - found.book.asOfMs) / 1000));
-      return { bestBid: best(found.book.bids, "max"), bestAsk: best(found.book.asks, "min"), asOf: `${ageS} s before this card was built${found.book.derived === "complement" ? ", the complement of the Yes book" : ""}` };
+      return ok(await client.postOrder(body));
     } catch {
-      return { unread: BOOK_UNREAD };
+      return refuse("venue_ambiguous", "The order was sent but no answer came back from our markets API. It may or may not be on Limitless's book: list your open orders before placing another.");
     }
+  }
+
+  async function signPlan(signer: WalletSigner, plan: LimitlessOrderPlan): Promise<DirectResult<Hex>> {
+    let raw: Hex;
+    try {
+      raw = await signer.signTypedData(plan.typedData);
+    } catch (error) {
+      return walletRefusal(error, "the order");
+    }
+    return checkedSignature(signer, plan.digest, raw);
   }
 
   const executor: LimitlessExecutor = {
@@ -139,40 +144,63 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
 
     async ready(signer) {
       if (relay === null) return refuse("venue_unreachable", NOT_AVAILABLE);
-      const wrong = needsBase<never>(signer);
-      if (wrong !== null) return wrong;
       const chain = deps.chain(BASE);
-      if (chain === null) return refuse("chain_unreadable", "This build names no Base RPC, so your wallet cannot be read there.");
+      if (chain === null) return refuse("chain_unreadable", "This build names no Base RPC, so your account cannot be read there.");
       let code: Hex;
       try {
         code = await chain.port.getCode(signer.address);
       } catch {
-        return refuse("chain_unreadable", "This page could not read your wallet on Base. Read again in a moment.");
+        return refuse("chain_unreadable", "This page could not read your account on Base. Read again in a moment.");
       }
       if (code !== "0x" && !DELEGATED_CODE.test(code)) {
-        return refuse("account_refused", "The connected address is a contract on Base. Limitless takes orders an ordinary wallet (an EOA) signs with its own key, so this page builds none for it.");
+        return refuse("account_refused", "Your trading address is a contract on Base. Limitless takes orders a key signs itself (an EOA order), so this page builds none for it.");
       }
-      const account: DirectAccount = { venue: LIMITLESS_VENUE, chainId: BASE, signer: signer.address, maker: signer.address, label: "your wallet itself", signatureType: 0, makerIsSigner: true };
-      return ok({ accounts: [account], notes: ["Limitless takes orders your own wallet signs (an EOA order, signature type 0) from a profile in EOA trading mode; your token is checked for both before anything is signed."] });
+      return ok({ accounts: [accountOf(signer)], notes: [] });
+    },
+
+    foreign(signer) {
+      const stored = deps.store.get(LIMITLESS_VENUE, signer.address);
+      return stored !== null && stored.includes('"foreign":true');
     },
 
     session(signer) {
-      const token = tokenOf(signer);
-      return token === null ? null : { venue: LIMITLESS_VENUE, address: signer.address, keyTag: limitlessKeyTag(token.tokenId) };
+      const registration = registrationOf(signer);
+      return registration === null ? null : { venue: LIMITLESS_VENUE, address: signer.address, keyTag: `profile ${registration.profileId}` };
     },
 
-    async login() {
-      return refuse("not_logged_in", "Limitless issues API tokens in its own app only: paste one created there with the trading scope.");
-    },
-
-    async connect(signer, tokenId, secret) {
+    async login(signer): Promise<DirectResult<DirectSession>> {
       if (relay === null) return refuse("venue_unreachable", NOT_AVAILABLE);
-      const token = tokenFromInput(tokenId, secret);
-      if (token === null) return refuse("not_logged_in", "That is not a Limitless API token: the id is printable text without spaces and the secret is base64 text, both as Limitless showed them.");
-      const profile = await profileOf(relay, signer, token);
-      if (!profile.ok) return profile;
-      deps.store.set(LIMITLESS_VENUE, signer.address, serializeLimitlessToken(token));
-      return ok({ venue: LIMITLESS_VENUE, address: signer.address, keyTag: limitlessKeyTag(token.tokenId) });
+      let textAnswer: LimitlessAnswer;
+      try {
+        textAnswer = await relay.signingMessage();
+      } catch (error) {
+        return transportRefusal(error, "Limitless's sign-in text");
+      }
+      if (textAnswer.status !== 200) return answerRefusal(textAnswer, "Limitless's sign-in text");
+      const message = readSigningMessage(textAnswer.text, textAnswer.json);
+      if (!message.ok) return message;
+      let signature: Hex;
+      try {
+        signature = await signer.signMessage(message.value);
+      } catch (error) {
+        return walletRefusal(error, "the Limitless sign-in text");
+      }
+      let answer: LimitlessAnswer;
+      try {
+        answer = await relay.register({ account: signer.address, signingMessageHex: stringToHex(message.value), signature });
+      } catch (error) {
+        return transportRefusal(error, "your Limitless registration");
+      }
+      if (answer.status === 409) {
+        // Remembered for this tab, so the account stops offering a registration that cannot succeed.
+        deps.store.set(LIMITLESS_VENUE, signer.address, JSON.stringify({ foreign: true }));
+        return refuse("account_refused", ALREADY_HAS_ACCOUNT, limitlessMessage(answer.json, ""));
+      }
+      if (answer.status < 200 || answer.status >= 300) return answerRefusal(answer, "your Limitless registration");
+      const profileId = readProfileId(answer.json);
+      if (!profileId.ok) return profileId;
+      deps.store.set(LIMITLESS_VENUE, signer.address, JSON.stringify({ profileId: profileId.value }));
+      return ok({ venue: LIMITLESS_VENUE, address: signer.address, keyTag: `profile ${profileId.value}` });
     },
 
     logout(signer) {
@@ -181,26 +209,20 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
 
     async prepareOrder(signer, account, input) {
       if (relay === null) return refuse("venue_unreachable", NOT_AVAILABLE);
-      const wrong = needsBase<never>(signer);
-      if (wrong !== null) return wrong;
-      if (account.venue !== LIMITLESS_VENUE || account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The account was read for another wallet. Read your account again.");
-      const token = tokenOf(signer);
-      if (token === null) return refuse("not_logged_in", "Paste your Limitless API token in this tab first.");
+      if (account.venue !== LIMITLESS_VENUE || account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The account was read for another key. Read your account again.");
+      if (registrationOf(signer) === null) return refuse("not_logged_in", "Limitless trading is not activated for this account yet.");
       const slug = input.ticket.marketId;
       if (!LIMITLESS_SLUG.test(slug) || input.facts.marketId !== slug) return refuse("invalid_order", "This ticket does not name a Limitless market.");
       let marketAnswer: LimitlessAnswer;
-      let profile: DirectResult<LimitlessProfile>;
-      let book: LimitlessCardInput["book"];
       try {
-        [marketAnswer, profile, book] = await Promise.all([relay.market(slug), profileOf(relay, signer, token), bookFor(slug, input.ticket.tokenId)]);
+        marketAnswer = await relay.market(slug);
       } catch (error) {
         return transportRefusal(error, "the market's record");
       }
       if (marketAnswer.from !== "limitless" || marketAnswer.status !== 200) return answerRefusal(marketAnswer, "the market's record");
       const market = readLimitlessMarket(marketAnswer.json, slug, input.ticket.tokenId);
       if (!market.ok) return market;
-      if (!profile.ok) return profile;
-      const plan = planLimitlessOrder({ ticket: input.ticket, account, market: market.value, profile: profile.value, salt: saltFrom(deps.randomBytes) });
+      const plan = planLimitlessOrder({ ticket: input.ticket, account, market: market.value, feeRateBps: feeRates.get(signer.address.toLowerCase()) ?? 0, salt: saltFrom(deps.randomBytes) });
       if (!plan.ok) return plan;
       const card = limitlessOrderCard({
         plan: plan.value,
@@ -210,7 +232,7 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
         maxOutlayAtomic: input.ticket.maxOutlayAtomic,
         minProceedsAtomic: input.ticket.minProceedsAtomic,
         outcome: input.outcome,
-        book,
+        book: { unread: "The book is shown in the market's own view; this order does not depend on it." },
       });
       const prepared: DirectPreparedOrder = { venue: LIMITLESS_VENUE, account, card, typedData: plan.value.typedData, orderId: plan.value.digest };
       held.set(prepared, { plan: plan.value, preparedAtMs: deps.nowMs() });
@@ -220,35 +242,34 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
     async placeOrder(signer, prepared) {
       const entry = held.get(prepared);
       if (entry === undefined || relay === null) return refuse("invalid_order", "This order was already sent or was never prepared here. Review it again.");
-      if (prepared.account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The connected wallet changed since this order was prepared. Review it again.");
+      if (prepared.account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The trading account changed since this order was prepared. Review it again.");
       if (deps.nowMs() - entry.preparedAtMs > PREPARED_TTL_MS) {
         held.delete(prepared);
-        return refuse("invalid_order", "This order was prepared more than two minutes ago. Review it again so the market, your profile and the book are fresh.");
+        return refuse("invalid_order", "This order was prepared more than two minutes ago. Review it again so the market's record is fresh.");
       }
-      const token = tokenOf(signer);
-      if (token === null) return refuse("not_logged_in", "Paste your Limitless API token in this tab first.");
-      let raw: Hex;
-      try {
-        raw = await signer.signTypedData(prepared.typedData);
-      } catch (error) {
-        return walletRefusal(error, "the order");
-      }
-      const signature = await checkedSignature(signer, entry.plan.digest, raw);
+      let plan = entry.plan;
+      const signature = await signPlan(signer, plan);
       if (!signature.ok) return signature;
       // From here on the order may reach the venue: the handle is spent whatever the answer.
       held.delete(prepared);
-      const body = limitlessOrderBody(entry.plan, signature.value);
-      let answer: LimitlessAnswer;
-      try {
-        answer = await relay.postOrder(token, body);
-      } catch {
-        return refuse("venue_ambiguous", "The order was sent but no answer came back from our markets API. It may or may not be on Limitless's book: list your open orders before signing another.");
+      let posted = await postOnce(relay, limitlessOrderBody(plan, signature.value));
+      if (!posted.ok) return posted;
+      let answer = posted.value;
+      const expected = answer.from === "limitless" && answer.status === 400 ? feeRateMismatch(answer.json) : null;
+      if (expected !== null && expected !== plan.feeRateBps && plan.feeSource === "on") {
+        // The venue refused the order for its fee rate alone, so it is not on the book: sign it once at the named rate.
+        feeRates.set(signer.address.toLowerCase(), expected);
+        plan = withFeeRate(plan, expected);
+        const again = await signPlan(signer, plan);
+        if (!again.ok) return again;
+        posted = await postOnce(relay, limitlessOrderBody(plan, again.value));
+        if (!posted.ok) return posted;
+        answer = posted.value;
       }
-      if (answer.from === "relay" && answer.status >= 500) {
-        return refuse("venue_ambiguous", `Our markets API's relay got no usable answer from Limitless (HTTP ${answer.status}). The order may or may not have been placed: list your open orders before signing another.`, limitlessMessage(answer.json, ""));
+      if (answer.status >= 500) {
+        return refuse("venue_ambiguous", `No usable answer came back for the order (HTTP ${answer.status}). It may or may not have been placed: list your open orders before placing another.`, limitlessMessage(answer.json, answer.from === "limitless" ? answer.text : ""));
       }
-      if (answer.from === "limitless" && answer.status >= 500) return refuse("venue_ambiguous", `Limitless answered with an error of its own (HTTP ${answer.status}). The order may or may not have been placed: list your open orders before signing another.`, limitlessMessage(answer.json, answer.text));
-      if (answer.from !== "limitless" || answer.status < 200 || answer.status >= 300) return answerRefusal(answer, "the order");
+      if (answer.status < 200 || answer.status >= 300) return answerRefusal(answer, "the order");
       // OrderResponseDto: { order: CreatedOrderDto, makerMatches?, execution }. The order's id names it for a cancel.
       const accepted = typeof answer.json === "object" && answer.json !== null ? (answer.json as Record<string, unknown>)["order"] : undefined;
       const created = typeof accepted === "object" && accepted !== null ? (accepted as Record<string, unknown>) : null;
@@ -262,32 +283,35 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
 
     async openOrders(signer, filter) {
       if (relay === null) return refuse("venue_unreachable", NOT_AVAILABLE);
-      const token = tokenOf(signer);
-      if (token === null) return refuse("not_logged_in", "Paste your Limitless API token in this tab to list your orders.");
+      if (registrationOf(signer) === null) return refuse("not_logged_in", "Limitless trading is not activated for this account yet.");
       if (filter.market === null || !LIMITLESS_SLUG.test(filter.market)) return refuse("invalid_order", "Limitless lists your orders one market at a time.");
+      const proof = await proofFor(signer, { method: "GET", path: relay.paths.ordersOf(signer.address, filter.market) }, deps.nowMs());
+      if (!proof.ok) return proof;
       let answer: LimitlessAnswer;
       try {
-        answer = await relay.userOrders(token, filter.market);
+        answer = await relay.userOrders(signer.address, filter.market, proof.value);
       } catch (error) {
         return transportRefusal(error, "your open orders");
       }
-      if (answer.from !== "limitless" || answer.status !== 200) return answerRefusal(answer, "your open orders");
+      if (answer.status !== 200) return answerRefusal(answer, "your open orders");
       return readLimitlessOrders(answer.json, OPEN_ORDERS_LIMIT);
     },
 
     async cancel(signer, orderId) {
       if (relay === null) return refuse("venue_unreachable", NOT_AVAILABLE);
-      const token = tokenOf(signer);
-      if (token === null) return refuse("not_logged_in", "Paste your Limitless API token in this tab to cancel an order.");
+      if (registrationOf(signer) === null) return refuse("not_logged_in", "Limitless trading is not activated for this account yet.");
       if (!LIMITLESS_ORDER_ID.test(orderId)) return refuse("invalid_order", "That is not a Limitless order id.");
+      const body = JSON.stringify({ account: signer.address, orderId });
+      const proof = await proofFor(signer, { method: "POST", path: relay.paths.cancel, body }, deps.nowMs());
+      if (!proof.ok) return proof;
       let answer: LimitlessAnswer;
       try {
-        answer = await relay.cancelOrder(token, orderId);
+        answer = await relay.cancelOrder(body, proof.value);
       } catch {
         return refuse("venue_ambiguous", "The cancel was sent but no answer came back from our markets API. List your open orders to see whether it took effect.");
       }
       if (answer.from === "limitless" && answer.status >= 200 && answer.status < 300) return ok({ canceled: [orderId], notCanceled: [] });
-      if (answer.from === "limitless" && answer.status >= 400 && answer.status < 500 && answer.status !== 401 && answer.status !== 403) {
+      if (answer.from === "limitless" && answer.status >= 400 && answer.status < 500) {
         return ok({ canceled: [], notCanceled: [{ id: orderId, reason: limitlessMessage(answer.json, answer.text) ?? `HTTP ${answer.status}` }] });
       }
       if (answer.status >= 500) return refuse("venue_ambiguous", `No usable answer came back for the cancel (HTTP ${answer.status}). List your open orders to see whether it took effect.`, limitlessMessage(answer.json, ""));
@@ -298,21 +322,14 @@ export function createLimitlessExecutor(deps: DirectDeps, relayOrigin: string | 
       return readLimitlessFunding(deps.chain(BASE), account, tokenId !== null && /^[1-9][0-9]{0,77}$/.test(tokenId) ? tokenId : null);
     },
 
-    approvalBlocker(signer) {
-      return limitlessApprovalBlocker(signer.capabilities.sendTransaction);
+    async approvalCalls(account) {
+      const funding = await readLimitlessFunding(deps.chain(BASE), account, null);
+      return funding.ok ? ok(limitlessApprovalCalls(funding.value)) : funding;
     },
 
-    approval(account, approval, amount) {
-      return buildLimitlessApproval(account, approval, amount);
-    },
-
-    async sendApproval(signer, account, transaction) {
-      const blocked = limitlessApprovalBlocker(signer.capabilities.sendTransaction);
-      if (blocked !== null) return refuse("account_refused", blocked);
-      if (account.signer.toLowerCase() !== signer.address.toLowerCase()) return refuse("account_refused", "The connected wallet changed. Read your account again.");
+    async sendApproval(signer, call) {
       try {
-        if ((await signer.chainId()) !== BASE) await signer.switchChain(BASE);
-        return ok(await signer.sendTransaction(transaction.request));
+        return ok(await signer.sendTransaction({ chainId: call.chainId, to: call.to, data: call.data }));
       } catch (error) {
         return walletRefusal(error, "the approval");
       }

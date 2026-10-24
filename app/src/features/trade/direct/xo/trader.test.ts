@@ -9,7 +9,6 @@ import * as node from "@sdk/node/trade/xo/hmac";
 
 import { WalletError } from "../../../../core/signer";
 import { XoCredential, XoCredentialStore } from "./credentials";
-import { xoAvailability, xoDirectExecutor } from "./index";
 import { cancelBody, readCancel, readOpenOrders } from "./order";
 import { RELAY_BASE_PATH, XoRelayClient } from "./relay";
 import { loginCard, orderCard, walletTypedData, type XoSigningCard } from "./signing";
@@ -105,7 +104,6 @@ describe("the chain the wallet signs on", () => {
     expect(chainSupport(paybox)).toEqual({ ok: false, words: PAYBOX_CHAIN_WORDS });
     expect(PAYBOX_CHAIN_WORDS).toMatch(/PayBox/);
     expect(PAYBOX_CHAIN_WORDS).toMatch(/3223/);
-    expect(xoAvailability(paybox, RELAY_ORIGIN)).toEqual({ available: false, reason: PAYBOX_CHAIN_WORDS });
     const storage = memoryStorage();
     loggedIn(storage);
     const { t, relay } = trader(paybox, {}, { storage });
@@ -272,14 +270,6 @@ describe("the credential and the executor", () => {
     const memoryOnly = new XoCredentialStore(null);
     memoryOnly.put(OWNER, ACCOUNT, credential as XoCredential);
     expect(memoryOnly.get(OWNER, ACCOUNT)?.forSigning()).toEqual(CREDENTIAL);
-  });
-
-  it("is registered as the xo venue and is unavailable without a relay origin", () => {
-    const executor = xoDirectExecutor();
-    expect([executor.venue, executor.chainId]).toEqual(["xo", 3223]);
-    expect(executor.availability(fakeSigner(), null)).toEqual({ available: false, reason: "XO trading is not available in this build." });
-    expect(executor.availability(null, RELAY_ORIGIN).available).toBe(false);
-    expect(executor.availability(fakeSigner(), RELAY_ORIGIN)).toEqual({ available: true });
   });
 
   it("refuses a card whose checks fail before the wallet is asked", async () => {

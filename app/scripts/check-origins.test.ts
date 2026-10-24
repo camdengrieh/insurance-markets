@@ -80,6 +80,12 @@ describe("check-origins", () => {
     expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": "// never use innerHTML here\nexport const a = 1; /* eval is banned */\n" })).toEqual([]);
   });
 
+  it("allows only the WebAuthn PRF extension's `eval` property key, never another eval", async () => {
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": "export const x = { prf: { eval: { first: salt } } };\n" })).toEqual([]);
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": "export const x = { prf: { eval: { first: eval('1') } } };\n" })).toEqual(["html-sink:app/src/a.ts"]);
+    expect(await rules({ "app/index.html": GOOD_HTML, "app/src/a.ts": "export const x = { eval: 1 };\n" })).toEqual(["html-sink:app/src/a.ts"]);
+  });
+
   it("classifies hosts and finds URLs without matching template hosts", () => {
     expect(classifyHost("api-mainnet.xo.market")).toBe("network");
     expect(classifyHost("orderbooks.xo.market")).toBe("network");
