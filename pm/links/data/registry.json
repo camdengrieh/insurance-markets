@@ -41,6 +41,20 @@
       "at": "2026-10-23",
       "linkId": "lnk_baccf2d20e9b94fcf3c69119215e2b9e",
       "note": "source=statistics"
+    },
+    {
+      "action": "propose",
+      "actor": "stats-linker-v1",
+      "at": "2026-10-23",
+      "linkId": "lnk_29261e4cda12ed455b983b4aeb22da24",
+      "note": "source=statistics"
+    },
+    {
+      "action": "propose",
+      "actor": "stats-linker-v1",
+      "at": "2026-10-24",
+      "linkId": "lnk_9d0b12a822eccf5b9e3ed4607fabe722",
+      "note": "source=statistics"
     }
   ],
   "format": "pm-link-registry",
@@ -410,6 +424,146 @@
       "synthetic": false,
       "tierCap": "indicative_discrepancy",
       "validUntil": "2027-01-01T23:59:00Z"
+    },
+    {
+      "approvals": [],
+      "basis": {
+        "axes": [
+          {
+            "a": "2026-10-25T00:00:00Z",
+            "axis": "timing_cutoff",
+            "b": "2026-10-26T00:00:00Z",
+            "legA": 0,
+            "legB": 1,
+            "severity": "minor"
+          }
+        ],
+        "class": "settlement_window",
+        "cutoffDeltaMinutes": 1440
+      },
+      "legs": [
+        {
+          "closeUtc": "2026-10-25T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "tampa-bay-rays-vs-milwaukee-brewers-1792775710180",
+          "maskedSha256": "fa472b8b3bfaa04d40a033679fd3665773ce604abe0732d4437c88668e1b7d88",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "5c78ac9b5e98311ab7baf48f6fb49546095e1345e8b2ef98ffbca55a49723a53",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        },
+        {
+          "closeUtc": "2026-10-26T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "tampa-bay-rays-vs-milwaukee-brewers-1792775711240",
+          "maskedSha256": "fa472b8b3bfaa04d40a033679fd3665773ce604abe0732d4437c88668e1b7d88",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "81ef24ce712992dd69d6d19bf4c87f9e40d51debefc83a9e5194c72e19604bea",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        }
+      ],
+      "linkId": "lnk_29261e4cda12ed455b983b4aeb22da24",
+      "proof": {
+        "evidence": [
+          {
+            "detail": "s8862.t10000.r10000.n10000.d0.c24h",
+            "method": "statistics_hint"
+          }
+        ],
+        "level": "P_unproven"
+      },
+      "proposedBy": {
+        "at": "2026-10-23",
+        "id": "stats-linker-v1",
+        "source": "statistics"
+      },
+      "relation": "near_identity",
+      "schemaVersion": 1,
+      "state": "candidate",
+      "synthetic": false,
+      "tierCap": "indicative_discrepancy",
+      "validUntil": "2026-10-25T00:00:00Z"
+    },
+    {
+      "approvals": [],
+      "basis": {
+        "axes": [
+          {
+            "a": "2026-10-28T00:00:00Z",
+            "axis": "timing_cutoff",
+            "b": "2026-10-29T00:00:00Z",
+            "legA": 0,
+            "legB": 1,
+            "severity": "minor"
+          }
+        ],
+        "class": "settlement_window",
+        "cutoffDeltaMinutes": 1440
+      },
+      "legs": [
+        {
+          "closeUtc": "2026-10-28T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "milwaukee-brewers-vs-tampa-bay-rays-1792775712467",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "bf9d8fdefa3ae1610c1e869b2354e9dff6dbf643ee8c0185646398cd850a14e3",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        },
+        {
+          "closeUtc": "2026-10-29T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "milwaukee-brewers-vs-tampa-bay-rays-1792775717870",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "0952791e7769cd3ad09a77158e9ce0bb0120f29da18df66141d14032978e3188",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        }
+      ],
+      "linkId": "lnk_9d0b12a822eccf5b9e3ed4607fabe722",
+      "proof": {
+        "evidence": [
+          {
+            "detail": "s8862.t10000.r10000.n10000.d0.c24h",
+            "method": "statistics_hint"
+          }
+        ],
+        "level": "P_unproven"
+      },
+      "proposedBy": {
+        "at": "2026-10-24",
+        "id": "stats-linker-v1",
+        "source": "statistics"
+      },
+      "relation": "near_identity",
+      "schemaVersion": 1,
+      "state": "candidate",
+      "synthetic": false,
+      "tierCap": "indicative_discrepancy",
+      "validUntil": "2026-10-28T00:00:00Z"
     }
   ],
   "version": 1

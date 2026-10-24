@@ -1,5 +1,5 @@
 {
-  "contentSha256": "807a38b4a03d79e8853d7d79623dad7e7b6a64abe0728645e0b53a7c1c603ea1",
+  "contentSha256": "1a65267e2258d78d831a7e92f0c16b02139c0f161624ee0a5c8d1c0dde6586cf",
   "links": [
     {
       "band": "strong",
@@ -44,6 +44,45 @@
     {
       "band": "strong",
       "basis": {
+        "axes": [
+          "timing"
+        ],
+        "class": "settlement_window"
+      },
+      "legs": [
+        {
+          "closeUtc": "2026-10-25T00:00:00Z",
+          "maskedSha256": "fa472b8b3bfaa04d40a033679fd3665773ce604abe0732d4437c88668e1b7d88",
+          "nativeId": "tampa-bay-rays-vs-milwaukee-brewers-1792775710180",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "5c78ac9b5e98311ab7baf48f6fb49546095e1345e8b2ef98ffbca55a49723a53",
+          "venue": "limitless"
+        },
+        {
+          "category": "sports",
+          "closeUtc": "2026-10-26T00:00:00Z",
+          "maskedSha256": "fa472b8b3bfaa04d40a033679fd3665773ce604abe0732d4437c88668e1b7d88",
+          "nativeId": "tampa-bay-rays-vs-milwaukee-brewers-1792775711240",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "81ef24ce712992dd69d6d19bf4c87f9e40d51debefc83a9e5194c72e19604bea",
+          "venue": "limitless"
+        }
+      ],
+      "linkId": "lnk_29261e4cda12ed455b983b4aeb22da24",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-10-25T00:00:00Z"
+    },
+    {
+      "band": "strong",
+      "basis": {
         "axes": [],
         "class": "different"
       },
@@ -80,6 +119,46 @@
       "relation": "near_identity",
       "state": "proposed",
       "validUntil": "2027-01-01T23:59:00Z"
+    },
+    {
+      "band": "strong",
+      "basis": {
+        "axes": [
+          "timing"
+        ],
+        "class": "settlement_window"
+      },
+      "legs": [
+        {
+          "category": "sports",
+          "closeUtc": "2026-10-28T00:00:00Z",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "nativeId": "milwaukee-brewers-vs-tampa-bay-rays-1792775712467",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "bf9d8fdefa3ae1610c1e869b2354e9dff6dbf643ee8c0185646398cd850a14e3",
+          "venue": "limitless"
+        },
+        {
+          "category": "sports",
+          "closeUtc": "2026-10-29T00:00:00Z",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "nativeId": "milwaukee-brewers-vs-tampa-bay-rays-1792775717870",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "rulesSha256": "0952791e7769cd3ad09a77158e9ce0bb0120f29da18df66141d14032978e3188",
+          "venue": "limitless"
+        }
+      ],
+      "linkId": "lnk_9d0b12a822eccf5b9e3ed4607fabe722",
+      "proof": "P_unproven",
+      "relation": "near_identity",
+      "state": "proposed",
+      "validUntil": "2026-10-28T00:00:00Z"
     },
     {
       "band": "strong",
@@ -242,7 +321,7 @@
       "validUntil": "2027-01-01T23:59:00Z"
     }
   ],
-  "release": "2026-10-23",
+  "release": "2026-10-24",
   "rulesRecipe": "rules-v2",
   "schemaVersion": 1
 }
