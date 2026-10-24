@@ -8,6 +8,7 @@ import { SqliteMeteringStore } from "./metering-store.js";
 import { createMeter, paymentParts } from "./metering.js";
 import { startApiServer } from "./server.js";
 import { SqliteIndexStore } from "./store.js";
+import { SqliteAccountStore } from "./account-store.js";
 import { createHonestFetch } from "./upstream.js";
 
 // The markets API: the free read endpoints and the chain indexer (docs/sdk-and-api-design.md section 9, step 8), and the
@@ -23,13 +24,17 @@ const USAGE = `insurance-markets-api ${API_VERSION}
 
   serve     answer GET /v1/health, /v1/venues, /v1/markets, /v1/markets/:venue/:id, /v1/groups, the paid GET /v1/quote and
             POST /v1/route/prepare, the XO order relay under /v1/relay/xo/ when API_XO_RELAY=on, the Limitless
-            order relay under /v1/relay/limitless/ when API_LIMITLESS_RELAY=on, and run the chain indexer
+            partner relay under /v1/relay/limitless/ when API_LIMITLESS_RELAY=on, the gas sponsor /v1/paymaster/:chainId
+            and /v1/relay/polymarket-bridge/deposit when API_PAYMASTER=on, the Polymarket builder relay under
+            /v1/relay/polymarket/ when API_POLYMARKET_RELAY=on, /v1/account-backup/ when API_ACCOUNT_BACKUP=on, and run
+            the chain indexer
   keys      keys issue --label <text> --tier quote|full [--per-minute N] [--burst N] [--days N] | keys list | keys revoke <id>
   listing   print the x402 listing manifest (paid endpoints, prices, rail) as JSON
   --help    this text
 
-Configuration is the environment; see api/README.md. API_DATA_DIR is required. No secret is needed: the API holds no key,
-and the payment address and prices are public values.`;
+Configuration is the environment; see api/README.md. API_DATA_DIR is required. The free tier needs no secret. The
+unified-account features use the operator's own credentials (PIMLICO_*, POLY_BUILDER_*, LIMITLESS_PARTNER_*), read from
+the environment only and never printed; each feature answers 503 not_configured without its own.`;
 
 const HOUR_MS = 3_600_000;
 
@@ -53,13 +58,20 @@ async function serve(config: ApiConfig): Promise<void> {
     process.stderr.write(`insurance-markets-api: the metering tables could not be opened (${error instanceof Error ? error.name : "error"}).\n`);
     process.exit(2);
   }
+  let accounts: SqliteAccountStore;
+  try {
+    accounts = SqliteAccountStore.open(join(dataDir, "api.sqlite"));
+  } catch (error) {
+    process.stderr.write(`insurance-markets-api: the account tables could not be opened (${error instanceof Error ? error.name : "error"}).\n`);
+    process.exit(2);
+  }
   const honest = createHonestFetch({ fetchImpl: globalThis.fetch });
   const facilitatorFetch = createHonestFetch({ fetchImpl: globalThis.fetch, timeoutMs: config.limits.facilitatorTimeoutMs, maxBytes: 64 * 1024 });
   const api = createApi({ config, store, fetchFor: () => honest, rpcFetch: honest, nowMs: Date.now, log: stamp });
   const meter = createMeter({ config, store: metering, ...paymentParts(config, facilitatorFetch, honest, Date.now), nowMs: Date.now, log: stamp });
-  // The order relays (off unless API_XO_RELAY=on, API_LIMITLESS_RELAY=on) forward with the platform fetch; each sets its
-  // own User-Agent, deadline and caps (xo-relay.ts, limitless-relay.ts).
-  const server = await startApiServer({ api, config, meter, log: stamp, relayFetch: globalThis.fetch });
+  // The relays and the paymaster (each off unless its API_* switch is on) forward with the platform fetch; each sets its
+  // own User-Agent, deadline and caps (xo-relay.ts, relay-http.ts).
+  const server = await startApiServer({ api, config, meter, log: stamp, relayFetch: globalThis.fetch, accountStore: accounts });
   stamp(`listening on ${config.host}:${server.port}`);
 
   let stopping = false;
@@ -93,6 +105,7 @@ async function serve(config: ApiConfig): Promise<void> {
     await server.close();
     store.close();
     metering.close();
+    accounts.close();
     stamp("stopped");
     process.exit(0);
   };

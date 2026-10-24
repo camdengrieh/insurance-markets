@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 
+import type { AccountStore } from "../../api/account-store.js";
 import { createApi, type Api } from "../../api/app.js";
 import { assertStartable, loadApiConfig, type ApiConfig } from "../../api/config.js";
 import { startApiServer, type RunningServer } from "../../api/server.js";
@@ -118,6 +119,8 @@ export interface HarnessOptions {
   readonly relayFetch?: typeof fetch;
   readonly relayUpstreamTimeoutMs?: number;
   readonly log?: (line: string) => void;
+  // The unified-account tables (api/account-store.ts); the server keeps an in-memory one of its own otherwise.
+  readonly accountStore?: AccountStore;
 }
 
 const refuse = (what: string): FetchLike => async () => {
@@ -151,6 +154,7 @@ export async function startHarness(options: HarnessOptions): Promise<Harness> {
     ...(options.relayFetch === undefined ? {} : { relayFetch: options.relayFetch }),
     ...(options.relayUpstreamTimeoutMs === undefined ? {} : { relayUpstreamTimeoutMs: options.relayUpstreamTimeoutMs }),
     ...(options.log === undefined ? {} : { log: options.log }),
+    ...(options.accountStore === undefined ? {} : { accountStore: options.accountStore }),
   });
   return {
     api,

@@ -94,10 +94,12 @@ test("the bundle builds deterministically as one file with no secrets, machine p
   assert.match(text, /insurance-markets-api\/0\.1/);
   assert.equal(/approveLink|APPROVAL_ACK/.test(text), false, "the approval path is not in the API bundle");
   assert.equal(/FAKE_BLOCK_PAGE|testkit/.test(text), false, "no test support in the bundle");
-  // No credentialed signer: nothing from sdk/node. (viem's secp256k1, which the x402 check uses to recover a payer's
-  // signature, carries its own RFC 6979 HMAC-DRBG; that is not a request signer.)
-  assert.equal(/\bcreateHmac\(|l2Headers|hmacSignature/.test(text), false);
-  assert.equal(/from "node:crypto"[^;]*createHmac\b/.test(text), false);
+  // The only request signers are the operator's own HMACs of the unified-account routes (docs/unified-account-design.md
+  // section 2): the Polymarket Builder headers and the Limitless partner token, from sdk/node. No visitor credential is
+  // signed with, and no L2 credential of anyone's is held.
+  assert.match(text, /POLY_BUILDER_SIGNATURE/);
+  assert.match(text, /lmts-signature/);
+  assert.equal(/l2Headers|hmacSignature|buildPolymarketL2Headers/.test(text), false);
   // No private key and no signing call: the API recovers signatures, it never makes one.
   assert.equal(/privateKeyToAccount|signTypedData\(/.test(text), false);
 });

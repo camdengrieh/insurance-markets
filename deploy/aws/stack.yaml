@@ -2,9 +2,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   insurance-markets research workers: one Graviton EC2 host running pm-recorder (continuous, one
   EBS data volume), pm-linker (systemd timer every two hours) and pm-api (the markets API with the
-  XO and Limitless order relays, behind CloudFront). The only inbound port is the API's, open to CloudFront's
-  origin-facing addresses alone; shell access through SSM Session Manager. Images live in three ECR
-  repositories; container logs go to CloudWatch.
+  XO, Limitless and Polymarket relays, the gas sponsor and the account backup store, behind CloudFront).
+  The only inbound port is the API's, open to CloudFront's origin-facing addresses alone; shell access
+  through SSM Session Manager. The API's operator credentials are SSM SecureString parameters under
+  /pm-workers/api/. Images live in three ECR repositories; container logs go to CloudWatch.
 
 Parameters:
   SubnetId:
@@ -139,6 +140,21 @@ Resources:
               - Effect: Allow
                 Action: s3:ListBucket
                 Resource: !GetAtt TransferBucket.Arn
+              # The markets API's operator credentials (docs/unified-account-design.md section 2): SecureString
+              # parameters under /pm-workers/api/ only, read by /usr/local/bin/pm-api-secrets before pm-api starts.
+              - Effect: Allow
+                Action: [ssm:GetParameter, ssm:GetParameters]
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/pm-workers/api/*"
+              # Decrypting them with the key SSM used (the AWS managed aws/ssm key, or a customer key), only through
+              # SSM and only for a parameter on that path (SSM puts the parameter's ARN in the encryption context).
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub "ssm.${AWS::Region}.amazonaws.com"
+                  StringLike:
+                    kms:EncryptionContext:PARAMETER_ARN: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/pm-workers/api/*"
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -424,12 +440,54 @@ Resources:
                     [ "$before" != "$after" ] && echo changed || echo unchanged
                     SH
 
+                    cat > /usr/local/bin/pm-api-secrets <<'SH'
+                    #!/bin/bash
+                    # Write the markets API's operator credentials from SSM SecureString parameters
+                    # (/pm-workers/api/<NAME>) into /etc/pm-api.secrets.env (root only, mode 0600), the env file
+                    # pm-api's container gets. A parameter that does not exist is left out (that feature answers
+                    # 503 not_configured). If SSM cannot be read, the previous file is kept. No value is ever printed:
+                    # only the names written. Prints "secrets changed" or "secrets unchanged" last.
+                    set -euo pipefail
+                    set +x
+                    . /etc/pm-api.env
+                    umask 077
+                    out=/etc/pm-api.secrets.env
+                    tmp="$(mktemp /etc/pm-api.secrets.XXXXXX)"
+                    trap 'rm -f "$tmp"' EXIT
+                    names=()
+                    for name in PIMLICO_API_KEY PIMLICO_SPONSORSHIP_POLICY_ID POLY_BUILDER_API_KEY POLY_BUILDER_SECRET POLY_BUILDER_PASSPHRASE POLY_BUILDER_CODE LIMITLESS_PARTNER_TOKEN_ID LIMITLESS_PARTNER_SECRET; do
+                      err="$(mktemp)"
+                      if value="$(aws ssm get-parameter --region "$AWS_REGION" --name "/pm-workers/api/$name" --with-decryption --query Parameter.Value --output text 2>"$err")"; then
+                        rm -f "$err"
+                        case "$value" in
+                          *$'\n'*|*$'\r'*|'') echo "pm-api-secrets: $name is empty or has a line break; left out" ;;
+                          *) printf '%s=%s\n' "$name" "$value" >> "$tmp"; names+=("$name") ;;
+                        esac
+                      elif grep -q ParameterNotFound "$err"; then
+                        rm -f "$err"
+                      else
+                        rm -f "$err"
+                        echo "pm-api-secrets: SSM could not be read; keeping the previous file"
+                        [ -f "$out" ] || : > "$out"
+                        chmod 0600 "$out"
+                        echo "secrets unchanged"
+                        exit 0
+                      fi
+                      unset value
+                    done
+                    chmod 0600 "$tmp"
+                    echo "pm-api-secrets: ${!#names[@]} set: ${!names[*]:-none}"
+                    if [ -f "$out" ] && cmp -s "$tmp" "$out"; then echo "secrets unchanged"; else mv "$tmp" "$out"; trap - EXIT; echo "secrets changed"; fi
+                    SH
+
                     cat > /usr/local/bin/pm-deploy <<'SH'
                     #!/bin/bash
                     # Pull the latest images; restart the recorder only if its image changed, and pm-api only if its
-                    # image changed (or it is not running and its image exists). The linker picks up a new image on
-                    # its next timer run. Run by deploy/aws/push.sh through SSM.
+                    # image changed, its operator credentials in SSM changed (pm-api-secrets), or it is not running
+                    # and its image exists. The linker picks up a new image on its next timer run. Run by
+                    # deploy/aws/push.sh through SSM.
                     set -euo pipefail
+                    secrets="$(/usr/local/bin/pm-api-secrets | tail -1)"
                     out="$(/usr/local/bin/pm-pull)"
                     recorder="$(printf '%s\n' "$out" | tail -1)"
                     api="$(printf '%s\n' "$out" | grep '^api ' | tail -1 || true)"
@@ -442,7 +500,7 @@ Resources:
                     fi
                     if [ -z "$api" ] || [ "$api" = "api absent" ]; then
                       echo "pm-api image not pushed yet"
-                    elif [ "$api" = "api changed" ] || ! systemctl is-active --quiet pm-api; then
+                    elif [ "$api" = "api changed" ] || [ "$secrets" = "secrets changed" ] || ! systemctl is-active --quiet pm-api; then
                       systemctl reset-failed pm-api || true
                       systemctl restart pm-api
                       echo "pm-api restarted"
@@ -455,10 +513,11 @@ Resources:
                     if [ -n "$api" ] && [ "$api" != "api absent" ]; then systemctl --no-pager status pm-api | head -5; fi
                     SH
                     chmod 0755 /usr/local/bin/pm-pull /usr/local/bin/pm-deploy
+                    chmod 0700 /usr/local/bin/pm-api-secrets
 
                     cat > /etc/systemd/system/pm-api.service <<'UNIT'
                     [Unit]
-                    Description=pm-api (markets API and the XO and Limitless order relays, behind CloudFront)
+                    Description=pm-api (markets API, its relays, gas sponsor and backup store, behind CloudFront)
                     After=docker.service data.mount
                     Requires=docker.service
                     RequiresMountsFor=/data
@@ -469,10 +528,14 @@ Resources:
                     EnvironmentFile=/etc/pm-api.env
                     ExecStartPre=-/usr/bin/docker rm -f pm-api
                     ExecStartPre=/usr/bin/docker image inspect ${!API_IMAGE}
+                    # The operator credentials from SSM into a root-only env file (never on the command line, never logged).
+                    ExecStartPre=/usr/local/bin/pm-api-secrets
                     ExecStart=/usr/bin/docker run --rm --name pm-api --stop-timeout 10 --memory 640m \
                       -p ${!API_PORT}:8790 \
                       --log-driver awslogs --log-opt awslogs-region=${!AWS_REGION} --log-opt awslogs-group=${!API_LOGS} --log-opt awslogs-stream=api \
-                      -e API_XO_RELAY=on -e API_LIMITLESS_RELAY=on -e API_TRUST_PROXY_HOPS=1 -e API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app -e API_INDEXER=off \
+                      --env-file /etc/pm-api.secrets.env \
+                      -e API_XO_RELAY=on -e API_LIMITLESS_RELAY=on -e API_PAYMASTER=on -e API_POLYMARKET_RELAY=on -e API_ACCOUNT_BACKUP=on \
+                      -e API_TRUST_PROXY_HOPS=1 -e API_CORS_ORIGINS=https://xo-markets-explorer.vercel.app -e API_INDEXER=off \
                       -v /data/api:/data ${!API_IMAGE}
                     ExecStop=/usr/bin/docker stop -t 10 pm-api
                     TimeoutStopSec=30
@@ -530,15 +593,17 @@ Resources:
             - xo-address
             - xo-nonce
 
-  # The Limitless relay's own policy: an origin request policy takes at most 10 headers (CloudFront quota "Headers per
-  # origin request policy", 10, read 2026-10-23) and the XO one above uses all ten, so Limitless's three scoped-token
-  # headers get this policy and the /v1/relay/limitless/* behaviour below. No cookies.
-  LimitlessRelayOriginRequestPolicy:
+  # The unified-account routes (docs/unified-account-design.md section 3.2) get policies of their own: an origin request
+  # policy takes at most 10 headers (CloudFront quota "Headers per origin request policy", 10, read 2026-10-23) and the
+  # XO one above uses all ten. The Limitless partner relay, the Polymarket builder relay and the account backup store
+  # take the ownership proof (x-im-proof) and the session-signer routes an Idempotency-Key; no browser credential header goes to the API any more
+  # (the Limitless relay signs with the operator's token, so the visitor's lmts-* headers are not forwarded). No cookies.
+  ProofRelayOriginRequestPolicy:
     Type: AWS::CloudFront::OriginRequestPolicy
     Properties:
       OriginRequestPolicyConfig:
-        Name: !Sub "${AWS::StackName}-limitless-relay"
-        Comment: Limitless relay - Origin, CORS preflight, content-type and the lmts scoped-token headers; no cookies
+        Name: !Sub "${AWS::StackName}-proof-relay"
+        Comment: Limitless and Polymarket relays, account backup - Origin, CORS preflight, content-type, x-im-proof, idempotency-key; no cookies
         CookiesConfig:
           CookieBehavior: none
         QueryStringsConfig:
@@ -550,16 +615,34 @@ Resources:
             - access-control-request-method
             - access-control-request-headers
             - content-type
-            - lmts-api-key
-            - lmts-timestamp
-            - lmts-signature
+            - x-im-proof
+            - idempotency-key
+
+  # The paymaster and the bridge address route: JSON bodies only, no credential header.
+  JsonRouteOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${AWS::StackName}-json-routes"
+        Comment: Paymaster and bridge route - Origin, CORS preflight and content-type; no cookies
+        CookiesConfig:
+          CookieBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: all
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - origin
+            - access-control-request-method
+            - access-control-request-headers
+            - content-type
 
   ApiDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
-        Comment: !Sub "${AWS::StackName} markets API and XO relay"
+        Comment: !Sub "${AWS::StackName} markets API and relays"
         PriceClass: PriceClass_100
         HttpVersion: http2and3
         IPV6Enabled: true
@@ -589,7 +672,8 @@ Resources:
           # PAYMENT-SIGNATURE, and CloudFront forwards Authorization only through an all-viewer-headers origin
           # request policy (with caching disabled) or a cache key; it cannot be listed on its own.
           OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-        # Behaviours are matched in order: the Limitless relay's path first, then every other relay path.
+        # Behaviours are matched in order: the named relay paths first, then every other relay path (XO's).
+        # /v1/relay/polymarket/* does not match /v1/relay/polymarket-bridge/... (the slash after "polymarket").
         CacheBehaviors:
           - PathPattern: /v1/relay/limitless/*
             TargetOriginId: pm-api
@@ -598,7 +682,39 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: false
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            OriginRequestPolicyId: !Ref LimitlessRelayOriginRequestPolicy
+            OriginRequestPolicyId: !Ref ProofRelayOriginRequestPolicy
+          - PathPattern: /v1/relay/polymarket/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref ProofRelayOriginRequestPolicy
+          - PathPattern: /v1/relay/polymarket-bridge/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref JsonRouteOriginRequestPolicy
+          - PathPattern: /v1/paymaster/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref JsonRouteOriginRequestPolicy
+          - PathPattern: /v1/account-backup/*
+            TargetOriginId: pm-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref ProofRelayOriginRequestPolicy
           - PathPattern: /v1/relay/*
             TargetOriginId: pm-api
             ViewerProtocolPolicy: https-only

@@ -205,6 +205,14 @@ Each venue reader has an opt-in suite, skipped unless `APP_LIVE=1`, to catch an 
 | The strip under the header says "Not paired with the daemon" | The page was opened without a pair link, the code was used or expired, or the daemon restarted | Reload the page; the daemon prints a fresh link. The standalone build needs none of this |
 | Kill engaged by mistake | The kill is one-way | Stop and restart the process |
 
+**The hosted dApp's trading account says a venue or gas sponsorship is "not available".** The markets API answers
+`503 not_configured` for a feature whose operator credential is not set: the gas sponsor (Pimlico key and policy), the
+Polymarket gasless wallet (Builder credentials) or Limitless (partner token). Those are SSM SecureString parameters under
+`/pm-workers/api/`; the exact `aws ssm put-parameter` commands, where each credential comes from, how they reach the
+container and how to check each route are in [deploy/aws/README.md](../deploy/aws/README.md), "Operator credentials for
+the unified account (SSM)". The routes themselves are described in [api/README.md](../api/README.md), "Unified account
+routes".
+
 To stop everything: `Ctrl-C` the daemon. To rotate the agent token: restart with `--rotate-agent-token`. To remove local data: delete the data directory you chose (back up `master.key` first if you want the vault again; see [docs/safety.md](safety.md)).
 
 ## 12. Sources

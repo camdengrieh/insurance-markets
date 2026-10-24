@@ -16,8 +16,13 @@ import { XO_RPC_URL } from "../sdk/chain/xo/pins.js";
 //   - which venues are read is code (api/markets.ts, every SDK reader that needs no key), never configuration;
 //   - metering (step 9) has NO defaults for money: the payTo address and every price must be named, or the paid endpoints
 //     answer "payments_not_configured"; route prepare is off unless the operator turns it on (API_ROUTE_PREPARE);
-//   - the XO order relay (xo-relay.ts) is off unless the operator turns it on (API_XO_RELAY=on), and so is the
-//     Limitless order relay (limitless-relay.ts, API_LIMITLESS_RELAY=on).
+//   - the XO order relay (xo-relay.ts) is off unless the operator turns it on (API_XO_RELAY=on), and so are the
+//     Limitless partner relay (limitless-relay.ts, API_LIMITLESS_RELAY=on), the gas sponsor and its bridge address route
+//     (paymaster.ts, polymarket-bridge.ts, API_PAYMASTER=on), the Polymarket builder relay (polymarket-relay.ts,
+//     API_POLYMARKET_RELAY=on) and the account backup store (account-backup.ts, API_ACCOUNT_BACKUP=on);
+//   - the operator's own credentials (docs/unified-account-design.md section 2) come only from the environment, which the
+//     AWS host fills from SSM SecureString parameters; a feature whose credential is absent answers 503 not_configured.
+//     No issue, banner or log line ever prints a credential, or even its length.
 
 export const API_VERSION = "0.1.0";
 export const DEFAULT_API_PORT = 8790;
@@ -42,6 +47,9 @@ export const API_ENV = Object.freeze({
   routePrepare: "API_ROUTE_PREPARE",
   xoRelay: "API_XO_RELAY",
   limitlessRelay: "API_LIMITLESS_RELAY",
+  paymaster: "API_PAYMASTER",
+  polymarketRelay: "API_POLYMARKET_RELAY",
+  accountBackup: "API_ACCOUNT_BACKUP",
   publicUrl: "API_PUBLIC_URL",
   facilitatorUrl: "API_X402_FACILITATOR_URL",
   payTo: "API_X402_PAY_TO",
@@ -49,6 +57,30 @@ export const API_ENV = Object.freeze({
   priceQuote: "API_X402_PRICE_QUOTE",
   priceRoutePrepare: "API_X402_PRICE_ROUTE_PREPARE",
 });
+
+// The operator's credentials (docs/unified-account-design.md section 2), by their SSM parameter names under
+// /pm-workers/api/ (deploy/aws/stack.yaml writes each present one into the container's environment under the same name).
+export const OPERATOR_ENV = Object.freeze({
+  pimlicoApiKey: "PIMLICO_API_KEY",
+  pimlicoPolicyId: "PIMLICO_SPONSORSHIP_POLICY_ID",
+  polyBuilderApiKey: "POLY_BUILDER_API_KEY",
+  polyBuilderSecret: "POLY_BUILDER_SECRET",
+  polyBuilderPassphrase: "POLY_BUILDER_PASSPHRASE",
+  polyBuilderCode: "POLY_BUILDER_CODE",
+  limitlessTokenId: "LIMITLESS_PARTNER_TOKEN_ID",
+  limitlessSecret: "LIMITLESS_PARTNER_SECRET",
+});
+
+export interface OperatorCredentials {
+  // Pimlico bundler and paymaster (paymaster.ts). Null until both are set.
+  readonly pimlico: { readonly apiKey: string; readonly policyId: string } | null;
+  // Polymarket Builder API credentials (polymarket-relay.ts). Null until all three are set.
+  readonly polyBuilder: { readonly apiKey: string; readonly secret: string; readonly passphrase: string } | null;
+  // The public builder code (a bytes32 hex), sent as X-Builder-Code to the bridge when set.
+  readonly polyBuilderCode: string | null;
+  // The Limitless partner HMAC token (limitless-relay.ts). Null until both are set.
+  readonly limitlessPartner: { readonly tokenId: string; readonly secret: string } | null;
+}
 
 // POST /v1/route/prepare (docs/sdk-and-api-design.md section 4): "off" answers the fixed code route_prepare_not_enabled;
 // "free" serves it at no charge (free-tier limits per client, or a key's); "paid" serves it to a subscription key whose tier
@@ -116,8 +148,18 @@ export interface ApiHttpLimits {
   readonly reads: RateLimitSpec;
   readonly paid: RateLimitSpec;
   // Per client address, every /v1/relay/xo/ route together (xo-relay.ts); the Limitless relay keeps its own bucket of the
-  // same size (limitless-relay.ts).
+  // same size (limitless-relay.ts), and so do the Polymarket relay and the bridge address route.
   readonly relay: RateLimitSpec;
+  // The gas sponsor (paymaster.ts): per client address over every call, and per sender over the calls that spend
+  // (pm_getPaymasterData, eth_sendUserOperation); `withdrawalsPerDay` counts the user operations of one sender that move
+  // a token to an address the bridge did not give this server, per UTC day.
+  readonly paymasterClient: RateLimitSpec;
+  readonly paymasterSender: RateLimitSpec;
+  readonly withdrawalsPerDay: number;
+  // Per account: every Polymarket relay write per signer, and every Limitless registration, order and cancel per account.
+  readonly accountWrites: RateLimitSpec;
+  // The account backup store (account-backup.ts): per client address.
+  readonly backup: RateLimitSpec;
   // How long the facilitator's /verify and /settle may take.
   readonly facilitatorTimeoutMs: number;
 }
@@ -135,6 +177,11 @@ export const API_LIMITS: ApiHttpLimits = Object.freeze({
   reads: Object.freeze({ capacity: 60, refillPerSecond: 1 }),
   paid: Object.freeze({ capacity: 30, refillPerSecond: 0.5 }),
   relay: Object.freeze({ capacity: 30, refillPerSecond: 1 }),
+  paymasterClient: Object.freeze({ capacity: 60, refillPerSecond: 1 }),
+  paymasterSender: Object.freeze({ capacity: 10, refillPerSecond: 0.1 }),
+  withdrawalsPerDay: 10,
+  accountWrites: Object.freeze({ capacity: 20, refillPerSecond: 0.5 }),
+  backup: Object.freeze({ capacity: 10, refillPerSecond: 0.1 }),
   facilitatorTimeoutMs: 10_000,
 });
 
@@ -162,6 +209,14 @@ export interface ApiConfig {
   readonly xoRelay: boolean;
   // The Limitless order relay (limitless-relay.ts): off unless API_LIMITLESS_RELAY is on.
   readonly limitlessRelay: boolean;
+  // The gas sponsor and the bridge address route (paymaster.ts, polymarket-bridge.ts): off unless API_PAYMASTER is on.
+  readonly paymaster: boolean;
+  // The Polymarket builder relay (polymarket-relay.ts): off unless API_POLYMARKET_RELAY is on.
+  readonly polymarketRelay: boolean;
+  // The account backup store (account-backup.ts): off unless API_ACCOUNT_BACKUP is on.
+  readonly accountBackup: boolean;
+  // The operator's credentials; never printed.
+  readonly operator: OperatorCredentials;
   // Null when no payment variable is set: the paid endpoints then answer payments_not_configured (a key still works).
   readonly payments: PaymentsConfig | null;
   readonly limits: ApiHttpLimits;
@@ -313,6 +368,46 @@ function loadPayments(env: ApiEnv, fatal: (variable: string, message: string) =>
   return Object.freeze({ publicUrl, facilitatorUrl, payTo, network, prices: Object.freeze(prices) });
 }
 
+// One credential: printable ASCII with no space, at most 512 characters; anything else is ignored with a note that names
+// the variable (never the value). An HMAC secret must be base64 text (either alphabet).
+const CREDENTIAL = /^[\x21-\x7e]{1,512}$/;
+const BASE64_SECRET = /^[A-Za-z0-9+/_=-]{16,1024}$/;
+const BYTES32 = /^0x[0-9a-fA-F]{64}$/;
+
+function loadOperator(env: ApiEnv, issues: ApiConfigIssue[]): OperatorCredentials {
+  const value = (name: string, shape: RegExp = CREDENTIAL): string | null => {
+    const raw = read(env, name);
+    if (raw === undefined) return null;
+    if (!shape.test(raw)) {
+      issues.push({ variable: name, message: `${name} is not of the expected form; the feature that needs it stays not_configured.`, fatal: false });
+      return null;
+    }
+    return raw;
+  };
+  const pimlicoApiKey = value(OPERATOR_ENV.pimlicoApiKey);
+  const pimlicoPolicyId = value(OPERATOR_ENV.pimlicoPolicyId);
+  const builderKey = value(OPERATOR_ENV.polyBuilderApiKey);
+  const builderSecret = value(OPERATOR_ENV.polyBuilderSecret, BASE64_SECRET);
+  const builderPassphrase = value(OPERATOR_ENV.polyBuilderPassphrase);
+  const builderCode = value(OPERATOR_ENV.polyBuilderCode, BYTES32);
+  const tokenId = value(OPERATOR_ENV.limitlessTokenId);
+  const tokenSecret = value(OPERATOR_ENV.limitlessSecret, BASE64_SECRET);
+  const partial = (names: readonly string[], present: readonly (string | null)[]): void => {
+    if (present.some((v) => v !== null) && present.some((v) => v === null)) {
+      issues.push({ variable: names.join(", "), message: `${names.join(", ")} are needed together; the feature stays not_configured until all are set.`, fatal: false });
+    }
+  };
+  partial([OPERATOR_ENV.pimlicoApiKey, OPERATOR_ENV.pimlicoPolicyId], [pimlicoApiKey, pimlicoPolicyId]);
+  partial([OPERATOR_ENV.polyBuilderApiKey, OPERATOR_ENV.polyBuilderSecret, OPERATOR_ENV.polyBuilderPassphrase], [builderKey, builderSecret, builderPassphrase]);
+  partial([OPERATOR_ENV.limitlessTokenId, OPERATOR_ENV.limitlessSecret], [tokenId, tokenSecret]);
+  return Object.freeze({
+    pimlico: pimlicoApiKey !== null && pimlicoPolicyId !== null ? Object.freeze({ apiKey: pimlicoApiKey, policyId: pimlicoPolicyId }) : null,
+    polyBuilder: builderKey !== null && builderSecret !== null && builderPassphrase !== null ? Object.freeze({ apiKey: builderKey, secret: builderSecret, passphrase: builderPassphrase }) : null,
+    polyBuilderCode: builderCode,
+    limitlessPartner: tokenId !== null && tokenSecret !== null ? Object.freeze({ tokenId, secret: tokenSecret }) : null,
+  });
+}
+
 export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
   const issues: ApiConfigIssue[] = [];
   const fatal = (variable: string, message: string): void => {
@@ -453,6 +548,10 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
   };
   const xoRelay = onOff(API_ENV.xoRelay);
   const limitlessRelay = onOff(API_ENV.limitlessRelay);
+  const paymaster = onOff(API_ENV.paymaster);
+  const polymarketRelay = onOff(API_ENV.polymarketRelay);
+  const accountBackup = onOff(API_ENV.accountBackup);
+  const operator = loadOperator(env, issues);
   const payments = loadPayments(env, fatal);
 
   const config: ApiConfig = Object.freeze({
@@ -469,6 +568,10 @@ export function loadApiConfig(env: ApiEnv): LoadedApiConfig {
     routePrepare,
     xoRelay,
     limitlessRelay,
+    paymaster,
+    polymarketRelay,
+    accountBackup,
+    operator,
     payments,
     limits: API_LIMITS,
   });
@@ -502,7 +605,10 @@ export function describeConfig(config: ApiConfig): string[] {
     `limits: markets ${config.limits.markets.capacity} burst, ${config.limits.markets.refillPerSecond * 60}/min; other reads ${config.limits.reads.capacity} burst, ${config.limits.reads.refillPerSecond * 60}/min per client`,
     `route prepare: ${config.routePrepare}`,
     `xo relay: ${config.xoRelay ? `on (${config.limits.relay.capacity} burst, ${config.limits.relay.refillPerSecond * 60}/min per client)` : "off"}`,
-    `limitless relay: ${config.limitlessRelay ? `on (${config.limits.relay.capacity} burst, ${config.limits.relay.refillPerSecond * 60}/min per client)` : "off"}`,
+    `limitless relay: ${config.limitlessRelay ? `on, partner token ${config.operator.limitlessPartner === null ? "not configured" : "configured"}` : "off"}`,
+    `paymaster: ${config.paymaster ? `on, pimlico ${config.operator.pimlico === null ? "not configured" : "configured"}` : "off"}`,
+    `polymarket relay: ${config.polymarketRelay ? `on, builder credentials ${config.operator.polyBuilder === null ? "not configured" : "configured"}, builder code ${config.operator.polyBuilderCode === null ? "not set" : "set"}` : "off"}`,
+    `account backup: ${config.accountBackup ? "on" : "off"}`,
     `payments: ${
       config.payments === null
         ? "not configured (paid endpoints answer payments_not_configured unless a key is sent)"
