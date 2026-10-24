@@ -48,6 +48,13 @@
       "at": "2026-10-23",
       "linkId": "lnk_29261e4cda12ed455b983b4aeb22da24",
       "note": "source=statistics"
+    },
+    {
+      "action": "propose",
+      "actor": "stats-linker-v1",
+      "at": "2026-10-24",
+      "linkId": "lnk_9d0b12a822eccf5b9e3ed4607fabe722",
+      "note": "source=statistics"
     }
   ],
   "format": "pm-link-registry",
@@ -487,6 +494,76 @@
       "synthetic": false,
       "tierCap": "indicative_discrepancy",
       "validUntil": "2026-10-25T00:00:00Z"
+    },
+    {
+      "approvals": [],
+      "basis": {
+        "axes": [
+          {
+            "a": "2026-10-28T00:00:00Z",
+            "axis": "timing_cutoff",
+            "b": "2026-10-29T00:00:00Z",
+            "legA": 0,
+            "legB": 1,
+            "severity": "minor"
+          }
+        ],
+        "class": "settlement_window",
+        "cutoffDeltaMinutes": 1440
+      },
+      "legs": [
+        {
+          "closeUtc": "2026-10-28T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "milwaukee-brewers-vs-tampa-bay-rays-1792775712467",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "bf9d8fdefa3ae1610c1e869b2354e9dff6dbf643ee8c0185646398cd850a14e3",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        },
+        {
+          "closeUtc": "2026-10-29T00:00:00Z",
+          "creatorAllowlisted": null,
+          "groupKey": null,
+          "marketId": "milwaukee-brewers-vs-tampa-bay-rays-1792775717870",
+          "maskedSha256": "2d97a763d9c37543f0bb20761b53782458f06dc879e09918fc88181543ad05d5",
+          "outcomeMap": [
+            0,
+            1
+          ],
+          "resolverId": null,
+          "rulesSha256": "0952791e7769cd3ad09a77158e9ce0bb0120f29da18df66141d14032978e3188",
+          "venue": "limitless",
+          "voidPolicy": "unknown"
+        }
+      ],
+      "linkId": "lnk_9d0b12a822eccf5b9e3ed4607fabe722",
+      "proof": {
+        "evidence": [
+          {
+            "detail": "s8862.t10000.r10000.n10000.d0.c24h",
+            "method": "statistics_hint"
+          }
+        ],
+        "level": "P_unproven"
+      },
+      "proposedBy": {
+        "at": "2026-10-24",
+        "id": "stats-linker-v1",
+        "source": "statistics"
+      },
+      "relation": "near_identity",
+      "schemaVersion": 1,
+      "state": "candidate",
+      "synthetic": false,
+      "tierCap": "indicative_discrepancy",
+      "validUntil": "2026-10-28T00:00:00Z"
     }
   ],
   "version": 1
