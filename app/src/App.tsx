@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Router, type BaseLocationHook } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 
+import { TradingAccountProvider } from "./features/account/context";
+import type { AccountServices } from "./features/account/services";
 import type { WalletEnvironment } from "./features/wallet/connect/environment";
 import { WalletConnectionProvider } from "./features/wallet/connect/WalletConnectionProvider";
 import { AnnouncerProvider } from "./ui/a11y";
@@ -33,6 +35,9 @@ export interface AppProps {
   // The wallet connection's window, storage and WalletConnect client (features/wallet/connect). Production passes
   // none: the real ones for this build.
   readonly walletEnvironment?: WalletEnvironment;
+  // The trading account's store, passkey, backup server, chain reads and sponsor (features/account/services.ts).
+  // Production passes none: the browser's own for this build.
+  readonly accountServices?: AccountServices;
 }
 
 function useResolvedRoutes(loaders: Readonly<Record<string, Loader>>): ResolvedRoute[] | null {
@@ -49,7 +54,7 @@ function useResolvedRoutes(loaders: Readonly<Record<string, Loader>>): ResolvedR
   return routes;
 }
 
-export function App({ loaders = discovered, mode = appModeFromEnv(), clock = systemClock, queryClient, locationHook = useHashLocation, statusBar, topBarEnd, dock, onConnect, walletLabel, walletEnvironment }: AppProps) {
+export function App({ loaders = discovered, mode = appModeFromEnv(), clock = systemClock, queryClient, locationHook = useHashLocation, statusBar, topBarEnd, dock, onConnect, walletLabel, walletEnvironment, accountServices }: AppProps) {
   const [client] = useState(() => queryClient ?? createAppQueryClient());
   const routes = useResolvedRoutes(loaders);
   return (
@@ -57,6 +62,8 @@ export function App({ loaders = discovered, mode = appModeFromEnv(), clock = sys
       <ClockProvider clock={clock}>
         {/* The one wallet connection, for both builds; it renders SignerProvider for every screen below. */}
         <WalletConnectionProvider {...(walletEnvironment === undefined ? {} : { environment: walletEnvironment })}>
+        {/* The one trading account (features/account): its key for this tab, funded by the connected wallet above. */}
+        <TradingAccountProvider {...(accountServices === undefined ? {} : { services: accountServices })}>
         <QueryClientProvider client={client}>
           <AnnouncerProvider>
             <SearchProvider>
@@ -76,6 +83,7 @@ export function App({ loaders = discovered, mode = appModeFromEnv(), clock = sys
             </SearchProvider>
           </AnnouncerProvider>
         </QueryClientProvider>
+        </TradingAccountProvider>
         </WalletConnectionProvider>
       </ClockProvider>
     </ModeProvider>

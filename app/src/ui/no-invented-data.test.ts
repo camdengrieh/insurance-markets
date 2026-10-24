@@ -48,6 +48,9 @@ const PINNED_ADDRESS_FILES = new Set([
   "sdk/venues/trueo/constants.ts", // Trueo's pinned Base contracts (manager, token, pool reads) and Base USDC
   "sdk/trade/xo/constants.ts", // XO's order domain contract, the Kernel ECDSA validator and the zero address
   "features/signals/quotient/constants.ts", // Base USDC and the pay-to address of the x402 route
+  // Circle's native USDC on Polygon, which the trading account takes deposits in and withdraws (nothing else in the page
+  // names it: Polymarket's own collateral is USDC.e and pUSD). Base USDC there is imported from the SDK's pin.
+  "features/account/constants.ts",
 ]);
 
 describe("no invented data in shipped code", () => {
@@ -84,6 +87,7 @@ describe("no invented data in shipped code", () => {
       ["features/terminal/prepare/PrepareConsole.tsx", 1], // origin tag "typed"
       ["features/wallet/services.tsx", 1], // load status "loading"
       ["features/wallet/BindingsPanel.tsx", 1], // address kind "eoa" (a select choice; the address starts empty)
+      ["features/account/context.tsx", 1], // passkey support "unknown" until the browser is asked (a load status)
     ]);
     const literal = /useState(?:<[^>]*>)?\(\s*(?:"[^"]+"|'[^']+'|`[^`]+`)\s*\)/g;
     for (const { name, text } of all) {

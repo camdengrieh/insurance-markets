@@ -8,7 +8,9 @@
 
 import type { Address, Hex, TypedDataDefinition } from "viem";
 
-export type WalletKind = "injected" | "walletconnect";
+// "local" is the page's own trading key (features/account, docs/unified-account-design.md 3.1), not a connected wallet:
+// it signs in this tab without a prompt, and its sendTransaction sends one sponsored call.
+export type WalletKind = "injected" | "walletconnect" | "local";
 
 export type WalletErrorCode =
   // The person declined in the wallet (EIP-1193 4001).

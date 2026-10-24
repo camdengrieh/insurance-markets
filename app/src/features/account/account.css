@@ -1,0 +1,241 @@
+/* The trading account panel (AccountPanel.tsx) and its chip. Tokens only (ui/theme.css): no inline style, no outside
+   font or image. It follows the Connect modal's layout (features/wallet/wallet.css): outlined sections, facts in two
+   columns, mono numbers, one bordered footer row. */
+
+/* Locked: the two ways in, side by side when there is room, under one outline. */
+.ac-routes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  border: var(--line) solid var(--border);
+}
+
+.ac-route {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px 24px;
+}
+
+.ac-route + .ac-route {
+  border-inline-start: var(--line) solid var(--border);
+  background: var(--surface);
+}
+
+.ac-route h3,
+.ac-section h3,
+.ac-summary h3 {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.ac-route > p,
+.ac-section > p {
+  margin: 0;
+}
+
+.ac-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Open: the summary in the heavy outline the connected-wallet panel uses, then one outlined section per action. */
+.ac-open {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ac-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 16px 20px;
+  border: var(--line-strong) solid var(--text);
+  background: var(--surface);
+}
+
+.ac-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+.ac-facts > div {
+  display: contents;
+}
+
+.ac-facts dt {
+  color: var(--text-muted);
+}
+
+.ac-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ac-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ac-total {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.ac-total-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ac-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+
+.ac-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ac-lines li + li {
+  margin-top: 0.25rem;
+}
+
+.ac-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 16px 20px;
+  border: var(--line) solid var(--border);
+}
+
+.ac-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.ac-address {
+  width: 100%;
+  font-family: var(--mono);
+}
+
+.ac-section .ui-field {
+  width: 100%;
+}
+
+.ac-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ac-choice legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.ac-choice label,
+.ac-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+}
+
+.ac-choice input,
+.ac-confirm input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+.ac-warnings {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.ac-activations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.ac-activations li {
+  padding: 0.5rem 0;
+  border-bottom: var(--line) solid var(--border);
+}
+
+.ac-activations li:first-child {
+  border-top: var(--line) solid var(--border);
+}
+
+.ac-venue {
+  font-weight: 600;
+}
+
+.ac-note,
+.ac-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ac-key {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border: var(--line) solid var(--border);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.ac-footer {
+  margin-top: 0;
+}
+
+.ac-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.ac-error > p {
+  margin: 0;
+}
+
+@media (max-width: 43.99rem) {
+  .ac-route + .ac-route {
+    border-inline-start: 0;
+    border-top: var(--line) solid var(--border);
+  }
+
+  .ac-route,
+  .ac-summary,
+  .ac-section {
+    padding: 16px;
+  }
+}

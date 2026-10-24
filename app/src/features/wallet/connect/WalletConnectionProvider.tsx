@@ -81,7 +81,8 @@ const IDLE: ConnectionPhase = { kind: "idle" };
 
 // The phase that matches the connection as it stands (after a failed or cancelled attempt).
 function phaseOf(signer: WalletSigner | null): ConnectionPhase {
-  return signer === null ? IDLE : { kind: "connected", via: signer.kind };
+  // A connection's signer is never the trading account's local one; the mapping only keeps the type total.
+  return signer === null ? IDLE : { kind: "connected", via: signer.kind === "walletconnect" ? "walletconnect" : "injected" };
 }
 
 function walletConnectState(environment: WalletEnvironment): WalletConnectState {

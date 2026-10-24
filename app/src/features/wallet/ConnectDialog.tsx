@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type KeyboardEvent } from "react";
 
 import { Button, Dialog } from "../../ui";
+import { useOpenTradingAccount } from "../account/context";
 import { BrowserWalletTab, ConnectedPanel, WalletConnectTab } from "./connect/ConnectTabs";
 import { useWalletConnection } from "./connect/WalletConnectionProvider";
 import type { BindingsState } from "./services";
@@ -53,6 +54,8 @@ export interface ConnectDialogProps {
 
 export function ConnectDialog({ open, onClose, state }: ConnectDialogProps) {
   const connection = useWalletConnection();
+  // The trading account's panel (features/account), offered once a wallet is connected; null where it is not offered.
+  const openAccount = useOpenTradingAccount();
   const found = connection.wallets.length;
   const [chosen, setChosen] = useState<ConnectTab | null>(null);
   const tab = chosen ?? defaultTab(found);
@@ -82,6 +85,20 @@ export function ConnectDialog({ open, onClose, state }: ConnectDialogProps) {
   return (
     <Dialog open={open} title={DIALOG_TITLE} lede={DIALOG_LEDE} onClose={onClose} size="medium">
       <ConnectedPanel state={state} />
+      {connection.signer === null || openAccount === null ? null : (
+        <div className="wl-account-entry" data-kind="account-entry">
+          <p>Trade every market from one account that this wallet funds. Your wallet is asked to sign once to open it.</p>
+          <Button
+            onClick={() => {
+              onClose();
+              openAccount();
+            }}
+            data-action="open-trading-account"
+          >
+            Open your trading account
+          </Button>
+        </div>
+      )}
       <div className="wl-tabs" role="tablist" aria-label="Ways to connect" onKeyDown={onKeyDown}>
         {CONNECT_TABS.map((entry) => (
           <button

@@ -384,3 +384,21 @@ a.ui-button {
     display: none;
   }
 }
+
+/* ---- the trading account entry under the connected wallet (ConnectDialog.tsx; the panel is features/account) ------ */
+
+.wl-account-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 12px 20px;
+  border: var(--line) solid var(--border);
+}
+
+.wl-account-entry p {
+  flex: 1 1 18rem;
+  margin: 0;
+  font-size: 0.8125rem;
+}

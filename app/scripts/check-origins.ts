@@ -22,6 +22,17 @@ const TEXT_FILE = /\.(?:[cm]?[tj]sx?|css|html|svg|json)$/;
 
 const SINK = /\b(innerHTML|outerHTML|insertAdjacentHTML|dangerouslySetInnerHTML|document\.write|eval|new Function)\b/;
 
+// The one documented exception: the WebAuthn PRF extension's input is an object property named `eval` (WebAuthn Level 3,
+// AuthenticationExtensionsPRFInputs: `prf: { eval: { first } }`), which the trading account's passkey must send to get
+// the output that wraps its key (features/account/passkey.ts). A property key is not a call and evaluates nothing; only
+// that exact shape is removed before the sink is matched, so any other `eval` still fails. (The bundle check matches
+// `eval(` only, so the built code needs no exception.)
+export const PRF_EVAL_KEY = /\bprf:\s*\{\s*eval:/g;
+
+export function withoutPrfEvalKey(source: string): string {
+  return source.replace(PRF_EVAL_KEY, "prf: {");
+}
+
 // Crude on purpose: comments may name a sink to forbid it.
 export function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
@@ -52,7 +63,7 @@ export async function checkOrigins(options: OriginOptions = {}): Promise<Violati
       }
     }
     if (SOURCE_FILE.test(file)) {
-      const hit = SINK.exec(stripComments(text));
+      const hit = SINK.exec(withoutPrfEvalKey(stripComments(text)));
       if (hit !== null) {
         violations.push({ file: name, rule: "html-sink", detail: `${hit[1] ?? "sink"}: no string-to-HTML or string-to-code sink may appear in app source` });
       }
