@@ -1,5 +1,5 @@
 {
-  "contentSha256": "1219b8e08ada0f39fb3004c3bf338c3a1772748eb372541e19fa9c03a7c88a44",
+  "contentSha256": "845412913359b8a3fd2f13a232733eb57a7a10d71b4959b8a511517ac82d5a4d",
   "links": [
     {
       "band": "strong",
@@ -51,7 +51,6 @@
       },
       "legs": [
         {
-          "category": "sports",
           "closeUtc": "2026-10-25T00:00:00Z",
           "maskedSha256": "fa472b8b3bfaa04d40a033679fd3665773ce604abe0732d4437c88668e1b7d88",
           "nativeId": "tampa-bay-rays-vs-milwaukee-brewers-1792775710180",
